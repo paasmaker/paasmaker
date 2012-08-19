@@ -54,7 +54,6 @@ class Renderer:
 		self.format = format
 
 	def render(self, template_name):
-		# TODO: Add additional parameters from the web engine.
 		# Determine the mode from the parameters.
 		if self.get_format() == 'html':
 			template = self.template_lookup.get_template(template_name)
