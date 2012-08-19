@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 
-import tornado
+import tornado.web
 import logging
 import paasmaker
 
