@@ -5,8 +5,10 @@ import collections
 import unittest
 import os
 import logging
+import warnings
 
 logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 class Configuration:
 	def __init__(self, configuration_file_override = None):
@@ -16,8 +18,7 @@ class Configuration:
 		if raw:
 			update(self.values, raw)
 		else:
-			# TODO: Update with the loaded path.
-			logger.warning("Unable to parse configuration, or configuration empty")
+			logger.warning("Unable to parse configuration, or configuration empty - loading '%s'", loader.get_loaded_filename())
 			
 
 	def defaults(self):
@@ -53,6 +54,9 @@ def update(d, u):
 
 class TestConfiguration(unittest.TestCase):
 	def setUp(self):
+		# Ignore the warning when using tmpnam. tmpnam is fine for the test.
+		warnings.simplefilter("ignore")
+
 		self.tempnam = os.tempnam()
 
 	def tearDown(self):

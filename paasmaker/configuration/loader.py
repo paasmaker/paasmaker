@@ -9,6 +9,12 @@ FILENAME = "paasmaker.yml"
 logger = logging.getLogger(__name__)
 
 class Loader:
+	def __init__(self):
+		self.loadedfile = None
+
+	def get_loaded_filename(self):
+		return self.loadedfile
+
 	def locate_file(self, manual_location = None):
 		configuration_file = None
 		if manual_location:
@@ -45,6 +51,7 @@ class Loader:
 
 	def load(self, manual_location = None):
 		contents = open(self.locate_file(manual_location)).read()
+		self.loadedfile = manual_location
 		values = yaml.load(contents)
 		return values
 
