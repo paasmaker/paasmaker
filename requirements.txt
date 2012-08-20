@@ -1,4 +1,5 @@
 tornado
-Mako
 sqlalchemy
 pyyaml
+Jinja2
+MarkupSafe

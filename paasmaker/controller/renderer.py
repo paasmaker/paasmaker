@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-from mako.lookup import TemplateLookup
+import jinja2
 import datetime
 import simplejson as json
 import unittest
 
 class Renderer:
 	def __init__(self, templatedir):
-		self.template_lookup = TemplateLookup(directories=[templatedir])
+		self.template_lookup = jinja2.Environment(loader=jinja2.FileSystemLoader(templatedir))
 		self.data = {}
 		self.types = {}
 		self.format = 'html'
