@@ -1,9 +1,0 @@
-Renderer test.
-
-{{ test }}
-
-% for item in testList:
-{{ item }}
-% endfor
-
-{{ template }}
