@@ -2,13 +2,23 @@
 
 import paasmaker
 import collections
+import unittest
+import os
+import logging
+
+logger = logging.getLogger(__name__)
 
 class Configuration:
 	def __init__(self, configuration_file_override = None):
-		self.defaults()
+		self.values = self.defaults()
 		loader = paasmaker.configuration.Loader()
 		raw = loader.load(configuration_file_override)
-		update(self.values, raw)
+		if raw:
+			update(self.values, raw)
+		else:
+			# TODO: Update with the loaded path.
+			logger.warning("Unable to parse configuration, or configuration empty")
+			
 
 	def defaults(self):
 		defaults = {}
@@ -20,12 +30,13 @@ class Configuration:
 		defaults['pacemaker'] = {}
 		defaults['pacemaker']['dsn'] = 'sqlite3:///tmp/paasmaker.db'
 
-		self.values = defaults
+		return defaults
 
 	def dump(self):
 		print str(self.values)
 
 	def get_raw(self):
+		# TODO: This feels too... raw...
 		return self.values
 
 # From: http://stackoverflow.com/questions/3232943/update-value-of-a-nested-dictionary-of-varying-depth
@@ -39,3 +50,28 @@ def update(d, u):
 			d[k] = u[k]
 
 	return d
+
+class TestConfiguration(unittest.TestCase):
+	def setUp(self):
+		self.tempnam = os.tempnam()
+
+	def tearDown(self):
+		if os.path.exists(self.tempnam):
+			os.unlink(self.tempnam)
+
+	def test_fail_load(self):
+		def new_config():
+			Configuration()
+		self.assertRaises(IOError, new_config)
+
+		open(self.tempnam, 'w').write("test:\n  foo: 10")
+		config = Configuration(self.tempnam)
+		self.assertEquals(config.get_raw()['test']['foo'], 10)
+
+	def test_simple_default(self):
+		open(self.tempnam, 'w').write("")
+		config = Configuration(self.tempnam)
+		self.assertEqual(config.get_raw()['global']['http_port'], 8888, 'No default present.')
+
+if __name__ == '__main__':
+	unittest.main()
