@@ -14,6 +14,7 @@ logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=loggin
 
 # Load configuration
 configuration = paasmaker.configuration.Configuration()
+configuration.load()
 configuration.dump()
 
 # Configure our application and routes.

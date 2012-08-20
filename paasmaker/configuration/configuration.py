@@ -11,15 +11,16 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 class Configuration:
-	def __init__(self, configuration_file_override = None):
+	def __init__(self):
 		self.values = self.defaults()
+
+	def load(self, configuration_file = None):
 		loader = paasmaker.configuration.Loader()
-		raw = loader.load(configuration_file_override)
+		raw = loader.load(configuration_file)
 		if raw:
 			update(self.values, raw)
 		else:
-			logger.warning("Unable to parse configuration, or configuration empty - loading '%s'", loader.get_loaded_filename())
-			
+			logger.warning("Unable to parse configuration, or configuration empty - loading '%s'", loader.get_loaded_filename())			
 
 	def defaults(self):
 		defaults = {}
@@ -64,17 +65,18 @@ class TestConfiguration(unittest.TestCase):
 			os.unlink(self.tempnam)
 
 	def test_fail_load(self):
-		def new_config():
-			Configuration()
-		self.assertRaises(IOError, new_config)
+		config = Configuration()
+		self.assertRaises(IOError, config.load, 'test_failure.yml')
 
 		open(self.tempnam, 'w').write("test:\n  foo: 10")
-		config = Configuration(self.tempnam)
+		config = Configuration()
+		config.load(self.tempnam)
 		self.assertEquals(config.get_raw()['test']['foo'], 10)
 
 	def test_simple_default(self):
 		open(self.tempnam, 'w').write("")
-		config = Configuration(self.tempnam)
+		config = Configuration()
+		config.load(self.tempnam)
 		self.assertEqual(config.get_raw()['global']['http_port'], 8888, 'No default present.')
 
 if __name__ == '__main__':
