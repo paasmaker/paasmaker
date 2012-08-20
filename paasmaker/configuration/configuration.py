@@ -34,7 +34,7 @@ class Configuration:
 		return defaults
 
 	def dump(self):
-		print str(self.values)
+		logger.debug("Configuration: %s", str(self.values))
 
 	def get_raw(self):
 		# TODO: This feels too... raw...
