@@ -6,52 +6,69 @@ import unittest
 import os
 import logging
 import warnings
+import colander
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-class Configuration:
-	def __init__(self):
-		self.values = self.defaults()
+# The Configuration Schema.
+class ConfigurationSectionEverywhereSchema(colander.MappingSchema):
+	http_port = colander.SchemaNode(colander.Int(),
+			validator=colander.Range(0, 65535),
+			default=8888,
+			missing=8888,
+			title="API HTTP Port",
+			description="The HTTP port to bind to for incoming API requests")
+	my_route = colander.SchemaNode(colander.String(),
+			default=None,
+			missing=None,
+			title="My route",
+			description="The hostname or IP route to advertise to other nodes",
+			required=False)
+	auth_token = colander.SchemaNode(colander.String(),
+			title="Authentication Token",
+			description="Authentication token to use to authenticate with other nodes in the cluster")
 
-	def load(self, configuration_file = None):
+class ConfigurationSectionPacemakerSchema(colander.MappingSchema):
+	enabled = colander.SchemaNode(colander.Boolean(),
+			default=False,
+			missing=False,
+			title="Enable Pacemaker",
+			description="If this node should act like a pacemaker")
+
+class ConfigurationSchema(colander.MappingSchema):
+	everywhere = ConfigurationSectionEverywhereSchema()
+	pacemaker = ConfigurationSectionPacemakerSchema()
+
+class InvalidConfigurationException(Exception):
+	pass
+
+class Configuration:
+	def __init__(self, configuration_file = None):
 		loader = paasmaker.configuration.Loader()
 		raw = loader.load(configuration_file)
 		if raw:
-			update(self.values, raw)
+			try:
+				schema = ConfigurationSchema()
+				self.values = schema.deserialize(raw)
+				self.flat = schema.flatten(self.values)
+			except colander.Invalid, ex:
+				# TODO: Pass more context back with this exception.
+				raise InvalidConfigurationException("Configuration is not valid: %s" % str(ex))
 		else:
-			logger.warning("Unable to parse configuration, or configuration empty - loading '%s'", loader.get_loaded_filename())			
-
-	def defaults(self):
-		defaults = {}
-
-		defaults['global'] = {}
-		defaults['global']['http_port'] = 8888
-		defaults['global']['my_route'] = None
-
-		defaults['pacemaker'] = {}
-		defaults['pacemaker']['dsn'] = 'sqlite3:///tmp/paasmaker.db'
-
-		return defaults
+			raise InvalidConfigurationException("Unable to parse configuration, or configuration empty - loading '%s'", loader.get_loaded_filename())
 
 	def dump(self):
-		logger.debug("Configuration: %s", str(self.values))
+		logger.debug("Configuration dump:")
+		for key in self.flat:
+			logger.debug("%s: %s", key, str(self.flat[key]))
 
 	def get_raw(self):
 		# TODO: This feels too... raw...
 		return self.values
-
-# From: http://stackoverflow.com/questions/3232943/update-value-of-a-nested-dictionary-of-varying-depth
-# Thanks, this is epic win!
-def update(d, u):
-	for k, v in u.iteritems():
-		if isinstance(v, collections.Mapping):
-			r = update(d.get(k, {}), v)
-			d[k] = r
-		else:
-			d[k] = u[k]
-
-	return d
+	def get_flat(self, value):
+		# TODO: Assumes that the value exists.
+		return self.flat[value]
 
 class TestConfiguration(unittest.TestCase):
 	def setUp(self):
@@ -65,19 +82,22 @@ class TestConfiguration(unittest.TestCase):
 			os.unlink(self.tempnam)
 
 	def test_fail_load(self):
-		config = Configuration()
-		self.assertRaises(IOError, config.load, 'test_failure.yml')
+		try:
+			config = Configuration('test_failure.yml')
+			self.assertTrue(False, "Should have thrown IOError exception.")
+		except IOError, ex:
+			self.assertTrue(True, "Threw exception correctly.")
 
-		open(self.tempnam, 'w').write("test:\n  foo: 10")
-		config = Configuration()
-		config.load(self.tempnam)
-		self.assertEquals(config.get_raw()['test']['foo'], 10)
+		try:
+			open(self.tempnam, 'w').write("test:\n  foo: 10")
+			config = Configuration(self.tempnam)
+		except InvalidConfigurationException, ex:
+			self.assertTrue(True, "Configuration did not pass the schema.")
 
 	def test_simple_default(self):
-		open(self.tempnam, 'w').write("")
-		config = Configuration()
-		config.load(self.tempnam)
-		self.assertEqual(config.get_raw()['global']['http_port'], 8888, 'No default present.')
+		open(self.tempnam, 'w').write("everywhere:\n  auth_token: supersecret\npacemaker:\n  enabled: true\n")
+		config = Configuration(self.tempnam)
+		self.assertEqual(config.get_flat('everywhere.http_port'), 8888, 'No default present.')
 
 if __name__ == '__main__':
 	unittest.main()

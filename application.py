@@ -14,7 +14,6 @@ logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=loggin
 
 # Load configuration
 configuration = paasmaker.configuration.Configuration()
-configuration.load()
 configuration.dump()
 
 # Configure our application and routes.
@@ -27,5 +26,5 @@ application = tornado.web.Application(routes)
 
 # Commence the application.
 if __name__ == "__main__":
-	application.listen(configuration.get_raw()['global']['http_port'])
+	application.listen(configuration.get_flat('everywhere.http_port'))
 	tornado.ioloop.IOLoop.instance().start()
