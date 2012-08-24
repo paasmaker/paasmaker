@@ -2,8 +2,9 @@
 
 import jinja2
 import datetime
-import simplejson as json
+import json
 import unittest
+import jsonencoder
 
 class Renderer:
 	def __init__(self, templatedir):
@@ -24,27 +25,6 @@ class Renderer:
 		self.data[name] = value
 		self.types[name] = 'template'
 
-	def prepare_to_json(self, data):
-		if data == None:
-			return None
-		elif isinstance(data, dict):
-			result = {}
-			for key in data:
-				result[key] = self.prepare_to_json(data[key])
-			return result
-		elif isinstance(data, list):
-			result = []
-			for item in data:
-				result.append(self.prepare_to_json(item))
-			return result
-		elif isinstance(data, datetime.datetime):
-			# Return dates in ISO 8601 format. Always in UTC.
-			return data.isoformat()
-		elif isinstance(data, int) or isinstance(data, float) or isinstance(data, bool):
-			return data
-		else:
-			return str(data)
-
 	def get_format(self):
 		return self.format
 
@@ -63,8 +43,8 @@ class Renderer:
 			outputdata = {}
 			for key, value in self.data.iteritems():
 				if self.types[key] == 'data' or self.types[key] == 'data-list':
-					outputdata[key] = self.prepare_to_json(value)
-			return json.dumps(outputdata)
+					outputdata[key] = value
+			return json.dumps(outputdata, cls=jsonencoder.JsonEncoder)
 		else:
 			# Not a supported mode.
 			return None
@@ -85,6 +65,7 @@ class TestRenderer(unittest.TestCase):
 		self.ren.add_data('test', 1);
 		self.ren.add_data_list('testList', [2])
 		self.ren.add_data_template('template', 3)
+		self.ren.add_data('now', datetime.datetime.now())
 
 	def test_json_format(self):
 		self.ren.set_format('json')

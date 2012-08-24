@@ -11,7 +11,7 @@ class Base(tornado.web.RequestHandler):
 
 	def prepare(self):
 		# TODO: Figure out the path to templates better.
-		self.renderer = paasmaker.controller.Renderer('templates')
+		self.renderer = paasmaker.util.Renderer('templates')
 
 	def render(self, template):
 		# TODO: Add template variables from the engine.
