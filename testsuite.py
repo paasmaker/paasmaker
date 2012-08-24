@@ -8,4 +8,5 @@ if __name__ == '__main__':
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.renderer))
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.jsonencoder))
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.configuration.configuration))
+	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.model))
 	unittest.TextTestRunner(verbosity=2).run(suite)

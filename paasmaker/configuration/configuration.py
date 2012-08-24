@@ -35,6 +35,11 @@ class ConfigurationSectionPacemakerSchema(colander.MappingSchema):
 			missing=False,
 			title="Enable Pacemaker",
 			description="If this node should act like a pacemaker")
+	dsn = colander.SchemaNode(colander.String(),
+			title="Database DSN string",
+			default="sqlite:///tmp/paasmaker.db",
+			missing="sqlite:///tmp/paasmaker.db",
+			description="SQLAlchemy ready database connection string")
 
 class ConfigurationSchema(colander.MappingSchema):
 	everywhere = ConfigurationSectionEverywhereSchema()
