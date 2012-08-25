@@ -6,15 +6,28 @@ import datetime
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
+from sqlalchemy.orm.interfaces import MapperExtension
 
 Base = declarative_base()
 
 # TODO: Revisit this:
 # DateTime handling: insert UTC timestamps.
 
-# TODO: Automatic deleted flag, created flag, updated flag, last user flag.
+# Helper function to return the time in UTC.
+def now():
+	return datetime.datetime.utcnow()
 
-class Node(Base):
+class OrmExtension(MapperExtension):
+	def before_update(self, mapper, connection, instance):
+		instance.updated = now()
+
+class OrmBase(object):
+	__mapper_args__ = { 'extension': OrmExtension() }
+	created = Column(DateTime, nullable=False, default=now)
+	deleted = Column(Boolean, nullable=False, default=False)
+	updated = Column(DateTime, nullable=False, default=now)
+
+class Node(OrmBase, Base):
 	__tablename__ = 'node'
 
 	id = Column(Integer, primary_key=True)
@@ -34,7 +47,7 @@ class Node(Base):
 	def __repr__(self):
 		return "<Node('%s','%s')>" % (self.name, self.route)
 
-class User(Base):
+class User(OrmBase, Base):
 	__tablename__ = 'user'
 
 	id = Column(Integer, primary_key=True)
@@ -52,7 +65,7 @@ class User(Base):
 	def __repr__(self):
 		return "<User('%s'@'%s')>" % (self.username, self.auth_source)
 
-class Role(Base):
+class Role(OrmBase, Base):
 	__tablename__ = 'role'
 
 	id = Column(Integer, primary_key=True)
@@ -64,7 +77,7 @@ class Role(Base):
 	def __repr__(self):
 		return "<Role('%s')>" % self.name
 
-class RolePermission(Base):
+class RolePermission(OrmBase, Base):
 	__tablename__ = 'role_permission'
 
 	id = Column(Integer, primary_key=True)
@@ -81,7 +94,7 @@ class RolePermission(Base):
 	def __repr__(self):
 		return "<RolePermission('%s' -> '%s')>" % (self.name, str(self.granted))
 
-class Workspace(Base):
+class Workspace(OrmBase, Base):
 	__tablename__ = 'workspace'
 
 	id = Column(Integer, primary_key=True)
@@ -93,7 +106,7 @@ class Workspace(Base):
 	def __repr__(self):
 		return "<Workspace('%s')>" % self.name
 
-class WorkspaceUser(Base):
+class WorkspaceUser(OrmBase, Base):
 	__tablename__ = 'workspace_user'
 
 	id = Column(Integer, primary_key=True)
@@ -112,7 +125,7 @@ class WorkspaceUser(Base):
 	def __repr__(self):
 		return "<WorkspaceUser('%s'@'%s' -> '%s')>" % (self.user, self.workspace, self.role)
 
-class Application(Base):
+class Application(OrmBase, Base):
 	__tablename__ = 'application'
 
 	id = Column(Integer, primary_key=True)
@@ -128,7 +141,7 @@ class Application(Base):
 	def __repr__(self):
 		return "<Application('%s')>" % self.name
 
-class ApplicationVersion(Base):
+class ApplicationVersion(OrmBase, Base):
 	__tablename__ = 'application_version'
 
 	id = Column(Integer, primary_key=True)
@@ -145,7 +158,7 @@ class ApplicationVersion(Base):
 	def __repr__(self):
 		return "<ApplicationVersion('%s'@'%s' - active: %s)>" % (self.version, self.application, str(self.is_current))
 
-class ApplicationInstance(Base):
+class ApplicationInstance(OrmBase, Base):
 	__tablename__ = 'application_instance'
 
 	id = Column(Integer, primary_key=True)
@@ -197,15 +210,42 @@ class TestModel(unittest.TestCase):
 			self.__class__.session.close()
 
 	def test_is_working(self):
+		s = self.__class__.session
 		item = self.__class__.session.query(Node).first()
-		self.assertEquals(item.name, 'test')
+		self.assertEquals(item.name, 'test', "Item has incorrect name.")
+		self.assertEquals(item.deleted, False, "Item does not have inherited attribute.")
+		s.add(item)
+		s.commit()
+		self.assertEquals(item.id, 1, "Item is not id 1.")
+
+	def test_created_timestamps(self):
+		s = self.__class__.session
+		n = Node('foo', 'bar', 'baz1', 'boo')
+		s.add(n)
+		s.commit()
+		n2 = Node('foo', 'bar', 'baz2', 'boo')
+		s.add(n2)
+		s.commit()
+		self.assertTrue(n2.created > n.created, "Created timestamp is not greater.")
+
+	def test_updated_timestamp(self):
+		s = self.__class__.session
+		n = Node('foo', 'bar', 'baz3', 'boo')
+		s.add(n)
+		s.commit()
+		ts1 = str(n.updated)
+		n.name = 'bar'
+		s.add(n)
+		s.commit()
+		ts2 = str(n.updated)
+		self.assertEquals(cmp(ts1, ts2), -1, "Updated timestamp did not change.")
 
 	def test_user_workspace(self):
 		s = self.__class__.session
 
 		user = User('danielf')
 		role = Role('Administrator')
-		role_permission = RolePermission('admin', True)
+		role_permission = RolePermission('ADMIN', True)
 		role.permissions.append(role_permission)
 
 		s.add(user)
