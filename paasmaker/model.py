@@ -1,8 +1,10 @@
 #!/usr/bin/env python
 
 import unittest
+import json
 import sqlalchemy
 import datetime
+import paasmaker
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
@@ -32,6 +34,7 @@ class OrmBase(object):
 		fields['id'] = self.__dict__['id']
 		fields['updated'] = self.__dict__['updated']
 		fields['created'] = self.__dict__['created']
+		fields['class'] = self.__class__.__name__
 		for field in field_list:
 			fields[field] = self.__dict__[field]
 		return fields
@@ -286,9 +289,16 @@ class TestModel(unittest.TestCase):
 		s = self.__class__.session
 		item = s.query(Node).first()
 		flat = item.flatten()
-		self.assertEquals(len(flat.keys()), 8, "Item is missing keys.")
+		# TODO: This assert below is a bit fragile.
+		self.assertEquals(len(flat.keys()), 9, "Item has incorrect number of keys.")
 		self.assertTrue(flat.has_key('id'), "Missing ID.")
 		self.assertTrue(isinstance(flat['id'], int), "ID is not an integer.")
+
+		data = { 'node': item }
+		encoded = json.dumps(data, cls=paasmaker.util.jsonencoder.JsonEncoder)
+		decoded = json.loads(encoded)
+
+		self.assertEquals(decoded['node']['id'], 1, "ID is not correct.")
 
 	@classmethod
 	def setUpClass(cls):
