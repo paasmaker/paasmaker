@@ -9,4 +9,5 @@ if __name__ == '__main__':
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.jsonencoder))
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.configuration.configuration))
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.model))
+	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.controller.example))
 	unittest.TextTestRunner(verbosity=2).run(suite)

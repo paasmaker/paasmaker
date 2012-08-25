@@ -22,7 +22,7 @@ class Base(tornado.web.RequestHandler):
 		self.write(self.renderer.render(template))
 
 	def on_finish(self):
-		logging.warning(
+		logging.info(
 			"%s %s (%s) %0.5fs" %
 				(self.request.method,
 				self.request.uri,
