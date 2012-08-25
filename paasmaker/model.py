@@ -25,7 +25,7 @@ class OrmExtension(MapperExtension):
 class OrmBase(object):
 	__mapper_args__ = { 'extension': OrmExtension() }
 	created = Column(DateTime, nullable=False, default=now)
-	deleted = Column(DateTime, nullable=True, default=None)
+	deleted = Column(DateTime, nullable=True, default=None, index=True)
 	updated = Column(DateTime, nullable=False, default=now)
 
 	def flatten(self, field_list=None):
@@ -49,9 +49,9 @@ class Node(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	name = Column(String, nullable=False)
 	route = Column(String, nullable=False)
-	uuid = Column(String, nullable=False, unique=True)
+	uuid = Column(String, nullable=False, unique=True, index=True)
 	state = Column(String, nullable=False)
-	last_heard = Column(DateTime)
+	last_heard = Column(DateTime, nullable=False)
 
 	def __init__(self, name, route, uuid, state):
 		self.name = name
@@ -70,7 +70,7 @@ class User(OrmBase, Base):
 	__tablename__ = 'user'
 
 	id = Column(Integer, primary_key=True)
-	username = Column(String, nullable=False)
+	username = Column(String, nullable=False, index=True)
 	auth_source = Column(String, nullable=False, default="internal")
 	auth_meta = Column(String, nullable=True)
 
@@ -100,9 +100,9 @@ class RolePermission(OrmBase, Base):
 	__tablename__ = 'role_permission'
 
 	id = Column(Integer, primary_key=True)
-	role_id = Column(Integer, ForeignKey('role.id'), nullable=False)
-	name = Column(String, nullable=False)
-	granted = Column(Boolean, nullable=False)
+	role_id = Column(Integer, ForeignKey('role.id'), nullable=False, index=True)
+	name = Column(String, nullable=False, index=True)
+	granted = Column(Boolean, nullable=False, index=True)
 
 	role = relationship("Role", backref=backref('permissions', order_by=id))
 
@@ -129,11 +129,11 @@ class WorkspaceUser(OrmBase, Base):
 	__tablename__ = 'workspace_user'
 
 	id = Column(Integer, primary_key=True)
-	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False)
+	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False, index=True)
 	workspace = relationship("Workspace", backref=backref('users', order_by=id))
-	role_id = Column(Integer, ForeignKey('role.id'))
+	role_id = Column(Integer, ForeignKey('role.id'), index=True)
 	role = relationship("Role", backref=backref('workspaces', order_by=id))
-	user_id = Column(Integer, ForeignKey('user.id'))
+	user_id = Column(Integer, ForeignKey('user.id'), index=True)
 	user = relationship("User", backref=backref('workspaces', order_by=id))
 
 	def __init__(self, workspace, role, user):
@@ -148,7 +148,7 @@ class Application(OrmBase, Base):
 	__tablename__ = 'application'
 
 	id = Column(Integer, primary_key=True)
-	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False)
+	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False, index=True)
 	workspace = relationship("Workspace", backref=backref('applications', order_by=id))
 	# Application names are globally unique.
 	name = Column(String, unique=True)
@@ -164,7 +164,7 @@ class ApplicationVersion(OrmBase, Base):
 	__tablename__ = 'application_version'
 
 	id = Column(Integer, primary_key=True)
-	application_id = Column(Integer, ForeignKey('application.id'), nullable=False)
+	application_id = Column(Integer, ForeignKey('application.id'), nullable=False, index=True)
 	application = relationship("Application", backref=backref('versions', order_by=id))
 	version = Column(String, nullable=False)
 	is_current = Column(Boolean, nullable=False)
@@ -181,11 +181,11 @@ class ApplicationInstance(OrmBase, Base):
 	__tablename__ = 'application_instance'
 
 	id = Column(Integer, primary_key=True)
-	application_version_id = Column(Integer, ForeignKey('application_version.id'), nullable=False)
+	application_version_id = Column(Integer, ForeignKey('application_version.id'), nullable=False, index=True)
 	application_version = relationship("ApplicationVersion", backref=backref('instances', order_by=id))
-	node_id = Column(Integer, ForeignKey('node.id'), nullable=False)
+	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
 	node = relationship("Node", backref=backref('nodes', order_by=id))
-	status = Column(String, nullable=False)
+	status = Column(String, nullable=False, index=True)
 
 	def __init__(self, application_version, node):
 		self.application_version = application_version
