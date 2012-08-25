@@ -10,8 +10,7 @@ from sqlalchemy.orm.interfaces import MapperExtension
 
 Base = declarative_base()
 
-# TODO: Revisit this:
-# DateTime handling: insert UTC timestamps.
+# TODO: Revisit this: DateTime handling: insert UTC timestamps.
 
 # Helper function to return the time in UTC.
 def now():
@@ -24,8 +23,22 @@ class OrmExtension(MapperExtension):
 class OrmBase(object):
 	__mapper_args__ = { 'extension': OrmExtension() }
 	created = Column(DateTime, nullable=False, default=now)
-	deleted = Column(Boolean, nullable=False, default=False)
+	deleted = Column(DateTime, nullable=True, default=None)
 	updated = Column(DateTime, nullable=False, default=now)
+
+	def flatten(self, field_list=None):
+		# If field_list is not None, return just those fields.
+		fields = {}
+		fields['id'] = self.__dict__['id']
+		fields['updated'] = self.__dict__['updated']
+		fields['created'] = self.__dict__['created']
+		for field in field_list:
+			fields[field] = self.__dict__[field]
+		return fields
+
+	def delete(self):
+		"""Mark the object as deleted. You still need to save it."""
+		self.deleted = now()
 
 class Node(OrmBase, Base):
 	__tablename__ = 'node'
@@ -46,6 +59,9 @@ class Node(OrmBase, Base):
 
 	def __repr__(self):
 		return "<Node('%s','%s')>" % (self.name, self.route)
+
+	def flatten(self, field_list=None):
+		return OrmBase.flatten(self, ['name', 'route', 'uuid', 'state', 'last_heard'])		
 
 class User(OrmBase, Base):
 	__tablename__ = 'user'
@@ -211,9 +227,9 @@ class TestModel(unittest.TestCase):
 
 	def test_is_working(self):
 		s = self.__class__.session
-		item = self.__class__.session.query(Node).first()
+		item = s.query(Node).first()
 		self.assertEquals(item.name, 'test', "Item has incorrect name.")
-		self.assertEquals(item.deleted, False, "Item does not have inherited attribute.")
+		self.assertIsNone(item.deleted, "Item does not have inherited attribute.")
 		s.add(item)
 		s.commit()
 		self.assertEquals(item.id, 1, "Item is not id 1.")
@@ -265,6 +281,14 @@ class TestModel(unittest.TestCase):
 		self.assertEquals(len(workspace.users), 1, "Workspace does not have a user.")
 		self.assertEquals(len(role.workspaces), 1, "Role does not have a workspace.")
 		self.assertEquals(len(role.permissions), 1, "Role does not have any permissions.")
+
+	def test_flatten(self):
+		s = self.__class__.session
+		item = s.query(Node).first()
+		flat = item.flatten()
+		self.assertEquals(len(flat.keys()), 8, "Item is missing keys.")
+		self.assertTrue(flat.has_key('id'), "Missing ID.")
+		self.assertTrue(isinstance(flat['id'], int), "ID is not an integer.")
 
 	@classmethod
 	def setUpClass(cls):
