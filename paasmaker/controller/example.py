@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from base import Base
+from base import BaseTest
 import unittest
 
 import tornado
@@ -18,10 +19,9 @@ class Example(Base):
 		routes.append((r"/example", Example, configuration))
 		return routes
 
-class ExampleTest(tornado.testing.AsyncHTTPTestCase):
+class ExampleTest(BaseTest):
 	def get_app(self):
-		# TODO: Use a testing version of the configuration object.
-		routes = Example.get_routes({'configuration': 'bar'})
+		routes = Example.get_routes({'configuration': self.configuration})
 		application = tornado.web.Application(routes)
 		return application
 
