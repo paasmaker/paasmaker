@@ -1,63 +1,46 @@
 #!/usr/bin/env python
 
 import paasmaker
-import collections
 import unittest
 import os
 import logging
 import warnings
-import colander
+
+import dotconf
+from dotconf.schema.containers import Section, Value
+from dotconf.schema.types import Boolean, Integer, Float, String
+from dotconf.parser import DotconfParser, yacc, ParsingError
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 # The Configuration Schema.
-class ConfigurationSectionEverywhereSchema(colander.MappingSchema):
-	http_port = colander.SchemaNode(colander.Int(),
-			validator=colander.Range(0, 65535),
-			default=8888,
-			missing=8888,
-			title="API HTTP Port",
-			description="The HTTP port to bind to for incoming API requests")
-	my_route = colander.SchemaNode(colander.String(),
-			default=None,
-			missing=None,
-			title="My route",
-			description="The hostname or IP route to advertise to other nodes",
-			required=False)
-	auth_token = colander.SchemaNode(colander.String(),
-			title="Authentication Token",
-			description="Authentication token to use to authenticate with other nodes in the cluster")
+class PacemakerSection(Section):
+	# Optional section.
+	_meta = { 'repeat': (0, 1) }
+	# If the pacemaker is enabled.
+	enabled = Value(Boolean(), default=False)
+	# The SQLAlchemy-ready database DSN. Required.
+	dsn = Value(String())
 
-class ConfigurationSectionPacemakerSchema(colander.MappingSchema):
-	enabled = colander.SchemaNode(colander.Boolean(),
-			default=False,
-			missing=False,
-			title="Enable Pacemaker",
-			description="If this node should act like a pacemaker")
-	dsn = colander.SchemaNode(colander.String(),
-			title="Database DSN string",
-			default="sqlite:///tmp/paasmaker.db",
-			missing="sqlite:///tmp/paasmaker.db",
-			description="SQLAlchemy ready database connection string")
+class HeartSection(Section):
+	# Optional section.
+	_meta = { 'repeat': (0, 1) }
+	# If the heart is enabled.
+	enabled = Value(Boolean(), default=False)
+	# The working directory. Required, must be set.
+	working_dir = Value(String())
 
-class ConfigurationSectionHeartSchema(colander.MappingSchema):
-	enabled = colander.SchemaNode(colander.Boolean(),
-			default=False,
-			missing=False,
-			title="Enable Heart",
-			description="If this node should act like a heart")
-	working_dir = colander.SchemaNode(colander.String(),
-			title="Working directory",
-			default="/tmp/paasmaker-heart/",
-			missing="/tmp/paasmaker-heart/",
-			description="Working directory where application instances are stored, and other state is stored. Must be writable")
+class MainSection(Section):
+	# The HTTP port to listen on.
+	http_port = Value(Integer(), default=8888)
+	# The route to this node. None if it should be automatically determined.
+	my_route = Value(String(), default=None)
+	# Authentication token that the nodes use to communicate. Required.
+	auth_token = Value(String())
 
-
-class ConfigurationSchema(colander.MappingSchema):
-	everywhere = ConfigurationSectionEverywhereSchema()
-	pacemaker = ConfigurationSectionPacemakerSchema()
-	heart = ConfigurationSectionHeartSchema()
+	pacemaker = PacemakerSection()
+	heart = HeartSection()
 
 class InvalidConfigurationException(Exception):
 	pass
@@ -66,42 +49,43 @@ class Configuration:
 	def __init__(self, configuration_file = None):
 		loader = paasmaker.configuration.Loader()
 		raw = loader.load(configuration_file)
-		if raw:
-			try:
-				schema = ConfigurationSchema()
-				self.values = schema.deserialize(raw)
-				self.flat = schema.flatten(self.values)
-			except colander.Invalid, ex:
-				# TODO: Pass more context back with this exception - preferably the whole exception.
-				raise InvalidConfigurationException("Configuration is not valid: %s" % str(ex))
-		else:
-			raise InvalidConfigurationException("Unable to parse configuration, or configuration empty - loading '%s'", loader.get_loaded_filename())
+		parser = DotconfParser(raw, debug=False, write_tables=False, errorlog=yacc.NullLogger())
+		try:
+			config = parser.parse()
+		except ParsingError, ex:
+			raise InvalidConfigurationException("Invalid configuration file syntax: %s" % str(ex))
+		except AttributeError, ex:
+			raise InvalidConfigurationException("Parser error - probably invalid configuration file syntax. %s" % str(ex))
+		schema = MainSection()
+		try:
+			self.values = schema.validate(config)
+		except dotconf.schema.ValidationError, ex:
+			raise InvalidConfigurationException("Configuration is invalid: %s" % str(ex))
 
 	def dump(self):
 		logger.debug("Configuration dump:")
-		for key in self.flat:
-			logger.debug("%s: %s", key, str(self.flat[key]))
+		# TODO: Go deeper into the values.
+		for key, value in self.values.iteritems():
+			logger.debug("%s: %s", key, str(value))
 
-	def get_raw(self):
-		# TODO: This feels too... raw...
-		return self.values
-	def get_flat(self, value):
-		# TODO: Assumes that the value exists.
-		return self.flat[value]
+	def get_global(self, key):
+		return self.values.get(key)
+
+	def _has_section(self, section):
+		return len(self.values._subsections[section]) > 0
+
+	def get_section_value(self, section, key):
+		"""Simple helper to fetch a key from a section. Assumes section exists."""
+		return self.values._subsections[section][0].get(key)
 
 	def is_pacemaker(self):
-		return self.flat['pacemaker.enabled']
+		return self._has_section('pacemaker') and self.get_section_value('pacemaker', 'enabled')
 	def is_heart(self):
-		return self.flat['heart.enabled']
+		return self._has_section('heart') and self.get_section_value('heart', 'enabled')
 
 class TestConfiguration(unittest.TestCase):
 	minimum_config = """
-everywhere:
-  auth_token: supersecret
-pacemaker:
-  enabled: true
-heart:
-  enabled: true
+auth_token = 'supersecret'
 """
 	
 	def setUp(self):
@@ -125,12 +109,12 @@ heart:
 			open(self.tempnam, 'w').write("test:\n  foo: 10")
 			config = Configuration(self.tempnam)
 		except InvalidConfigurationException, ex:
-			self.assertTrue(True, "Configuration did not pass the schema.")
+			self.assertTrue(True, "Configuration did not pass the schema or was invalid.")
 
 	def test_simple_default(self):
 		open(self.tempnam, 'w').write(self.minimum_config)
 		config = Configuration(self.tempnam)
-		self.assertEqual(config.get_flat('everywhere.http_port'), 8888, 'No default present.')
+		self.assertEqual(config.get_global('http_port'), 8888, 'No default present.')
 
 if __name__ == '__main__':
 	unittest.main()

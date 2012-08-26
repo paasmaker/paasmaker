@@ -29,6 +29,6 @@ application = tornado.web.Application(routes)
 
 # Commence the application.
 if __name__ == "__main__":
-	application.listen(configuration.get_flat('everywhere.http_port'))
-	logging.info("Listening on port %d", configuration.get_flat('everywhere.http_port'))
+	application.listen(configuration.get_global('http_port'))
+	logging.info("Listening on port %d", configuration.get_global('http_port'))
 	tornado.ioloop.IOLoop.instance().start()

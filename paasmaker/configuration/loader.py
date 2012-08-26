@@ -4,7 +4,7 @@ import yaml
 import os
 import logging
 
-FILENAME = "paasmaker.yml"
+FILENAME = "paasmaker.conf"
 
 logger = logging.getLogger(__name__)
 
@@ -50,8 +50,5 @@ class Loader:
 		return configuration_file
 
 	def load(self, manual_location = None):
-		contents = open(self.locate_file(manual_location)).read()
-		self.loadedfile = manual_location
-		values = yaml.load(contents)
-		return values
+		return open(self.locate_file(manual_location)).read()
 

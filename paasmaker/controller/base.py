@@ -36,12 +36,7 @@ class Base(tornado.web.RequestHandler):
 
 class BaseTest(tornado.testing.AsyncHTTPTestCase):
 	minimum_config = """
-everywhere:
-  auth_token: supersecret
-pacemaker:
-  enabled: true
-heart:
-  enabled: true
+auth_token = 'supersecret'
 """
 
 	def setUp(self):
