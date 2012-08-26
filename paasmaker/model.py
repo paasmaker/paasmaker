@@ -64,7 +64,7 @@ class Node(OrmBase, Base):
 		return "<Node('%s','%s')>" % (self.name, self.route)
 
 	def flatten(self, field_list=None):
-		return OrmBase.flatten(self, ['name', 'route', 'uuid', 'state', 'last_heard'])		
+		return super(Node, self).flatten(['name', 'route', 'uuid', 'state', 'last_heard'])
 
 class User(OrmBase, Base):
 	__tablename__ = 'user'
@@ -84,6 +84,9 @@ class User(OrmBase, Base):
 	def __repr__(self):
 		return "<User('%s'@'%s')>" % (self.username, self.auth_source)
 
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['username', 'auth_source', 'name'])
+
 class Role(OrmBase, Base):
 	__tablename__ = 'role'
 
@@ -95,6 +98,9 @@ class Role(OrmBase, Base):
 
 	def __repr__(self):
 		return "<Role('%s')>" % self.name
+
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['name', 'permissions'])
 
 class RolePermission(OrmBase, Base):
 	__tablename__ = 'role_permission'
@@ -113,6 +119,9 @@ class RolePermission(OrmBase, Base):
 	def __repr__(self):
 		return "<RolePermission('%s' -> '%s')>" % (self.name, str(self.granted))
 
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['name', 'role', 'granted'])
+
 class Workspace(OrmBase, Base):
 	__tablename__ = 'workspace'
 
@@ -124,6 +133,9 @@ class Workspace(OrmBase, Base):
 	
 	def __repr__(self):
 		return "<Workspace('%s')>" % self.name
+
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['name', 'users', 'applications'])
 
 class WorkspaceUser(OrmBase, Base):
 	__tablename__ = 'workspace_user'
@@ -144,6 +156,9 @@ class WorkspaceUser(OrmBase, Base):
 	def __repr__(self):
 		return "<WorkspaceUser('%s'@'%s' -> '%s')>" % (self.user, self.workspace, self.role)
 
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['workspace', 'user', 'role'])
+
 class Application(OrmBase, Base):
 	__tablename__ = 'application'
 
@@ -159,6 +174,9 @@ class Application(OrmBase, Base):
 	
 	def __repr__(self):
 		return "<Application('%s')>" % self.name
+
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['name', 'workspace'])
 
 class ApplicationVersion(OrmBase, Base):
 	__tablename__ = 'application_version'
@@ -177,6 +195,9 @@ class ApplicationVersion(OrmBase, Base):
 	def __repr__(self):
 		return "<ApplicationVersion('%s'@'%s' - active: %s)>" % (self.version, self.application, str(self.is_current))
 
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['application', 'version', 'is_current'])
+
 class ApplicationInstance(OrmBase, Base):
 	__tablename__ = 'application_instance'
 
@@ -194,6 +215,9 @@ class ApplicationInstance(OrmBase, Base):
 	
 	def __repr__(self):
 		return "<ApplicationInstance('%s'@'%s' - %s)>" % (self.application_version, self.node, self.status)
+
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['application_version', 'node', 'status'])
 
 
 def init_db(engine):
@@ -289,9 +313,9 @@ class TestModel(unittest.TestCase):
 		s = self.__class__.session
 		item = s.query(Node).first()
 		flat = item.flatten()
-		# TODO: This assert below is a bit fragile.
 		self.assertEquals(len(flat.keys()), 9, "Item has incorrect number of keys.")
 		self.assertTrue(flat.has_key('id'), "Missing ID.")
+		self.assertTrue(flat.has_key('name'), "Missing name.")
 		self.assertTrue(isinstance(flat['id'], int), "ID is not an integer.")
 
 		data = { 'node': item }
