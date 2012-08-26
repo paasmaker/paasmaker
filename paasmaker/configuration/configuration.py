@@ -41,9 +41,23 @@ class ConfigurationSectionPacemakerSchema(colander.MappingSchema):
 			missing="sqlite:///tmp/paasmaker.db",
 			description="SQLAlchemy ready database connection string")
 
+class ConfigurationSectionHeartSchema(colander.MappingSchema):
+	enabled = colander.SchemaNode(colander.Boolean(),
+			default=False,
+			missing=False,
+			title="Enable Heart",
+			description="If this node should act like a heart")
+	working_dir = colander.SchemaNode(colander.String(),
+			title="Working directory",
+			default="/tmp/paasmaker-heart/",
+			missing="/tmp/paasmaker-heart/",
+			description="Working directory where application instances are stored, and other state is stored. Must be writable")
+
+
 class ConfigurationSchema(colander.MappingSchema):
 	everywhere = ConfigurationSectionEverywhereSchema()
 	pacemaker = ConfigurationSectionPacemakerSchema()
+	heart = ConfigurationSectionHeartSchema()
 
 class InvalidConfigurationException(Exception):
 	pass
@@ -58,7 +72,7 @@ class Configuration:
 				self.values = schema.deserialize(raw)
 				self.flat = schema.flatten(self.values)
 			except colander.Invalid, ex:
-				# TODO: Pass more context back with this exception.
+				# TODO: Pass more context back with this exception - preferably the whole exception.
 				raise InvalidConfigurationException("Configuration is not valid: %s" % str(ex))
 		else:
 			raise InvalidConfigurationException("Unable to parse configuration, or configuration empty - loading '%s'", loader.get_loaded_filename())
@@ -75,7 +89,21 @@ class Configuration:
 		# TODO: Assumes that the value exists.
 		return self.flat[value]
 
+	def is_pacemaker(self):
+		return self.flat['pacemaker.enabled']
+	def is_heart(self):
+		return self.flat['heart.enabled']
+
 class TestConfiguration(unittest.TestCase):
+	minimum_config = """
+everywhere:
+  auth_token: supersecret
+pacemaker:
+  enabled: true
+heart:
+  enabled: true
+"""
+	
 	def setUp(self):
 		# Ignore the warning when using tmpnam. tmpnam is fine for the test.
 		warnings.simplefilter("ignore")
@@ -100,7 +128,7 @@ class TestConfiguration(unittest.TestCase):
 			self.assertTrue(True, "Configuration did not pass the schema.")
 
 	def test_simple_default(self):
-		open(self.tempnam, 'w').write("everywhere:\n  auth_token: supersecret\npacemaker:\n  enabled: true\n")
+		open(self.tempnam, 'w').write(self.minimum_config)
 		config = Configuration(self.tempnam)
 		self.assertEqual(config.get_flat('everywhere.http_port'), 8888, 'No default present.')
 

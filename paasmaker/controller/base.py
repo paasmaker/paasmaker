@@ -3,6 +3,9 @@
 import tornado.web
 import logging
 import paasmaker
+import tornado.testing
+import warnings
+import os
 
 class Base(tornado.web.RequestHandler):
 
@@ -14,10 +17,10 @@ class Base(tornado.web.RequestHandler):
 		self.renderer = paasmaker.util.Renderer('templates')
 
 	def render(self, template):
-		# TODO: Add template variables from the engine.
+		self.renderer.add_data_template('request', self.request)
+		self.renderer.add_data_template('configuration', self.configuration)
 		self.renderer.set_format(self.get_argument('format', 'html'))
 		if self.renderer.get_format() == 'json':
-			print "Setting content-type header."
 			self.set_header('Content-Type', 'application/json')
 		self.write(self.renderer.render(template))
 
@@ -30,3 +33,24 @@ class Base(tornado.web.RequestHandler):
 				self.request.request_time()
 				)
 		)
+
+class BaseTest(tornado.testing.AsyncHTTPTestCase):
+	minimum_config = """
+everywhere:
+  auth_token: supersecret
+pacemaker:
+  enabled: true
+heart:
+  enabled: true
+"""
+
+	def setUp(self):
+		# Ignore the warning when using tmpnam. tmpnam is fine for the test.
+		warnings.simplefilter("ignore")
+		self.tempnam = os.tempnam()
+
+		open(self.tempnam, 'w').write(self.minimum_config)
+		self.configuration = paasmaker.configuration.Configuration(self.tempnam)
+
+		super(BaseTest, self).setUp()
+
