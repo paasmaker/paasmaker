@@ -8,7 +8,7 @@ import warnings
 
 import dotconf
 from dotconf.schema.containers import Section, Value
-from dotconf.schema.types import Boolean, Integer, Float, String
+from dotconf.schema.types import Boolean, Integer, Float, String, Regex
 from dotconf.parser import DotconfParser, yacc, ParsingError
 
 logger = logging.getLogger(__name__)
@@ -38,6 +38,12 @@ class MainSection(Section):
 	my_route = Value(String(), default=None)
 	# Authentication token that the nodes use to communicate. Required.
 	auth_token = Value(String())
+	# Log directory. Very important - you should set this to a persistent location.
+	log_directory = Value(String(), default="/tmp/paasmaker-logs/")
+	# Server log level.
+	server_log_level = Value(Regex(r'DEBUG|INFO|WARNING|CRITICAL|ERROR'), default="INFO")
+	# Job log level. TODO: This might need to be upped/downed per job... needs more thinking.
+	job_log_level = Value(Regex(r'/DEBUG|INFO|WARNING|CRITICAL|ERROR/'), default="INFO")
 
 	pacemaker = PacemakerSection()
 	heart = HeartSection()

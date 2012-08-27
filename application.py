@@ -10,12 +10,17 @@ import paasmaker
 # Logging setup.
 # TODO: Allow this to be controlled by command line / configuration.
 import logging
-logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.DEBUG)
+logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
 # Load configuration
 logging.info("Loading configuration...")
 configuration = paasmaker.configuration.Configuration()
 configuration.dump()
+
+# Reset the log level.
+logging.info("Resetting server log level to %s.", configuration.get_global('server_log_level'))
+logger = logging.getLogger()
+logger.setLevel(getattr(logging, configuration.get_global('server_log_level')))
 
 # Configure our application and routes.
 logging.info("Building routes.")
