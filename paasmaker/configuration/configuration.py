@@ -4,6 +4,9 @@ import paasmaker
 import unittest
 import os
 import logging
+import tempfile
+import uuid
+import shutil
 import warnings
 
 import dotconf
@@ -88,6 +91,34 @@ class Configuration:
 		return self._has_section('pacemaker') and self.get_section_value('pacemaker', 'enabled')
 	def is_heart(self):
 		return self._has_section('heart') and self.get_section_value('heart', 'enabled')
+
+class ConfigurationStub(Configuration):
+	"""A test version of the configuration object, for unit tests."""
+	default_config = """
+auth_token = '%(auth_token)s'
+log_directory = '%(log_dir)s'
+"""
+
+	def __init__(self):
+		# Choose filenames and set up example configuration.
+		configfile = tempfile.mkstemp()
+		self.params = {}
+
+		self.params['log_dir'] = tempfile.mkdtemp()
+		self.params['auth_token'] = str(uuid.uuid4())
+
+		# Create the configuration file.
+		configuration = self.default_config % self.params
+		self.configname = configfile[1]
+		open(self.configname, 'w').write(configuration)
+
+		# Create the object with our temp name.
+		Configuration.__init__(self, self.configname)
+
+	def cleanup(self):
+		# Remove files that we created.
+		shutil.rmtree(self.params['log_dir'])
+		os.unlink(self.configname)
 
 class TestConfiguration(unittest.TestCase):
 	minimum_config = """

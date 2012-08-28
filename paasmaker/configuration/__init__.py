@@ -1,3 +1,3 @@
 # configuration module initialization.
 from loader import Loader
-from configuration import Configuration
+from configuration import Configuration, ConfigurationStub
