@@ -27,10 +27,12 @@ logging.info("Building routes.")
 route_extras = dict(configuration=configuration)
 routes = []
 routes.extend(paasmaker.controller.example.Example.get_routes(route_extras))
+routes.extend(paasmaker.controller.information.Information.get_routes(route_extras))
 
 # Set up the application object.
 logging.info("Setting up the application.")
-application = tornado.web.Application(routes)
+application_settings = configuration.get_torando_configuration()
+application = tornado.web.Application(routes, **application_settings)
 
 # Commence the application.
 if __name__ == "__main__":

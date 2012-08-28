@@ -104,6 +104,11 @@ class Configuration:
 	def is_heart(self):
 		return self._has_section('heart') and self.get_section_value('heart', 'enabled')
 
+	def get_torando_configuration(self):
+		settings = {}
+		settings['template_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../templates')
+		return settings
+
 class ConfigurationStub(Configuration):
 	"""A test version of the configuration object, for unit tests."""
 	default_config = """

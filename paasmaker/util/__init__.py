@@ -1,3 +1,3 @@
-from renderer import Renderer
 from example import Example
 from joblogging import JobLoggingHandler
+from jsonencoder import JsonEncoder
