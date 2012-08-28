@@ -34,18 +34,11 @@ class Base(tornado.web.RequestHandler):
 				)
 		)
 
-class BaseTest(tornado.testing.AsyncHTTPTestCase):
-	minimum_config = """
-auth_token = 'supersecret'
-"""
-
+class BaseHTTPTest(tornado.testing.AsyncHTTPTestCase):
 	def setUp(self):
-		# Ignore the warning when using tmpnam. tmpnam is fine for the test.
-		warnings.simplefilter("ignore")
-		self.tempnam = os.tempnam()
-
-		open(self.tempnam, 'w').write(self.minimum_config)
-		self.configuration = paasmaker.configuration.Configuration(self.tempnam)
-
-		super(BaseTest, self).setUp()
+		self.configuration = paasmaker.configuration.ConfigurationStub()
+		super(BaseHTTPTest, self).setUp()
+	def tearDown(self):
+		self.configuration.cleanup()
+		super(BaseHTTPTest, self).tearDown()
 

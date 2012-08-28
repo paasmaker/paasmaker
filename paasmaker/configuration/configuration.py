@@ -10,7 +10,7 @@ import shutil
 import warnings
 
 import dotconf
-from dotconf.schema.containers import Section, Value
+from dotconf.schema.containers import Section, Value, List
 from dotconf.schema.types import Boolean, Integer, Float, String, Regex
 from dotconf.parser import DotconfParser, yacc, ParsingError
 
@@ -26,6 +26,16 @@ class PacemakerSection(Section):
 	# The SQLAlchemy-ready database DSN. Required.
 	dsn = Value(String())
 
+class HeartLanguageVersionSection(Section):
+	_meta = { 'repeat': (1, None), 'args': Value(String()) }
+	# TODO: Attributes here...
+	enabled = Value(Boolean(), default=False)
+
+class HeartLanguageSection(Section):
+	_meta = { 'repeat': (1, None), 'args': Value(String()) }
+	# A list of versions.
+	version = HeartLanguageVersionSection()
+
 class HeartSection(Section):
 	# Optional section.
 	_meta = { 'repeat': (0, 1) }
@@ -33,6 +43,8 @@ class HeartSection(Section):
 	enabled = Value(Boolean(), default=False)
 	# The working directory. Required, must be set.
 	working_dir = Value(String())
+	# Languages that this Heart supports.
+	language = HeartLanguageSection()
 
 class MainSection(Section):
 	# The HTTP port to listen on.
@@ -99,16 +111,52 @@ auth_token = '%(auth_token)s'
 log_directory = '%(log_dir)s'
 """
 
-	def __init__(self):
+	pacemaker_config = """
+pacemaker {
+	enabled = yes
+}
+"""
+
+	heart_config = """
+heart {
+	enabled = yes
+	working_dir = "%(heart_working_dir)s"
+	language "php" {
+		version "5.3" {
+			enabled = yes
+		}
+		version "5.4" {
+			enabled = yes
+		}
+	}
+	language "ruby" {
+		version "1.8.7" {
+			enabled = yes
+		}
+		version "1.9.3" {
+			enabled = yes
+		}
+	}
+}
+"""
+
+	def __init__(self, modules=[]):
 		# Choose filenames and set up example configuration.
 		configfile = tempfile.mkstemp()
 		self.params = {}
 
 		self.params['log_dir'] = tempfile.mkdtemp()
 		self.params['auth_token'] = str(uuid.uuid4())
+		self.params['heart_working_dir'] = tempfile.mkdtemp()
 
 		# Create the configuration file.
 		configuration = self.default_config % self.params
+
+		if 'pacemaker' in modules:
+			configuration += self.pacemaker_config % self.params
+		if 'heart' in modules:
+			configuration += self.heart_config % self.params
+
 		self.configname = configfile[1]
 		open(self.configname, 'w').write(configuration)
 
@@ -118,6 +166,7 @@ log_directory = '%(log_dir)s'
 	def cleanup(self):
 		# Remove files that we created.
 		shutil.rmtree(self.params['log_dir'])
+		shutil.rmtree(self.params['heart_working_dir'])
 		os.unlink(self.configname)
 
 class TestConfiguration(unittest.TestCase):
@@ -152,6 +201,9 @@ auth_token = 'supersecret'
 		open(self.tempnam, 'w').write(self.minimum_config)
 		config = Configuration(self.tempnam)
 		self.assertEqual(config.get_global('http_port'), 8888, 'No default present.')
+	
+	def test_heart_languages(self):
+		stub = ConfigurationStub(['heart'])
 
 if __name__ == '__main__':
 	unittest.main()

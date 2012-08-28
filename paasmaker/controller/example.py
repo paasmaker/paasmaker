@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 from base import Base
-from base import BaseTest
+from base import BaseHTTPTest
 import unittest
 
 import tornado
@@ -19,7 +19,7 @@ class Example(Base):
 		routes.append((r"/example", Example, configuration))
 		return routes
 
-class ExampleTest(BaseTest):
+class ExampleTest(BaseHTTPTest):
 	def get_app(self):
 		routes = Example.get_routes({'configuration': self.configuration})
 		application = tornado.web.Application(routes)
