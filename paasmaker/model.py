@@ -70,22 +70,22 @@ class User(OrmBase, Base):
 	__tablename__ = 'user'
 
 	id = Column(Integer, primary_key=True)
-	username = Column(String, nullable=False, index=True)
+	email = Column(String, nullable=False, index=True)
 	auth_source = Column(String, nullable=False, default="internal")
 	auth_meta = Column(String, nullable=True)
 
 	password = Column(String, nullable=True)
 	name = Column(String, nullable=True)
 
-	def __init__(self, username, auth_source="internal"):
-		self.username = username
+	def __init__(self, email, auth_source="internal"):
+		self.email = email
 		self.auth_source = auth_source
 
 	def __repr__(self):
-		return "<User('%s'@'%s')>" % (self.username, self.auth_source)
+		return "<User('%s'@'%s')>" % (self.email, self.auth_source)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['username', 'auth_source', 'name'])
+		return super(Node, self).flatten(['email', 'auth_source', 'name'])
 
 class Role(OrmBase, Base):
 	__tablename__ = 'role'
