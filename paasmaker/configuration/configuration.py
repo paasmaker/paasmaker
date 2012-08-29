@@ -107,6 +107,7 @@ class Configuration:
 	def get_torando_configuration(self):
 		settings = {}
 		settings['template_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../templates')
+		settings['static_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../static')
 		return settings
 
 class ConfigurationStub(Configuration):

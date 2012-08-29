@@ -29,6 +29,7 @@ routes = []
 #routes.extend(paasmaker.controller.example.Example.get_routes(route_extras))
 #routes.extend(paasmaker.controller.example.ExampleFail.get_routes(route_extras))
 routes.extend(paasmaker.controller.information.Information.get_routes(route_extras))
+routes.extend(paasmaker.controller.index.Index.get_routes(route_extras))
 
 # Set up the application object.
 logging.info("Setting up the application.")
