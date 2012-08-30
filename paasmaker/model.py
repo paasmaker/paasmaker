@@ -5,7 +5,7 @@ import json
 import sqlalchemy
 import datetime
 import paasmaker
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.orm.interfaces import MapperExtension
@@ -186,6 +186,7 @@ class ApplicationVersion(OrmBase, Base):
 	application = relationship("Application", backref=backref('versions', order_by=id))
 	version = Column(String, nullable=False)
 	is_current = Column(Boolean, nullable=False)
+	statistics = Column(Text, nullable=True)
 
 	def __init__(self, application, version):
 		self.application = application
@@ -207,6 +208,7 @@ class ApplicationInstance(OrmBase, Base):
 	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
 	node = relationship("Node", backref=backref('nodes', order_by=id))
 	status = Column(String, nullable=False, index=True)
+	statistics = Column(Text, nullable=True)
 
 	def __init__(self, application_version, node):
 		self.application_version = application_version
@@ -219,6 +221,45 @@ class ApplicationInstance(OrmBase, Base):
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['application_version', 'node', 'status'])
 
+class ApplicationHostname(OrmBase, Base):
+	__tablename__ = 'application_hostname'
+
+	id = Column(Integer, primary_key=True)
+	application_version_id = Column(Integer, ForeignKey('application_version.id'), nullable=False, index=True)
+	application_version = relationship("ApplicationVersion", backref=backref('hostnames', order_by=id))
+
+	hostname = Column(String, nullable=False, index=True)
+	statistics = Column(Text, nullable=True)
+
+	def __init__(self, application_version, hostname):
+		self.application_version = application_version
+		self.hostname = hostname
+	
+	def __repr__(self):
+		return "<ApplicationHostname('%s' -> '%s')>" % (self.hostname, self.application_version)
+
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['application_version', 'hostname'])
+
+class Service(OrmBase, Base):
+	__tablename__ = 'service'
+
+	id = Column(Integer, primary_key=True)
+	application_id = Column(Integer, ForeignKey('application.id'), nullable=False, index=True)
+	application = relationship("Application", backref=backref('services', order_by=id))
+	provider = Column(String, nullable=False, index=True)
+	credentials = Column(Text, nullable=False)
+
+	def __init__(self, application, provider, credentials):
+		self.application = application
+		self.provider = provider
+		self.credentials = credentials
+	
+	def __repr__(self):
+		return "<Service('%s'->'%s')>" % (self.provider, self.application)
+
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['application', 'provider', 'credentials'])
 
 def init_db(engine):
 	Base.metadata.create_all(bind=engine)
