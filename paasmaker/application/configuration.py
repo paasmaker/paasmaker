@@ -21,6 +21,10 @@ class ServiceSection(Section):
 	# Provider name. Required.
 	provider = Value(String())
 
+class PlacementSection(Section):
+	# Optional section. And you can only have one.
+	_meta = { 'repeat': (0, 1), 'args': Value(String()) }
+
 class MainSection(Section):
 	# Hostnames for this application.
 	hostnames = List(String())
@@ -30,6 +34,9 @@ class MainSection(Section):
 
 	# Services information.
 	service = ServiceSection()
+
+	# Placement information.
+	placement = PlacementSection()
 
 class InvalidConfigurationException(Exception):
 	pass
@@ -86,6 +93,10 @@ service "name" {
 	provider_arguments {
 		one = "foo"
 	}
+}
+
+placement "strategy" {
+	argument = "test"
 }
 """
 
