@@ -61,7 +61,8 @@ class MainSection(Section):
 	# The route to this node. None if it should be automatically determined.
 	my_route = Value(String(), default=None)
 	# Authentication token that the nodes use to communicate. Required.
-	auth_token = Value(String())
+	# Should be 20 characters at least.
+	auth_token = Value(Regex(r'[-A-Za-z0-9]{20,}'))
 	# Log directory. Very important - you should set this to a persistent location.
 	log_directory = Value(String(), default="/tmp/paasmaker-logs/")
 	# Server log level.
@@ -190,7 +191,7 @@ heart {
 
 class TestConfiguration(unittest.TestCase):
 	minimum_config = """
-auth_token = 'supersecret'
+auth_token = '5893b415-f166-41a8-b606-7bdb68b88f0b'
 """
 	
 	def setUp(self):
