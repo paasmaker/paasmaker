@@ -38,7 +38,7 @@ routes.extend(paasmaker.controller.index.Index.get_routes(route_extras))
 # Set up the application object.
 logging.info("Setting up the application.")
 application_settings = configuration.get_torando_configuration()
-print str(application_settings)
+#print str(application_settings)
 application = tornado.web.Application(routes, **application_settings)
 
 # Commence the application.
