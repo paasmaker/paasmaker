@@ -125,7 +125,6 @@ class Configuration:
 
 	def get_torando_configuration(self):
 		settings = {}
-		# TODO: Enforce minimum length on this token.
 		# TODO: Use a different value from the auth token?
 		settings['cookie_secret'] = self.get_global('auth_token')
 		settings['template_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../templates')
