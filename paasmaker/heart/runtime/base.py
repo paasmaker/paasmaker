@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
 # Base runtime interface.
-class Runtime():
+class Base():
 	def __init__(self, configuration):
 		self.configuration = configuration
 
