@@ -199,6 +199,15 @@ class ApplicationVersion(OrmBase, Base):
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['application', 'version', 'is_current'])
 
+class ApplicationVersionServices(OrmBase, Base):
+	__tablename__ = 'application_version_service'
+
+	id = Column(Integer, primary_key=True)
+	application_version_id = Column(Integer, ForeignKey('application_version.id'), nullable=False, index=True)
+	application_version = relationship("ApplicationVersion", backref=backref('application_versions', order_by=id))
+	service_id = Column(Integer, ForeignKey('service.id'), nullable=False, index=True)
+	service = relationship("Service", backref=backref('services', order_by=id))
+
 class ApplicationInstance(OrmBase, Base):
 	__tablename__ = 'application_instance'
 
@@ -247,10 +256,12 @@ class Service(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	application_id = Column(Integer, ForeignKey('application.id'), nullable=False, index=True)
 	application = relationship("Application", backref=backref('services', order_by=id))
+	name = Column(String, nullable=False, index=True)
 	provider = Column(String, nullable=False, index=True)
 	credentials = Column(Text, nullable=False)
 
-	def __init__(self, application, provider, credentials):
+	def __init__(self, application, name, provider, credentials):
+		self.name = name
 		self.application = application
 		self.provider = provider
 		self.credentials = credentials
