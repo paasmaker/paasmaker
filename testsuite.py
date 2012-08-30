@@ -1,7 +1,12 @@
 #!/usr/bin/env python
 
+import logging
 import unittest
 import paasmaker
+
+# Suppress log messages.
+# Turning this off temporarily can be helpful for debugging.
+logging.basicConfig(level=logging.CRITICAL)
 
 if __name__ == '__main__':
 	suite = unittest.TestLoader().loadTestsFromModule(paasmaker.util.example)
