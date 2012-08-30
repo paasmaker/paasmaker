@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 
+# General imports.
 import paasmaker
 import unittest
 import os
@@ -9,13 +10,21 @@ import uuid
 import shutil
 import warnings
 
+# For parsing command line options.
+from tornado.options import define, options
+
+# For parsing configuration files.
 import dotconf
 from dotconf.schema.containers import Section, Value, List
 from dotconf.schema.types import Boolean, Integer, Float, String, Regex
 from dotconf.parser import DotconfParser, yacc, ParsingError
 
+# Set up logging for this module.
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
+# Set up command line options.
+define("debug", type=int, default=0, help="Enable Tornado debug mode.")
 
 # The Configuration Schema.
 class PacemakerSection(Section):
@@ -106,8 +115,12 @@ class Configuration:
 
 	def get_torando_configuration(self):
 		settings = {}
+		# TODO: Enforce minimum length on this token.
+		# TODO: Use a different value from the auth token?
+		settings['cookie_secret'] = self.get_global('auth_token')
 		settings['template_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../templates')
 		settings['static_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../static')
+		settings['debug'] = (options.debug == 1)
 		return settings
 
 class ConfigurationStub(Configuration):

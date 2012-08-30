@@ -1,9 +1,14 @@
+{% extends "../layout/main.html" %}
+
+{% block body %}
 <h1>An error occurred</h1>
 
-<p>Response code {{ error_code }}</p>
+<p>HTTP response code {{ error_code }}.</p>
 
+<p>{{ _("Reported error:", "Reported errors:", len(errors)) }}</p>
 <ul>
 	{% for error in errors %}
 		<li>{{ error }}</li>
 	{% end %}
 </ul>
+{% end %}
