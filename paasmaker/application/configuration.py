@@ -86,8 +86,10 @@ class TestApplicationConfiguration(unittest.TestCase):
 runtime "PHP" {
 	version = "5.4"
 }
+
 hostnames = "foo.com", "foo.com.au",
 		"www.foo.com", "www.foo.com.au"
+
 service "name" {
 	provider = "postgres"
 	provider_arguments {
