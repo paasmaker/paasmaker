@@ -55,6 +55,14 @@ class HeartSection(Section):
 	# Languages that this Heart supports.
 	language = HeartLanguageSection()
 
+class RouterSection(Section):
+	# Optional section.
+	_meta = { 'repeat': (0, 1) }
+	# If the router is enabled.
+	enabled = Value(Boolean(), default=False)
+	# The redis connection details.
+	redis = Value(String())
+
 class MainSection(Section):
 	# The HTTP port to listen on.
 	http_port = Value(Integer(), default=8888)
@@ -72,6 +80,7 @@ class MainSection(Section):
 
 	pacemaker = PacemakerSection()
 	heart = HeartSection()
+	router = RouterSection()
 
 class InvalidConfigurationException(Exception):
 	pass
