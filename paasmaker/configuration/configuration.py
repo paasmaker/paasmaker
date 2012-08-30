@@ -168,6 +168,13 @@ heart {
 }
 """
 
+	router_config = """
+router {
+	enabled = yes
+	redis = "%(redis)s
+}
+"""
+
 	def __init__(self, modules=[]):
 		# Choose filenames and set up example configuration.
 		configfile = tempfile.mkstemp()
@@ -184,6 +191,8 @@ heart {
 			configuration += self.pacemaker_config % self.params
 		if 'heart' in modules:
 			configuration += self.heart_config % self.params
+		if 'router' in modules:
+			configuration += self.router_config % self.params
 
 		self.configname = configfile[1]
 		open(self.configname, 'w').write(configuration)
