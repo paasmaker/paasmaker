@@ -66,6 +66,27 @@ class Node(OrmBase, Base):
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['name', 'route', 'uuid', 'state', 'last_heard'])
 
+class NodeRuntime(OrmBase, Base):
+	__tablename__ = 'node_runtime'
+
+	id = Column(Integer, primary_key=True)
+	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
+	node = relationship("Node", backref=backref('runtimes', order_by=id))
+	name = Column(String, nullable=False)
+	version = Column(String, nullable=False)
+	description = Column(String, nullable=True)
+
+	def __init__(self, node, name, version):
+		self.node = node
+		self.name = name
+		self.version = version
+
+	def __repr__(self):
+		return "<NodeRuntime('%s' version '%s' @ '%s')>" % (self.name, self.version, self.node)
+
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['name', 'route', 'uuid', 'state', 'last_heard'])
+
 class User(OrmBase, Base):
 	__tablename__ = 'user'
 
@@ -107,6 +128,7 @@ class RolePermission(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	role_id = Column(Integer, ForeignKey('role.id'), nullable=False, index=True)
+	role = relationship("Role", backref=backref('permissions', order_by=id))
 	name = Column(String, nullable=False, index=True)
 	granted = Column(Boolean, nullable=False, index=True)
 
