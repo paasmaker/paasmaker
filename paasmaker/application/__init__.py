@@ -1,2 +1,2 @@
 
-from configuration import ApplicationConfiguration, InvalidConfigurationException
+from configuration import ApplicationConfiguration

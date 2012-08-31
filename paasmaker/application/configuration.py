@@ -3,7 +3,10 @@
 import unittest
 import colander
 import yaml
+import paasmaker
+from paasmaker.util.configurationhelper import InvalidConfigurationException
 
+# Schema definition.
 class Runtime(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Runtime name",
@@ -39,25 +42,9 @@ class ConfigurationSchema(colander.MappingSchema):
 	runtime = Runtime()
 	placement = Placement(default=Placement.default(), missing=Placement.default())
 
-class InvalidConfigurationException(Exception):
-	pass
-
-class ApplicationConfiguration():
-	def __init__(self, raw):
-		# Convert to Yaml.
-		self.parsed = yaml.load(raw)
-		# Load the schema.
-		schema = ConfigurationSchema()
-		# Parse the structure.
-		self.values = schema.deserialize(self.parsed)
-		# And flatten.
-		self.flat = schema.flatten(self.values)
-
-	def get_flat(self, key):
-		return self.flat[key]
-
-	def get_key(self, key):
-		return self.values[key]
+class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationHelper):
+	def __init__(self):
+		super(ApplicationConfiguration, self).__init__(ConfigurationSchema())
 
 class TestApplicationConfiguration(unittest.TestCase):
 	test_config = """
@@ -91,18 +78,20 @@ placement:
 		pass
 
 	def test_loading(self):
-		config = ApplicationConfiguration(self.test_config)
+		config = ApplicationConfiguration()
+		config.load(self.test_config)
 		self.assertEquals(config.get_flat('runtime.name'), "PHP", "Runtime value is not as expected.")
 		self.assertEquals(config.get_flat('runtime.version'), "5.4", "Runtime version is not as expected.")
-		self.assertEquals(len(config.get_key('hostnames')), 4, "Number of hostnames is not as expected.")
-		self.assertIn("www.foo.com.au", config.get_key('hostnames'), "Hostnames does not contain an expected item.")
-		self.assertEquals(len(config.get_key('services')), 1, "Services array does not contain the expected number of items.")
+		self.assertEquals(len(config['hostnames']), 4, "Number of hostnames is not as expected.")
+		self.assertIn("www.foo.com.au", config['hostnames'], "Hostnames does not contain an expected item.")
+		self.assertEquals(len(config['services']), 1, "Services array does not contain the expected number of items.")
 
 	def test_bad_config(self):
 		try:
-			config = ApplicationConfiguration(self.bad_config)
+			config = ApplicationConfiguration()
+			config.load(self.bad_config)
 			self.assertTrue(False, "Should have thrown an exception.")
-		except colander.Invalid, ex:
+		except InvalidConfigurationException, ex:
 			self.assertTrue(True, "Threw exception correctly.")
 
 if __name__ == '__main__':
