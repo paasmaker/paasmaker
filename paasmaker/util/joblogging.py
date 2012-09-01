@@ -24,7 +24,7 @@ class JobLoggingHandler(logging.Handler):
 				self.close_handler(job_id)
 
 	def get_path(self, job_id):
-		path = os.path.join(self.configuration.get_global('log_directory'), job_id + '.log')
+		path = os.path.join(self.configuration['log_directory'], job_id + '.log')
 		return path
 
 	def get_handler(self, job_id):

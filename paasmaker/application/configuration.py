@@ -37,11 +37,12 @@ class Placement(colander.MappingSchema):
 		return {'strategy': 'default'}
 
 class ConfigurationSchema(colander.MappingSchema):
-	hostnames = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String(), title="Hostname"))
+	hostnames = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()), title="Hostnames")
 	services = Services()
 	runtime = Runtime()
 	placement = Placement(default=Placement.default(), missing=Placement.default())
 
+# TODO: Use a SAFE yaml parser; this YAML is user supplied!
 class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def __init__(self):
 		super(ApplicationConfiguration, self).__init__(ConfigurationSchema())

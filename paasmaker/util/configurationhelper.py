@@ -12,7 +12,7 @@ class NoConfigurationFileException(Exception):
 		self.paths = paths
 
 	def __str__(self):
-		return "NoConfigurationFileException: Can't find a configuration file in %s" % str(self.paths)
+		return "Can't find a configuration file in %s" % str(self.paths)
 
 class InvalidConfigurationException(Exception):
 	def __init__(self, colander_exception, raw_configuration, parsed_configuration):
@@ -21,7 +21,7 @@ class InvalidConfigurationException(Exception):
 		self.colander_exception = colander_exception
 
 	def __str__(self):
-		return "InvalidConfigurationException: %s" % str(self.colander_exception)
+		return "%s" % str(self.colander_exception)
 
 	def report(self):
 		# Generate a nice report of what happened here...
