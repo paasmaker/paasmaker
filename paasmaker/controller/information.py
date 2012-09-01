@@ -1,13 +1,13 @@
 #!/usr/bin/env python
 
-from base import Base
-from base import BaseHTTPTest
+from base import BaseController
+from base import BaseControllerTest
 import unittest
 
 import tornado
 import tornado.testing
 
-class Information(Base):
+class InformationController(BaseController):
 	def get(self):
 		self.add_data('is_heart', self.configuration.is_heart())
 		self.add_data('is_pacemaker', self.configuration.is_pacemaker())
@@ -16,12 +16,12 @@ class Information(Base):
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
-		routes.append((r"/information", Information, configuration))
+		routes.append((r"/information", InformationController, configuration))
 		return routes
 
-class InformationTest(BaseHTTPTest):
+class InformationControllerTest(BaseControllerTest):
 	def get_app(self):
-		routes = Information.get_routes({'configuration': self.configuration})
+		routes = InformationController.get_routes({'configuration': self.configuration})
 		application = tornado.web.Application(routes, **self.configuration.get_torando_configuration())
 		return application
 

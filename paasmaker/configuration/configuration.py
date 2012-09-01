@@ -223,6 +223,12 @@ router:
 		shutil.rmtree(self.params['heart_working_dir'])
 		os.unlink(self.configname)
 
+	def get_torando_configuration(self):
+		settings = super(ConfigurationStub, self).get_torando_configuration()
+		# Force debug mode on.
+		settings['debug'] = True
+		return settings
+
 class TestConfiguration(unittest.TestCase):
 	minimum_config = """
 auth_token: 5893b415-f166-41a8-b606-7bdb68b88f0b

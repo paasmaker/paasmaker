@@ -1,14 +1,14 @@
 #!/usr/bin/env python
 
-from base import Base
-from base import BaseHTTPTest
+from base import BaseController
+from base import BaseControllerTest
 import unittest
 import json
 
 import tornado
 import tornado.testing
 
-class Example(Base):
+class ExampleController(BaseController):
 	def get(self):
 		self.add_data("test", "Hello")
 		self.add_data_template("template", "Template")
@@ -17,10 +17,10 @@ class Example(Base):
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
-		routes.append((r"/example", Example, configuration))
+		routes.append((r"/example", ExampleController, configuration))
 		return routes
 
-class ExampleFail(Base):
+class ExampleFailController(BaseController):
 	def get(self):
 		self.add_data("test", "Hello")
 		self.add_data_template("template", "Template")
@@ -30,13 +30,13 @@ class ExampleFail(Base):
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
-		routes.append((r"/example-fail", ExampleFail, configuration))
+		routes.append((r"/example-fail", ExampleFailController, configuration))
 		return routes
 
-class ExampleTest(BaseHTTPTest):
+class ExampleControllerTest(BaseControllerTest):
 	def get_app(self):
-		routes = Example.get_routes({'configuration': self.configuration})
-		routes.extend(ExampleFail.get_routes({'configuration': self.configuration}))
+		routes = ExampleController.get_routes({'configuration': self.configuration})
+		routes.extend(ExampleFailController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_torando_configuration())
 		return application
 

@@ -1,4 +1,4 @@
 # controller model init
-from example import Example, ExampleFail
-from information import Information
-from index import Index
+from example import ExampleController, ExampleFailController
+from information import InformationController
+from index import IndexController

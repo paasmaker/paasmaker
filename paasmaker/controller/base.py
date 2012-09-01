@@ -8,7 +8,7 @@ import warnings
 import os
 import json
 
-class Base(tornado.web.RequestHandler):
+class BaseController(tornado.web.RequestHandler):
 
 	def initialize(self, configuration):
 		self.configuration = configuration
@@ -56,7 +56,7 @@ class Base(tornado.web.RequestHandler):
 			variables['warnings'] = self.warnings
 			variables.update(self.template)
 			variables.update(kwargs)
-			super(Base, self).render(template, **variables)
+			super(BaseController, self).render(template, **variables)
 
 	def write_error(self, status_code, **kwargs):
 		# Reset the data queued up until now.
@@ -69,11 +69,11 @@ class Base(tornado.web.RequestHandler):
 	def on_finish(self):
 		self.application.log_request(self)
 
-class BaseHTTPTest(tornado.testing.AsyncHTTPTestCase):
+class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 	def setUp(self):
 		self.configuration = paasmaker.configuration.ConfigurationStub()
-		super(BaseHTTPTest, self).setUp()
+		super(BaseControllerTest, self).setUp()
 	def tearDown(self):
 		self.configuration.cleanup()
-		super(BaseHTTPTest, self).tearDown()
+		super(BaseControllerTest, self).tearDown()
 
