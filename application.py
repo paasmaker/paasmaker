@@ -19,12 +19,13 @@ tornado.options.parse_command_line()
 # Load configuration
 logging.info("Loading configuration...")
 configuration = paasmaker.configuration.Configuration()
+configuration.load_from_file(['../paasmaker.yml', '/etc/paasmaker/paasmaker.yml'])
 configuration.dump()
 
 # Reset the log level.
-logging.info("Resetting server log level to %s.", configuration.get_global('server_log_level'))
+logging.info("Resetting server log level to %s.", configuration['server_log_level'])
 logger = logging.getLogger()
-logger.setLevel(getattr(logging, configuration.get_global('server_log_level')))
+logger.setLevel(getattr(logging, configuration['server_log_level']))
 
 # Configure our application and routes.
 logging.info("Building routes.")
@@ -44,7 +45,7 @@ application = tornado.web.Application(routes, **application_settings)
 # Commence the application.
 if __name__ == "__main__":
 	# Set up the application...
-	application.listen(configuration.get_global('http_port'))
-	logging.info("Listening on port %d", configuration.get_global('http_port'))
+	application.listen(configuration['http_port'])
+	logging.info("Listening on port %d", configuration['http_port'])
 	# And start listening.
 	tornado.ioloop.IOLoop.instance().start()

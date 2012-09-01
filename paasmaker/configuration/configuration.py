@@ -68,7 +68,11 @@ class HeartSchema(colander.MappingSchema):
 		title="Working directory",
 		description="Directory where heart working files are stored")
 
-	runtimes = HeartRuntimesSchema(title="Runtimes", description="A list of runtimes offered by this heart")
+	runtimes = HeartRuntimesSchema(
+		title="Runtimes",
+		description="A list of runtimes offered by this heart",
+		missing=[],
+		default=[])
 
 	@staticmethod
 	def default():
