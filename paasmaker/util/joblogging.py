@@ -4,6 +4,8 @@ import unittest
 import logging
 import paasmaker
 import os
+import uuid
+import json
 
 class JobLoggingHandler(logging.Handler):
 	def __init__(self, configuration):
@@ -23,15 +25,11 @@ class JobLoggingHandler(logging.Handler):
 			if record.__dict__.has_key('complete') and record.complete:
 				self.close_handler(job_id)
 
-	def get_path(self, job_id):
-		path = os.path.join(self.configuration['log_directory'], job_id + '.log')
-		return path
-
 	def get_handler(self, job_id):
 		if self.handlers.has_key(job_id):
 			return self.handlers[job_id]
 		else:
-			handler = logging.FileHandler(self.get_path(job_id))
+			handler = logging.FileHandler(self.configuration.get_job_log_path(job_id))
 			handler.setFormatter(self.formatter)
 			self.handlers[job_id] = handler
 			return handler
@@ -47,6 +45,18 @@ class JobLoggingHandler(logging.Handler):
 		# adjustable per job?
 		joblogger.setLevel(logging.DEBUG)
 		joblogger.addHandler(JobLoggingHandler(configuration))
+
+class JobLoggerAdapter(logging.LoggerAdapter):
+	def __init__(self, logger, job_id, configuration):
+		self.job_id = job_id
+		self.configuration = configuration
+		super(JobLoggerAdapter, self).__init__(logger, {'job':job_id})
+
+	def complete(self, success, summary):
+		# Job should now be complete...
+		# This will trigger closing the file.
+		flat_summary = {'success': success, 'summary': summary}
+		self.logger.info(json.dumps(flat_summary), extra={'job':self.job_id, 'complete':True})
 
 class JobLoggingTest(unittest.TestCase):
 	def setUp(self):
@@ -68,16 +78,27 @@ class JobLoggingTest(unittest.TestCase):
 
 	def test_log_jobs(self):
 		# Log, then check it exists in the log file.
-		self.logger.debug('Test 1', extra={'job':"1"})
-		self.logger.debug('Test 2', extra={'job':"2"})
-		job1path = self.handler.get_path("1")
-		job2path = self.handler.get_path("2")
+		id1 = str(uuid.uuid4())
+		id2 = str(uuid.uuid4())
+
+		job1logger = self.configuration.get_job_logger(id1)
+		job1logger.debug('Test 1')
+
+		job2logger = self.configuration.get_job_logger(id2)
+		job2logger.debug('Test 2')
+
+		job1path = self.configuration.get_job_log_path(id1)
+		job2path = self.configuration.get_job_log_path(id2)
+
 		self.assertTrue(os.path.exists(job1path), "Log file for job 1 does not exist.")
 		self.assertTrue(os.path.exists(job2path), "Log file for job 2 does not exist.")
+
 		log1content = open(job1path, 'r').read()
 		log2content = open(job2path, 'r').read()
+
 		self.assertEquals(len(open(job1path, 'r').read().split('\n')), 2)
 		self.assertEquals(len(open(job2path, 'r').read().split('\n')), 2)
+
 		self.assertIn('Test 1', log1content)
 		self.assertIn('Test 2', log2content)
 
@@ -88,8 +109,20 @@ class JobLoggingTest(unittest.TestCase):
 
 	def test_complete_job(self):
 		# Mark a job as completed.
-		self.logger.debug('Test', extra={'job':"1", 'complete':True})
-		self.assertEquals(len(self.handler.handlers.keys()), 0)
+		id1 = str(uuid.uuid4())
+		job1logger = self.configuration.get_job_logger(id1)
+		job1logger.debug('Test')
+		job1logger.complete(True, "Success")
+		self.assertEquals(len(self.handler.handlers.keys()), 0, "Handler was not closed and freed.")
+
+		# Now check that the summary was written and parseable.
+		# TODO: Find nicer way to organise these.
+		job1path = self.configuration.get_job_log_path(id1)
+		contents = open(job1path, 'r').read()
+		self.assertIn('Success', contents)
+		self.assertIn('true', contents)
+		self.assertIn('{', contents)
+		self.assertIn('}', contents)
 
 if __name__ == '__main__':
 	unittest.main()

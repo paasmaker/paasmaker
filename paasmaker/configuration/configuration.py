@@ -146,6 +146,13 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		settings['debug'] = (options.debug == 1)
 		return settings
 
+	def get_job_logger(self, job_id):
+		return paasmaker.util.joblogging.JobLoggerAdapter(logging.getLogger('job'), job_id, self)
+	def get_job_log_path(self, job_id):
+		# TODO: Split path into sub directories.
+		path = os.path.join(self['log_directory'], job_id + '.log')
+		return path
+
 class ConfigurationStub(Configuration):
 	"""A test version of the configuration object, for unit tests."""
 	default_config = """
