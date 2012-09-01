@@ -2,11 +2,13 @@
 
 from base import BaseController
 from base import BaseControllerTest
+from base import BaseWebsocketHandler
 import unittest
 import json
 
 import tornado
 import tornado.testing
+from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 class ExampleController(BaseController):
 	def get(self):
@@ -33,10 +35,41 @@ class ExampleFailController(BaseController):
 		routes.append((r"/example-fail", ExampleFailController, configuration))
 		return routes
 
+class ExampleWebsocketHandler(BaseWebsocketHandler):
+	events = []
+
+	def open(self):
+		self.events.append('Opened')
+
+	def on_message(self, message):
+		# CAUTION: message is not a string! You will need to explicitly str() it
+		# if you want to JSON decode it.
+		self.write_message(u"You said: " + message)
+		self.events.append(message)
+
+	def on_close(self):
+		self.events.append('Closed')
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/example-websocket", ExampleWebsocketHandler, configuration))
+		return routes
+
+class ExampleWebsocketHandlerTestClient(TornadoWebSocketClient):
+	events = []
+	def opened(self):
+		self.events.append('Opened')
+	def closed(self, code, reason):
+		self.events.append('Closed: %d %s' % (code, reason))
+	def received_message(self, m):
+		self.events.append('Got message: %s' % m)
+
 class ExampleControllerTest(BaseControllerTest):
 	def get_app(self):
 		routes = ExampleController.get_routes({'configuration': self.configuration})
 		routes.extend(ExampleFailController.get_routes({'configuration': self.configuration}))
+		routes.extend(ExampleWebsocketHandler.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_torando_configuration())
 		return application
 
@@ -69,7 +102,25 @@ class ExampleControllerTest(BaseControllerTest):
 		self.assertTrue(len(decoded['errors']) > 0, 'No errors reported.')
 		self.assertTrue(decoded.has_key('warnings'), 'Missing root warnings key.')
 		self.assertFalse(decoded['data'].has_key('test'), 'Missing test data key.')
-		self.assertFalse(decoded['data'].has_key('template'), 'Includes template data key.')		
+		self.assertFalse(decoded['data'].has_key('template'), 'Includes template data key.')
+
+	def test_example_websocket(self):
+		client = ExampleWebsocketHandlerTestClient("ws://localhost:%d/example-websocket" % self.get_http_port(), io_loop=self.io_loop)
+		client.connect()
+		self.short_wait_hack()
+		self.wait() # Waiting for everything to settle.
+
+		# Send it a short message.
+		client.send('test')
+		self.short_wait_hack()
+		self.wait() # Wait for processing of that message.
+
+		client.close()
+		self.short_wait_hack()
+		self.wait() # Wait for closing.
+
+		self.assertEquals(len(client.events), 3, "Missing events.")
+		
 
 if __name__ == '__main__':
 	tornado.testing.main()

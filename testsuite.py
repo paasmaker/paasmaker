@@ -18,4 +18,5 @@ if __name__ == '__main__':
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.joblogging))
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.application.configuration))
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.configurationhelper))
+	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.controller.log))
 	unittest.TextTestRunner(verbosity=2).run(suite)

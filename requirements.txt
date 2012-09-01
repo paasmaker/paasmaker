@@ -2,3 +2,4 @@ tornado
 sqlalchemy
 pyyaml
 colander
+ws4py

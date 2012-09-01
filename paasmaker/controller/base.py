@@ -1,15 +1,19 @@
 #!/usr/bin/env python
 
 import tornado.web
+import tornado.websocket
 import logging
 import paasmaker
 import tornado.testing
 import warnings
 import os
 import json
+import time
 
 class BaseController(tornado.web.RequestHandler):
-
+	"""
+	Base class for all controllers in the system.
+	"""
 	def initialize(self, configuration):
 		self.configuration = configuration
 		self.data = {}
@@ -69,6 +73,16 @@ class BaseController(tornado.web.RequestHandler):
 	def on_finish(self):
 		self.application.log_request(self)
 
+class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
+	"""
+	Base class for WebsocketHandlers.
+	"""
+	def initialize(self, configuration):
+		self.configuration = configuration
+
+	def encode_message(self, message):
+		return json.dumps(message, cls=paasmaker.util.jsonencoder.JsonEncoder)
+
 class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 	def setUp(self):
 		self.configuration = paasmaker.configuration.ConfigurationStub()
@@ -76,4 +90,7 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 	def tearDown(self):
 		self.configuration.cleanup()
 		super(BaseControllerTest, self).tearDown()
+
+	def short_wait_hack(self):
+		self.io_loop.add_timeout(time.time() + 0.1, self.stop)
 
