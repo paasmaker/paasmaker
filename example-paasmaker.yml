@@ -2,4 +2,5 @@ global:
   http_port: 8888
   my_route: None
 pacemaker:
+  enabled: true
   dsn: sqlite3:///tmp/paasmaker.db 
