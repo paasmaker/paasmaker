@@ -15,7 +15,7 @@ import colander
 # Types of API requests.
 # 1. Node->Node. (ie, nodes talking to each other)
 # 2. User->Pacemaker (cookie auth) (ie, AJAX browser callback)
-# 3. User->Pacemaker (token auth) (ie, command line tool)
+# 3. User->Pacemaker (token auth) (ie, command line tool or other API request)
 
 # Structure of API requests.
 # auth: { method: 'node|cookie|token', value: 'token|cookie' }
