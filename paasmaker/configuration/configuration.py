@@ -171,6 +171,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		settings['template_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../templates')
 		settings['static_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../static')
 		settings['debug'] = (options.debug == 1)
+		settings['xheaders'] = True
 		return settings
 
 	def get_job_logger(self, job_id):

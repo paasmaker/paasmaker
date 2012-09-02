@@ -27,6 +27,12 @@ class BaseController(tornado.web.RequestHandler):
 	def prepare(self):
 		self._set_format(self.get_argument('format', 'html'))
 
+		# If the post body is JSON, parse it and put it into the arguments.
+		if self.request.method == 'POST' and self.request.body[0] == '{' and self.request.body[-1] == '}':
+			# TODO: Test that it meets a schema.
+			parsed = json.loads(self.request.body)
+			self.request.arguments.update(parsed)
+
 	def add_data(self, key, name):
 		self.data[key] = name
 
