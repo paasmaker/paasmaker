@@ -52,12 +52,19 @@ class JobLoggingPubHandler(logging.Handler):
 		# This handler only logs if there is a job id.
 		if record.__dict__.has_key('job'):
 			job_id = record.job
+			job_topic = self.configuration.get_job_pub_topic(job_id)
+			# Don't proceed any further if there is no one listening.
+			# We're trying to avoid the self.format() call, as that can
+			# be expensive.
+			# TODO: this is a bit hacky.
+			job_topic_key = ".".join(job_topic)
+			if pub.topicsMap.has_key(job_topic_key) and len(pub.topicsMap[job_topic_key]._Topic__listeners):
+				return
 			# Publish the message to interested parties.
-			pub.sendMessage(self.configuration.get_job_pub_topic(job_id), message=self.format(record), job_id=job_id)
+			pub.sendMessage(job_topic, message=self.format(record), job_id=job_id)
 			# If it's complete, unsubscribe all.
 			if record.__dict__.has_key('complete') and record.complete:
-				# TODO: Do this.
-				pass
+				pub.delTopic(job_topic)
 
 class JobLoggerAdapter(logging.LoggerAdapter):
 	def __init__(self, logger, job_id, configuration):

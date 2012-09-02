@@ -153,6 +153,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		path = os.path.join(self['log_directory'], job_id + '.log')
 		return path
 	def get_job_pub_topic(self, job_id):
+		# Why add the 'j' to the job name? It seems a topic name
+		# can't start with a number.
 		return ('job', 'j' + job_id) #"job.j%s" % (job_id.replace('-', ''))
 
 class ConfigurationStub(Configuration):

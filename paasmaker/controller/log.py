@@ -43,8 +43,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 				from_pos = parsed['from_pos']
 			self.send_job_log(parsed['id'], from_pos)
 			# Step 2: subscribe for future updates.
-			# TODO: Do this.
-			pub.subscribe( self.pub_msg_rcv, self.configuration.get_job_pub_topic(parsed['id']))
+			pub.subscribe(self.pub_msg_rcv, self.configuration.get_job_pub_topic(parsed['id']))
 
 	def on_close(self):
 		pass
@@ -152,13 +151,15 @@ class LogStreamHandlerTest(BaseControllerTest):
 		self.assertEquals(number_lines, len(client.lines), "Didn't download the expected number of lines.")
 
 		# Send another log entry.
+		# This one should come back automatically because the websocket is
+		# subscribed.
 		log.info("Additional log entry.")
 
 		self.short_wait_hack()
 		self.wait() # Wait for server to send us the logs.
 
-		print str(client.lines)
-		print str(client.server_pos)
+		#print str(client.lines)
+		#print str(client.server_pos)
 		
 		client.subscribe(job_id, position=client.server_pos)
 		self.short_wait_hack()
