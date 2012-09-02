@@ -10,6 +10,7 @@ import logging
 import tempfile
 import uuid
 import shutil
+import hashlib
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -177,13 +178,22 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def get_job_logger(self, job_id):
 		return paasmaker.util.joblogging.JobLoggerAdapter(logging.getLogger('job'), job_id, self)
 	def get_job_log_path(self, job_id):
-		# TODO: Split path into sub directories.
-		path = os.path.join(self['log_directory'], job_id + '.log')
+		container = os.path.join(self['log_directory'], 'job')
+		checksum = hashlib.md5()
+		checksum.update(job_id)
+		checksum = checksum.hexdigest()
+		container = os.path.join(container, checksum[0:4])
+		if not os.path.exists(container):
+			os.makedirs(container)
+		path = os.path.join(container, checksum + '.log')
 		return path
 	def get_job_pub_topic(self, job_id):
 		# Why add the 'j' to the job name? It seems a topic name
 		# can't start with a number.
 		return ('job', 'message', 'j' + job_id)
+	def job_exists_locally(self, job_id):
+		path = self.get_job_log_path(job_id)
+		return os.path.exists(path)
 
 class ConfigurationStub(Configuration):
 	"""A test version of the configuration object, for unit tests."""

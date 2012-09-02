@@ -146,7 +146,7 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 			sequence = -1
 			if parsed.has_key('sequence'):
 				sequence = parsed['sequence']
-			self.send_error(str(ex), sequence)
+			self.send_error(str(ex), message)
 			return None
 
 		return result
@@ -155,21 +155,21 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 		try:
 			result = schema.deserialize(message['data'])
 		except colander.Invalid, ex:
-			self.send_error(str(ex), message['sequence'])
+			self.send_error(str(ex), message)
 			return None
 
 		return result
 
-	def send_error(self, error, sequence):
-		self.write_message(self.encode_message(self.make_error(error, sequence)))
+	def send_error(self, error, message):
+		self.write_message(self.encode_message(self.make_error(error, message)))
 
 	def send_success(self, typ, data):
 		self.write_message(self.encode_message(self.make_success(typ, data)))
 
-	def make_error(self, error, sequence):
+	def make_error(self, error, message):
 		message = {
 			'type': 'error',
-			'data': { 'error': error, 'sequence': sequence }
+			'data': { 'error': error, 'sequence': message['sequence'] }
 		}
 		return message
 

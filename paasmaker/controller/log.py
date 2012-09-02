@@ -58,13 +58,19 @@ class LogStreamHandler(BaseWebsocketHandler):
 		# Must match the subscribe schema.
 		subscribe = self.validate_data(message, LogSubscribeSchema())
 		if subscribe:
-			# TODO: Check if we have this job.
-			# TODO: If we're a pacemaker, we can ask other nodes for this job.
+			if self.configuration.job_exists_locally(subscribe['job_id']):
+				# Step 1: Feed since when they last saw.
+				self.send_job_log(subscribe['job_id'], subscribe['position'])
+				# Step 2: subscribe for future updates.
+				pub.subscribe(self.job_message_update, self.configuration.get_job_pub_topic(subscribe['job_id']))
 
-			# Step 1: Feed since when they last saw.
-			self.send_job_log(subscribe['job_id'], subscribe['position'])
-			# Step 2: subscribe for future updates.
-			pub.subscribe(self.job_message_update, self.configuration.get_job_pub_topic(subscribe['job_id']))
+			elif self.configuration.is_pacemaker():
+				# Find which node the job belongs to.
+				# And then get that to stream the logs to us.
+				# TODO: Implement!
+				pass
+			else:
+				self.send_error('Unable to find job %s' % subscribe['job_id'], message)
 
 	def handle_unsubscribe(self, message):
 		# Must match the unsubscribe schema.
