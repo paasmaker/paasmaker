@@ -22,6 +22,7 @@ class BaseController(tornado.web.RequestHandler):
 		self.warnings = []
 		self.format = 'html'
 		self.root_data = {}
+		self.session = None
 
 	def prepare(self):
 		self._set_format(self.get_argument('format', 'html'))
@@ -37,6 +38,12 @@ class BaseController(tornado.web.RequestHandler):
 
 	def add_warning(self, warning):
 		self.warnings.append(warning)
+
+	def db(self):
+		if self.session:
+			return self.session
+		self.session = self.configuration.get_database_session()
+		return self.session
 
 	def _set_format(self, format):
 		if format != 'json' and format != 'html':
