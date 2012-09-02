@@ -29,7 +29,7 @@ configuration.dump()
 
 # Initialise the system.
 # Set up the job logger.
-paasmaker.util.joblogging.JobLoggingHandler.setup_joblogger(configuration)
+paasmaker.util.joblogging.JobLoggerAdapter.setup_joblogger(configuration)
 
 # Configure our application and routes.
 logging.info("Building routes.")

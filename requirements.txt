@@ -3,3 +3,4 @@ sqlalchemy
 pyyaml
 colander
 ws4py
+pypubsub

@@ -7,12 +7,16 @@ import os
 import uuid
 import json
 
-class JobLoggingHandler(logging.Handler):
+from pubsub import pub
+
+JOB_LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
+
+class JobLoggingFileHandler(logging.Handler):
 	def __init__(self, configuration):
 		self.configuration = configuration
 		self.handlers = {}
 		logging.Handler.__init__(self)
-		self.formatter = logging.Formatter('%(asctime)s %(levelname)s %(message)s')
+		self.formatter = logging.Formatter(JOB_LOG_FORMAT)
 
 	def emit(self, record):
 		# This handler only logs if there is a job id.
@@ -38,13 +42,22 @@ class JobLoggingHandler(logging.Handler):
 		if self.handlers.has_key(job_id):
 			del self.handlers[job_id]
 
-	@staticmethod
-	def setup_joblogger(configuration):
-		joblogger = logging.getLogger('job')
-		# TODO: This level should be adjustable, but how to make it
-		# adjustable per job?
-		joblogger.setLevel(logging.DEBUG)
-		joblogger.addHandler(JobLoggingHandler(configuration))
+class JobLoggingPubHandler(logging.Handler):
+	def __init__(self, configuration):
+		self.configuration = configuration
+		logging.Handler.__init__(self)
+		self.setFormatter(logging.Formatter(JOB_LOG_FORMAT))
+
+	def emit(self, record):
+		# This handler only logs if there is a job id.
+		if record.__dict__.has_key('job'):
+			job_id = record.job
+			# Publish the message to interested parties.
+			pub.sendMessage(self.configuration.get_job_pub_topic(job_id), message=self.format(record), job_id=job_id)
+			# If it's complete, unsubscribe all.
+			if record.__dict__.has_key('complete') and record.complete:
+				# TODO: Do this.
+				pass
 
 class JobLoggerAdapter(logging.LoggerAdapter):
 	def __init__(self, logger, job_id, configuration):
@@ -58,6 +71,15 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 		flat_summary = {'success': success, 'summary': summary}
 		self.logger.info(json.dumps(flat_summary), extra={'job':self.job_id, 'complete':True})
 
+	@staticmethod
+	def setup_joblogger(configuration):
+		joblogger = logging.getLogger('job')
+		# TODO: This level should be adjustable, but how to make it
+		# adjustable per job?
+		joblogger.setLevel(logging.DEBUG)
+		joblogger.addHandler(JobLoggingFileHandler(configuration))
+		joblogger.addHandler(JobLoggingPubHandler(configuration))
+
 class JobLoggingTest(unittest.TestCase):
 	def setUp(self):
 		self.configuration = paasmaker.configuration.ConfigurationStub()
@@ -68,7 +90,7 @@ class JobLoggingTest(unittest.TestCase):
 		# Clean out all handlers. Otherwise multiple tests fail.
 		self.logger.handlers = []
 
-		JobLoggingHandler.setup_joblogger(self.configuration)
+		JobLoggerAdapter.setup_joblogger(self.configuration)
 
 		# Hack to fetch the handler.
 		self.handler = self.logger.handlers[0]

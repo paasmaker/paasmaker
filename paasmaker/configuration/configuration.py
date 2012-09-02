@@ -152,6 +152,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# TODO: Split path into sub directories.
 		path = os.path.join(self['log_directory'], job_id + '.log')
 		return path
+	def get_job_pub_topic(self, job_id):
+		return ('job', 'j' + job_id) #"job.j%s" % (job_id.replace('-', ''))
 
 class ConfigurationStub(Configuration):
 	"""A test version of the configuration object, for unit tests."""
