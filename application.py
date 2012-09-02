@@ -9,7 +9,6 @@ import tornado.options
 import paasmaker
 
 # Logging setup.
-# TODO: Allow this to be controlled by command line / configuration.
 import logging
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
@@ -28,13 +27,28 @@ logger.setLevel(getattr(logging, configuration['server_log_level']))
 configuration.dump()
 
 # Initialise the system.
+logging.info("Initialising system.")
+route_extras = dict(configuration=configuration)
+routes = []
+
 # Set up the job logger.
 paasmaker.util.joblogging.JobLoggerAdapter.setup_joblogger(configuration)
 
-# Configure our application and routes.
-logging.info("Building routes.")
-route_extras = dict(configuration=configuration)
-routes = []
+if configuration.is_pacemaker():
+	# Pacemaker setup.
+	# Connect to the database.
+	logging.info("Database connection and table creation...")
+	configuration.setup_database()
+
+if configuration.is_heart():
+	# Heart setup.
+	pass
+
+if configuration.is_router():
+	# Router setup.
+	# Connect to redis.
+	pass
+
 #routes.extend(paasmaker.controller.example.ExampleController.get_routes(route_extras))
 #routes.extend(paasmaker.controller.example.ExampleFailController.get_routes(route_extras))
 routes.extend(paasmaker.controller.example.ExampleWebsocketHandler.get_routes(route_extras))

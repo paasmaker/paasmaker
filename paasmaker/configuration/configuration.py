@@ -11,6 +11,8 @@ import tempfile
 import uuid
 import shutil
 
+from sqlalchemy import create_engine
+from sqlalchemy.orm import sessionmaker
 import colander
 
 # For parsing command line options.
@@ -126,6 +128,9 @@ class ConfigurationSchema(colander.MappingSchema):
 	heart = HeartSchema(defalt=HeartSchema.default(),missing=HeartSchema.default())
 	router = RouterSchema(default=RouterSchema.default(),missing=RouterSchema.default())
 
+class ImNotA(Exception):
+	pass
+
 class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def __init__(self):
 		super(Configuration, self).__init__(ConfigurationSchema())
@@ -136,6 +141,28 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		return self.get_flat('heart.enabled')
 	def is_router(self):
 		return self.get_flat('router.enabled')
+
+	def setup_database(self):
+		if not self.is_pacemaker():
+			raise ImNotA("I'm not a pacemaker.")
+
+		# Connect.
+		self.engine = create_engine(self.get_flat('pacemaker.dsn'))
+		self.session = sessionmaker(bind=self.engine)
+
+		# Create the tables.
+		paasmaker.model.Base.metadata.bind = self.engine
+		paasmaker.model.Base.metadata.create_all()
+
+	def get_database_session(self):
+		"""
+		Get a database session object. Each requesthandler should fetch
+		one of these when it needs to, but hang onto it - repeated
+		calls will fetch new sessions every time.
+		"""
+		if not self.is_pacemaker():
+			raise ImNotA("I'm not a pacemaker.")
+		return self.session()
 
 	def get_torando_configuration(self):
 		settings = {}
@@ -155,7 +182,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def get_job_pub_topic(self, job_id):
 		# Why add the 'j' to the job name? It seems a topic name
 		# can't start with a number.
-		return ('job', 'j' + job_id) #"job.j%s" % (job_id.replace('-', ''))
+		return ('job', 'message', 'j' + job_id)
 
 class ConfigurationStub(Configuration):
 	"""A test version of the configuration object, for unit tests."""
