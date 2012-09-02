@@ -78,8 +78,8 @@ class LogStreamHandlerTestClient(TornadoWebSocketClient):
 		#print "Client: Opened!"
 		pass
 
-	def subscribe(self, job_id):
-		message = { 'request': 'subscribe', 'id': job_id }
+	def subscribe(self, job_id, position=0):
+		message = { 'request': 'subscribe', 'id': job_id, 'from_pos': position }
 		self.send(json.dumps(message))
 
 	def closed(self, code, reason=None):
@@ -140,14 +140,23 @@ class LogStreamHandlerTest(BaseControllerTest):
 		self.short_wait_hack()
 		self.wait() # Wait for server to send us the logs.
 
+		self.assertEquals(number_lines, len(client.lines), "Didn't download the expected number of lines.")
+
+		# Send another log entry.
+		log.info("Additional log entry.")
+		
+		client.subscribe(job_id, position=client.server_pos)
+		self.short_wait_hack()
+		self.wait() # Wait for server to send us the logs.
+
+		self.assertEquals(number_lines + 1, len(client.lines), "Didn't download the expected number of lines.")
+
 		client.close()
 		self.short_wait_hack()
 		self.wait() # Wait for closing.
 
 		#print str(client.lines)
 		#print str(client.server_pos)
-
-		self.assertEquals(number_lines, len(client.lines), "Didn't download the expected number of lines.")
 
 if __name__ == '__main__':
 	tornado.testing.main()
