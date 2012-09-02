@@ -10,6 +10,29 @@ import os
 import json
 import time
 
+import colander
+
+# Types of API requests.
+# 1. Node->Node. (ie, nodes talking to each other)
+# 2. User->Pacemaker (cookie auth) (ie, AJAX browser callback)
+# 3. User->Pacemaker (token auth) (ie, command line tool)
+
+# Structure of API requests.
+# auth: { method: 'node|cookie|token', value: 'token|cookie' }
+# data: { ... keys ... }
+
+class APIAuthRequestSchema(colander.MappingSchema):
+	method = colander.SchemaNode(colander.String(),
+		title="Method of authentication",
+		description="One of node, cookie, or token")
+	value = colander.SchemaNode(colander.String(),
+		title="Authentication value",
+		description="The authentication value")
+
+class APIRequestSchema(colander.MappingSchema):
+	auth = APIAuthRequestSchema()
+	data = colander.SchemaNode(colander.Mapping(unknown='preserve'))
+
 class BaseController(tornado.web.RequestHandler):
 	"""
 	Base class for all controllers in the system.
@@ -23,15 +46,22 @@ class BaseController(tornado.web.RequestHandler):
 		self.format = 'html'
 		self.root_data = {}
 		self.session = None
+		self.auth = {}
 
 	def prepare(self):
 		self._set_format(self.get_argument('format', 'html'))
 
 		# If the post body is JSON, parse it and put it into the arguments.
 		if self.request.method == 'POST' and self.request.body[0] == '{' and self.request.body[-1] == '}':
-			# TODO: Test that it meets a schema.
 			parsed = json.loads(self.request.body)
-			self.request.arguments.update(parsed)
+			schema = APIRequestSchema()
+			try:
+				result = schema.deserialize(parsed)
+			except colander.Invalid, ex:
+				self.send_error(400, exc_info=ex)
+				return
+			self.auth = result['auth']
+			self.request.arguments.update(result['data'])
 
 	def add_data(self, key, name):
 		self.data[key] = name
