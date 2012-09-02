@@ -52,6 +52,8 @@ class BaseController(tornado.web.RequestHandler):
 		self._set_format(self.get_argument('format', 'html'))
 
 		# If the post body is JSON, parse it and put it into the arguments.
+		# TODO: This JSON detection is lightweight, but there might be corner
+		# cases in it too...
 		if self.request.method == 'POST' and self.request.body[0] == '{' and self.request.body[-1] == '}':
 			parsed = json.loads(self.request.body)
 			schema = APIRequestSchema()
@@ -116,12 +118,67 @@ class BaseController(tornado.web.RequestHandler):
 	def on_finish(self):
 		self.application.log_request(self)
 
+# A schema for websocket incoming messages, to keep them consistent.
+class WebsocketMessageSchema(colander.MappingSchema):
+	request = colander.SchemaNode(colander.String(),
+		title="Request",
+		description="What is intended from this request")
+	sequence = colander.SchemaNode(colander.Integer(),
+		title="Sequence",
+		description="The sequence number for this request. Errors are returned matching this sequence, so you can tell which request they originated from. Optional",
+		default=0,
+		missing=0)
+	data = colander.SchemaNode(colander.Mapping(unknown='preserve'))
+
 class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 	"""
 	Base class for WebsocketHandlers.
 	"""
 	def initialize(self, configuration):
 		self.configuration = configuration
+
+	def parse_message(self, message):
+		parsed = json.loads(message)
+		schema = WebsocketMessageSchema()
+		try:
+			result = schema.deserialize(parsed)
+		except colander.Invalid, ex:
+			sequence = -1
+			if parsed.has_key('sequence'):
+				sequence = parsed['sequence']
+			self.send_error(str(ex), sequence)
+			return None
+
+		return result
+
+	def validate_data(self, message, schema):
+		try:
+			result = schema.deserialize(message['data'])
+		except colander.Invalid, ex:
+			self.send_error(str(ex), message['sequence'])
+			return None
+
+		return result
+
+	def send_error(self, error, sequence):
+		self.write_message(self.encode_message(self.make_error(error, sequence)))
+
+	def send_success(self, typ, data):
+		self.write_message(self.encode_message(self.make_success(typ, data)))
+
+	def make_error(self, error, sequence):
+		message = {
+			'type': 'error',
+			'data': { 'error': error, 'sequence': sequence }
+		}
+		return message
+
+	def make_success(self, typ, data):
+		message = {
+			'type': typ,
+			'data': data
+		}
+		return message
 
 	def encode_message(self, message):
 		return json.dumps(message, cls=paasmaker.util.jsonencoder.JsonEncoder)

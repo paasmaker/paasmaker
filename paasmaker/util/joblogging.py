@@ -58,10 +58,13 @@ class JobLoggingPubHandler(logging.Handler):
 			# be expensive.
 			# TODO: this is a bit hacky.
 			job_topic_key = ".".join(job_topic)
-			if pub.topicsMap.has_key(job_topic_key) and len(pub.topicsMap[job_topic_key]._Topic__listeners):
+			if pub.topicsMap.has_key(job_topic_key) and len(pub.topicsMap[job_topic_key]._Topic__listeners) == 0:
 				return
+			# Render the message. Note we add a newline, because the file
+			# handler also does this... so if we didn't, we'd be out by one-byte-per-entry.
+			message = self.format(record) + "\n"
 			# Publish the message to interested parties.
-			pub.sendMessage(job_topic, message=self.format(record), job_id=job_id)
+			pub.sendMessage(job_topic, message=message, job_id=job_id)
 			# If it's complete, unsubscribe all.
 			if record.__dict__.has_key('complete') and record.complete:
 				pub.delTopic(job_topic)

@@ -11,6 +11,8 @@ import json
 import uuid
 import logging
 
+import colander
+
 from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 from pubsub import pub
@@ -19,6 +21,19 @@ from pubsub import pub
 # TODO: Figure out a way to configure this. If we need to...
 BLOCK_READ = 8192
 
+# A schema for the type of message that this handler will accept.
+class LogSubscribeSchema(colander.MappingSchema):
+	position = colander.SchemaNode(colander.Integer(),
+		title="Position to start",
+		description="The position to start the subscription from. All data since this position is sent upon connection")
+	job_id = colander.SchemaNode(colander.String(),
+		title="Job ID",
+		description="The ID of the job to work on")
+class LogUnSubscribeSchema(colander.MappingSchema):
+	job_id = colander.SchemaNode(colander.String(),
+		title="Job ID",
+		description="The ID of the job to work on")
+
 class LogStreamHandler(BaseWebsocketHandler):
 	last_positions = {}
 
@@ -26,48 +41,59 @@ class LogStreamHandler(BaseWebsocketHandler):
 		#print "Server: opened"
 		pass
 
-	def pub_msg_rcv(self, message=None, job_id=None):
-		#print "Pub message!"
-		#print message
-		#print job_id
-		self.write_message(self.make_message(job_id, [message], 1000))
+	def job_message_update(self, message=None, job_id=None):
+		self.last_positions[job_id] += len(message)
+		self.send_success('lines', self.make_data(job_id, [message], self.last_positions[job_id]))
 
 	def on_message(self, message):
 		# Message should be JSON.
-		parsed = json.loads(message)
-		# TODO: Enforce the message matching a schema.
-		if parsed['request'] == 'subscribe':
+		parsed = self.parse_message(message)
+		if parsed:
+			if parsed['request'] == 'subscribe':
+				self.handle_subscribe(parsed)
+			if parsed['request'] == 'unsubscribe':
+				self.handle_unsubscribe(parsed)
+
+	def handle_subscribe(self, message):
+		# Must match the subscribe schema.
+		subscribe = self.validate_data(message, LogSubscribeSchema())
+		if subscribe:
+			# TODO: Check if we have this job.
+			# TODO: If we're a pacemaker, we can ask other nodes for this job.
+
 			# Step 1: Feed since when they last saw.
-			from_pos = 0
-			if parsed.has_key('from_pos'):
-				from_pos = parsed['from_pos']
-			self.send_job_log(parsed['id'], from_pos)
+			self.send_job_log(subscribe['job_id'], subscribe['position'])
 			# Step 2: subscribe for future updates.
-			pub.subscribe(self.pub_msg_rcv, self.configuration.get_job_pub_topic(parsed['id']))
+			pub.subscribe(self.job_message_update, self.configuration.get_job_pub_topic(subscribe['job_id']))
+
+	def handle_unsubscribe(self, message):
+		# Must match the unsubscribe schema.
+		unsubscribe = self.validate_data(message, LogUnSubscribeSchema())
+		if unsubscribe:
+			pub.unsubscribe(self.job_message_update, self.configuration.get_job_pub_topic(unsubscribe['job_id']))
 
 	def on_close(self):
 		pass
 
-	def make_message(self, job_id, log_lines, position):
+	def make_data(self, job_id, log_lines, position):
 		message = {
-			'type': 'lines',
-			'id': job_id,
+			'job_id': job_id,
 			'lines': log_lines,
-			'position': position,
-			'test': "Foo\nBar"
+			'position': position
 		}
-		return self.encode_message(message)
+		return message
 
 	def send_job_log(self, job_id, last_position=0):
 		log_file = self.configuration.get_job_log_path(job_id)
+
 		fp = open(log_file, 'rb')
 		if last_position > 0:
 			fp.seek(last_position)
 		lines = ['Dummy line']
 		while len(lines) > 0:
 			lines = fp.readlines(BLOCK_READ)
-			message = self.make_message(job_id, lines, fp.tell())
-			self.write_message(message)
+			self.send_success('lines', self.make_data(job_id, lines, fp.tell()))
+
 		self.last_positions[job_id] = fp.tell()
 		fp.close()
 
@@ -87,7 +113,13 @@ class LogStreamHandlerTestClient(TornadoWebSocketClient):
 		pass
 
 	def subscribe(self, job_id, position=0):
-		message = { 'request': 'subscribe', 'id': job_id, 'from_pos': position }
+		data = { 'job_id': job_id, 'position': position }
+		message = { 'request': 'subscribe', 'data': data }
+		self.send(json.dumps(message))
+
+	def unsubscribe(self, job_id):
+		data = { 'job_id': job_id }
+		message = { 'request': 'unsubscribe', 'data': data }
 		self.send(json.dumps(message))
 
 	def closed(self, code, reason=None):
@@ -99,9 +131,9 @@ class LogStreamHandlerTestClient(TornadoWebSocketClient):
 		# Record the log lines.
 		# CAUTION: m is NOT A STRING.
 		parsed = json.loads(str(m))
-		self.lines += parsed['lines']
-		self.server_pos = parsed['position']
-		self.job_id = parsed['id']
+		self.lines += parsed['data']['lines']
+		self.server_pos = parsed['data']['position']
+		self.job_id = parsed['data']['job_id']
 
 class LogStreamHandlerTest(BaseControllerTest):
 	def get_app(self):
@@ -148,7 +180,12 @@ class LogStreamHandlerTest(BaseControllerTest):
 		self.short_wait_hack()
 		self.wait() # Wait for server to send us the logs.
 
+		#print str(client.lines)
+		#print str(client.server_pos)
+
 		self.assertEquals(number_lines, len(client.lines), "Didn't download the expected number of lines.")
+
+		#print str(client.lines)
 
 		# Send another log entry.
 		# This one should come back automatically because the websocket is
@@ -159,13 +196,28 @@ class LogStreamHandlerTest(BaseControllerTest):
 		self.wait() # Wait for server to send us the logs.
 
 		#print str(client.lines)
-		#print str(client.server_pos)
-		
+
+		self.assertEquals(number_lines + 1, len(client.lines), "Didn't download the expected number of lines.")
+
+		# Unsubscribe.
+		client.unsubscribe(job_id)
+
+		self.short_wait_hack()
+		self.wait() # Wait for server to unsubscribe.
+
+		# Send a new log entry. This one won't come back, because we've
+		# unsubscribed.
+		log.info("Another additional log entry.")
+
+		# Now subscribe again. It will send us everything since the
+		# end of the last subscribe.
 		client.subscribe(job_id, position=client.server_pos)
 		self.short_wait_hack()
 		self.wait() # Wait for server to send us the logs.
 
-		self.assertEquals(number_lines + 1, len(client.lines), "Didn't download the expected number of lines.")
+		self.assertEquals(number_lines + 2, len(client.lines), "Didn't download the expected number of lines.")
+
+		#print str(client.lines)
 
 		client.close()
 		self.short_wait_hack()
