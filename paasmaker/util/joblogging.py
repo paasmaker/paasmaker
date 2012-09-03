@@ -66,7 +66,9 @@ class JobLoggingPubHandler(logging.Handler):
 			# Publish the message to interested parties.
 			pub.sendMessage(job_topic, message=message, job_id=job_id)
 			# If it's complete, unsubscribe all.
+			# And then publish a message to say that the job is complete.
 			if record.__dict__.has_key('complete') and record.complete:
+				pub.sendMessage(('job', 'complete'), job_id=job_id, summary=self.format(record))
 				pub.delTopic(job_topic)
 
 class JobLoggerAdapter(logging.LoggerAdapter):

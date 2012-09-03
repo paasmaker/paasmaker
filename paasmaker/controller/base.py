@@ -129,6 +129,7 @@ class WebsocketMessageSchema(colander.MappingSchema):
 		default=0,
 		missing=0)
 	data = colander.SchemaNode(colander.Mapping(unknown='preserve'))
+	auth = APIAuthRequestSchema()
 
 class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 	"""
@@ -142,11 +143,14 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 		schema = WebsocketMessageSchema()
 		try:
 			result = schema.deserialize(parsed)
+
+			# Validate their authentication details.
+			# Have to be authenticated for anything to work.
+			# TODO: Implement!
 		except colander.Invalid, ex:
-			sequence = -1
-			if parsed.has_key('sequence'):
-				sequence = parsed['sequence']
-			self.send_error(str(ex), message)
+			if not parsed.has_key('sequence'):
+				parsed['sequence'] = -1
+			self.send_error(str(ex), parsed)
 			return None
 
 		return result

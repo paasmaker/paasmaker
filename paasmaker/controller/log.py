@@ -70,6 +70,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 				# TODO: Implement!
 				pass
 			else:
+				# TODO: Test that the error is sent!
 				self.send_error('Unable to find job %s' % subscribe['job_id'], message)
 
 	def handle_unsubscribe(self, message):
@@ -111,8 +112,10 @@ class LogStreamHandler(BaseWebsocketHandler):
 
 class LogStreamHandlerTestClient(TornadoWebSocketClient):
 	lines = []
+	errors = []
 	server_pos = 0
 	job_id = ''
+	configuration = None
 
 	def opened(self):
 		#print "Client: Opened!"
@@ -120,12 +123,14 @@ class LogStreamHandlerTestClient(TornadoWebSocketClient):
 
 	def subscribe(self, job_id, position=0):
 		data = { 'job_id': job_id, 'position': position }
-		message = { 'request': 'subscribe', 'data': data }
+		auth = { 'method': 'node', 'value': self.configuration.get_flat('auth_token') }
+		message = { 'request': 'subscribe', 'data': data, 'auth': auth }
 		self.send(json.dumps(message))
 
 	def unsubscribe(self, job_id):
 		data = { 'job_id': job_id }
-		message = { 'request': 'unsubscribe', 'data': data }
+		auth = { 'method': 'node', 'value': self.configuration.get_flat('auth_token') }
+		message = { 'request': 'unsubscribe', 'data': data, 'auth': auth }
 		self.send(json.dumps(message))
 
 	def closed(self, code, reason=None):
@@ -137,9 +142,12 @@ class LogStreamHandlerTestClient(TornadoWebSocketClient):
 		# Record the log lines.
 		# CAUTION: m is NOT A STRING.
 		parsed = json.loads(str(m))
-		self.lines += parsed['data']['lines']
-		self.server_pos = parsed['data']['position']
-		self.job_id = parsed['data']['job_id']
+		if parsed['type'] == 'lines':
+			self.lines += parsed['data']['lines']
+			self.server_pos = parsed['data']['position']
+			self.job_id = parsed['data']['job_id']
+		elif parsed['type'] == 'error':
+			self.errors.append(parsed['data']['error'])
 
 class LogStreamHandlerTest(BaseControllerTest):
 	def get_app(self):
@@ -178,6 +186,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 
 		# Now, connect to it and stream the log.
 		client = LogStreamHandlerTestClient("ws://localhost:%d/log/stream" % self.get_http_port(), io_loop=self.io_loop)
+		client.configuration = self.configuration
 		client.connect()
 		self.short_wait_hack()
 		self.wait() # Wait for connection to finish.
@@ -188,7 +197,9 @@ class LogStreamHandlerTest(BaseControllerTest):
 
 		#print str(client.lines)
 		#print str(client.server_pos)
+		#print str(client.errors)
 
+		self.assertEquals(0, len(client.errors), "Errors found.")
 		self.assertEquals(number_lines, len(client.lines), "Didn't download the expected number of lines.")
 
 		#print str(client.lines)
@@ -203,6 +214,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 
 		#print str(client.lines)
 
+		self.assertEquals(0, len(client.errors), "Errors found.")
 		self.assertEquals(number_lines + 1, len(client.lines), "Didn't download the expected number of lines.")
 
 		# Unsubscribe.
@@ -221,6 +233,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 		self.short_wait_hack()
 		self.wait() # Wait for server to send us the logs.
 
+		self.assertEquals(0, len(client.errors), "Errors found.")
 		self.assertEquals(number_lines + 2, len(client.lines), "Didn't download the expected number of lines.")
 
 		#print str(client.lines)
