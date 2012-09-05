@@ -12,6 +12,7 @@ import tornado.testing
 
 # TODO: This is specific to the setup.
 NGINX_BINARY_PATH = "/usr/local/openresty/nginx/sbin/nginx"
+REDIS_BINARY_PATH = "/usr/bin/redis-server"
 
 NGINX_CONFIG = """
 worker_processes  1;
@@ -56,6 +57,24 @@ http {
 }
 """
 
+REDIS_CONFIG = """
+daemonize yes
+pidfile %(temp_dir)s/redis.pid
+dir %(temp_dir)s
+port %(redis_port)d
+bind 127.0.0.1
+
+databases 16
+
+# No save commands - so in memory only.
+
+timeout 300
+loglevel notice
+logfile stdout
+appendonly no
+vm-enabled no
+"""
+
 class RouterTest(paasmaker.controller.base.BaseControllerTest):
 	def get_app(self):
 		routes = paasmaker.controller.example.ExampleController.get_routes({'configuration': self.configuration})
@@ -71,12 +90,15 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 		# Fire up an nginx instance.
 		self.nginxconfig = tempfile.mkstemp()[1]
 		self.nginxtempdir = tempfile.mkdtemp()
-		self.pidfile = os.path.join(self.nginxtempdir, 'nginx.pid')
+		self.nginxpidfile = os.path.join(self.nginxtempdir, 'nginx.pid')
 		self.nginxport = tornado.testing.get_unused_port()
 
 		# TODO: Fire up Redis.
 		self.redishost = "127.0.0.1"
 		self.redisport = tornado.testing.get_unused_port()
+		self.redisconfig = tempfile.mkstemp()[1]
+		self.redistempdir = tempfile.mkdtemp()
+		self.redispidfile = os.path.join(self.redistempdir, 'redis.pid')
 
 		# For debugging... they are unlinked in tearDown()
 		# but you can inspect them in the meantime.
@@ -95,19 +117,26 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 		config = NGINX_CONFIG % nginxparams
 		open(self.nginxconfig, 'w').write(config)
 
+		redisparams = {}
+		redisparams['temp_dir'] = self.redistempdir
+		redisparams['redis_port'] = self.redisport
+		
+		config = REDIS_CONFIG % redisparams
+		open(self.redisconfig, 'w').write(config)
+
 		# Kick off the instance. It will fork in the background once it's
 		# successfully started.
 		# check_call throws an exception if it failed to start.
 		subprocess.check_call([NGINX_BINARY_PATH, '-c', self.nginxconfig])	
 
 		# And fire off a redis instance.
-		
+		subprocess.check_call([REDIS_BINARY_PATH, self.redisconfig])	
 
 	def tearDown(self):
 		super(RouterTest, self).tearDown()
 
 		# Kill off the nginx instance.
-		pid = int(open(self.pidfile, 'r').read())
+		pid = int(open(self.nginxpidfile, 'r').read())
 		os.kill(pid, signal.SIGTERM)
 
 		# Remove all the temp files.
@@ -115,19 +144,31 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 		os.unlink(self.nginxconfig)
 		os.unlink(self.errorlog)
 		os.unlink(self.accesslog)
+		
+		# Kill off the redis instance.
+		pid = int(open(self.redispidfile, 'r').read())
+		os.kill(pid, signal.SIGTERM)
+
+		# Remove all the temp files.
+		shutil.rmtree(self.redistempdir)
+		os.unlink(self.redisconfig)
 
 	def test_simple_request(self):
 		request = tornado.httpclient.HTTPRequest(
 			"http://localhost:%d/" % self.nginxport,
 			method="GET",
-			headers={'Host': 'kheb.lan'})
+			headers={'Host': 'foo.com'})
 		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
 		client.fetch(request, self.stop)
 		response = self.wait()
-		self.failIf(response.error)
-		# NGINX returns 200, but a body of 500 server error when the LUA
-		# has an issue; eg, can't connect to Redis.
-		self.assertNotIn("500 Internal Server Error", response.body)
+
+		# The response from nginx.
+		#print response.body
+		# The nginx error log - will contain lua debug info.
+		#print open(self.errorlog, 'r').read()
+
+		# Should be 'not found'.
+		self.assertEquals(response.code, 404)
 
 if __name__ == '__main__':
 	unittest.main()
