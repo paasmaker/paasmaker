@@ -12,7 +12,6 @@ import tornado.testing
 
 # TODO: This is specific to the setup.
 NGINX_BINARY_PATH = "/usr/local/openresty/nginx/sbin/nginx"
-REDIS_BINARY_PATH = "/usr/bin/redis-server"
 
 NGINX_CONFIG = """
 worker_processes  1;
@@ -57,24 +56,6 @@ http {
 }
 """
 
-REDIS_CONFIG = """
-daemonize yes
-pidfile %(temp_dir)s/redis.pid
-dir %(temp_dir)s
-port %(redis_port)d
-bind 127.0.0.1
-
-databases 16
-
-# No save commands - so in memory only.
-
-timeout 300
-loglevel notice
-logfile stdout
-appendonly no
-vm-enabled no
-"""
-
 class RouterTest(paasmaker.controller.base.BaseControllerTest):
 	def get_app(self):
 		routes = paasmaker.controller.example.ExampleController.get_routes({'configuration': self.configuration})
@@ -87,18 +68,14 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 	def setUp(self):
 		super(RouterTest, self).setUp()
 
+		self.redis = self.configuration.get_redis(self)
+		self.redisconfig = self.configuration.get_redis_configuration()
+
 		# Fire up an nginx instance.
 		self.nginxconfig = tempfile.mkstemp()[1]
 		self.nginxtempdir = tempfile.mkdtemp()
 		self.nginxpidfile = os.path.join(self.nginxtempdir, 'nginx.pid')
 		self.nginxport = tornado.testing.get_unused_port()
-
-		# TODO: Fire up Redis.
-		self.redishost = "127.0.0.1"
-		self.redisport = tornado.testing.get_unused_port()
-		self.redisconfig = tempfile.mkstemp()[1]
-		self.redistempdir = tempfile.mkdtemp()
-		self.redispidfile = os.path.join(self.redistempdir, 'redis.pid')
 
 		# For debugging... they are unlinked in tearDown()
 		# but you can inspect them in the meantime.
@@ -111,26 +88,16 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 		nginxparams['test_port'] = self.nginxport
 		nginxparams['error_log'] = self.errorlog
 		nginxparams['access_log'] = self.accesslog
-		nginxparams['redis_host'] = self.redishost
-		nginxparams['redis_port'] = self.redisport
+		nginxparams['redis_host'] = self.redisconfig['host']
+		nginxparams['redis_port'] = self.redisconfig['port']
 
 		config = NGINX_CONFIG % nginxparams
 		open(self.nginxconfig, 'w').write(config)
 
-		redisparams = {}
-		redisparams['temp_dir'] = self.redistempdir
-		redisparams['redis_port'] = self.redisport
-		
-		config = REDIS_CONFIG % redisparams
-		open(self.redisconfig, 'w').write(config)
-
 		# Kick off the instance. It will fork in the background once it's
 		# successfully started.
 		# check_call throws an exception if it failed to start.
-		subprocess.check_call([NGINX_BINARY_PATH, '-c', self.nginxconfig])	
-
-		# And fire off a redis instance.
-		subprocess.check_call([REDIS_BINARY_PATH, self.redisconfig])	
+		subprocess.check_call([NGINX_BINARY_PATH, '-c', self.nginxconfig])
 
 	def tearDown(self):
 		super(RouterTest, self).tearDown()
@@ -144,14 +111,6 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 		os.unlink(self.nginxconfig)
 		os.unlink(self.errorlog)
 		os.unlink(self.accesslog)
-		
-		# Kill off the redis instance.
-		pid = int(open(self.redispidfile, 'r').read())
-		os.kill(pid, signal.SIGTERM)
-
-		# Remove all the temp files.
-		shutil.rmtree(self.redistempdir)
-		os.unlink(self.redisconfig)
 
 	def test_simple_request(self):
 		request = tornado.httpclient.HTTPRequest(

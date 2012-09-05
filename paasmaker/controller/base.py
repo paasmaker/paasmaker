@@ -197,4 +197,4 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 
 	def short_wait_hack(self):
 		self.io_loop.add_timeout(time.time() + 0.1, self.stop)
-
+		self.wait()

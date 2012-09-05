@@ -4,3 +4,4 @@ pyyaml
 colander
 ws4py
 pypubsub
+tornado-redis

@@ -188,12 +188,10 @@ class LogStreamHandlerTest(BaseControllerTest):
 		client = LogStreamHandlerTestClient("ws://localhost:%d/log/stream" % self.get_http_port(), io_loop=self.io_loop)
 		client.configuration = self.configuration
 		client.connect()
-		self.short_wait_hack()
-		self.wait() # Wait for connection to finish.
+		self.short_wait_hack() # Wait for connection to finish.
 
 		client.subscribe(job_id)
-		self.short_wait_hack()
-		self.wait() # Wait for server to send us the logs.
+		self.short_wait_hack() # Wait for server to send us the logs.
 
 		#print str(client.lines)
 		#print str(client.server_pos)
@@ -209,8 +207,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 		# subscribed.
 		log.info("Additional log entry.")
 
-		self.short_wait_hack()
-		self.wait() # Wait for server to send us the logs.
+		self.short_wait_hack() # Wait for server to send us the logs.
 
 		#print str(client.lines)
 
@@ -220,8 +217,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 		# Unsubscribe.
 		client.unsubscribe(job_id)
 
-		self.short_wait_hack()
-		self.wait() # Wait for server to unsubscribe.
+		self.short_wait_hack() # Wait for server to unsubscribe.
 
 		# Send a new log entry. This one won't come back, because we've
 		# unsubscribed.
@@ -230,8 +226,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 		# Now subscribe again. It will send us everything since the
 		# end of the last subscribe.
 		client.subscribe(job_id, position=client.server_pos)
-		self.short_wait_hack()
-		self.wait() # Wait for server to send us the logs.
+		self.short_wait_hack() # Wait for server to send us the logs.
 
 		self.assertEquals(0, len(client.errors), "Errors found.")
 		self.assertEquals(number_lines + 2, len(client.lines), "Didn't download the expected number of lines.")
@@ -239,8 +234,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 		#print str(client.lines)
 
 		client.close()
-		self.short_wait_hack()
-		self.wait() # Wait for closing.
+		self.short_wait_hack() # Wait for closing.
 
 if __name__ == '__main__':
 	tornado.testing.main()

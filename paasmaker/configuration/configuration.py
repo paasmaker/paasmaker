@@ -6,11 +6,14 @@ from paasmaker.util.configurationhelper import InvalidConfigurationException
 from paasmaker.util.configurationhelper import NoConfigurationFileException
 import unittest
 import os
+import signal
 import logging
 import tempfile
 import uuid
 import shutil
 import hashlib
+import logging
+import subprocess
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -18,6 +21,9 @@ import colander
 
 # For parsing command line options.
 from tornado.options import define, options
+import tornado.testing
+
+import tornadoredis
 
 # Set up logging for this module.
 logger = logging.getLogger(__name__)
@@ -165,6 +171,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			raise ImNotA("I'm not a pacemaker.")
 		return self.session()
 
+	def get_redis(self):
+		pass
+
 	def get_torando_configuration(self):
 		settings = {}
 		# TODO: Use a different value from the auth token?
@@ -232,6 +241,26 @@ router:
   redis: %(redis)s
 """
 
+	# TODO: too specific to the server setup.
+	redis_binary_path = "/usr/bin/redis-server"
+	redis_server_config = """
+daemonize yes
+pidfile %(pidfile)s
+dir %(dir)s
+port %(port)d
+bind %(host)s
+
+databases 16
+
+# No save commands - so in memory only.
+
+timeout 300
+loglevel notice
+logfile stdout
+appendonly no
+vm-enabled no
+"""
+
 	def __init__(self, modules=[]):
 		# Choose filenames and set up example configuration.
 		configfile = tempfile.mkstemp()
@@ -254,16 +283,68 @@ router:
 		self.configname = configfile[1]
 		open(self.configname, 'w').write(configuration)
 
+		self.redis = None
+
 		# Call parent constructor.
 		super(ConfigurationStub, self).__init__()
 		# And then load the config.
 		super(ConfigurationStub, self).load_from_file([self.configname])
+
+	def get_redis(self, testcase=None):
+		if not self.redis:
+			if not testcase:
+				# This is to remain API compatible with the original configuration object.
+				raise ValueError("You must call get_redis the first time with a testcase argument, to initialize it.")
+			# Choose some configuration values.
+			self.redis = {}
+			self.redis['port'] = tornado.testing.get_unused_port()
+			self.redis['host'] = "127.0.0.1"
+			self.redis['configfile'] = tempfile.mkstemp()[1]
+			self.redis['dir'] = tempfile.mkdtemp()
+			self.redis['pidfile'] = os.path.join(self.redis['dir'], 'redis.pid')
+			self.redis['testcase'] = testcase
+
+			# Write out the configuration.
+			redisconfig = self.redis_server_config % self.redis
+			open(self.redis['configfile'], 'w').write(redisconfig)
+
+			# Fire up the server.
+			logging.info("Starting up redis server because requested by test.")
+			subprocess.check_call([self.redis_binary_path, self.redis['configfile']])
+
+			# Wait for it to start up.
+			testcase.short_wait_hack()
+
+			# Create a client for it.
+			client = tornadoredis.Client(host=self.redis['host'], port=self.redis['port'],
+				io_loop=testcase.io_loop)
+			client.connect()
+			self.redis['client'] = client
+
+		# Clear all keys before returning the client.
+		self.redis['client'].flushall(callback=self.redis['testcase'].stop)
+		self.redis['testcase'].wait()
+
+		return self.redis['client']
+
+	def get_redis_configuration(self):
+		if not self.redis:
+			raise Exception("Redis not initialized.")
+		return self.redis
 
 	def cleanup(self):
 		# Remove files that we created.
 		shutil.rmtree(self.params['log_dir'])
 		shutil.rmtree(self.params['heart_working_dir'])
 		os.unlink(self.configname)
+
+		if self.redis:
+			self.redis['client'].disconnect()
+			# Clean up the redis.
+			redispid = int(open(self.redis['pidfile'], 'r').read())
+			os.kill(redispid, signal.SIGTERM)
+			os.unlink(self.redis['configfile'])
+			shutil.rmtree(self.redis['dir'])
 
 	def get_torando_configuration(self):
 		settings = super(ConfigurationStub, self).get_torando_configuration()

@@ -144,17 +144,14 @@ class ExampleControllerTest(BaseControllerTest):
 	def test_example_websocket(self):
 		client = ExampleWebsocketHandlerTestClient("ws://localhost:%d/example-websocket" % self.get_http_port(), io_loop=self.io_loop)
 		client.connect()
-		self.short_wait_hack()
-		self.wait() # Waiting for everything to settle.
+		self.short_wait_hack() # Waiting for everything to settle.
 
 		# Send it a short message.
 		client.send('test')
-		self.short_wait_hack()
-		self.wait() # Wait for processing of that message.
+		self.short_wait_hack() # Wait for processing of that message.
 
 		client.close()
-		self.short_wait_hack()
-		self.wait() # Wait for closing.
+		self.short_wait_hack() # Wait for closing.
 
 		self.assertEquals(len(client.events), 3, "Missing events.")
 		
