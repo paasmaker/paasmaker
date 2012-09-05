@@ -84,7 +84,7 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 
 		nginxparams = {}
 		nginxparams['temp_dir'] = self.nginxtempdir
-		nginxparams['router_root'] = os.path.normpath(os.path.dirname(__file__) + '/../../router')
+		nginxparams['router_root'] = os.path.normpath(os.path.dirname(__file__))
 		nginxparams['test_port'] = self.nginxport
 		nginxparams['error_log'] = self.errorlog
 		nginxparams['access_log'] = self.accesslog
