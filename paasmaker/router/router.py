@@ -114,7 +114,7 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 
 	def test_simple_request(self):
 		request = tornado.httpclient.HTTPRequest(
-			"http://localhost:%d/" % self.nginxport,
+			"http://localhost:%d/example" % self.nginxport,
 			method="GET",
 			headers={'Host': 'foo.com'})
 		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
@@ -127,7 +127,28 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 		#print open(self.errorlog, 'r').read()
 
 		# Should be 'not found'.
-		self.assertEquals(response.code, 404)
+		self.assertEquals(response.code, 404, "Response is not 404.")
+
+		# Now insert a record for it.
+		# Inserted records MUST be IP addresses.
+		target = "127.0.0.1:%d" % self.get_http_port()
+		self.redis.sadd('foo.com', target, callback=self.stop)
+		self.wait()
+
+		# Fetch the set members.
+		self.redis.smembers('foo.com', callback=self.stop)
+		members = self.wait()
+		self.assertIn(target, members, "Target is not in set.")
+
+		# And try it again!
+		client.fetch(request, self.stop)
+		response = self.wait()
+
+		#print response.body
+		#print open(self.errorlog, 'r').read()
+
+		# Should be 200 this time.
+		self.assertEquals(response.code, 200, "Response is not 200.")
 
 if __name__ == '__main__':
 	unittest.main()

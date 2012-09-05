@@ -25,7 +25,8 @@ if not host then
 	end
 end
 
-local ok, err = red:get(host)
+-- Get a random remote end.
+local ok, err = red:srandmember(host)
 ngx.log(ngx.DEBUG, ok)
 ngx.log(ngx.DEBUG, err)
 if err then
