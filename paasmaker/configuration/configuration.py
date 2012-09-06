@@ -174,7 +174,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def get_redis(self):
 		pass
 
-	def get_torando_configuration(self):
+	def get_tornado_configuration(self):
 		settings = {}
 		# TODO: Use a different value from the auth token?
 		settings['cookie_secret'] = self['auth_token']
@@ -346,8 +346,8 @@ vm-enabled no
 			os.unlink(self.redis['configfile'])
 			shutil.rmtree(self.redis['dir'])
 
-	def get_torando_configuration(self):
-		settings = super(ConfigurationStub, self).get_torando_configuration()
+	def get_tornado_configuration(self):
+		settings = super(ConfigurationStub, self).get_tornado_configuration()
 		# Force debug mode on.
 		settings['debug'] = True
 		return settings

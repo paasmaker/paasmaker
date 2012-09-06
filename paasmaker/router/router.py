@@ -62,7 +62,7 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 		routes.extend(paasmaker.controller.example.ExampleFailController.get_routes({'configuration': self.configuration}))
 		routes.extend(paasmaker.controller.example.ExamplePostController.get_routes({'configuration': self.configuration}))
 		routes.extend(paasmaker.controller.example.ExampleWebsocketHandler.get_routes({'configuration': self.configuration}))
-		application = tornado.web.Application(routes, **self.configuration.get_torando_configuration())
+		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
 	def setUp(self):
