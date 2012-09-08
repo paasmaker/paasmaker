@@ -44,6 +44,12 @@ class PacemakerSchema(colander.MappingSchema):
 		title="Database DSN",
 		description="Database connection details for this pacemaker, in SQLAlchemy format")
 
+	login_age = colander.SchemaNode(colander.Integer(),
+		title="Login age",
+		description="The number of days to grant access when logging in, before requiring a new login.",
+		default=7,
+		missing=7)
+
 	@staticmethod
 	def default():
 		return {'enabled': False}

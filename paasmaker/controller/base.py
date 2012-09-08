@@ -34,6 +34,14 @@ class APIRequestSchema(colander.MappingSchema):
 	data = colander.SchemaNode(colander.Mapping(unknown='preserve'))
 
 class BaseController(tornado.web.RequestHandler):
+	# Allowed authentication methods.
+	ANONYMOUS = 0
+	NODE = 1
+	USER = 2
+
+	# You must override this in your subclass.
+	auth_methods = []
+
 	"""
 	Base class for all controllers in the system.
 	"""
@@ -46,7 +54,9 @@ class BaseController(tornado.web.RequestHandler):
 		self.format = 'html'
 		self.root_data = {}
 		self.session = None
+		self.user = None
 		self.auth = {}
+		self.allowed_authentication_methods = ['anonymous']
 
 	def prepare(self):
 		self._set_format(self.get_argument('format', 'html'))
@@ -64,6 +74,66 @@ class BaseController(tornado.web.RequestHandler):
 				return
 			self.auth = result['auth']
 			self.request.arguments.update(result['data'])
+
+		# Must be one of the supported auth methods.
+		self.require_authentication(self.auth_methods)
+
+	def require_authentication(self, methods):
+		if len(methods) == 0:
+			# No methods provided.
+			raise tornado.web.HTTPError(403, 'Access is denied. No authentication methods supplied.')
+
+		found_allowed_method = False
+
+		if self.ANONYMOUS in methods:
+			# Anonymous is allowed. So let it go through...
+			found_allowed_method = True
+
+		if self.NODE in methods:
+			# Check that a valid node authenticated.
+			found_allowed_method = self.check_node_auth()
+
+		if self.USER in methods:
+			# Check that a valid user is authenticated.
+			if self.get_current_user():
+				found_allowed_method = True
+
+		if not found_allowed_method:
+			raise tornado.web.HTTPError(403, 'Access is denied')
+
+	def check_node_auth(self):
+		"""
+		Check to see if the node authentication is valid.
+		"""
+		if self.auth.has_key('method') and self.auth['method'] == 'node':
+			if self.auth.has_key('value') and self.auth['value'] == self.configuration.get_flat('auth_token'):
+				return True
+		return False
+
+	def get_current_user(self):
+		"""
+		Get the currently logged in user.
+		"""
+		# Did we already look them up? Return that.
+		if self.user:
+			return self.user
+
+		# Only pacemakers allow users to authenticate to them.
+		if not self.configuration.is_pacemaker():
+			return None
+
+		# Fetch their cookie.
+		raw = self.get_secure_cookie('user', max_age_days=self.configuration.get_flat('pacemaker.login_age'))
+		if raw:
+			# Lookup the user object.
+			user = self.db().query(paasmaker.model.User).get(int(raw))
+			# Make sure we have the user, and it's enabled and not deleted.
+			if user and user.enabled and not user.deleted:
+				self.user = user
+				return user
+
+		# Otherwise, return None.
+		return None
 
 	def add_data(self, key, name):
 		self.data[key] = name
@@ -194,6 +264,13 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 	def tearDown(self):
 		self.configuration.cleanup()
 		super(BaseControllerTest, self).tearDown()
+
+	def fetch_user_auth(self, url, user, **kwargs):
+		# Add a cookie header.
+		# TODO: Figure out how to do this.
+		request = tornado.httpclient.HTTPRequest(url, **kwargs)
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, self.stop)	
 
 	def short_wait_hack(self):
 		self.io_loop.add_timeout(time.time() + 0.1, self.stop)

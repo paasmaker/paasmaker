@@ -94,6 +94,7 @@ class User(OrmBase, Base):
 	email = Column(String, nullable=False, index=True)
 	auth_source = Column(String, nullable=False, default="internal")
 	auth_meta = Column(String, nullable=True)
+	enabled = Column(Boolean, nullable=False, default=True)
 
 	password = Column(String, nullable=True)
 	name = Column(String, nullable=True)
