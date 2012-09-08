@@ -5,6 +5,8 @@ from base import BaseController
 import tornado
 
 class IndexController(BaseController):
+	auth_methods = [BaseController.ANONYMOUS]
+
 	def get(self):
 		self.render("index.html")
 
