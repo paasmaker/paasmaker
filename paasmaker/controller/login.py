@@ -1,5 +1,6 @@
 from base import BaseController
 from base import BaseControllerTest
+from information import InformationController
 import paasmaker
 import tornado
 
@@ -74,6 +75,7 @@ class LoginControllerTest(BaseControllerTest):
 	def get_app(self):
 		routes = LoginController.get_routes({'configuration': self.configuration})
 		routes.extend(LogoutController.get_routes({'configuration': self.configuration}))
+		routes.extend(InformationController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
@@ -116,5 +118,17 @@ class LoginControllerTest(BaseControllerTest):
 		self.assertEquals(len(response.errors), 0, "There were errors.")
 		self.assertEquals(len(response.warnings), 0, "There were warnings.")
 		self.assertTrue(response.data.has_key('token'))
-		# TODO: Test that this token can be used for token-authenticated API requests.
-		#print response.data['token']
+
+		# Test that the supplied token is valid.
+		auth_token = response.data['token']
+
+		request = tornado.httpclient.HTTPRequest(
+			"http://localhost:%d/information" % self.get_http_port(),
+			headers={'Cookie': 'user=' + auth_token})
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, self.stop)
+		response = self.wait()
+
+		# Check that it returned the information page.
+		self.failIf(response.error)
+		self.assertIn("machine readable", response.body)
