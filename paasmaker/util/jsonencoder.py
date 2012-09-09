@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import json
 import datetime
 import unittest
@@ -37,5 +35,3 @@ class TestJsonEncoder(unittest.TestCase):
 		# for the models instead.
 		pass
 
-if __name__ == '__main__':
-	unittest.main()

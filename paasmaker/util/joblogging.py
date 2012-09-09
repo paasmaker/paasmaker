@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import unittest
 import logging
 import paasmaker
@@ -158,5 +156,3 @@ class JobLoggingTest(unittest.TestCase):
 		self.assertIn('{', contents)
 		self.assertIn('}', contents)
 
-if __name__ == '__main__':
-	unittest.main()

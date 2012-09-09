@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import unittest
 import colander
 import yaml
@@ -109,5 +107,3 @@ map_item:
 		except InvalidConfigurationException, ex:
 			self.assertTrue(True, "Exception was thrown.")
 
-if __name__ == '__main__':
-	unittest.main()

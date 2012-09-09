@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from base import BaseController
 from base import BaseControllerTest
 import paasmaker

@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Base service.
 class Base():
 	def __init__(self, all_configuration, my_configuration):

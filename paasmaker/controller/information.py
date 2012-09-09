@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from base import BaseController
 from base import BaseControllerTest
 import unittest
@@ -41,6 +39,3 @@ class InformationControllerTest(BaseControllerTest):
 		self.assertEquals(len(response.warnings), 0, "There were warnings.")
 		self.assertTrue(response.data.has_key('is_heart'))
 		self.assertTrue(response.data.has_key('is_pacemaker'))
-
-if __name__ == '__main__':
-	tornado.testing.main()

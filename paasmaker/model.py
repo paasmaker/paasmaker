@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import unittest
 import json
 import sqlalchemy
@@ -421,6 +419,3 @@ class TestModel(unittest.TestCase):
 	@classmethod
 	def tearDownClass(cls):
 		pass
-
-if __name__ == '__main__':
-	unittest.main()

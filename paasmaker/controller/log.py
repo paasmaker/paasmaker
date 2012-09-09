@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from base import BaseWebsocketHandler
 from base import BaseControllerTest
 
@@ -236,5 +234,3 @@ class LogStreamHandlerTest(BaseControllerTest):
 		client.close()
 		self.short_wait_hack() # Wait for closing.
 
-if __name__ == '__main__':
-	tornado.testing.main()

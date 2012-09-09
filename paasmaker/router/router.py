@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import unittest
 import os
 import subprocess
@@ -150,5 +148,3 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 		# Should be 200 this time.
 		self.assertEquals(response.code, 200, "Response is not 200.")
 
-if __name__ == '__main__':
-	unittest.main()

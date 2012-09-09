@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 from base import BaseController
 from base import BaseControllerTest
 from base import BaseWebsocketHandler
@@ -160,7 +158,4 @@ class ExampleControllerTest(BaseControllerTest):
 		self.short_wait_hack() # Wait for closing.
 
 		self.assertEquals(len(client.events), 3, "Missing events.")
-		
 
-if __name__ == '__main__':
-	tornado.testing.main()

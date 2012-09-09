@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import tornado.web
 import tornado.websocket
 import tornado.escape

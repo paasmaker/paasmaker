@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 import unittest
 import colander
 import yaml
@@ -95,5 +93,3 @@ placement:
 		except InvalidConfigurationException, ex:
 			self.assertTrue(True, "Threw exception correctly.")
 
-if __name__ == '__main__':
-	unittest.main()

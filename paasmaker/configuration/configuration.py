@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # General imports.
 import paasmaker
 from paasmaker.util.configurationhelper import InvalidConfigurationException
@@ -401,5 +399,3 @@ auth_token: 5893b415-f166-41a8-b606-7bdb68b88f0b
 		# TODO: Complete this.
 		stub = ConfigurationStub(modules=['heart'])
 
-if __name__ == '__main__':
-	unittest.main()

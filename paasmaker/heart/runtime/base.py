@@ -1,5 +1,3 @@
-#!/usr/bin/env python
-
 # Base runtime interface.
 class Base():
 	def __init__(self, configuration):
