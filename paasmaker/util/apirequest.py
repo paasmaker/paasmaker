@@ -46,7 +46,10 @@ class APIRequest():
 		encoded = json.dumps(data, cls=paasmaker.util.jsonencoder.JsonEncoder)
 
 		kwargs['body'] = encoded
+		# Always a POST, because we're sending a body.
 		kwargs['method'] = 'POST'
+		# Don't follow redirects - this is an API request.
+		kwargs['follow_redirects'] = False
 
 		# The function called when it returns.
 		# It's a closure to preserve the callback provided.

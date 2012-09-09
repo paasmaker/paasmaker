@@ -220,6 +220,7 @@ log_directory: %(log_dir)s
 	pacemaker_config = """
 pacemaker:
   enabled: true
+  dsn: "sqlite:///:memory:"
 """
 
 	heart_config = """
@@ -295,6 +296,10 @@ vm-enabled no
 		super(ConfigurationStub, self).__init__()
 		# And then load the config.
 		super(ConfigurationStub, self).load_from_file([self.configname])
+
+		# And if we're a pacemaker, create the DB.
+		if 'pacemaker' in modules:
+			self.setup_database()
 
 	def get_redis(self, testcase=None):
 		if not self.redis:

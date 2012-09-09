@@ -44,7 +44,7 @@ class ExamplePostController(BaseController):
 
 	def post(self):
 		self.add_data("test", "Hello")
-		self.add_data("output", self.request.arguments["more"])
+		self.add_data("output", self.param("more"))
 		self.add_data_template("template", "Template")
 		self.render("example/index.html")
 

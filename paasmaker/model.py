@@ -9,6 +9,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, T
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.orm.interfaces import MapperExtension
+import hashlib
 
 Base = declarative_base()
 
@@ -91,7 +92,8 @@ class User(OrmBase, Base):
 	__tablename__ = 'user'
 
 	id = Column(Integer, primary_key=True)
-	email = Column(String, nullable=False, index=True)
+	userkey = Column(String, nullable=False, index=True, unique=True)
+	email = Column(String, nullable=False, index=True, unique=True)
 	auth_source = Column(String, nullable=False, default="internal")
 	auth_meta = Column(String, nullable=True)
 	enabled = Column(Boolean, nullable=False, default=True)
@@ -99,7 +101,8 @@ class User(OrmBase, Base):
 	password = Column(String, nullable=True)
 	name = Column(String, nullable=True)
 
-	def __init__(self, email, auth_source="internal"):
+	def __init__(self, userkey, email, auth_source="internal"):
+		self.userkey = userkey
 		self.email = email
 		self.auth_source = auth_source
 
@@ -108,6 +111,18 @@ class User(OrmBase, Base):
 
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['email', 'auth_source', 'name'])
+
+	def password_hash(self, plain):
+		# TODO: make this more secure!
+		h = hashlib.md5()
+		h.update(plain)
+		return h.hexdigest()
+
+	def set_password(self, plain):
+		self.password = self.password_hash(plain)
+
+	def check_password(self, plain):
+		return self.password == self.password_hash(plain)
 
 class Role(OrmBase, Base):
 	__tablename__ = 'role'
@@ -361,7 +376,7 @@ class TestModel(unittest.TestCase):
 	def test_user_workspace(self):
 		s = self.__class__.session
 
-		user = User('danielf')
+		user = User('danielf', 'freefoote@dview.net')
 		role = Role('Administrator')
 		role_permission = RolePermission('ADMIN', True)
 		role.permissions.append(role_permission)

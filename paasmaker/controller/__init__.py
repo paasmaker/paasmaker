@@ -3,3 +3,4 @@ from example import ExampleController, ExampleFailController, ExampleWebsocketHa
 from information import InformationController
 from index import IndexController
 from log import LogStreamHandler
+from login import LoginController, LogoutController

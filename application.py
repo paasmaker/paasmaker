@@ -54,6 +54,8 @@ if configuration.is_router():
 routes.extend(paasmaker.controller.example.ExampleWebsocketHandler.get_routes(route_extras))
 routes.extend(paasmaker.controller.information.InformationController.get_routes(route_extras))
 routes.extend(paasmaker.controller.index.IndexController.get_routes(route_extras))
+routes.extend(paasmaker.controller.login.LoginController.get_routes(route_extras))
+routes.extend(paasmaker.controller.login.LogoutController.get_routes(route_extras))
 
 # Set up the application object.
 logging.info("Setting up the application.")

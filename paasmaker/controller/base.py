@@ -2,6 +2,7 @@
 
 import tornado.web
 import tornado.websocket
+import tornado.escape
 import logging
 import paasmaker
 import tornado.testing
@@ -56,10 +57,16 @@ class BaseController(tornado.web.RequestHandler):
 		self.session = None
 		self.user = None
 		self.auth = {}
+		self.params = {}
 		self.allowed_authentication_methods = ['anonymous']
 
 	def prepare(self):
 		self._set_format(self.get_argument('format', 'html'))
+
+		# Unpack arguments into params.
+		# TODO: Document why we're doing this.
+		for k, v in self.request.arguments.iteritems():
+			self.params[k] = v[-1]
 
 		# If the post body is JSON, parse it and put it into the arguments.
 		# TODO: This JSON detection is lightweight, but there might be corner
@@ -73,10 +80,16 @@ class BaseController(tornado.web.RequestHandler):
 				self.send_error(400, exc_info=ex)
 				return
 			self.auth = result['auth']
-			self.request.arguments.update(result['data'])
+			self.params.update(result['data'])
 
 		# Must be one of the supported auth methods.
 		self.require_authentication(self.auth_methods)
+
+	def param(self, name, default=None):
+		if self.params.has_key(name):
+			return self.params[name]
+		else:
+			return default
 
 	def require_authentication(self, methods):
 		if len(methods) == 0:
@@ -99,7 +112,11 @@ class BaseController(tornado.web.RequestHandler):
 				found_allowed_method = True
 
 		if not found_allowed_method:
-			raise tornado.web.HTTPError(403, 'Access is denied')
+			if self.format == 'json':
+				raise tornado.web.HTTPError(403, 'Access is denied')
+			else:
+				# TODO: Don't hard code /login?
+				self.redirect('/login?rt=' + tornado.escape.url_escape(self.request.uri))
 
 	def check_node_auth(self):
 		"""
@@ -258,8 +275,10 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 		return json.dumps(message, cls=paasmaker.util.jsonencoder.JsonEncoder)
 
 class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
+	config_modules = []
+
 	def setUp(self):
-		self.configuration = paasmaker.configuration.ConfigurationStub()
+		self.configuration = paasmaker.configuration.ConfigurationStub(self.config_modules)
 		super(BaseControllerTest, self).setUp()
 	def tearDown(self):
 		self.configuration.cleanup()

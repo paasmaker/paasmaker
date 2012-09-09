@@ -28,6 +28,7 @@ if __name__ == '__main__':
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.controller.example))
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.controller.information))
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.controller.log))
+	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.controller.login))
 
 	# Router.
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.router.router))

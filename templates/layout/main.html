@@ -2,13 +2,14 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8">
-		<title>{% block title %}Paasmaker{% end %}</title>
+		<title>{% block headtitle %}{% end %} Paasmaker</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 		<meta name="description" content="">
 		<meta name="author" content="">
 
 		<!-- Le styles -->
 		<link href="{{ static_url("css/bootstrap.min.css") }}" rel="stylesheet">
+		<link href="{{ static_url("css/paasmaker.css") }}" rel="stylesheet">
 		<style>
 			body {
 				padding-top: 60px; /* 60px to make the container go all the way to the bottom of the topbar */
@@ -48,6 +49,18 @@
 		</div>
 
 		<div class="container">
+			{% block pagetitle %}{% end %}
+
+			{% block errors %}
+				{% if len(errors) > 0 %}
+					<ul class="errors">
+						{% for error in errors %}
+							<li>{{ error }}</li>
+						{% end %}
+					</ul>
+				{% end %}
+			{% end %}
+
 			{% block body %}
 			{% end %}
 		</div>
