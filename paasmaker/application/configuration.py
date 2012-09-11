@@ -57,12 +57,18 @@ class Application(colander.MappingSchema):
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
 	source = ApplicationSource()
 
+class Manifest(colander.MappingSchema):
+	version = colander.SchemaNode(colander.Integer(),
+		title="Manifest version",
+		description="The manifest format version number.")
+
 class ConfigurationSchema(colander.MappingSchema):
 	application = Application()
 	hostnames = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()), title="Hostnames")
 	services = Services()
 	runtime = Runtime()
 	placement = Placement(default=Placement.default(), missing=Placement.default())
+	manifest = Manifest()
 
 class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def __init__(self):
@@ -70,6 +76,9 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 
 class TestApplicationConfiguration(unittest.TestCase):
 	test_config = """
+manifest:
+  version: 1
+
 application:
   name: foo.com
   tags:
@@ -115,6 +124,7 @@ placement:
 	def test_loading(self):
 		config = ApplicationConfiguration()
 		config.load(self.test_config)
+		self.assertEquals(config.get_flat('manifest.version'), 1, "Manifest version is incorrect.")
 		self.assertEquals(config.get_flat('runtime.provider'), "paasmaker.php", "Runtime provider is not as expected.")
 		self.assertEquals(config.get_flat('runtime.version'), "5.4", "Runtime version is not as expected.")
 		self.assertEquals(len(config['hostnames']), 4, "Number of hostnames is not as expected.")
