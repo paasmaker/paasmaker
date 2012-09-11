@@ -17,6 +17,7 @@ if __name__ == '__main__':
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.jsonencoder))
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.configurationhelper))
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.joblogging))
+	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.plugin))
 
 	# Configuration system.
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.configuration.configuration))
