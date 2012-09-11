@@ -34,7 +34,9 @@ class ConfigurationHelper(dict):
 
 	def load(self, raw):
 		# Convert to Yaml.
-		self.parsed = yaml.load(raw)
+		# NOTE: We always use safe_load, the yaml should have no reason
+		# to make Python classes.
+		self.parsed = yaml.safe_load(raw)
 		try:
 			# Validate, storing the keys in this dict.
 			self.update(self.schema.deserialize(self.parsed))

@@ -6,6 +6,7 @@ import paasmaker
 
 # Suppress log messages.
 # Turning this off temporarily can be helpful for debugging.
+#logging.basicConfig(level=logging.DEBUG)
 logging.basicConfig(level=logging.CRITICAL)
 
 if __name__ == '__main__':

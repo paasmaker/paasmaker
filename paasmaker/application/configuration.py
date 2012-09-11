@@ -12,6 +12,11 @@ class Runtime(colander.MappingSchema):
 	version = colander.SchemaNode(colander.String(),
 		title="Runtime version",
 		description="The version of the runtime to use.")
+	startup = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()),
+		title="Startup commands",
+		description="Commands used to prepare the code before starting the instance.",
+		default=[],
+		missing=[])
 
 class Service(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
@@ -34,22 +39,53 @@ class Placement(colander.MappingSchema):
 	def default():
 		return {'strategy': 'default'}
 
+class ApplicationSource(colander.MappingSchema):
+	method = colander.SchemaNode(colander.String(),
+		title="Source fetching method",
+		description="The method to grab and prepare the source")
+	location = colander.SchemaNode(colander.String(),
+		title="Location of source",
+		description="The location to fetch the source from.")
+	prepare = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()),
+		title="Prepare commands",
+		description="Commands used to prepare a pristine source for execution.")
+
+class Application(colander.MappingSchema):
+	name = colander.SchemaNode(colander.String(),
+		title="Application name",
+		decription="The name of the application")
+	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
+	source = ApplicationSource()
+
 class ConfigurationSchema(colander.MappingSchema):
+	application = Application()
 	hostnames = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()), title="Hostnames")
 	services = Services()
 	runtime = Runtime()
 	placement = Placement(default=Placement.default(), missing=Placement.default())
 
-# TODO: Use a SAFE yaml parser; this YAML is user supplied!
 class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def __init__(self):
 		super(ApplicationConfiguration, self).__init__(ConfigurationSchema())
 
 class TestApplicationConfiguration(unittest.TestCase):
 	test_config = """
+application:
+  name: foo.com
+  tags:
+    tag: value
+  source:
+    method: paasmaker.git
+    location: git@foo.com/paasmaker/paasmaker.git
+    prepare:
+      - php composer.phar install
+
 runtime:
   name: PHP
   version: 5.4
+  startup:
+    - php app/console cache:warm
+    - php app/console assets:deploy
 
 hostnames:
   - foo.com
@@ -58,7 +94,7 @@ hostnames:
   - www.foo.com
 
 services:
-  - name: test
+  - name: paasmaker.test
     provider: one
     options:
       bar: foo
@@ -84,6 +120,7 @@ placement:
 		self.assertEquals(len(config['hostnames']), 4, "Number of hostnames is not as expected.")
 		self.assertIn("www.foo.com.au", config['hostnames'], "Hostnames does not contain an expected item.")
 		self.assertEquals(len(config['services']), 1, "Services array does not contain the expected number of items.")
+		self.assertEquals(config.get_flat('application.name'), "foo.com", "Application name is not as expected.")
 
 	def test_bad_config(self):
 		try:
