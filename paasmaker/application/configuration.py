@@ -6,9 +6,9 @@ from paasmaker.util.configurationhelper import InvalidConfigurationException
 
 # Schema definition.
 class Runtime(colander.MappingSchema):
-	name = colander.SchemaNode(colander.String(),
-		title="Runtime name",
-		description="Runtime symbolic name")
+	provider = colander.SchemaNode(colander.String(),
+		title="Runtime provider",
+		description="Runtime provider symbolic name")
 	version = colander.SchemaNode(colander.String(),
 		title="Runtime version",
 		description="The version of the runtime to use.")
@@ -81,7 +81,7 @@ application:
       - php composer.phar install
 
 runtime:
-  name: PHP
+  provider: paasmaker.php
   version: 5.4
   startup:
     - php app/console cache:warm
@@ -94,8 +94,8 @@ hostnames:
   - www.foo.com
 
 services:
-  - name: paasmaker.test
-    provider: one
+  - name: test
+    provider: paasmaker.test
     options:
       bar: foo
 
@@ -115,7 +115,7 @@ placement:
 	def test_loading(self):
 		config = ApplicationConfiguration()
 		config.load(self.test_config)
-		self.assertEquals(config.get_flat('runtime.name'), "PHP", "Runtime value is not as expected.")
+		self.assertEquals(config.get_flat('runtime.provider'), "paasmaker.php", "Runtime provider is not as expected.")
 		self.assertEquals(config.get_flat('runtime.version'), "5.4", "Runtime version is not as expected.")
 		self.assertEquals(len(config['hostnames']), 4, "Number of hostnames is not as expected.")
 		self.assertIn("www.foo.com.au", config['hostnames'], "Hostnames does not contain an expected item.")
