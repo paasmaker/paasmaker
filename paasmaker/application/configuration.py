@@ -84,15 +84,17 @@ application:
   tags:
     tag: value
   source:
-    method: paasmaker.git
+    method: paasmaker.scm.git
     location: git@foo.com/paasmaker/paasmaker.git
     prepare:
+      - paasmaker.prepare.symfony2
       - php composer.phar install
 
 runtime:
   provider: paasmaker.php
   version: 5.4
   startup:
+    - paasmaker.startup.symfony2
     - php app/console cache:warm
     - php app/console assets:deploy
 
@@ -104,12 +106,12 @@ hostnames:
 
 services:
   - name: test
-    provider: paasmaker.test
+    provider: paasmaker.service.test
     options:
       bar: foo
 
 placement:
-  strategy: default
+  strategy: paasmaker.placement.default
 """
 
 	bad_config = """
