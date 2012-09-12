@@ -16,7 +16,7 @@ class PluginRegistry:
 	This matches tag names (eg, "paasmaker.service.foo") to classes (which should
 	be an importable fully dotted class).
 	When prompted, it can instantiate them. It assumes any plugins
-	require only the configuration in the constructor.
+	require two arguments to the constructor: configuration and parameters.
 	Why not just allow the fully dotted class in configurations? Because then
 	people could instantiate Python objects directly. This requires the classes
 	to be set explicitly. It also seperates the names in configurations from
@@ -33,13 +33,14 @@ class PluginRegistry:
 	def exists(self, plugin):
 		return self.registry.has_key(plugin)
 
-	def instantiate(self, plugin):
+	def instantiate(self, plugin, parameters):
 		cls = get_class(self.registry[plugin])
-		return cls(self.configuration)
+		return cls(self.configuration, parameters)
 
 class PluginExample:
-	def __init__(self, configuration):
+	def __init__(self, configuration, parameters):
 		self.configuration = configuration
+		self.parameters = parameters
 
 	def hello(self):
 		return self.configuration
@@ -55,7 +56,7 @@ class TestExample(unittest.TestCase):
 
 		self.assertTrue(self.registry.exists('paasmaker.test'), "Plugin doesn't exist.")
 
-		instance = self.registry.instantiate('paasmaker.test')
+		instance = self.registry.instantiate('paasmaker.test', {})
 
 		self.assertTrue(isinstance(instance, PluginExample), "Instance is not a PluginExample")
 		self.assertEquals(instance.configuration, 2, "Configuration was not passed to instance.")

@@ -17,6 +17,11 @@ class Runtime(colander.MappingSchema):
 		description="Commands used to prepare the code before starting the instance.",
 		default=[],
 		missing=[])
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Parameters",
+		description="Parameters to the runtime.",
+		missing={},
+		default={})
 
 class Service(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
