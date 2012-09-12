@@ -1,2 +1,3 @@
 # configuration module initialization.
-from configuration import Configuration, ConfigurationStub
+from configuration import Configuration
+from configurationstub import ConfigurationStub
