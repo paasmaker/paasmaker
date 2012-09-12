@@ -106,12 +106,30 @@ class RouterSchema(colander.MappingSchema):
 	def default():
 		return {'enabled': False}
 
+class MiscPortsSchema(colander.MappingSchema):
+	minimum = colander.SchemaNode(colander.Integer(),
+		title="Minimum port",
+		description="Lower end of the port range to search for free ports on.",
+		missing=10100,
+		default=10100)
+	maximum = colander.SchemaNode(colander.Integer(),
+		title="Maximum port",
+		description="Upper end of the port range to search for free ports on.",
+		missing=10500,
+		default=10500)
+	
+	@staticmethod
+	def default():
+		return {'minimum': 10100, 'maximum': 10500}
+
 class ConfigurationSchema(colander.MappingSchema):
 	http_port = colander.SchemaNode(colander.Integer(),
 		title="HTTP Port",
 		description="The HTTP port that this node listens on for API requests",
 		missing=8888,
 		default=8888)
+
+	misc_ports = MiscPortsSchema(default=MiscPortsSchema.default(),missing=MiscPortsSchema.default())
 	
 	my_route = colander.SchemaNode(colander.String(),
 		title="Route to this node",
@@ -145,6 +163,7 @@ class ImNotA(Exception):
 class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def __init__(self):
 		super(Configuration, self).__init__(ConfigurationSchema())
+		self.port_allocator = paasmaker.util.port.FreePortFinder()
 
 	def is_pacemaker(self):
 		return self.get_flat('pacemaker.enabled')
@@ -164,6 +183,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# Create the tables.
 		paasmaker.model.Base.metadata.bind = self.engine
 		paasmaker.model.Base.metadata.create_all()
+	
+	def get_free_port(self):
+		return self.port_allocator.free_in_range(self.get_flat('misc_ports.minimum'), self.get_flat('misc_ports.maximum'))
 
 	def get_database_session(self):
 		"""
@@ -306,7 +328,7 @@ vm-enabled no
 				raise ValueError("You must call get_redis the first time with a testcase argument, to initialize it.")
 			# Choose some configuration values.
 			self.redis = {}
-			self.redis['port'] = tornado.testing.get_unused_port()
+			self.redis['port'] = self.get_free_port()
 			self.redis['host'] = "127.0.0.1"
 			self.redis['configfile'] = tempfile.mkstemp()[1]
 			self.redis['dir'] = tempfile.mkdtemp()

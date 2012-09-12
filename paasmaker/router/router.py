@@ -29,8 +29,6 @@ http {
 	uwsgi_temp_path %(temp_dir)s/;
 	scgi_temp_path %(temp_dir)s/;
 
-	access_log /dev/stdout;
-
 	server {
 		listen       %(test_port)d;
 		server_name  localhost;
@@ -73,7 +71,7 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 		self.nginxconfig = tempfile.mkstemp()[1]
 		self.nginxtempdir = tempfile.mkdtemp()
 		self.nginxpidfile = os.path.join(self.nginxtempdir, 'nginx.pid')
-		self.nginxport = tornado.testing.get_unused_port()
+		self.nginxport = self.configuration.get_free_port()
 
 		# For debugging... they are unlinked in tearDown()
 		# but you can inspect them in the meantime.
@@ -95,7 +93,7 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 		# Kick off the instance. It will fork in the background once it's
 		# successfully started.
 		# check_call throws an exception if it failed to start.
-		subprocess.check_call([NGINX_BINARY_PATH, '-c', self.nginxconfig])
+		subprocess.check_call([NGINX_BINARY_PATH, '-c', self.nginxconfig], stderr=subprocess.PIPE)
 
 	def tearDown(self):
 		super(RouterTest, self).tearDown()
