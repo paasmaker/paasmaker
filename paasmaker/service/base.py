@@ -1,5 +1,5 @@
 # Base service.
-class Base():
+class ServiceBase():
 	def __init__(self, all_configuration, my_configuration):
 		# All configuration is the server-level configuration object.
 		self.all_configuration = all_configuration
@@ -10,14 +10,14 @@ class Base():
 
 	def get_server_configuration_schema(self):
 		"""
-		Get the dotconf schema for validating the incoming server-level
+		Get the colander schema for validating the incoming server-level
 		options. That is, the options used to later provide the service.
 		"""
 		pass
 
 	def get_application_configuration_schema(self):
 		"""
-		Get the dotconf schema for validating the
+		Get the colander schema for validating the
 		incoming application-level options. That is, the options
 		required to provision the service.
 		"""

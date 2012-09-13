@@ -1,2 +1,2 @@
 # placement module init.
-from base import Base
+from base import PlacementBase

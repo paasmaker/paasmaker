@@ -1,2 +1,2 @@
 # runtime module init.
-from base import Base
+from base import RuntimeBase
