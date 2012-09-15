@@ -33,16 +33,22 @@ heart:
   runtimes:
     - name: php
       cls: path.to.class
-      language: PHP
+      title: PHP
       versions:
         - 5.3
         - 5.4
+      parameters:
+        foo: bar
+        baz: bar
     - name: ruby
       cls: path.to.class
-      language: Ruby
+      title: Ruby
       versions:
         - 1.8.7
         - 1.9.3
+      parameters:
+        foo: bar
+        baz: bar
 """
 
 	router_config = """

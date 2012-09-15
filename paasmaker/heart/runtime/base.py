@@ -1,22 +1,8 @@
+import paasmaker
+import unittest
+
 # Base runtime interface.
-class RuntimeBase():
-	def __init__(self, configuration):
-		self.configuration = configuration
-
-	def get_server_configuration_schema(self):
-		"""
-		Get the colander schema for validating the incoming server-level
-		options. That is, the options used to later run the application.
-		"""
-		pass
-
-	def get_application_configuration_schema(self):
-		"""
-		Get the colander schema for validating the
-		incoming application-level options. That is, the options
-		required to run the application later.
-		"""
-		pass
+class BaseRuntime(paasmaker.util.plugin.PluginMixin):
 
 	def check_system(self):
 		"""
@@ -53,3 +39,12 @@ class RuntimeBase():
 		for the figures.
 		"""
 		raise NotImplementedError("You must implement stop.")
+
+class BaseRuntimeTest(unittest.TestCase):
+	def setUp(self):
+		# TODO: Create an appropriate configuration stub.
+		self.registry = paasmaker.util.plugin.PluginRegistry({})
+
+	def tearDown(self):
+		# TODO: Clean up the configuration stub, when that's implemented.
+		pass

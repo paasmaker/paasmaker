@@ -64,6 +64,11 @@ class HeartRuntimeSchema(colander.MappingSchema):
 		colander.SchemaNode(colander.String(),
 		title="Versions",
 		description="List of versions that are supported"))
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Runtime Parameters",
+		description="Parameters for this particular runtime",
+		missing={},
+		default={})
 
 class HeartRuntimesSchema(colander.SequenceSchema):
 	runtime = HeartRuntimeSchema()
@@ -115,7 +120,7 @@ class MiscPortsSchema(colander.MappingSchema):
 		description="Upper end of the port range to search for free ports on.",
 		missing=10500,
 		default=10500)
-	
+
 	@staticmethod
 	def default():
 		return {'minimum': 10100, 'maximum': 10500}
@@ -128,7 +133,7 @@ class ConfigurationSchema(colander.MappingSchema):
 		default=8888)
 
 	misc_ports = MiscPortsSchema(default=MiscPortsSchema.default(),missing=MiscPortsSchema.default())
-	
+
 	my_route = colander.SchemaNode(colander.String(),
 		title="Route to this node",
 		description="The route (IP address or Hostname) that should be used to contact this host. If not specified, it will be automatically determined",
@@ -162,6 +167,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def __init__(self):
 		super(Configuration, self).__init__(ConfigurationSchema())
 		self.port_allocator = paasmaker.util.port.FreePortFinder()
+		self.plugins = paasmaker.util.PluginRegistry(self)
 
 	def is_pacemaker(self):
 		return self.get_flat('pacemaker.enabled')
@@ -181,7 +187,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# Create the tables.
 		paasmaker.model.Base.metadata.bind = self.engine
 		paasmaker.model.Base.metadata.create_all()
-	
+
 	def get_free_port(self):
 		return self.port_allocator.free_in_range(self.get_flat('misc_ports.minimum'), self.get_flat('misc_ports.maximum'))
 
@@ -235,7 +241,7 @@ class TestConfiguration(unittest.TestCase):
 	minimum_config = """
 auth_token: 5893b415-f166-41a8-b606-7bdb68b88f0b
 """
-	
+
 	def setUp(self):
 		self.tempnam = tempfile.mkstemp()[1]
 

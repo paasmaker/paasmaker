@@ -36,5 +36,9 @@ if __name__ == '__main__':
 	# Router.
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.router.router))
 
+	# Runtimes.
+	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.heart.runtime))
+	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.heart.runtime.php))
+
 	# And run them.
 	unittest.TextTestRunner(verbosity=2).run(suite)

@@ -25,7 +25,7 @@ class InvalidConfigurationException(Exception):
 		# Generate a nice report of what happened here...
 		# TODO: Implement this.
 		pass
-	
+
 class ConfigurationHelper(dict):
 	def __init__(self, schema):
 		self.parsed = {}
@@ -47,6 +47,16 @@ class ConfigurationHelper(dict):
 			# In future this can be used to print a nicer report.
 			# Because the default output is rather confusing...!
 			raise InvalidConfigurationException(ex, raw, self.parsed)
+
+		# Allow subclasses to run their post-load stuff.
+		self.post_load()
+
+	def post_load(self):
+		"""
+		Overide this in your subclass to check the data that you loaded.
+		TODO: Figure out how exceptions should be handled.
+		"""
+		pass
 
 	def load_from_file(self, search_path):
 		for path in search_path:
@@ -77,7 +87,7 @@ map_item:
   one: two
   three: four
 """
-	
+
 	def test_simple(self):
 		conf = ConfigurationHelper(TestConfigurationSchema())
 		conf.load(self.test_configuration)

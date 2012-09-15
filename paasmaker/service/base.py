@@ -1,11 +1,9 @@
 # Base service.
 class ServiceBase():
-	def __init__(self, all_configuration, my_configuration):
+	def __init__(self, configuration, parameters):
 		# All configuration is the server-level configuration object.
-		self.all_configuration = all_configuration
-		# My configuration is just the single section that contains
-		# the configuration for this service.
-		self.my_configuration = my_configuration
+		self.configuration = configuration
+		self.parameters = parameters
 		pass
 
 	def get_server_configuration_schema(self):
