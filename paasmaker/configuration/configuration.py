@@ -21,8 +21,6 @@ import colander
 from tornado.options import define, options
 import tornado.testing
 
-import tornadoredis
-
 # Set up logging for this module.
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())

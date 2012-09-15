@@ -65,7 +65,7 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 		super(RouterTest, self).setUp()
 
 		self.redis = self.configuration.get_redis(self)
-		self.redisconfig = self.configuration.get_redis_configuration()
+		self.redis_server = self.configuration.get_redis_object()
 
 		# Fire up an nginx instance.
 		self.nginxconfig = tempfile.mkstemp()[1]
@@ -84,8 +84,8 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 		nginxparams['test_port'] = self.nginxport
 		nginxparams['error_log'] = self.errorlog
 		nginxparams['access_log'] = self.accesslog
-		nginxparams['redis_host'] = self.redisconfig['host']
-		nginxparams['redis_port'] = self.redisconfig['port']
+		nginxparams['redis_host'] = self.redis_server.host
+		nginxparams['redis_port'] = self.redis_server.port
 
 		config = NGINX_CONFIG % nginxparams
 		open(self.nginxconfig, 'w').write(config)

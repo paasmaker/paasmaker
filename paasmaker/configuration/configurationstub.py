@@ -9,6 +9,7 @@ import hashlib
 import logging
 import subprocess
 import configuration
+import paasmaker
 
 import tornadoredis
 
@@ -50,26 +51,6 @@ router:
   redis: %(redis)s
 """
 
-	# TODO: too specific to the server setup.
-	redis_binary_path = "/usr/bin/redis-server"
-	redis_server_config = """
-daemonize yes
-pidfile %(pidfile)s
-dir %(dir)s
-port %(port)d
-bind %(host)s
-
-databases 16
-
-# No save commands - so in memory only.
-
-timeout 300
-loglevel notice
-logfile stdout
-appendonly no
-vm-enabled no
-"""
-
 	def __init__(self, modules=[]):
 		# Choose filenames and set up example configuration.
 		configfile = tempfile.mkstemp()
@@ -108,39 +89,18 @@ vm-enabled no
 			if not testcase:
 				# This is to remain API compatible with the original configuration object.
 				raise ValueError("You must call get_redis the first time with a testcase argument, to initialize it.")
-			# Choose some configuration values.
-			self.redis = {}
-			self.redis['port'] = self.get_free_port()
-			self.redis['host'] = "127.0.0.1"
-			self.redis['configfile'] = tempfile.mkstemp()[1]
-			self.redis['dir'] = tempfile.mkdtemp()
-			self.redis['pidfile'] = os.path.join(self.redis['dir'], 'redis.pid')
-			self.redis['testcase'] = testcase
 
-			# Write out the configuration.
-			redisconfig = self.redis_server_config % self.redis
-			open(self.redis['configfile'], 'w').write(redisconfig)
-
-			# Fire up the server.
-			logging.info("Starting up redis server because requested by test.")
-			subprocess.check_call([self.redis_binary_path, self.redis['configfile']])
+			self.redis = paasmaker.util.memoryredis.MemoryRedis(self)
+			self.redis.start()
 
 			# Wait for it to start up.
 			testcase.short_wait_hack()
 
-			# Create a client for it.
-			client = tornadoredis.Client(host=self.redis['host'], port=self.redis['port'],
-				io_loop=testcase.io_loop)
-			client.connect()
-			self.redis['client'] = client
+			self.client = self.redis.get_client(io_loop=testcase.io_loop)
 
-		# Clear all keys before returning the client.
-		self.redis['client'].flushall(callback=self.redis['testcase'].stop)
-		self.redis['testcase'].wait()
+		return self.client
 
-		return self.redis['client']
-
-	def get_redis_configuration(self):
+	def get_redis_object(self):
 		if not self.redis:
 			raise Exception("Redis not initialized.")
 		return self.redis
@@ -152,12 +112,7 @@ vm-enabled no
 		os.unlink(self.configname)
 
 		if self.redis:
-			self.redis['client'].disconnect()
-			# Clean up the redis.
-			redispid = int(open(self.redis['pidfile'], 'r').read())
-			os.kill(redispid, signal.SIGTERM)
-			os.unlink(self.redis['configfile'])
-			shutil.rmtree(self.redis['dir'])
+			self.redis.stop()
 
 	def get_tornado_configuration(self):
 		settings = super(ConfigurationStub, self).get_tornado_configuration()
