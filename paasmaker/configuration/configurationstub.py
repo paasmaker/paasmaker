@@ -18,6 +18,7 @@ class ConfigurationStub(configuration.Configuration):
 	default_config = """
 auth_token: %(auth_token)s
 log_directory: %(log_dir)s
+scratch_directory: %(scratch_dir)s
 """
 
 	pacemaker_config = """
@@ -65,6 +66,7 @@ router:
 		self.params['log_dir'] = tempfile.mkdtemp()
 		self.params['auth_token'] = str(uuid.uuid4())
 		self.params['heart_working_dir'] = tempfile.mkdtemp()
+		self.params['scratch_dir'] = tempfile.mkdtemp()
 
 		# Create the configuration file.
 		configuration = self.default_config % self.params
@@ -137,6 +139,7 @@ router:
 		# Remove files that we created.
 		shutil.rmtree(self.params['log_dir'])
 		shutil.rmtree(self.params['heart_working_dir'])
+		shutil.rmtree(self.params['scratch_dir'])
 		os.unlink(self.configname)
 
 		if self.router_redis:

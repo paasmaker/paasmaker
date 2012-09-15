@@ -28,6 +28,7 @@ class InvalidConfigurationException(Exception):
 
 class ConfigurationHelper(dict):
 	def __init__(self, schema):
+		self.filename = None
 		self.parsed = {}
 		self.schema = schema
 		self.flat = {}
@@ -63,6 +64,7 @@ class ConfigurationHelper(dict):
 			if os.path.exists(path):
 				# Load this file.
 				raw = open(path).read()
+				self.filename = path
 				self.load(raw)
 				return
 

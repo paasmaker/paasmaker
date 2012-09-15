@@ -146,15 +146,17 @@ class ConfigurationSchema(colander.MappingSchema):
 
 	log_directory = colander.SchemaNode(colander.String(),
 		title="Log Directory",
-		description="Directory used to store log files",
-		default="/tmp/paasmaker-logs/", # TODO: use a better temp dir.
-		missing="/tmp/paasmaker-logs/")
+		description="Directory used to store log files")
 
 	server_log_level = colander.SchemaNode(colander.String(),
 		title="Server log level",
 		description="The log level for the server log file.",
 		default="INFO",
 		missing="INFO")
+
+	scratch_directory = colander.SchemaNode(colander.String(),
+		title="Scratch Directory",
+		description="Directory used for random temporary files. Should be somewhere persistent between reboots, eg, not /tmp.")
 
 	pacemaker = PacemakerSchema(default=PacemakerSchema.default(),missing=PacemakerSchema.default())
 	heart = HeartSchema(defalt=HeartSchema.default(),missing=HeartSchema.default())
@@ -168,6 +170,13 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		super(Configuration, self).__init__(ConfigurationSchema())
 		self.port_allocator = paasmaker.util.port.FreePortFinder()
 		self.plugins = paasmaker.util.PluginRegistry(self)
+
+	def post_load(self):
+		# Make sure directories exist.
+		if not os.path.exists(self.get_flat('scratch_directory')):
+			raise InvalidConfigurationException("Scratch directory does not exist.")
+		if not os.path.exists(self.get_flat('log_directory')):
+			raise InvalidConfigurationException("Log directory does not exist.")
 
 	def is_pacemaker(self):
 		return self.get_flat('pacemaker.enabled')
@@ -217,6 +226,12 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		settings['xheaders'] = True
 		return settings
 
+	def get_scratch_path(self, filename):
+		return os.path.join(self.get_flat('scratch_directory'), filename)
+
+	def get_supervisor_path(self):
+		return os.path.normpath(os.path.dirname(__file__) + '/../../supervisor.py')
+
 	def get_job_logger(self, job_id):
 		return paasmaker.util.joblogging.JobLoggerAdapter(logging.getLogger('job'), job_id, self)
 	def get_job_log_path(self, job_id):
@@ -240,6 +255,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 class TestConfiguration(unittest.TestCase):
 	minimum_config = """
 auth_token: 5893b415-f166-41a8-b606-7bdb68b88f0b
+log_directory: /tmp
+scratch_directory: /tmp
 """
 
 	def setUp(self):
