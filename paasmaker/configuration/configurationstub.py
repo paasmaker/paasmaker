@@ -73,7 +73,8 @@ router:
 		self.configname = configfile[1]
 		open(self.configname, 'w').write(configuration)
 
-		self.redis = None
+		self.router_redis = None
+		self.pubsub_redis = None
 
 		# Call parent constructor.
 		super(ConfigurationStub, self).__init__()
@@ -84,26 +85,47 @@ router:
 		if 'pacemaker' in modules:
 			self.setup_database()
 
-	def get_redis(self, testcase=None):
-		if not self.redis:
+	def get_router_redis(self, testcase=None):
+		if not self.router_redis:
 			if not testcase:
 				# This is to remain API compatible with the original configuration object.
-				raise ValueError("You must call get_redis the first time with a testcase argument, to initialize it.")
+				raise ValueError("You must call the first time with a testcase argument, to initialize it.")
 
-			self.redis = paasmaker.util.memoryredis.MemoryRedis(self)
-			self.redis.start()
+			self.router_redis = paasmaker.util.memoryredis.MemoryRedis(self)
+			self.router_redis.start()
 
 			# Wait for it to start up.
 			testcase.short_wait_hack()
 
-			self.client = self.redis.get_client(io_loop=testcase.io_loop)
+			self.router_redis_client = self.router_redis.get_client(io_loop=testcase.io_loop)
 
-		return self.client
+		return self.router_redis_client
 
-	def get_redis_object(self):
-		if not self.redis:
-			raise Exception("Redis not initialized.")
-		return self.redis
+	def get_pubsub_redis(self, testcase=None):
+		if not self.pubsub_redis:
+			if not testcase:
+				# This is to remain API compatible with the original configuration object.
+				raise ValueError("You must call the first time with a testcase argument, to initialize it.")
+
+			self.pubsub_redis = paasmaker.util.memoryredis.MemoryRedis(self)
+			self.pubsub_redis.start()
+
+			# Wait for it to start up.
+			testcase.short_wait_hack()
+
+			self.pubsub_redis_client = self.pubsub_redis.get_client(io_loop=testcase.io_loop)
+
+		return self.pubsub_redis_client
+
+	def get_router_redis_object(self):
+		if not self.router_redis:
+			raise Exception("Router redis not initialized.")
+		return self.router_redis
+
+	def get_pubsub_redis_object(self):
+		if not self.pubsub_redis:
+			raise Exception("Pubsub redis not initialized.")
+		return self.pubsub_redis
 
 	def cleanup(self):
 		# Remove files that we created.
@@ -111,8 +133,10 @@ router:
 		shutil.rmtree(self.params['heart_working_dir'])
 		os.unlink(self.configname)
 
-		if self.redis:
-			self.redis.stop()
+		if self.router_redis:
+			self.router_redis.stop()
+		if self.pubsub_redis:
+			self.pubsub_redis.stop()
 
 	def get_tornado_configuration(self):
 		settings = super(ConfigurationStub, self).get_tornado_configuration()

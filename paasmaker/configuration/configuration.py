@@ -195,7 +195,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			raise ImNotA("I'm not a pacemaker.")
 		return self.session()
 
-	def get_redis(self):
+	def get_pubsub_redis(self):
+		pass
+
+	def get_router_redis(self):
 		pass
 
 	def get_tornado_configuration(self):

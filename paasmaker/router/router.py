@@ -64,8 +64,8 @@ class RouterTest(paasmaker.controller.base.BaseControllerTest):
 	def setUp(self):
 		super(RouterTest, self).setUp()
 
-		self.redis = self.configuration.get_redis(self)
-		self.redis_server = self.configuration.get_redis_object()
+		self.redis = self.configuration.get_router_redis(self)
+		self.redis_server = self.configuration.get_router_redis_object()
 
 		# Fire up an nginx instance.
 		self.nginxconfig = tempfile.mkstemp()[1]
