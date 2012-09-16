@@ -6,4 +6,5 @@ from apirequest import APIRequest, APIResponse
 from plugin import PluginRegistry, PluginExample
 from port import FreePortFinder, NoFreePortException
 from memoryredis import MemoryRedis
+from memoryrabbitmq import MemoryRabbitMQ
 from commandsupervisor import CommandSupervisor, CommandSupervisorLauncher

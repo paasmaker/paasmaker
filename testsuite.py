@@ -20,6 +20,7 @@ if __name__ == '__main__':
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.port))
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.plugin))
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.commandsupervisor))
+	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.util.memoryrabbitmq))
 
 	# Configuration system.
 	suite.addTests(unittest.TestLoader().loadTestsFromModule(paasmaker.configuration.configuration))
