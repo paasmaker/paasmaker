@@ -210,9 +210,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			raise ImNotA("I'm not a pacemaker.")
 		return self.session()
 
-	def get_pubsub_redis(self):
-		pass
-
 	def get_router_redis(self):
 		pass
 
@@ -232,6 +229,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def get_supervisor_path(self):
 		return os.path.normpath(os.path.dirname(__file__) + '/../../supervisor.py')
 
+	#
+	# JOB HELPERS
+	#
 	def get_job_logger(self, job_id):
 		return paasmaker.util.joblogging.JobLoggerAdapter(logging.getLogger('job'), job_id, self)
 	def get_job_log_path(self, job_id):
