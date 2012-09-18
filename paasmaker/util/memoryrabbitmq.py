@@ -10,6 +10,10 @@ import os
 import logging
 import time
 import signal
+from paasmaker.thirdparty.pika import TornadoConnection
+import pika
+
+# https://github.com/pika/pika/blob/master/examples/demo_tornado.py
 
 class MemoryRabbitMQ:
 	# TODO: Ubuntu specific, most likely!
@@ -74,14 +78,20 @@ class MemoryRabbitMQ:
 			checkfd.seek(0)
 			raise Exception("Failed to start RabbitMQ: " + checkfd.read())
 
-	def get_client(self, io_loop=None):
-		# TODO: Implement!
-		pass
+	def get_client(self, io_loop=None, callback=None):
+		credentials = pika.PlainCredentials('guest', 'guest')
+		# This will connect immediately.
+		parameters = pika.ConnectionParameters(host='localhost',
+			port=self.port,
+			virtual_host='/',
+			credentials=credentials)
+		self.client = TornadoConnection(parameters, on_open_callback=callback, io_loop=io_loop)
+		return self.client
 
 	def stop(self):
 		if self.started:
 			if self.client:
-				self.client.disconnect()
+				self.client.close()
 			# Clean up the server.
 			pid = int(open(self.pidfile, 'r').read())
 			os.kill(pid, signal.SIGTERM)
@@ -93,12 +103,45 @@ class MemoryRabbitMQTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
 		self.configuration = paasmaker.configuration.ConfigurationStub([])
 		super(MemoryRabbitMQTest, self).setUp()
+		self.server = MemoryRabbitMQ(self.configuration)
+		# Basically, this shouldn't throw an exception.
+		self.server.start()
+
 	def tearDown(self):
 		self.configuration.cleanup()
 		super(MemoryRabbitMQTest, self).tearDown()
+		self.server.stop()
+
+	def callback(self, channel, method, header, body):
+		# Print out the message.
+		#print body
+		# Signal that we got it.
+		self.stop()
 
 	def test_basic(self):
-		server = MemoryRabbitMQ(self.configuration)
-		# Basically, this shouldn't throw an exception.
-		server.start()
-		server.stop()
+		# Set up the client.
+		client = self.server.get_client(io_loop=self.io_loop, callback=self.stop)
+		self.wait()
+
+		# Set up a basic channel.
+		client.channel(self.stop)
+		ch = self.wait()
+		ch.queue_declare(queue='hello', callback=self.stop)
+		self.wait()
+		ch.basic_consume(consumer_callback=self.callback, queue='hello', no_ack=True)
+
+		# Wait for that to be set up.
+		self.short_wait_hack()
+
+		# Publish a message.
+		ch.basic_publish(body='Message from the Rabbits.', exchange='', routing_key='hello')
+
+		# Wait until the message is received.
+		self.wait()
+
+		# Finish up.
+		client.close()
+
+	def short_wait_hack(self):
+		self.io_loop.add_timeout(time.time() + 0.1, self.stop)
+		self.wait()

@@ -5,3 +5,4 @@ colander
 ws4py
 pypubsub
 tornado-redis
+pika==0.9.5
