@@ -8,3 +8,4 @@ from port import FreePortFinder, NoFreePortException
 from memoryredis import MemoryRedis
 from memoryrabbitmq import MemoryRabbitMQ
 from commandsupervisor import CommandSupervisor, CommandSupervisorLauncher
+from popen import Popen
