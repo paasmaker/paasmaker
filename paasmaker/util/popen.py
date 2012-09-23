@@ -12,7 +12,7 @@ import sys
 import time
 
 class Popen(subprocess.Popen):
-    def __init__(self, cmd, uid=None, redirect_stderr=False, on_stdout=None, on_stderr=None, io_loop=None, *args, **kwargs):
+    def __init__(self, cmd, uid=None, redirect_stderr=False, on_stdout=None, on_stderr=None, io_loop=None, on_exit=None, *args, **kwargs):
         if isinstance(cmd, basestring):
             cmd = shlex.split(str(cmd))
 
@@ -26,6 +26,9 @@ class Popen(subprocess.Popen):
         elif on_stderr:
             self.on_stderr = on_stderr
             kwargs['stderr'] = subprocess.PIPE
+
+        if on_exit:
+            self.on_exit = on_exit
 
         if uid is not None:
             kwargs['preexec_fn'] = lambda: os.setuid(uid)
@@ -62,6 +65,8 @@ class Popen(subprocess.Popen):
             data = os.read(fd, 4096)
             if len(data) == 0:
                 logging.info("Child pipe closed")
+                # TODO: Sigh, have to call back once it's settled.
+                self.io_loop.add_timeout(time.time() + 0.1, self.check_completed)
                 self.io_loop.remove_handler(fd)
 
         except OSError, e:
@@ -80,6 +85,15 @@ class Popen(subprocess.Popen):
     def __del__(self):
         self.drain()
         super(Popen, self).__del__()
+
+    def check_completed(self):
+        self.poll()
+        if self.returncode is not None and self.on_exit:
+            logging.info("Process is complete with return code %d", self.returncode)
+            self.on_exit(self.returncode)
+            # Clear the callback once called - this prevents several calls
+            # due to the closing of stderr/stdout.
+            self.on_exit = None
 
 class PopenTest(tornado.testing.AsyncTestCase):
     def log(self, msg):
@@ -147,6 +161,12 @@ class PopenTest(tornado.testing.AsyncTestCase):
     def test_popen(self):
         cmd = self.make_command(1, 0., 0.)
         self.p = Popen(cmd, io_loop=self.io_loop, close_fds=True, on_stdout=self.on_sink, on_stderr=self.on_sink)
+
+    def test_popen_exited(self):
+        cmd = self.make_command(1, 0., 0.)
+        self.p = Popen(cmd, io_loop=self.io_loop, close_fds=True, on_stdout=self.on_sink, on_stderr=self.on_sink, on_exit=self.stop)
+        code = self.wait()
+        self.assertEquals(code, 0)
 
     def test_popen_stdout(self):
         cmd = self.make_command(1, 0., 0.)
