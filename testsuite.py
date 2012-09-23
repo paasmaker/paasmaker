@@ -56,6 +56,10 @@ if __name__ == '__main__':
 			else:
 				suite.addTests(unittest.TestLoader().loadTestsFromModule(module))
 
+	if not suite:
+		print "No tests selected."
+		sys.exit(1)
+
 	# And run them.
 	print "About to run %d tests." % suite.countTestCases()
 	unittest.TextTestRunner(verbosity=2).run(suite)
