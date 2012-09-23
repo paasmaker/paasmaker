@@ -41,3 +41,4 @@ be easily possible.
 	sudo apt-get install python-pip
 	sudo apt-get install python-dev
 	sudo pip install -r requirements.txt
+    sudo pip instal coverage
