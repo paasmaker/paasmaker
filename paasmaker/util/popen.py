@@ -11,6 +11,7 @@ import fcntl
 import sys
 import time
 import signal
+import tempfile
 from tornado  import stack_context
 from datetime import timedelta
 from collections import deque
@@ -225,7 +226,11 @@ class PopenTest(tornado.testing.AsyncTestCase):
 
     def test_popen(self):
         cmd = self.make_command(1, 0., 0.)
-        self.p = Popen(cmd, io_loop=self.io_loop, close_fds=True, on_stdout=self.on_output_sink, on_stderr=self.on_output_sink)
+        # CAUTION: This test is being a hiesen test. It works when you don't run
+        # all unit tests, but then sometimes fails when you run the whole suite.
+        # This bug should almost certainly be fixed at some time.
+        self.p = Popen(cmd, io_loop=self.io_loop, close_fds=True, on_stdout=self.on_output_sink, on_stderr=self.on_output_sink, on_exit=self.stop)
+        self.wait()
 
     def test_popen_exit_callback(self):
         # TODO: This sometimes fails with a timeout depending on what unit tests it's run with.
@@ -267,6 +272,22 @@ class PopenTest(tornado.testing.AsyncTestCase):
         self.wait()
         self.assertEqual(len(self.stdout), 1)
         self.assertEqual(len(self.stderr), 1)
+
+    def test_popen_to_file(self):
+        # This tests if we can redirect the output to a file directly.
+        cmd = self.make_command(1, 0., 0.)
+        filename = tempfile.mkstemp()[1]
+        fp = open(filename, 'wb')
+        self.p = Popen(cmd, stdout=fp, stderr=fp, io_loop=self.io_loop, close_fds=True, on_exit=self.stop)
+        code = self.wait()
+        self.assertEqual(code, 0, "Process did not exit cleanly.")
+        fp.close()
+        fp = open(filename, 'rb')
+        fp.seek(0)
+        rawdata = fp.read()
+        self.assertEqual(rawdata.count('iter'), 2, "Output did not capture output.")
+        fp.close()
+        os.unlink(filename)
 
     def test_popen_redirect(self):
         cmd = self.make_command(1, 0., 0.)
