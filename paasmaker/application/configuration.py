@@ -96,7 +96,7 @@ application:
       - php composer.phar install
 
 runtime:
-  provider: paasmaker.php
+  provider: paasmaker.runtime.php
   version: 5.4
   startup:
     - paasmaker.startup.symfony2
@@ -132,7 +132,7 @@ placement:
 		config = ApplicationConfiguration()
 		config.load(self.test_config)
 		self.assertEquals(config.get_flat('manifest.version'), 1, "Manifest version is incorrect.")
-		self.assertEquals(config.get_flat('runtime.provider'), "paasmaker.php", "Runtime provider is not as expected.")
+		self.assertEquals(config.get_flat('runtime.provider'), "paasmaker.runtime.php", "Runtime provider is not as expected.")
 		self.assertEquals(config.get_flat('runtime.version'), "5.4", "Runtime version is not as expected.")
 		self.assertEquals(len(config['hostnames']), 4, "Number of hostnames is not as expected.")
 		self.assertIn("www.foo.com.au", config['hostnames'], "Hostnames does not contain an expected item.")
