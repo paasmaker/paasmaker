@@ -75,8 +75,18 @@ class ConfigurationHelper(dict):
 		return self.flat[key]
 
 	def dump(self):
-		for key, value in self.flat.iteritems():
-			logging.debug("%s: %s", key, str(value))
+		keys = self.flat.keys()
+		keys.sort()
+		for key in keys:
+			logging.debug("%s: %s", key, str(self.flat[key]))
+
+	def load_plugins(self, registry, datasource):
+		for entry in datasource:
+			name = entry['name']
+			cls = entry['cls']
+			params = entry['parameters']
+
+			registry.register(name, cls, params)
 
 class TestConfigurationSchema(colander.MappingSchema):
 	str_item = colander.SchemaNode(colander.String())

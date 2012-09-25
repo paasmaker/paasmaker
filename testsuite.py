@@ -26,6 +26,7 @@ test_sets = {
 	paasmaker.util.popen: ['all', 'slow', 'util', 'process'],
 
 	paasmaker.configuration.configuration: ['all', 'quick', 'configuration'],
+	paasmaker.configuration.configurationstub: ['all', 'quick', 'configuration'],
 	paasmaker.application.configuration: ['all', 'quick', 'configuration'],
 
 	paasmaker.model: ['all', 'slow', 'model'],

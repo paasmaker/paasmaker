@@ -57,7 +57,7 @@ class HeartRuntimeSchema(colander.MappingSchema):
 	cls = colander.SchemaNode(colander.String(),
 		title="Runtime Class",
 		description="The class used to provide this runtime")
-	language = colander.SchemaNode(colander.String(),
+	title = colander.SchemaNode(colander.String(),
 		title="Friendly name",
 		description="The friendly name for this runtime")
 	versions = colander.SchemaNode(colander.Sequence(),
@@ -94,6 +94,23 @@ class HeartSchema(colander.MappingSchema):
 	def default():
 		return {'enabled': False, 'runtimes': []}
 
+class RedisConnectionSchema(colander.MappingSchema):
+	host = colander.SchemaNode(colander.String(),
+		title="Hostname",
+		description="Redis Hostname")
+	port = colander.SchemaNode(colander.Integer(),
+		title="Port",
+		description="Redis Port")
+	password = colander.SchemaNode(colander.String(),
+		title="Password",
+		description="Redis Password",
+		missing="",
+		default="")
+
+class RouterRedisSchema(colander.MappingSchema):
+	master = RedisConnectionSchema()
+	local = RedisConnectionSchema()
+
 class RouterSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
 		title="Router enabled",
@@ -101,13 +118,15 @@ class RouterSchema(colander.MappingSchema):
 		missing=False,
 		default=False)
 
-	redis = colander.SchemaNode(colander.String(),
-		title="Redis connection string",
-		description="The redis connection string. CAUTION: Do NOT share redis instances with other routers.")
+	redis = RouterRedisSchema()
 
 	@staticmethod
 	def default():
-		return {'enabled': False}
+		redis_default = {
+			'master': {'host':'localhost', 'port':6379},
+			'local': {'host':'localhost', 'port':6379}
+		}
+		return {'enabled': False, 'redis': redis_default}
 
 class MiscPortsSchema(colander.MappingSchema):
 	minimum = colander.SchemaNode(colander.Integer(),
@@ -177,6 +196,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			raise InvalidConfigurationException("Scratch directory does not exist.")
 		if not os.path.exists(self.get_flat('log_directory')):
 			raise InvalidConfigurationException("Log directory does not exist.")
+
+		# Load heart plugins.
+		if self.is_heart():
+			self.load_plugins(self.plugins, self['heart']['runtimes'])
 
 	def is_pacemaker(self):
 		return self.get_flat('pacemaker.enabled')

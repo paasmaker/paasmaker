@@ -32,30 +32,35 @@ heart:
   enabled: true
   working_dir: %(heart_working_dir)s
   runtimes:
-    - name: php
-      cls: path.to.class
+    - name: paasmaker.runtime.php
+      cls: paasmaker.heart.runtime.PHPRuntime
       title: PHP
       versions:
         - 5.3
         - 5.4
       parameters:
-        foo: bar
-        baz: bar
-    - name: ruby
-      cls: path.to.class
-      title: Ruby
-      versions:
-        - 1.8.7
-        - 1.9.3
-      parameters:
-        foo: bar
-        baz: bar
+        apache_config_dir: /tmp/foo
+    #- name: paasmaker.runtime.ruby
+    #  cls: paasmaker.heart.runtime.RubyRuntime
+    #  title: Ruby
+    #  versions:
+    #    - 1.8.7
+    #    - 1.9.3
+    #  parameters:
+    #    foo: bar
+    #    baz: bar
 """
 
 	router_config = """
 router:
   enabled: true
-  redis: %(redis)s
+  redis:
+    master:
+      host: localhost
+      port: 6379
+    local:
+      host: localhost
+      port: 6379
 """
 
 	def __init__(self, modules=[]):
@@ -128,3 +133,8 @@ router:
 		# Force debug mode on.
 		settings['debug'] = True
 		return settings
+
+class TestConfigurationStub(unittest.TestCase):
+	def test_simple(self):
+		stub = ConfigurationStub(['pacemaker', 'heart', 'router'])
+		# And I guess we shouldn't have any exceptions...
