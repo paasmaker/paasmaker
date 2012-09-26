@@ -15,7 +15,7 @@ import pika
 
 # https://github.com/pika/pika/blob/master/examples/demo_tornado.py
 
-class MemoryRabbitMQ:
+class TemporaryRabbitMQ:
 	# TODO: Ubuntu specific, most likely!
 	server_binary_path = "/usr/lib/rabbitmq/bin/rabbitmq-server"
 	server_config = """
@@ -99,17 +99,17 @@ class MemoryRabbitMQ:
 			os.unlink(self.outputspoolfile)
 			shutil.rmtree(self.dir)
 
-class MemoryRabbitMQTest(tornado.testing.AsyncTestCase):
+class TemporaryRabbitMQTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
 		self.configuration = paasmaker.configuration.ConfigurationStub([])
-		super(MemoryRabbitMQTest, self).setUp()
-		self.server = MemoryRabbitMQ(self.configuration)
+		super(TemporaryRabbitMQTest, self).setUp()
+		self.server = TemporaryRabbitMQ(self.configuration)
 		# Basically, this shouldn't throw an exception.
 		self.server.start()
 
 	def tearDown(self):
 		self.configuration.cleanup()
-		super(MemoryRabbitMQTest, self).tearDown()
+		super(TemporaryRabbitMQTest, self).tearDown()
 		self.server.stop()
 
 	def callback(self, channel, method, header, body):
