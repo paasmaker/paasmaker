@@ -92,7 +92,7 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 
 class JobLoggingTest(unittest.TestCase):
 	def setUp(self):
-		self.configuration = paasmaker.configuration.ConfigurationStub()
+		self.configuration = paasmaker.common.configuration.ConfigurationStub()
 		self.logger = logging.getLogger('job')
 		# Prevent propagation to the parent. This prevents extra messages
 		# during unit tests.

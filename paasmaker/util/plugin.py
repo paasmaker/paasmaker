@@ -34,7 +34,7 @@ class PluginMixin:
 			# Raise another exception that encapsulates more context.
 			# In future this can be used to print a nicer report.
 			# Because the default output is rather confusing...!
-			raise paasmaker.configuration.configuration.InvalidConfigurationException(ex, '', self.raw_options)
+			raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self.raw_options)
 
 	def check_parameters(self):
 		try:
@@ -47,7 +47,7 @@ class PluginMixin:
 			# Raise another exception that encapsulates more context.
 			# In future this can be used to print a nicer report.
 			# Because the default output is rather confusing...!
-			raise paasmaker.configuration.configuration.InvalidConfigurationException(ex, '', self.raw_parameters)
+			raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self.raw_parameters)
 
 	def get_flat_option(self, key):
 		return self.options_flat[key]
@@ -144,7 +144,7 @@ class TestExample(unittest.TestCase):
 		try:
 			registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {})
 			self.assertTrue(False, "Should have thrown exception.")
-		except paasmaker.configuration.configuration.InvalidConfigurationException, ex:
+		except paasmaker.common.configuration.configuration.InvalidConfigurationException, ex:
 			self.assertTrue(True, "Didn't throw exception as expected.")
 
 	def test_plugin_bad_parameters(self):
@@ -153,5 +153,5 @@ class TestExample(unittest.TestCase):
 		try:
 			instance = registry.instantiate('paasmaker.test', {})
 			self.assertTrue(False, "Should have thrown exception.")
-		except paasmaker.configuration.configuration.InvalidConfigurationException, ex:
+		except paasmaker.common.configuration.configuration.InvalidConfigurationException, ex:
 			self.assertTrue(True, "Didn't throw exception as expected.")

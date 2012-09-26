@@ -25,9 +25,9 @@ test_sets = {
 	paasmaker.util.temporaryrabbitmq: ['all', 'slow', 'util', 'messaging', 'service'],
 	paasmaker.util.popen: ['all', 'slow', 'util', 'process'],
 
-	paasmaker.configuration.configuration: ['all', 'quick', 'configuration'],
-	paasmaker.configuration.configurationstub: ['all', 'quick', 'configuration'],
-	paasmaker.application.configuration: ['all', 'quick', 'configuration'],
+	paasmaker.common.configuration.configuration: ['all', 'quick', 'configuration'],
+	paasmaker.common.configuration.configurationstub: ['all', 'quick', 'configuration'],
+	paasmaker.common.application.configuration: ['all', 'quick', 'configuration'],
 
 	paasmaker.model: ['all', 'slow', 'model'],
 

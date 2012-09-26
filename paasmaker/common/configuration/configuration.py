@@ -240,8 +240,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		settings = {}
 		# TODO: Use a different value from the auth token?
 		settings['cookie_secret'] = self['auth_token']
-		settings['template_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../templates')
-		settings['static_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../static')
+		settings['template_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../../templates')
+		settings['static_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../../static')
 		settings['debug'] = (options.debug == 1)
 		settings['xheaders'] = True
 		return settings
@@ -250,7 +250,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		return os.path.join(self.get_flat('scratch_directory'), filename)
 
 	def get_supervisor_path(self):
-		return os.path.normpath(os.path.dirname(__file__) + '/../../supervisor.py')
+		return os.path.normpath(os.path.dirname(__file__) + '/../../../supervisor.py')
 
 	#
 	# JOB HELPERS

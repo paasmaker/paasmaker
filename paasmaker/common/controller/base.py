@@ -172,7 +172,7 @@ class BaseController(tornado.web.RequestHandler):
 		if format != 'json' and format != 'html':
 			raise ValueError("Invalid format '%s' supplied." % format)
 		self.format = format
-		
+
 	def render(self, template, **kwargs):
 		# Prepare our variables.
 		if self.format == 'json':
@@ -276,7 +276,7 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 	config_modules = []
 
 	def setUp(self):
-		self.configuration = paasmaker.configuration.ConfigurationStub(self.config_modules)
+		self.configuration = paasmaker.common.configuration.ConfigurationStub(self.config_modules)
 		super(BaseControllerTest, self).setUp()
 	def tearDown(self):
 		self.configuration.cleanup()
@@ -287,7 +287,7 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 		# TODO: Figure out how to do this.
 		request = tornado.httpclient.HTTPRequest(url, **kwargs)
 		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
-		client.fetch(request, self.stop)	
+		client.fetch(request, self.stop)
 
 	def short_wait_hack(self):
 		self.io_loop.add_timeout(time.time() + 0.1, self.stop)

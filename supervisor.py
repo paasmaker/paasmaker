@@ -43,7 +43,7 @@ if len(sys.argv) > 3:
 
 # Load the configuration.
 logger(log_file, "Loading configuration...")
-configuration = paasmaker.configuration.Configuration()
+configuration = paasmaker.common.configuration.Configuration()
 configuration.load_from_file(configuration_files)
 
 # And launch. This will block until it completes.
