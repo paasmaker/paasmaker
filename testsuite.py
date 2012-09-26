@@ -31,10 +31,10 @@ test_sets = {
 
 	paasmaker.model: ['all', 'slow', 'model'],
 
-	paasmaker.controller.example: ['all', 'quick', 'controller'],
-	paasmaker.controller.information: ['all', 'quick', 'controller'],
-	paasmaker.controller.log: ['all', 'slow', 'controller'],
-	paasmaker.controller.login: ['all', 'slow', 'controller'],
+	paasmaker.common.controller.example: ['all', 'quick', 'controller'],
+	paasmaker.common.controller.information: ['all', 'quick', 'controller'],
+	paasmaker.common.controller.log: ['all', 'slow', 'controller'],
+	paasmaker.pacemaker.controller.login: ['all', 'slow', 'controller'],
 
 	paasmaker.heart.runtime: ['all', 'slow', 'heart', 'runtime'],
 	paasmaker.heart.runtime.php: ['all', 'slow', 'heart', 'runtime', 'php']

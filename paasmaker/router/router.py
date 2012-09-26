@@ -52,12 +52,12 @@ http {
 }
 """
 
-class RouterTest(paasmaker.controller.base.BaseControllerTest):
+class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 	def get_app(self):
-		routes = paasmaker.controller.example.ExampleController.get_routes({'configuration': self.configuration})
-		routes.extend(paasmaker.controller.example.ExampleFailController.get_routes({'configuration': self.configuration}))
-		routes.extend(paasmaker.controller.example.ExamplePostController.get_routes({'configuration': self.configuration}))
-		routes.extend(paasmaker.controller.example.ExampleWebsocketHandler.get_routes({'configuration': self.configuration}))
+		routes = paasmaker.common.controller.example.ExampleController.get_routes({'configuration': self.configuration})
+		routes.extend(paasmaker.common.controller.example.ExampleFailController.get_routes({'configuration': self.configuration}))
+		routes.extend(paasmaker.common.controller.example.ExamplePostController.get_routes({'configuration': self.configuration}))
+		routes.extend(paasmaker.common.controller.example.ExampleWebsocketHandler.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 

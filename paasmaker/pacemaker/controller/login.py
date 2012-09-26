@@ -1,7 +1,7 @@
-from base import BaseController
-from base import BaseControllerTest
-from information import InformationController
+
+from paasmaker.common.controller import InformationController
 import paasmaker
+from paasmaker.common.controller import BaseController, BaseControllerTest
 import tornado
 
 import unittest
