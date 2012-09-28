@@ -17,7 +17,7 @@ tornado.options.parse_command_line()
 
 # Load configuration
 logging.info("Loading configuration...")
-configuration = paasmaker.configuration.Configuration()
+configuration = paasmaker.common.configuration.Configuration()
 configuration.load_from_file(['../paasmaker.yml', '/etc/paasmaker/paasmaker.yml'])
 
 # Reset the log level.

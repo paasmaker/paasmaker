@@ -44,7 +44,7 @@ class BaseController(tornado.web.RequestHandler):
 	"""
 	Base class for all controllers in the system.
 	"""
-	def initialize(self, configuration):
+	def initialize(self, configuration=None, io_loop=None):
 		self.configuration = configuration
 		self.data = {}
 		self.template = {}
@@ -57,6 +57,7 @@ class BaseController(tornado.web.RequestHandler):
 		self.auth = {}
 		self.params = {}
 		self.allowed_authentication_methods = ['anonymous']
+		self.io_loop = io_loop
 
 	def prepare(self):
 		self._set_format(self.get_argument('format', 'html'))
@@ -158,9 +159,13 @@ class BaseController(tornado.web.RequestHandler):
 
 	def add_error(self, error):
 		self.errors.append(error)
+	def add_errors(self, errors):
+		self.errors.extend(errors)
 
 	def add_warning(self, warning):
 		self.warnings.append(warning)
+	def add_warnings(self, warnings):
+		self.warnings.extend(warnings)
 
 	def db(self):
 		if self.session:
@@ -281,7 +286,9 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 		this unit tests test HTTP port.
 		"""
 		if not self.configuration:
-			self.configuration = paasmaker.common.configuration.ConfigurationStub(port=self.get_http_port(), modules=self.config_modules)
+			self.configuration = paasmaker.common.configuration.ConfigurationStub(
+				port=self.get_http_port(),
+				modules=self.config_modules)
 		return self.configuration
 
 	def setUp(self):

@@ -35,6 +35,7 @@ test_sets = {
 	paasmaker.common.controller.information: ['all', 'quick', 'controller'],
 	paasmaker.common.controller.log: ['all', 'slow', 'controller'],
 	paasmaker.pacemaker.controller.login: ['all', 'slow', 'controller'],
+	paasmaker.pacemaker.controller.node: ['all', 'slow', 'controller', 'node'],
 
 	paasmaker.heart.runtime: ['all', 'slow', 'heart', 'runtime'],
 	paasmaker.heart.runtime.php: ['all', 'slow', 'heart', 'runtime', 'php']

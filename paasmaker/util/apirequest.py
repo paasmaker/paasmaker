@@ -48,8 +48,11 @@ class APIRequest():
 		return '/'
 
 	def set_target(self, target):
-		# TODO: Auto parse node objects.
-		self.target = target
+		if isinstance(target, basestring):
+			self.target = target
+		else:
+			# TODO: This assumes that it's a node object. Be sure of that.
+			self.target = "http://%s:%d" % (target.route, target.apiport)
 
 	def send(self, callback, **kwargs):
 		# Build what we're sending.

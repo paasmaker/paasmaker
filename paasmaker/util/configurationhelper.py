@@ -52,6 +52,9 @@ class ConfigurationHelper(dict):
 		# Allow subclasses to run their post-load stuff.
 		self.post_load()
 
+	def update_flat(self):
+		self.flat = self.schema.flatten(self)
+
 	def post_load(self):
 		"""
 		Overide this in your subclass to check the data that you loaded.

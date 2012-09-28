@@ -65,7 +65,7 @@ class Node(OrmBase, Base):
 		return "<Node('%s','%s')>" % (self.name, self.route)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['name', 'route', 'uuid', 'state', 'last_heard'])
+		return super(Node, self).flatten(['name', 'route', 'apiport', 'uuid', 'state', 'last_heard'])
 
 class NodeRuntime(OrmBase, Base):
 	__tablename__ = 'node_runtime'
@@ -403,7 +403,7 @@ class TestModel(unittest.TestCase):
 		s = self.__class__.session
 		item = s.query(Node).first()
 		flat = item.flatten()
-		self.assertEquals(len(flat.keys()), 9, "Item has incorrect number of keys.")
+		self.assertEquals(len(flat.keys()), 10, "Item has incorrect number of keys.")
 		self.assertTrue(flat.has_key('id'), "Missing ID.")
 		self.assertTrue(flat.has_key('name'), "Missing name.")
 		self.assertTrue(isinstance(flat['id'], int), "ID is not an integer.")

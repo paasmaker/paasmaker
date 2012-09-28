@@ -16,6 +16,8 @@ import tornadoredis
 class ConfigurationStub(configuration.Configuration):
 	"""A test version of the configuration object, for unit tests."""
 	default_config = """
+# The port to this test instance is the master port, for testing purposes.
+http_port: %(master_port)d
 auth_token: %(auth_token)s
 log_directory: %(log_dir)s
 scratch_directory: %(scratch_dir)s

@@ -12,6 +12,7 @@ import shutil
 import hashlib
 import logging
 import subprocess
+import socket
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -153,6 +154,12 @@ class ConfigurationSchema(colander.MappingSchema):
 
 	misc_ports = MiscPortsSchema(default=MiscPortsSchema.default(),missing=MiscPortsSchema.default())
 
+	my_name = colander.SchemaNode(colander.String(),
+		title="Node name",
+		description="Friendly node name, or if not supplied, will attempt to detect the hostname.",
+		missing=None,
+		default=None)
+
 	my_route = colander.SchemaNode(colander.String(),
 		title="Route to this node",
 		description="The route (IP address or Hostname) that should be used to contact this host. If not specified, it will be automatically determined",
@@ -206,9 +213,17 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		if not os.path.exists(self.get_flat('log_directory')):
 			raise InvalidConfigurationException("Log directory does not exist.")
 
+		if self['my_name'] is None:
+			self['my_name'] = os.uname()[1]
+		if self['my_route'] is None:
+			# TODO: improve this detection and use.
+			self['my_route'] = socket.getfqdn()
+
 		# Load heart plugins.
 		if self.is_heart():
 			self.load_plugins(self.plugins, self['heart']['runtimes'])
+
+		self.update_flat()
 
 	def is_pacemaker(self):
 		return self.get_flat('pacemaker.enabled')
