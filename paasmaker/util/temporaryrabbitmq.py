@@ -101,7 +101,7 @@ class TemporaryRabbitMQ:
 
 class TemporaryRabbitMQTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
-		self.configuration = paasmaker.common.configuration.ConfigurationStub([])
+		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [])
 		super(TemporaryRabbitMQTest, self).setUp()
 		self.server = TemporaryRabbitMQ(self.configuration)
 		# Basically, this shouldn't throw an exception.

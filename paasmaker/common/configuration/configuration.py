@@ -177,6 +177,15 @@ class ConfigurationSchema(colander.MappingSchema):
 		title="Scratch Directory",
 		description="Directory used for random temporary files. Should be somewhere persistent between reboots, eg, not /tmp.")
 
+	master_host = colander.SchemaNode(colander.String(),
+		title="Master Node",
+		description="The master node for this cluster.")
+	master_port = colander.SchemaNode(colander.Integer(),
+		title="Master Node HTTP port",
+		description="The master node HTTP port for API requests.",
+		default=8888,
+		missing=8888)
+
 	pacemaker = PacemakerSchema(default=PacemakerSchema.default(),missing=PacemakerSchema.default())
 	heart = HeartSchema(defalt=HeartSchema.default(),missing=HeartSchema.default())
 	router = RouterSchema(default=RouterSchema.default(),missing=RouterSchema.default())
@@ -280,6 +289,7 @@ class TestConfiguration(unittest.TestCase):
 auth_token: 5893b415-f166-41a8-b606-7bdb68b88f0b
 log_directory: /tmp
 scratch_directory: /tmp
+master_host: localhost
 """
 
 	def setUp(self):

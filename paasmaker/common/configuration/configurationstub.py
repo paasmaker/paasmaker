@@ -19,6 +19,8 @@ class ConfigurationStub(configuration.Configuration):
 auth_token: %(auth_token)s
 log_directory: %(log_dir)s
 scratch_directory: %(scratch_dir)s
+master_host: localhost
+master_port: %(master_port)d
 """
 
 	pacemaker_config = """
@@ -63,7 +65,7 @@ router:
       port: 6379
 """
 
-	def __init__(self, modules=[]):
+	def __init__(self, port=8888, modules=[]):
 		# Choose filenames and set up example configuration.
 		configfile = tempfile.mkstemp()
 		self.params = {}
@@ -72,6 +74,7 @@ router:
 		self.params['auth_token'] = str(uuid.uuid4())
 		self.params['heart_working_dir'] = tempfile.mkdtemp()
 		self.params['scratch_dir'] = tempfile.mkdtemp()
+		self.params['master_port'] = port
 
 		# Create the configuration file.
 		configuration = self.default_config % self.params
@@ -136,5 +139,5 @@ router:
 
 class TestConfigurationStub(unittest.TestCase):
 	def test_simple(self):
-		stub = ConfigurationStub(['pacemaker', 'heart', 'router'])
+		stub = ConfigurationStub(modules=['pacemaker', 'heart', 'router'])
 		# And I guess we shouldn't have any exceptions...

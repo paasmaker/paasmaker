@@ -34,11 +34,27 @@ class APIRequest():
 	def __init__(self, configuration, io_loop=None):
 		self.configuration = configuration
 		self.io_loop = io_loop
+		self.target = self.get_master()
 
-	def send(self, endpoint, payload, callback, **kwargs):
+	def build_payload(self):
+		# Override in your subclass.
+		return {}
+
+	def get_master(self):
+		return "http://%s:%d" % (self.configuration.get_flat('master_host'), self.configuration.get_flat('master_port'))
+
+	def get_endpoint(self):
+		# Override in your subclass to change the URI.
+		return '/'
+
+	def set_target(self, target):
+		# TODO: Auto parse node objects.
+		self.target = target
+
+	def send(self, callback, **kwargs):
 		# Build what we're sending.
 		data = {}
-		data['data'] = payload
+		data['data'] = self.build_payload()
 		data['auth'] = { 'method': 'node', 'value': self.configuration.get_flat('auth_token') }
 
 		encoded = json.dumps(data, cls=paasmaker.util.jsonencoder.JsonEncoder)
@@ -58,6 +74,11 @@ class APIRequest():
 			callback(our_response)
 
 		# Build and make the request.
+		endpoint = self.target + self.get_endpoint()
+		if endpoint.find('?') == -1:
+			endpoint += '?format=json'
+		else:
+			endpoint += '&format=json'
 		request = tornado.httpclient.HTTPRequest(endpoint, **kwargs)
 		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
 		client.fetch(request, our_callback)

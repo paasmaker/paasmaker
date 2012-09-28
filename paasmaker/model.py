@@ -48,13 +48,15 @@ class Node(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	name = Column(String, nullable=False)
 	route = Column(String, nullable=False)
+	apiport = Column(Integer, nullable=False)
 	uuid = Column(String, nullable=False, unique=True, index=True)
 	state = Column(String, nullable=False)
 	last_heard = Column(DateTime, nullable=False)
 
-	def __init__(self, name, route, uuid, state):
+	def __init__(self, name, route, apiport, uuid, state):
 		self.name = name
 		self.route = route
+		self.apiport = apiport
 		self.uuid = uuid
 		self.state = state
 		self.last_heard = datetime.datetime.utcnow()
@@ -166,7 +168,7 @@ class Workspace(OrmBase, Base):
 
 	def __init__(self, name):
 		self.name = name
-	
+
 	def __repr__(self):
 		return "<Workspace('%s')>" % self.name
 
@@ -207,7 +209,7 @@ class Application(OrmBase, Base):
 	def __init__(self, name, workspace):
 		self.workspace = workspace
 		self.name = name
-	
+
 	def __repr__(self):
 		return "<Application('%s')>" % self.name
 
@@ -259,7 +261,7 @@ class ApplicationInstance(OrmBase, Base):
 		self.application_version = application_version
 		self.node = node
 		self.status = status
-	
+
 	def __repr__(self):
 		return "<ApplicationInstance('%s'@'%s' - %s)>" % (self.application_version, self.node, self.status)
 
@@ -279,7 +281,7 @@ class ApplicationHostname(OrmBase, Base):
 	def __init__(self, application_version, hostname):
 		self.application_version = application_version
 		self.hostname = hostname
-	
+
 	def __repr__(self):
 		return "<ApplicationHostname('%s' -> '%s')>" % (self.hostname, self.application_version)
 
@@ -301,7 +303,7 @@ class Service(OrmBase, Base):
 		self.application = application
 		self.provider = provider
 		self.credentials = credentials
-	
+
 	def __repr__(self):
 		return "<Service('%s'->'%s')>" % (self.provider, self.application)
 
@@ -319,8 +321,8 @@ class TestModel(unittest.TestCase):
 	metadata = None
 
 	test_items = [
-		Node(name='test', route='1.test.com', uuid='1', state='new'),
-		Node(name='test2', route='2.test.com', uuid='2', state='new')
+		Node(name='test', route='1.test.com', apiport=8888, uuid='1', state='new'),
+		Node(name='test2', route='2.test.com', apiport=8888, uuid='2', state='new')
 	]
 
 	def setUp(self):
@@ -330,7 +332,7 @@ class TestModel(unittest.TestCase):
 			self.__class__.session = DBSession()
 			self.metadata = Base.metadata
 			self.metadata.bind = engine
-			self.metadata.drop_all() # Drop table        
+			self.metadata.drop_all() # Drop table
 			self.metadata.create_all() # Create tables
 			self.__class__.session.add_all(self.test_items) # Add data
 			self.__class__.session.commit() # Commit
@@ -351,17 +353,17 @@ class TestModel(unittest.TestCase):
 
 	def test_created_timestamps(self):
 		s = self.__class__.session
-		n = Node('foo', 'bar', 'baz1', 'boo')
+		n = Node('foo', 'bar', 8888, 'baz1', 'boo')
 		s.add(n)
 		s.commit()
-		n2 = Node('foo', 'bar', 'baz2', 'boo')
+		n2 = Node('foo', 'bar', 8888, 'baz2', 'boo')
 		s.add(n2)
 		s.commit()
 		self.assertTrue(n2.created > n.created, "Created timestamp is not greater.")
 
 	def test_updated_timestamp(self):
 		s = self.__class__.session
-		n = Node('foo', 'bar', 'baz3', 'boo')
+		n = Node('foo', 'bar', 8888, 'baz3', 'boo')
 		s.add(n)
 		s.commit()
 		ts1 = str(n.updated)

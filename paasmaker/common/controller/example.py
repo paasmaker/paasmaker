@@ -84,6 +84,7 @@ class ExampleWebsocketHandlerTestClient(TornadoWebSocketClient):
 
 class ExampleControllerTest(BaseControllerTest):
 	def get_app(self):
+		self.late_init_configuration()
 		routes = ExampleController.get_routes({'configuration': self.configuration})
 		routes.extend(ExampleFailController.get_routes({'configuration': self.configuration}))
 		routes.extend(ExamplePostController.get_routes({'configuration': self.configuration}))

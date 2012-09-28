@@ -118,7 +118,7 @@ class CommandSupervisorLauncher():
 
 class CommandSupervisorTest(unittest.TestCase):
 	def setUp(self):
-		self.configuration = paasmaker.common.configuration.ConfigurationStub([])
+		self.configuration = paasmaker.common.configuration.ConfigurationStub(modules=[])
 		super(CommandSupervisorTest, self).setUp()
 	def tearDown(self):
 		self.configuration.cleanup()

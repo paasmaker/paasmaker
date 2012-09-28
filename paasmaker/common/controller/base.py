@@ -275,8 +275,17 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 	config_modules = []
 
+	def late_init_configuration(self):
+		"""
+		Late initialize configuration. This is to solve the chicken-and-egg issue of getting
+		this unit tests test HTTP port.
+		"""
+		if not self.configuration:
+			self.configuration = paasmaker.common.configuration.ConfigurationStub(port=self.get_http_port(), modules=self.config_modules)
+		return self.configuration
+
 	def setUp(self):
-		self.configuration = paasmaker.common.configuration.ConfigurationStub(self.config_modules)
+		self.configuration = None
 		super(BaseControllerTest, self).setUp()
 	def tearDown(self):
 		self.configuration.cleanup()
