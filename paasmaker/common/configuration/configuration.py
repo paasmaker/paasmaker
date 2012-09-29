@@ -205,6 +205,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		super(Configuration, self).__init__(ConfigurationSchema())
 		self.port_allocator = paasmaker.util.port.FreePortFinder()
 		self.plugins = paasmaker.util.PluginRegistry(self)
+		self.uuid = None
 
 	def post_load(self):
 		# Make sure directories exist.
@@ -298,6 +299,41 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def job_exists_locally(self, job_id):
 		path = self.get_job_log_path(job_id)
 		return os.path.exists(path)
+
+	#
+	# IDENTITY HELPERS
+	#
+	def set_node_uuid(self, uuid):
+		"""
+		Save our UUID to the scratch directory.
+		"""
+		path = os.path.join(self.get_flat('scratch_directory'), 'UUID')
+		fp = open(path, 'w')
+		fp.write(uuid)
+		fp.close()
+		# And save us loading it again later...
+		self.uuid = uuid
+
+	def get_node_uuid(self):
+		"""
+		Get our UUID, returning it from cache if we can.
+		"""
+		# Have we already loaded it? If so, return that.
+		if self.uuid:
+			return self.uuid
+		# Try to open it.
+		path = os.path.join(self.get_flat('scratch_directory'), 'UUID')
+		if os.path.exists(path):
+			# It exists. Read and return.
+			fp = open(path, 'r')
+			uuid = fp.read()
+			fp.close()
+			self.uuid = uuid
+		else:
+			# Doesn't exist. Return None, callers should handle this.
+			pass
+
+		return self.uuid
 
 class TestConfiguration(unittest.TestCase):
 	minimum_config = """

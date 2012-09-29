@@ -1,4 +1,5 @@
 
 from information import InformationAPIRequest
 from noderegister import NodeRegisterAPIRequest
+from nodeupdate import NodeUpdateAPIRequest
 from login import LoginAPIRequest

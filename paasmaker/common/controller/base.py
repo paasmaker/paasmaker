@@ -20,6 +20,9 @@ import colander
 # auth: { method: 'node|cookie|token', value: 'token|cookie' }
 # data: { ... keys ... }
 
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
 class APIAuthRequestSchema(colander.MappingSchema):
 	method = colander.SchemaNode(colander.String(),
 		title="Method of authentication",
@@ -83,6 +86,19 @@ class BaseController(tornado.web.RequestHandler):
 
 		# Must be one of the supported auth methods.
 		self.require_authentication(self.auth_methods)
+
+	def validate_data(self, schema):
+		"""
+		Validate the request data with the given schema, returning
+		an error if it doesn't match.
+		"""
+		try:
+			result = schema.deserialize(self.params)
+		except colander.Invalid, ex:
+			logger.error("Invalid data supplied to this controller.")
+			logger.error(self)
+			logger.error(ex)
+			self.send_error(400, exc_info=ex)
 
 	def param(self, name, default=None):
 		if self.params.has_key(name):

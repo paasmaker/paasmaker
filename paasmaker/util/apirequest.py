@@ -40,7 +40,7 @@ class APIResponse(object):
 			for error in self.errors:
 				logger.error("- %s", error)
 
-class APIRequest():
+class APIRequest(object):
 	def __init__(self, configuration, io_loop=None):
 		self.configuration = configuration
 		self.io_loop = io_loop
@@ -67,6 +67,7 @@ class APIRequest():
 
 	def process_response(self, response):
 		# For overriding in your subclasses, if it's all self contained.
+		# Note that the supplied callback, if provided, is called after this.
 		pass
 
 	def send(self, callback=None, **kwargs):
@@ -91,11 +92,11 @@ class APIRequest():
 		def our_callback(response):
 			# Parse and handle what came back.
 			our_response = APIResponse(response)
-			# And call the caller back.
+			# Use the built in response processor.
+			self.process_response(our_response)
+			# And call the user defined callback back.
 			if callback:
 				callback(our_response)
-			else:
-				self.process_response(our_response)
 
 		# Build and make the request.
 		endpoint = self.target + self.get_endpoint()
