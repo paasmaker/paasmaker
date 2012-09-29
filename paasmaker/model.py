@@ -3,7 +3,7 @@ import json
 import sqlalchemy
 import datetime
 import paasmaker
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.orm.interfaces import MapperExtension
@@ -44,13 +44,14 @@ class OrmBase(object):
 
 class Node(OrmBase, Base):
 	__tablename__ = 'node'
+	STATES = ['ACTIVE', 'STOPPED', 'ERROR', 'INACTIVE']
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String, nullable=False)
 	route = Column(String, nullable=False)
 	apiport = Column(Integer, nullable=False)
 	uuid = Column(String, nullable=False, unique=True, index=True)
-	state = Column(String, nullable=False)
+	state = Column(Enum(*STATES), nullable=False)
 	last_heard = Column(DateTime, nullable=False)
 
 	def __init__(self, name, route, apiport, uuid, state):
@@ -321,8 +322,8 @@ class TestModel(unittest.TestCase):
 	metadata = None
 
 	test_items = [
-		Node(name='test', route='1.test.com', apiport=8888, uuid='1', state='new'),
-		Node(name='test2', route='2.test.com', apiport=8888, uuid='2', state='new')
+		Node(name='test', route='1.test.com', apiport=8888, uuid='1', state='ACTIVE'),
+		Node(name='test2', route='2.test.com', apiport=8888, uuid='2', state='ACTIVE')
 	]
 
 	def setUp(self):
@@ -353,17 +354,17 @@ class TestModel(unittest.TestCase):
 
 	def test_created_timestamps(self):
 		s = self.__class__.session
-		n = Node('foo', 'bar', 8888, 'baz1', 'boo')
+		n = Node('foo', 'bar', 8888, 'baz1', 'ACTIVE')
 		s.add(n)
 		s.commit()
-		n2 = Node('foo', 'bar', 8888, 'baz2', 'boo')
+		n2 = Node('foo', 'bar', 8888, 'baz2', 'ACTIVE')
 		s.add(n2)
 		s.commit()
 		self.assertTrue(n2.created > n.created, "Created timestamp is not greater.")
 
 	def test_updated_timestamp(self):
 		s = self.__class__.session
-		n = Node('foo', 'bar', 8888, 'baz3', 'boo')
+		n = Node('foo', 'bar', 8888, 'baz3', 'ACTIVE')
 		s.add(n)
 		s.commit()
 		ts1 = str(n.updated)

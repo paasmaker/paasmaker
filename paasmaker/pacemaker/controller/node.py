@@ -41,7 +41,6 @@ class NodeController(BaseController):
 		elif action == 'update':
 			self.validate_data(NodeUpdateSchema())
 
-		# TODO: Better initial state for the node. Ie, Map the states!
 		do_connectivity_check = False
 		if action == 'register':
 			# Create a UUID for this node.
@@ -55,8 +54,7 @@ class NodeController(BaseController):
 			if duplicate_node:
 				self.add_error("Node appears to already be registered - name %s, UUID %s." % (duplicate_node.name, duplicate_node.uuid))
 			else:
-				# TODO: States!
-				node = paasmaker.model.Node(self.param('name'), self.param('route'), self.param('apiport'), new_uuid, 'NEW')
+				node = paasmaker.model.Node(self.param('name'), self.param('route'), self.param('apiport'), new_uuid, 'ACTIVE')
 				logger.debug("New node %s(%s:%d), assigned UUID %s. Checking connectivity...", node.name, node.route, node.apiport, new_uuid)
 				do_connectivity_check = True
 
@@ -72,7 +70,7 @@ class NodeController(BaseController):
 				node.name = self.param('name')
 				node.route = self.param('route')
 				node.apiport = self.param('apiport')
-				# TODO: State!
+				node.state = 'ACTIVE'
 				do_connectivity_check = True
 
 		if do_connectivity_check:
