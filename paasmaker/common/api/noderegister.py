@@ -10,6 +10,8 @@ class NodeRegisterAPIRequest(paasmaker.util.APIRequest):
 	def build_payload(self):
 		# Build our payload.
 		payload = {}
+
+		# So here's my number... call me maybe?
 		payload['name'] = self.configuration.get_flat('my_name')
 		payload['route'] = self.configuration.get_flat('my_route')
 		payload['apiport'] = self.configuration.get_flat('http_port')
