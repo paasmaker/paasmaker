@@ -1,6 +1,10 @@
 import paasmaker
 import json
 import tornado
+import logging
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 class APIResponse(object):
 	def __init__(self, response):
@@ -10,8 +14,10 @@ class APIResponse(object):
 		self.success = False
 
 		if response.error:
+			logger.error("API request failed with error: %s", response.error)
 			self.errors.append(str(response.error))
 		else:
+			logger.debug("Raw API response body: %s", response.body)
 			if response.body[0] == '{' and response.body[-1] == '}':
 				try:
 					parsed = json.loads(response.body)
@@ -29,6 +35,10 @@ class APIResponse(object):
 
 		if len(self.errors) == 0:
 			self.success = True
+		else:
+			logger.error("API request failed with the following errors:")
+			for error in self.errors:
+				logger.error("- %s", error)
 
 class APIRequest():
 	def __init__(self, configuration, io_loop=None):
@@ -50,11 +60,16 @@ class APIRequest():
 	def set_target(self, target):
 		if isinstance(target, basestring):
 			self.target = target
-		else:
-			# TODO: This assumes that it's a node object. Be sure of that.
+		elif isinstance(target, paasmaker.model.Node):
 			self.target = "http://%s:%d" % (target.route, target.apiport)
+		else:
+			raise ValueError("Target is not a string or Node object.")
 
-	def send(self, callback, **kwargs):
+	def process_response(self, response):
+		# For overriding in your subclasses, if it's all self contained.
+		pass
+
+	def send(self, callback=None, **kwargs):
 		# Build what we're sending.
 		data = {}
 		data['data'] = self.build_payload()
@@ -68,13 +83,19 @@ class APIRequest():
 		# Don't follow redirects - this is an API request.
 		kwargs['follow_redirects'] = False
 
+		logger.debug("In send() of API request of type %s", type(self))
+		logger.debug("Payload sending to server: %s", encoded)
+
 		# The function called when it returns.
 		# It's a closure to preserve the callback provided.
 		def our_callback(response):
 			# Parse and handle what came back.
 			our_response = APIResponse(response)
 			# And call the caller back.
-			callback(our_response)
+			if callback:
+				callback(our_response)
+			else:
+				self.process_response(our_response)
 
 		# Build and make the request.
 		endpoint = self.target + self.get_endpoint()
@@ -82,6 +103,7 @@ class APIRequest():
 			endpoint += '?format=json'
 		else:
 			endpoint += '&format=json'
+		logger.debug("Endpoint for request: %s", endpoint)
 		request = tornado.httpclient.HTTPRequest(endpoint, **kwargs)
 		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
 		client.fetch(request, our_callback)

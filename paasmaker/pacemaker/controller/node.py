@@ -1,10 +1,14 @@
 import unittest
 import paasmaker
 import uuid
+import logging
 from paasmaker.common.controller import BaseController, BaseControllerTest
 
 import tornado
 import tornado.testing
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 class NodeController(BaseController):
 	auth_methods = [BaseController.NODE]
@@ -17,9 +21,11 @@ class NodeController(BaseController):
 	def post(self):
 		# TODO: Check schema!
 		# TODO: Better initial state for the node. Ie, Map the states!
+		# TODO: Check for duplicates!
 		# Create a UUID for this node.
 		new_uuid = str(uuid.uuid4())
 		node = paasmaker.model.Node(self.param('name'), self.param('route'), self.param('apiport'), new_uuid, 'NEW')
+		logger.debug("New node %s(%s:%d), assigned UUID %s. Checking connectivity...", node.name, node.route, node.apiport, new_uuid)
 		# Attempt to connect to the node...
 		request = paasmaker.common.api.information.InformationAPIRequest(self.configuration, self.io_loop)
 		request.set_target(node)
@@ -31,8 +37,12 @@ class NodeController(BaseController):
 
 			self.add_data('uuid', new_uuid)
 			self.add_data('id', node.id)
+			logger.info("Successfully registered node %s(%s:%d) UUID %s", node.name, node.route, node.apiport, new_uuid)
 		else:
 			self.add_errors(response.errors)
+			logger.error("Failed to connect to new node:")
+			for error in self.errors:
+				logger.error(error)
 		self.render("api/apionly.html")
 		self.finish()
 
