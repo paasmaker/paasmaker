@@ -2,13 +2,13 @@ import paasmaker
 import json
 import tornado
 
-class APIResponse():
-	errors = []
-	warnings = []
-	data = {}
-	success = False
-
+class APIResponse(object):
 	def __init__(self, response):
+		self.errors = []
+		self.warnings = []
+		self.data = {}
+		self.success = False
+
 		if response.error:
 			self.errors.append(str(response.error))
 		else:

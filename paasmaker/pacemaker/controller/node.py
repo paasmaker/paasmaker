@@ -21,7 +21,6 @@ class NodeController(BaseController):
 		new_uuid = str(uuid.uuid4())
 		node = paasmaker.model.Node(self.param('name'), self.param('route'), self.param('apiport'), new_uuid, 'NEW')
 		# Attempt to connect to the node...
-		# TODO: Set low connect timeout.
 		request = paasmaker.common.api.information.InformationAPIRequest(self.configuration, self.io_loop)
 		request.set_target(node)
 		response = yield tornado.gen.Task(request.send, connect_timeout=1.0)
@@ -64,5 +63,44 @@ class NodeControllerTest(BaseControllerTest):
 		self.assertTrue(response.data.has_key('uuid'))
 		self.assertTrue(response.data.has_key('id'))
 
-		# TODO: Test when it can't connect back.
-		# TODO: Test when data missing.
+	def test_fail_connect_port(self):
+		# Test when it can't connect.
+		request = NodeRegisterAPIRequestFailPort(self.configuration, self.io_loop)
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(response.success)
+		self.assertEquals(len(response.errors), 1, "There were no errors.")
+		self.assertEquals(len(response.warnings), 0, "There were warnings.")
+
+	def test_fail_connect_host(self):
+		# Test when it can't connect.
+		request = NodeRegisterAPIRequestFailHost(self.configuration, self.io_loop)
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(response.success)
+		self.assertEquals(len(response.errors), 1, "There were no errors.")
+		self.assertEquals(len(response.warnings), 0, "There were warnings.")
+
+class NodeRegisterAPIRequestFailPort(paasmaker.common.api.NodeRegisterAPIRequest):
+	"""
+	Stub class to send back a faulty HTTP port, to stop it from accessing the remote end.
+	"""
+	def build_payload(self):
+		# The use of super() didn't work here, and I couldn't figure it out after
+		# 20 minutes of Googling. TODO: Fix this properly.
+		data = paasmaker.common.api.NodeRegisterAPIRequest.build_payload(self)
+		data['apiport'] += 1000
+		return data
+
+class NodeRegisterAPIRequestFailHost(paasmaker.common.api.NodeRegisterAPIRequest):
+	"""
+	Stub class to send back a faulty HTTP port, to stop it from accessing the remote end.
+	"""
+	def build_payload(self):
+		# The use of super() didn't work here, and I couldn't figure it out after
+		# 20 minutes of Googling. TODO: Fix this properly.
+		data = paasmaker.common.api.NodeRegisterAPIRequest.build_payload(self)
+		data['route'] = 'noexist.paasmaker.com'
+		return data
