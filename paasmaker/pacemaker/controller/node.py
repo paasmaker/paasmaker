@@ -65,3 +65,4 @@ class NodeControllerTest(BaseControllerTest):
 		self.assertTrue(response.data.has_key('id'))
 
 		# TODO: Test when it can't connect back.
+		# TODO: Test when data missing.

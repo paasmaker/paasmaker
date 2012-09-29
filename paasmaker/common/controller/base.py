@@ -57,7 +57,7 @@ class BaseController(tornado.web.RequestHandler):
 		self.auth = {}
 		self.params = {}
 		self.allowed_authentication_methods = ['anonymous']
-		self.io_loop = io_loop
+		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
 
 	def prepare(self):
 		self._set_format(self.get_argument('format', 'html'))
