@@ -3,6 +3,7 @@ import paasmaker
 import uuid
 import logging
 import colander
+import json
 from paasmaker.common.controller import BaseController, BaseControllerTest
 
 import tornado
@@ -21,6 +22,9 @@ class NodeRegisterSchema(colander.MappingSchema):
 	apiport = colander.SchemaNode(colander.String(),
 		title="HTTP API port",
 		description="The HTTP port to use to interact with this node.")
+	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="User tags",
+		description="A generic set of tags or information stored for the node. Can be used to write custom placement filters, or find nodes.")
 
 class NodeUpdateSchema(NodeRegisterSchema):
 	uuid = colander.SchemaNode(colander.String(),
@@ -73,6 +77,15 @@ class NodeController(BaseController):
 				node.state = 'ACTIVE'
 				do_connectivity_check = True
 
+		# If we're doing a connectivity check, also update the other attributes for the node.
+		if do_connectivity_check:
+			tags = self.param('tags')
+			node.heart = tags['roles']['heart']
+			node.pacemaker = tags['roles']['pacemaker']
+			node.router = tags['roles']['router']
+
+			node.tags = json.dumps(tags, cls=paasmaker.util.jsonencoder.JsonEncoder)
+
 		if do_connectivity_check:
 			# Attempt to connect to the node...
 			request = paasmaker.common.api.information.InformationAPIRequest(self.configuration, self.io_loop)
@@ -90,7 +103,7 @@ class NodeController(BaseController):
 				logger.info("Successfully %s node %s(%s:%d) UUID %s", action, node.name, node.route, node.apiport, node.uuid)
 			else:
 				self.add_errors(response.errors)
-				logger.error("Failed to connect to node:")
+				logger.error("Failed to connect to node %s(%s:%d) UUID %s", node.name, node.route, node.apiport, node.uuid)
 				for error in self.errors:
 					logger.error(error)
 
@@ -105,7 +118,7 @@ class NodeController(BaseController):
 		return routes
 
 class NodeControllerTest(BaseControllerTest):
-	config_modules = ['pacemaker']
+	config_modules = ['pacemaker', 'heart']
 
 	def get_app(self):
 		self.late_init_configuration()

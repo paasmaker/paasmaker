@@ -193,6 +193,12 @@ class ConfigurationSchema(colander.MappingSchema):
 		default=8888,
 		missing=8888)
 
+	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="User tags",
+		description="A generic set of tags or information stored for the node. Can be used to write custom placement filters, or find nodes.",
+		missing={},
+		default={})
+
 	pacemaker = PacemakerSchema(default=PacemakerSchema.default(),missing=PacemakerSchema.default())
 	heart = HeartSchema(defalt=HeartSchema.default(),missing=HeartSchema.default())
 	router = RouterSchema(default=RouterSchema.default(),missing=RouterSchema.default())
@@ -232,6 +238,16 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		return self.get_flat('heart.enabled')
 	def is_router(self):
 		return self.get_flat('router.enabled')
+
+	def get_runtime_tags(self):
+		if not self.is_heart():
+			raise ImNotA("I'm not a heart, so I have no runtimes.")
+
+		tags = {}
+		for meta in self['heart']['runtimes']:
+			tags[meta['name']] = True
+
+		return tags
 
 	def setup_database(self):
 		if not self.is_pacemaker():

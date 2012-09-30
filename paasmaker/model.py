@@ -54,6 +54,12 @@ class Node(OrmBase, Base):
 	state = Column(Enum(*STATES), nullable=False)
 	last_heard = Column(DateTime, nullable=False)
 
+	heart = Column(Boolean, nullable=False, default=False)
+	pacemaker = Column(Boolean, nullable=False, default=False)
+	router = Column(Boolean, nullable=False, default=False)
+
+	tags = Column(Text, nullable=False, default="{}")
+
 	def __init__(self, name, route, apiport, uuid, state):
 		self.name = name
 		self.route = route
@@ -65,29 +71,13 @@ class Node(OrmBase, Base):
 	def __repr__(self):
 		return "<Node('%s','%s')>" % (self.name, self.route)
 
-	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['name', 'route', 'apiport', 'uuid', 'state', 'last_heard'])
-
-class NodeRuntime(OrmBase, Base):
-	__tablename__ = 'node_runtime'
-
-	id = Column(Integer, primary_key=True)
-	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
-	node = relationship("Node", backref=backref('runtimes', order_by=id))
-	name = Column(String, nullable=False)
-	version = Column(String, nullable=False)
-	description = Column(String, nullable=True)
-
-	def __init__(self, node, name, version):
-		self.node = node
-		self.name = name
-		self.version = version
-
-	def __repr__(self):
-		return "<NodeRuntime('%s' version '%s' @ '%s')>" % (self.name, self.version, self.node)
+	def parsed_tags(self):
+		return json.loads(self.tags)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['name', 'route', 'uuid', 'state', 'last_heard'])
+		data = super(Node, self).flatten(['name', 'route', 'apiport', 'uuid', 'state', 'last_heard', 'heart', 'pacemaker', 'router'])
+		data['tags'] = self.parsed_tags()
+		return data
 
 class User(OrmBase, Base):
 	__tablename__ = 'user'
@@ -404,7 +394,7 @@ class TestModel(unittest.TestCase):
 		s = self.__class__.session
 		item = s.query(Node).first()
 		flat = item.flatten()
-		self.assertEquals(len(flat.keys()), 10, "Item has incorrect number of keys.")
+		self.assertEquals(len(flat.keys()), 14, "Item has incorrect number of keys.")
 		self.assertTrue(flat.has_key('id'), "Missing ID.")
 		self.assertTrue(flat.has_key('name'), "Missing name.")
 		self.assertTrue(isinstance(flat['id'], int), "ID is not an integer.")

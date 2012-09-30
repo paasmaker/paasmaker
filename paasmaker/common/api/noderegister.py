@@ -16,12 +16,26 @@ class NodeRegisterAPIRequest(paasmaker.util.APIRequest):
 		payload['route'] = self.configuration.get_flat('my_route')
 		payload['apiport'] = self.configuration.get_flat('http_port')
 
-		# TODO: Implement/send tags!
+		# Send along the node tags.
+		tags = {}
 
+		# The node roles.
+		roles = {}
+		roles['heart'] = self.configuration.is_heart()
+		roles['pacemaker'] = self.configuration.is_pacemaker()
+		roles['router'] = self.configuration.is_router()
+
+		tags['roles'] = roles
+
+		# Runtimes.
 		if self.configuration.is_heart():
-			# TODO: Send runtimes list!
-			runtimes = []
-			payload['runtimes'] = runtimes
+			runtimes = self.configuration.get_runtime_tags()
+			tags['runtimes'] = runtimes
+
+		# Include node tags.
+		tags['node'] = self.configuration['tags']
+
+		payload['tags'] = tags
 
 		return payload
 
