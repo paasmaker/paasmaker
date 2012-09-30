@@ -1,7 +1,7 @@
 tornado
 sqlalchemy
 pyyaml
-colander
+colander>=0.9.9
 ws4py
 pypubsub
 tornado-redis
