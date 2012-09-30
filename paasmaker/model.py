@@ -245,6 +245,7 @@ class ApplicationInstance(OrmBase, Base):
 	application_version = relationship("ApplicationVersion", backref=backref('instances', order_by=id))
 	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
 	node = relationship("Node", backref=backref('nodes', order_by=id))
+	configuration = Column(String, nullable=False, index=True)
 	status = Column(String, nullable=False, index=True)
 	statistics = Column(Text, nullable=True)
 
@@ -283,23 +284,23 @@ class Service(OrmBase, Base):
 	__tablename__ = 'service'
 
 	id = Column(Integer, primary_key=True)
-	application_id = Column(Integer, ForeignKey('application.id'), nullable=False, index=True)
-	application = relationship("Application", backref=backref('services', order_by=id))
+	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False, index=True)
+	workspace = relationship("Workspace", backref=backref('workspace', order_by=id))
 	name = Column(String, nullable=False, index=True)
 	provider = Column(String, nullable=False, index=True)
 	credentials = Column(Text, nullable=False)
 
-	def __init__(self, application, name, provider, credentials):
+	def __init__(self, workspace, name, provider, credentials):
 		self.name = name
-		self.application = application
+		self.workspace = workspace
 		self.provider = provider
 		self.credentials = credentials
 
 	def __repr__(self):
-		return "<Service('%s'->'%s')>" % (self.provider, self.application)
+		return "<Service('%s'->'%s')>" % (self.provider, self.workspace)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['application', 'provider', 'credentials'])
+		return super(Node, self).flatten(['workspace', 'provider', 'credentials'])
 
 def init_db(engine):
 	Base.metadata.create_all(bind=engine)
