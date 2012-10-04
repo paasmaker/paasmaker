@@ -29,12 +29,13 @@ test_sets = {
 	paasmaker.common.configuration.configuration: ['all', 'quick', 'configuration'],
 	paasmaker.common.configuration.configurationstub: ['all', 'quick', 'configuration'],
 	paasmaker.common.application.configuration: ['all', 'quick', 'configuration'],
+	paasmaker.common.core.messageexchange: ['all', 'slow', 'messaging', 'exchange', 'job'],
 
 	paasmaker.model: ['all', 'slow', 'model'],
 
 	paasmaker.common.controller.example: ['all', 'quick', 'controller'],
 	paasmaker.common.controller.information: ['all', 'quick', 'controller'],
-	paasmaker.common.controller.log: ['all', 'slow', 'controller'],
+	paasmaker.common.controller.log: ['all', 'slow', 'controller', 'websocket'],
 	paasmaker.pacemaker.controller.login: ['all', 'slow', 'controller'],
 	paasmaker.pacemaker.controller.node: ['all', 'slow', 'controller', 'node'],
 

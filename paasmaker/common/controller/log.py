@@ -60,7 +60,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 				# Step 1: Feed since when they last saw.
 				self.send_job_log(subscribe['job_id'], subscribe['position'])
 				# Step 2: subscribe for future updates.
-				pub.subscribe(self.job_message_update, self.configuration.get_job_pub_topic(subscribe['job_id']))
+				pub.subscribe(self.job_message_update, self.configuration.get_job_message_pub_topic(subscribe['job_id']))
 
 			elif self.configuration.is_pacemaker():
 				# Find which node the job belongs to.
@@ -75,7 +75,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 		# Must match the unsubscribe schema.
 		unsubscribe = self.validate_data(message, LogUnSubscribeSchema())
 		if unsubscribe:
-			pub.unsubscribe(self.job_message_update, self.configuration.get_job_pub_topic(unsubscribe['job_id']))
+			pub.unsubscribe(self.job_message_update, self.configuration.get_job_message_pub_topic(unsubscribe['job_id']))
 
 	def on_close(self):
 		pass

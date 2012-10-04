@@ -145,6 +145,33 @@ class MiscPortsSchema(colander.MappingSchema):
 	def default():
 		return {'minimum': 10100, 'maximum': 10500}
 
+class MessageBrokerSchema(colander.MappingSchema):
+	hostname = colander.SchemaNode(colander.String(),
+		title="Hostname",
+		description="Hostname of the message broker.")
+	port = colander.SchemaNode(colander.Integer(),
+		title="Port",
+		description="The port of the message broker.")
+	username = colander.SchemaNode(colander.String(),
+		title="Username",
+		description="The username to connect as.",
+		default="guest",
+		missing="guest")
+	password = colander.SchemaNode(colander.String(),
+		title="Password",
+		description="The password to connect as.",
+		default="guest",
+		missing="guest")
+	virtualhost = colander.SchemaNode(colander.String(),
+		title="Virtual Host",
+		description="The virtual host to connect to.",
+		default="/",
+		missing="/")
+
+	@staticmethod
+	def default():
+		return {'hostname': 'localhost', 'port': 5672, 'username': 'guest', 'password': 'guest', 'virtualhost': '/'}
+
 class ConfigurationSchema(colander.MappingSchema):
 	http_port = colander.SchemaNode(colander.Integer(),
 		title="HTTP Port",
@@ -198,6 +225,8 @@ class ConfigurationSchema(colander.MappingSchema):
 		description="A generic set of tags or information stored for the node. Can be used to write custom placement filters, or find nodes.",
 		missing={},
 		default={})
+
+	broker = MessageBrokerSchema(default=MessageBrokerSchema.default(),missing=MessageBrokerSchema.default())
 
 	pacemaker = PacemakerSchema(default=PacemakerSchema.default(),missing=PacemakerSchema.default())
 	heart = HeartSchema(defalt=HeartSchema.default(),missing=HeartSchema.default())
@@ -275,6 +304,21 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		return self.session()
 
 	def get_router_redis(self):
+		# TODO: Implement!
+		pass
+
+	def get_message_broker(self):
+		"""
+		Return the raw message broker connection.
+		"""
+		# TODO: Implement.
+		pass
+
+	def get_message_exchange(self):
+		"""
+		Return the raw message exchange instance.
+		"""
+		# TODO: Implement.
 		pass
 
 	def get_tornado_configuration(self):
@@ -308,10 +352,14 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			os.makedirs(container)
 		path = os.path.join(container, checksum + '.log')
 		return path
-	def get_job_pub_topic(self, job_id):
+	def get_job_message_pub_topic(self, job_id):
 		# Why add the 'j' to the job name? It seems a topic name
 		# can't start with a number.
 		return ('job', 'message', 'j' + job_id)
+	def get_job_status_pub_topic(self, job_id):
+		# Why add the 'j' to the job name? It seems a topic name
+		# can't start with a number.
+		return ('job', 'status', 'j' + job_id)
 	def job_exists_locally(self, job_id):
 		path = self.get_job_log_path(job_id)
 		return os.path.exists(path)

@@ -12,6 +12,7 @@ import configuration
 import paasmaker
 
 import tornadoredis
+import tornado
 
 class ConfigurationStub(configuration.Configuration):
 	"""A test version of the configuration object, for unit tests."""
@@ -92,6 +93,8 @@ router:
 		open(self.configname, 'w').write(configuration)
 
 		self.router_redis = None
+		self.message_broker_server = None
+		self.message_broker_client = None
 
 		# Call parent constructor.
 		super(ConfigurationStub, self).__init__()
@@ -132,12 +135,21 @@ router:
 
 		if self.router_redis:
 			self.router_redis.stop()
+		if self.message_broker_server:
+			self.message_broker_server.stop()
 
 	def get_tornado_configuration(self):
 		settings = super(ConfigurationStub, self).get_tornado_configuration()
 		# Force debug mode on.
 		settings['debug'] = True
 		return settings
+
+	def get_message_broker(self, callback, io_loop=None):
+		if not self.message_broker_server:
+			# Start up a message broker.
+			self.message_broker_server = paasmaker.util.temporaryrabbitmq.TemporaryRabbitMQ(self)
+			self.message_broker_server.start()
+			self.message_broker_server.get_client(io_loop=io_loop, callback=callback)
 
 class TestConfigurationStub(unittest.TestCase):
 	def test_simple(self):

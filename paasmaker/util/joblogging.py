@@ -50,7 +50,7 @@ class JobLoggingPubHandler(logging.Handler):
 		# This handler only logs if there is a job id.
 		if record.__dict__.has_key('job'):
 			job_id = record.job
-			job_topic = self.configuration.get_job_pub_topic(job_id)
+			job_topic = self.configuration.get_job_message_pub_topic(job_id)
 			# Don't proceed any further if there is no one listening.
 			# We're trying to avoid the self.format() call, as that can
 			# be expensive.
