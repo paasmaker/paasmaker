@@ -129,7 +129,7 @@ class NodeControllerTest(BaseControllerTest):
 
 	def test_register(self):
 		# Register the node.
-		request = paasmaker.common.api.NodeRegisterAPIRequest(self.configuration, self.io_loop)
+		request = NodeRegisterAPIRequestLocalHost(self.configuration, self.io_loop)
 		request.send(self.stop)
 		response = self.wait()
 
@@ -145,14 +145,14 @@ class NodeControllerTest(BaseControllerTest):
 		first_id = response.data['node']['id']
 
 		# Register again. This should fail, as it detects the same route/port combination.
-		request = paasmaker.common.api.NodeRegisterAPIRequest(self.configuration, self.io_loop)
+		request = NodeRegisterAPIRequestLocalHost(self.configuration, self.io_loop)
 		request.send(self.stop)
 		response = self.wait()
 
 		self.failIf(response.success)
 
 		# Now update our node.
-		request = paasmaker.common.api.NodeUpdateAPIRequest(self.configuration, self.io_loop)
+		request = NodeUpdateAPIRequestLocalHost(self.configuration, self.io_loop)
 		request.send(self.stop)
 		response = self.wait()
 
@@ -192,6 +192,26 @@ class NodeControllerTest(BaseControllerTest):
 		self.failIf(response.success)
 		self.assertEquals(len(response.errors), 1, "There were no errors.")
 		self.assertEquals(len(response.warnings), 0, "There were warnings.")
+
+class NodeRegisterAPIRequestLocalHost(paasmaker.common.api.NodeRegisterAPIRequest):
+	"""
+	Stub class to send back localhost as the route - on some machines,
+	the local path detection causes the unit tests to fail.
+	"""
+	def build_payload(self):
+		data = super(NodeRegisterAPIRequestLocalHost, self).build_payload()
+		data['route'] = 'localhost'
+		return data
+
+class NodeUpdateAPIRequestLocalHost(paasmaker.common.api.NodeUpdateAPIRequest):
+	"""
+	Stub class to send back localhost as the route - on some machines,
+	the local path detection causes the unit tests to fail.
+	"""
+	def build_payload(self):
+		data = super(NodeUpdateAPIRequestLocalHost, self).build_payload()
+		data['route'] = 'localhost'
+		return data
 
 class NodeRegisterAPIRequestFailPort(paasmaker.common.api.NodeRegisterAPIRequest):
 	"""
