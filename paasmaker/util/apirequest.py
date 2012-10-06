@@ -45,6 +45,8 @@ class APIRequest(object):
 		self.configuration = configuration
 		self.io_loop = io_loop
 		self.target = self.get_master()
+		self.authmethod = 'node'
+		self.authvalue = self.configuration.get_flat('auth_token')
 
 	def build_payload(self):
 		# Override in your subclass.
@@ -74,7 +76,7 @@ class APIRequest(object):
 		# Build what we're sending.
 		data = {}
 		data['data'] = self.build_payload()
-		data['auth'] = { 'method': 'node', 'value': self.configuration.get_flat('auth_token') }
+		data['auth'] = { 'method': self.authmethod, 'value': self.authvalue }
 
 		encoded = json.dumps(data, cls=paasmaker.util.jsonencoder.JsonEncoder)
 
