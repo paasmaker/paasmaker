@@ -39,9 +39,8 @@ class LogStreamHandler(BaseWebsocketHandler):
 		#print "Server: opened"
 		pass
 
-	def job_message_update(self, message=None, job_id=None):
-		self.last_positions[job_id] += len(message)
-		self.send_success('lines', self.make_data(job_id, [message], self.last_positions[job_id]))
+	def job_message_update(self, job_id=None):
+		self.send_job_log(job_id, self.last_positions[job_id])
 
 	def on_message(self, message):
 		# Message should be JSON.
@@ -61,6 +60,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 				self.send_job_log(subscribe['job_id'], subscribe['position'])
 				# Step 2: subscribe for future updates.
 				pub.subscribe(self.job_message_update, self.configuration.get_job_message_pub_topic(subscribe['job_id']))
+				self.configuration.get_job_watcher().add_watch(subscribe['job_id'])
 
 			elif self.configuration.is_pacemaker():
 				# Find which node the job belongs to.
@@ -75,6 +75,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 		# Must match the unsubscribe schema.
 		unsubscribe = self.validate_data(message, LogUnSubscribeSchema())
 		if unsubscribe:
+			self.configuration.get_job_watcher().remove_watch(unsubscribe['job_id'])
 			pub.unsubscribe(self.job_message_update, self.configuration.get_job_message_pub_topic(unsubscribe['job_id']))
 
 	def on_close(self):
@@ -207,8 +208,8 @@ class LogStreamHandlerTest(BaseControllerTest):
 		log.info("Additional log entry.")
 
 		self.short_wait_hack() # Wait for server to send us the logs.
-
-		#print str(client.lines)
+		self.short_wait_hack() # We have to wait at most 200ms.
+		self.short_wait_hack()
 
 		self.assertEquals(0, len(client.errors), "Errors found.")
 		self.assertEquals(number_lines + 1, len(client.lines), "Didn't download the expected number of lines.")

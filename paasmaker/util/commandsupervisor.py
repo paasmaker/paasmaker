@@ -72,7 +72,7 @@ class CommandSupervisor():
 
 	def close_off_log(self):
 		if self.job_fp:
-			self.job_fp.close()
+			self.logger.untakeover_file(self.job_fp)
 
 	def kill(self):
 		if self.process:

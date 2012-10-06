@@ -33,6 +33,7 @@ routes = []
 
 # Set up the job logger.
 paasmaker.util.joblogging.JobLoggerAdapter.setup_joblogger(configuration)
+configuration.setup_job_watcher(tornado.ioloop.IOLoop.instance())
 
 if configuration.is_pacemaker():
 	# Pacemaker setup.

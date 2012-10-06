@@ -244,6 +244,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.plugins = paasmaker.util.PluginRegistry(self)
 		self.uuid = None
 		self.exchange = None
+		self.job_watcher = None
 
 	def post_load(self):
 		# Make sure directories exist.
@@ -337,7 +338,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	# JOB HELPERS
 	#
 	def get_job_logger(self, job_id):
-		return paasmaker.util.joblogging.JobLoggerAdapter(logging.getLogger('job'), job_id, self)
+		return paasmaker.util.joblogging.JobLoggerAdapter(logging.getLogger('job'), job_id, self, self.get_job_watcher())
 	def get_job_log_path(self, job_id):
 		container = os.path.join(self['log_directory'], 'job')
 		checksum = hashlib.md5()
@@ -363,6 +364,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def job_exists_locally(self, job_id):
 		path = self.get_job_log_path(job_id)
 		return os.path.exists(path)
+	def setup_job_watcher(self, io_loop):
+		if not self.job_watcher:
+			self.job_watcher = paasmaker.util.joblogging.JobWatcher(self, io_loop)
+	def get_job_watcher(self):
+		return self.job_watcher
 	def send_job_status(self, job_id, state, source=None):
 		"""
 		Propagate the status of a job to listeners who care inside our
