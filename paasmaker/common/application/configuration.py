@@ -6,6 +6,11 @@ from paasmaker.util.configurationhelper import InvalidConfigurationException
 
 # Schema definition.
 class Runtime(colander.MappingSchema):
+	quantity = colander.SchemaNode(colander.Integer(),
+		title="Quantity",
+		description="The quantity of instances to start with.",
+		missing=1,
+		default=1)
 	provider = colander.SchemaNode(colander.String(),
 		title="Runtime provider",
 		description="Runtime provider symbolic name")
@@ -80,6 +85,21 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 	def __init__(self):
 		super(ApplicationConfiguration, self).__init__(ConfigurationSchema())
 
+	def post_load(self):
+		# Check the schema of nodes in the instances map.
+		# Because there doesn't seem to be a way to get colander to do so.
+		schema = Runtime()
+		for instance in self['instances']:
+			try:
+				# Validate.
+				valid = schema.deserialize(self['instances'][instance])
+			except colander.Invalid, ex:
+				# Raise another exception that encapsulates more context.
+				# In future this can be used to print a nicer report.
+				# Because the default output is rather confusing...!
+				raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self['instance']['instances'])
+
+
 class TestApplicationConfiguration(unittest.TestCase):
 	test_config = """
 manifest:
@@ -101,6 +121,8 @@ instances:
   web:
     quantity: 1
     provider: paasmaker.runtime.php
+    parameters:
+      document_root: web
     version: 5.4
     startup:
       - paasmaker.startup.symfony2
