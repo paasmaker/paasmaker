@@ -1,0 +1,24 @@
+
+# The possible node states.
+NODE_STATES = ['ACTIVE', 'STOPPED', 'ERROR', 'INACTIVE']
+
+# Various classes of node states.
+NODE_ACTIVE_STATES = ['ACTIVE']
+NODE_ERROR_STATES = ['ERROR']
+NODE_STOPPED_STATES = ['STOPPED', 'ERROR']
+
+# The possible job states.
+JOB_STATES = ['NEW', 'WAITING', 'RUNNING', 'FAILED', 'ABORTED', 'FINISHED']
+
+# Various classes of job states.
+JOB_RUNNING_STATES = ['NEW', 'WAITING', 'RUNNING']
+JOB_FINISHED_STATES = ['ABORTED', 'FINISHED']
+JOB_ERROR_STATES = ['FAILED']
+
+# The possible instance states.
+INSTANCE_STATES = ['STARTING', 'RUNNING', 'STOPPED', 'ERROR', 'SHUTDOWN']
+
+# Various classes of instance states.
+INSTANCE_RUNNING_STATES = ['STARTING', 'RUNNING']
+INSTANCE_ERROR_STATES = ['ERROR']
+INSTANCE_FINISHED_STATES = ['STOPPED', 'SHUTDOWN']

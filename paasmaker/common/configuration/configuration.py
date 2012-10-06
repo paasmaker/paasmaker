@@ -14,6 +14,8 @@ import logging
 import subprocess
 import socket
 
+from pubsub import pub
+
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import colander
@@ -241,6 +243,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.port_allocator = paasmaker.util.port.FreePortFinder()
 		self.plugins = paasmaker.util.PluginRegistry(self)
 		self.uuid = None
+		self.exchange = None
 
 	def post_load(self):
 		# Make sure directories exist.
@@ -307,16 +310,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# TODO: Implement!
 		pass
 
-	def get_message_broker(self):
+	def setup_message_exchange(self, status_ready_callback=None, audit_ready_callback=None, io_loop=None):
 		"""
-		Return the raw message broker connection.
-		"""
-		# TODO: Implement.
-		pass
-
-	def get_message_exchange(self):
-		"""
-		Return the raw message exchange instance.
+		Set up the message broker connection and appropriate exchange.
 		"""
 		# TODO: Implement.
 		pass
@@ -363,6 +359,20 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def job_exists_locally(self, job_id):
 		path = self.get_job_log_path(job_id)
 		return os.path.exists(path)
+	def send_job_status(self, job_id, state, source=None):
+		"""
+		Propagate the status of a job to listeners who care inside our
+		instance, and also likely down the Rabbit hole to other listeners.
+		(Rabbit hole means RabbitMQ... so there is no confusion.)
+		"""
+		topic = self.get_job_status_pub_topic(job_id)
+
+		# If source is not supplied, send along our own UUID.
+		send_source = source
+		if not send_source:
+			send_source = self.get_node_uuid()
+
+		pub.sendMessage(topic, job_id=job_id, state=state, source=send_source)
 
 	#
 	# IDENTITY HELPERS

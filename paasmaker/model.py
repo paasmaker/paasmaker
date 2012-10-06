@@ -9,6 +9,8 @@ from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.orm.interfaces import MapperExtension
 import hashlib
 
+from paasmaker.common.core import constants
+
 Base = declarative_base()
 
 # TODO: Revisit this: DateTime handling: insert UTC timestamps.
@@ -44,14 +46,13 @@ class OrmBase(object):
 
 class Node(OrmBase, Base):
 	__tablename__ = 'node'
-	STATES = ['ACTIVE', 'STOPPED', 'ERROR', 'INACTIVE']
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String, nullable=False)
 	route = Column(String, nullable=False)
 	apiport = Column(Integer, nullable=False)
 	uuid = Column(String, nullable=False, unique=True, index=True)
-	state = Column(Enum(*STATES), nullable=False)
+	state = Column(Enum(*constants.NODE_STATES), nullable=False)
 	last_heard = Column(DateTime, nullable=False)
 
 	heart = Column(Boolean, nullable=False, default=False)

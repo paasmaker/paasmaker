@@ -14,6 +14,9 @@ import paasmaker
 import tornadoredis
 import tornado
 
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
+
 class ConfigurationStub(configuration.Configuration):
 	"""A test version of the configuration object, for unit tests."""
 	default_config = """
@@ -101,6 +104,9 @@ router:
 		# And then load the config.
 		super(ConfigurationStub, self).load_from_file([self.configname])
 
+		# Choose a UUID for ourself.
+		#self.set_node_uuid(str(uuid.uuid4()))
+
 		# And if we're a pacemaker, create the DB.
 		if 'pacemaker' in modules:
 			self.setup_database()
@@ -144,12 +150,26 @@ router:
 		settings['debug'] = True
 		return settings
 
-	def get_message_broker(self, callback, io_loop=None):
+	def setup_message_exchange(self, status_ready_callback=None, audit_ready_callback=None, io_loop=None):
+		self.exchange = paasmaker.common.core.MessageExchange(self)
 		if not self.message_broker_server:
+			logger.debug("Firing up temporary rabbitmq server... (this can take a few seconds)")
+
+			# A callback that finishes the setup.
+			def on_connection_ready(client):
+				logger.debug("Temporary rabbitmq server is running. Setting up exchange.")
+				self.exchange.setup(client, status_ready_callback, audit_ready_callback)
+
 			# Start up a message broker.
 			self.message_broker_server = paasmaker.util.temporaryrabbitmq.TemporaryRabbitMQ(self)
 			self.message_broker_server.start()
-			self.message_broker_server.get_client(io_loop=io_loop, callback=callback)
+			self.message_broker_server.get_client(io_loop=io_loop, callback=on_connection_ready)
+		else:
+			# Already fired up. Just call the callbacks.
+			if status_ready_callback:
+				status_ready_callback()
+			if audit_ready_callback:
+				audit_ready_callback()
 
 class TestConfigurationStub(unittest.TestCase):
 	def test_simple(self):
