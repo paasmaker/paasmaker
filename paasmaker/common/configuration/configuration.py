@@ -332,7 +332,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		return os.path.join(self.get_flat('scratch_directory'), filename)
 
 	def get_supervisor_path(self):
-		return os.path.normpath(os.path.dirname(__file__) + '/../../../supervisor.py')
+		return os.path.normpath(os.path.dirname(__file__) + '/../../../pm-supervisor.py')
 
 	#
 	# JOB HELPERS
