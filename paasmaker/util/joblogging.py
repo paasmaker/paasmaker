@@ -16,16 +16,15 @@ class JobLoggingFileHandler(logging.Handler):
 		logging.Handler.__init__(self)
 		self.formatter = logging.Formatter(JOB_LOG_FORMAT)
 
+		pub.subscribe(self.job_status_change, 'job.status')
+
 	def emit(self, record):
 		# This handler only logs if there is a job id.
 		if record.__dict__.has_key('job'):
 			job_id = record.job
-			# Find a handler.
+			# Find a handler, and get that one to emit the record.
 			handler = self.get_handler(job_id)
 			handler.emit(record)
-			# If it's complete, destroy that handler.
-			if record.__dict__.has_key('complete') and record.complete:
-				self.close_handler(job_id)
 
 	def get_handler(self, job_id):
 		if self.handlers.has_key(job_id):
@@ -38,36 +37,14 @@ class JobLoggingFileHandler(logging.Handler):
 
 	def close_handler(self, job_id):
 		if self.handlers.has_key(job_id):
+			self.handlers[job_id].close()
 			del self.handlers[job_id]
 
-class JobLoggingPubHandler(logging.Handler):
-	def __init__(self, configuration):
-		self.configuration = configuration
-		logging.Handler.__init__(self)
-		self.setFormatter(logging.Formatter(JOB_LOG_FORMAT))
-
-	def emit(self, record):
-		# This handler only logs if there is a job id.
-		if record.__dict__.has_key('job'):
-			job_id = record.job
-			job_topic = self.configuration.get_job_message_pub_topic(job_id)
-			# Don't proceed any further if there is no one listening.
-			# We're trying to avoid the self.format() call, as that can
-			# be expensive.
-			# TODO: this is a bit hacky.
-			job_topic_key = ".".join(job_topic)
-			if pub.topicsMap.has_key(job_topic_key) and len(pub.topicsMap[job_topic_key]._Topic__listeners) == 0:
-				return
-			# Render the message. Note we add a newline, because the file
-			# handler also does this... so if we didn't, we'd be out by one-byte-per-entry.
-			message = self.format(record) + "\n"
-			# Publish the message to interested parties.
-			pub.sendMessage(job_topic, message=message, job_id=job_id)
-			# If it's complete, unsubscribe all.
-			# And then publish a message to say that the job is complete.
-			if record.__dict__.has_key('complete') and record.complete:
-				pub.sendMessage(('job', 'complete'), job_id=job_id, summary=self.format(record))
-				pub.delTopic(job_topic)
+	def job_status_change(self, job_id, state, source):
+		if state in paasmaker.common.core.constants.JOB_FINISHED_STATES:
+			# Pubsub callback for job status change.
+			# Close off that handler.
+			self.close_handler(job_id)
 
 class JobLoggerAdapter(logging.LoggerAdapter):
 	def __init__(self, logger, job_id, configuration):
@@ -75,11 +52,14 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 		self.configuration = configuration
 		super(JobLoggerAdapter, self).__init__(logger, {'job':job_id})
 
-	def complete(self, success, summary):
-		# Job should now be complete...
-		# This will trigger closing the file.
-		flat_summary = {'success': success, 'summary': summary}
-		self.logger.info(json.dumps(flat_summary), extra={'job':self.job_id, 'complete':True})
+	def complete(self, state, summary):
+		# Dump out some JSON to the log file.
+		flat_summary = {'state': state, 'summary': summary}
+		self.info(json.dumps(flat_summary))
+		# Publish to the audit queue.
+		self.configuration.send_job_complete(self.job_id, state, summary)
+		# And to the state queue.
+		self.configuration.send_job_status(self.job_id, state, summary)
 
 	@staticmethod
 	def setup_joblogger(configuration):
@@ -88,7 +68,6 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 		# adjustable per job?
 		joblogger.setLevel(logging.DEBUG)
 		joblogger.addHandler(JobLoggingFileHandler(configuration))
-		joblogger.addHandler(JobLoggingPubHandler(configuration))
 
 class JobLoggingTest(unittest.TestCase):
 	def setUp(self):
@@ -140,19 +119,27 @@ class JobLoggingTest(unittest.TestCase):
 		self.logger.debug('Test')
 
 	def test_complete_job(self):
-		# Mark a job as completed.
 		id1 = str(uuid.uuid4())
 		job1logger = self.configuration.get_job_logger(id1)
 		job1logger.debug('Test')
-		job1logger.complete(True, "Success")
+
+		# Check that it has a handler.
+		self.assertEquals(len(self.handler.handlers.keys()), 1, "A handler was expected.")
+
+		# Send a job update (that's not a finished status) and make sure the handler is still open.
+		self.configuration.send_job_status(id1, 'RUNNING')
+		self.assertEquals(len(self.handler.handlers.keys()), 1, "A handler was expected.")
+
+		# Mark a job as completed.
+		job1logger.complete('FINISHED', "Success")
 		self.assertEquals(len(self.handler.handlers.keys()), 0, "Handler was not closed and freed.")
 
 		# Now check that the summary was written and parseable.
 		# TODO: Find nicer way to organise these.
 		job1path = self.configuration.get_job_log_path(id1)
 		contents = open(job1path, 'r').read()
-		self.assertIn('Success', contents)
-		self.assertIn('true', contents)
+		self.assertIn('state', contents)
+		self.assertIn('FINISHED', contents)
 		self.assertIn('{', contents)
 		self.assertIn('}', contents)
 

@@ -356,6 +356,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# Why add the 'j' to the job name? It seems a topic name
 		# can't start with a number.
 		return ('job', 'status', 'j' + job_id)
+	def get_job_audit_pub_topic(self, job_id):
+		# Why add the 'j' to the job name? It seems a topic name
+		# can't start with a number.
+		return ('job', 'audit', 'j' + job_id)
 	def job_exists_locally(self, job_id):
 		path = self.get_job_log_path(job_id)
 		return os.path.exists(path)
@@ -373,6 +377,18 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			send_source = self.get_node_uuid()
 
 		pub.sendMessage(topic, job_id=job_id, state=state, source=send_source)
+	def send_job_complete(self, job_id, state, summary, source=None):
+		"""
+		Send that a job is complete, with the given summary message.
+		"""
+		topic = self.get_job_audit_pub_topic(job_id)
+
+		# If source is not supplied, send along our own UUID.
+		send_source = source
+		if not send_source:
+			send_source = self.get_node_uuid()
+
+		pub.sendMessage(topic, job_id=job_id, state=state, summary=summary, source=send_source)
 
 	#
 	# IDENTITY HELPERS

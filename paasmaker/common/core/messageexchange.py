@@ -52,6 +52,8 @@ class MessageExchange:
 		self.channel.basic_consume(consumer_callback=self.on_job_audit_message, queue='job.audit')
 		if self.audit_ready_callback:
 			self.audit_ready_callback(self)
+		# Subscribe to job audit updates from internal.
+		pub.subscribe(self.send_job_status, 'job.audit')
 
 	def on_job_status_queue_bound(self, frame):
 		logger.debug("Message Broker (6): Job status queue is bound, now consuming.")
