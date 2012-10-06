@@ -14,13 +14,14 @@ class CommandSupervisor():
 	def __init__(self, configuration, logfile):
 		self.configuration = configuration
 		self.process = None
-		self.logfile = logfile
+		self.logger = None
+		self.job_fp = None
 
 	def run(self, data):
 		# Prepare to run.
 		# NOTE: Assumes that data is as expected...
 		job_id = data['job_id']
-		job_file = self.configuration.get_job_log_path(job_id)
+		self.logger = self.configuration.get_job_logger(job_id)
 		command = data['command'] # Should be an array!
 		shell = False
 		if data.has_key('shell'):
@@ -35,13 +36,13 @@ class CommandSupervisor():
 		signal.signal(signal.SIGHUP, self.signal_handler)
 
 		try:
-			self.special_logger(self.logfile, "Running command: %s" % " ".join(command))
-			job_fp = open(job_file, 'ab')
+			self.logger.info("Running command: %s", " ".join(command))
+			self.job_fp = self.logger.takeover_file()
 			self.process = subprocess.Popen(
 				command,
 				stdin=None,
-				stdout=job_fp,
-				stderr=job_fp,
+				stdout=self.job_fp,
+				stderr=self.job_fp,
 				shell=shell
 			)
 
@@ -53,39 +54,38 @@ class CommandSupervisor():
 			# Wait for it to complete, or for a signal.
 			self.process.wait()
 
-			# Close off the output file.
-			job_fp.close()
+			self.close_off_log()
 
 			# Remove the pidfile.
 			os.unlink(pidfile)
 
 			# And record the result.
-			self.special_logger(self.logfile, "Completed with result code %d" % self.process.returncode)
+			self.logger.info("Completed with result code %d", self.process.returncode)
 
 			# TODO: Announce the completion by pubsub.
 
 		except OSError, ex:
-			self.special_logger(self.logfile, "Failed to execute subcommand: %s" % str(ex))
+			if job_fp:
+				job_fp.close()
+			self.logger.error(ex)
+			self.logger.error("Failed to execute subcommand: %s", str(ex))
+
+	def close_off_log(self):
+		if self.job_fp:
+			self.job_fp.close()
 
 	def kill(self):
 		if self.process:
-			self.special_logger(self.logfile, "Killing off this process.")
 			os.kill(self.process.pid, signal.SIGTERM)
+			self.process.wait()
+			self.close_off_log()
+			self.logger.info("Killed off child process as requested.")
 
 	def signal_handler(self, signum, frame):
 		# Attempt to kill our child process.
 		# (Think of the children!)
-		self.special_logger(self.logfile, "Got signal %d" % signum)
 		self.kill()
-
-	@staticmethod
-	def special_logger(filename, message):
-		f = open(filename, 'a')
-		f.write(datetime.datetime.utcnow().isoformat())
-		f.write(" ")
-		f.write(message)
-		f.write("\n")
-		f.close()
+		self.logger.info("Got signal %d", signum)
 
 class CommandSupervisorLauncher():
 	def __init__(self, configuration):
@@ -163,4 +163,4 @@ class CommandSupervisorTest(unittest.TestCase):
 			job_contents = open(job_path, 'r').read()
 
 		self.assertIn("Start...", job_contents, "Missing output.")
-		self.assertIn("Killing", job_contents, "Missing output.")
+		self.assertIn("Killed", job_contents, "Missing output.")

@@ -16,7 +16,10 @@ class JobLoggingFileHandler(logging.Handler):
 		logging.Handler.__init__(self)
 		self.formatter = logging.Formatter(JOB_LOG_FORMAT)
 
+		# Subscribe to job updates, so we can close handlers as appropriate.
 		pub.subscribe(self.job_status_change, 'job.status')
+		# And a takeover if we want to free the FD's for another purpose.
+		pub.subscribe(self.job_file_takeover, 'job.takeover')
 
 	def emit(self, record):
 		# This handler only logs if there is a job id.
@@ -46,6 +49,10 @@ class JobLoggingFileHandler(logging.Handler):
 			# Close off that handler.
 			self.close_handler(job_id)
 
+	def job_file_takeover(self, job_id):
+		# Close the handler for that job - freeing up the file.
+		self.close_handler(job_id)
+
 class JobLoggerAdapter(logging.LoggerAdapter):
 	def __init__(self, logger, job_id, configuration):
 		self.job_id = job_id
@@ -60,6 +67,14 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 		self.configuration.send_job_complete(self.job_id, state, summary)
 		# And to the state queue.
 		self.configuration.send_job_status(self.job_id, state, summary)
+
+	def takeover_file(self):
+		# Close the file, if it's open.
+		pub.sendMessage('job.takeover', job_id=self.job_id)
+		# Open the file up again...
+		# The caller is responsible for closing it.
+		job_file = self.configuration.get_job_log_path(self.job_id)
+		return open(job_file, 'ab')
 
 	@staticmethod
 	def setup_joblogger(configuration):

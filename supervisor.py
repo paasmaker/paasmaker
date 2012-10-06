@@ -13,7 +13,7 @@ import os
 # 2: control file
 # 3: optional - configuration file
 
-logger = CommandSupervisor.special_logger
+# TODO: How to capture this output from startup?
 
 # Load the control file.
 if len(sys.argv) < 3:
@@ -24,14 +24,14 @@ log_file = sys.argv[1]
 control_file = sys.argv[2]
 
 if not os.path.exists(control_file):
-	logger(log_file, "Provided control file does not exist.")
+	print "Provided control file does not exist."
 	sys.exit(2)
 
 raw = open(control_file, 'r').read()
 try:
 	parsed = json.loads(raw)
 except ValueError, ex:
-	logger(log_file, "Invalid JSON: %s" % str(ex))
+	print "Invalid JSON: %s" % str(ex)
 	sys.exit(3)
 
 configuration_files = ['../paasmaker.yml', '/etc/paasmaker/paasmaker.yml']
@@ -42,9 +42,11 @@ if len(sys.argv) > 3:
 	configuration_files = [sys.argv[3]]
 
 # Load the configuration.
-logger(log_file, "Loading configuration...")
 configuration = paasmaker.common.configuration.Configuration()
 configuration.load_from_file(configuration_files)
+
+# Set up the job logger.
+paasmaker.util.joblogging.JobLoggerAdapter.setup_joblogger(configuration)
 
 # And launch. This will block until it completes.
 supervisor = paasmaker.util.commandsupervisor.CommandSupervisor(configuration, log_file)

@@ -343,10 +343,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		checksum = hashlib.md5()
 		checksum.update(job_id)
 		checksum = checksum.hexdigest()
-		container = os.path.join(container, checksum[0:4])
+		container = os.path.join(container, checksum[0:2])
 		if not os.path.exists(container):
 			os.makedirs(container)
-		path = os.path.join(container, checksum + '.log')
+		path = os.path.join(container, checksum[2:] + '.log')
 		return path
 	def get_job_message_pub_topic(self, job_id):
 		# Why add the 'j' to the job name? It seems a topic name
