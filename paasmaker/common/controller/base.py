@@ -121,6 +121,7 @@ class BaseController(tornado.web.RequestHandler):
 			# Check that a valid node authenticated.
 			found_allowed_method = self.check_node_auth()
 
+		# TODO: Handle user token authentication.
 		if self.USER in methods:
 			# Check that a valid user is authenticated.
 			if self.get_current_user():
