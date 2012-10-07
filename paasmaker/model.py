@@ -84,7 +84,7 @@ class User(OrmBase, Base):
 	__tablename__ = 'user'
 
 	id = Column(Integer, primary_key=True)
-	userkey = Column(String, nullable=False, index=True, unique=True)
+	login = Column(String, nullable=False, index=True, unique=True)
 	email = Column(String, nullable=False, index=True, unique=True)
 	auth_source = Column(String, nullable=False, default="internal")
 	auth_meta = Column(String, nullable=True)
@@ -93,10 +93,11 @@ class User(OrmBase, Base):
 	password = Column(String, nullable=True)
 	name = Column(String, nullable=True)
 
-	def __init__(self, userkey, email, auth_source="internal"):
-		self.userkey = userkey
-		self.email = email
-		self.auth_source = auth_source
+	def __init__(self):#, userkey, email, auth_source="internal"):
+		pass
+		#self.userkey = userkey
+		#self.email = email
+		#self.auth_source = auth_source
 
 	def __repr__(self):
 		return "<User('%s'@'%s')>" % (self.email, self.auth_source)
