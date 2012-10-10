@@ -86,6 +86,7 @@ class LoginControllerTest(BaseControllerTest):
 		u = paasmaker.model.User()
 		u.login = 'danielf'
 		u.email = 'freefoote@dview.net'
+		u.name = 'Daniel Foote'
 		u.set_password('test')
 		s.add(u)
 		s.commit()
@@ -110,9 +111,11 @@ class LoginControllerTest(BaseControllerTest):
 		u = paasmaker.model.User()
 		u.login = 'danielf'
 		u.email = 'freefoote@dview.net'
+		u.name = 'Daniel Foote'
 		u.set_password('test')
 		s.add(u)
 		s.commit()
+		s.refresh(u)
 
 		# Ok, now that we've done that, try to log in.
 		request = paasmaker.common.api.LoginAPIRequest(self.configuration, self.io_loop)
@@ -138,3 +141,32 @@ class LoginControllerTest(BaseControllerTest):
 		# Check that it returned the information page.
 		self.failIf(response.error)
 		self.assertIn("machine readable", response.body)
+
+	def test_login_apikey(self):
+		# Create a test user.
+		s = self.configuration.get_database_session()
+		u = paasmaker.model.User()
+		u.login = 'danielf'
+		u.email = 'freefoote@dview.net'
+		u.name = 'Daniel Foote'
+		u.set_password('test')
+		s.add(u)
+		s.commit()
+		s.refresh(u)
+
+		request = paasmaker.common.api.InformationAPIRequest(self.configuration, self.io_loop)
+		request.set_apikey_auth('bogus')
+		request.send(self.stop)
+		response = self.wait()
+
+		# This will fail.
+		self.failIf(response.success)
+
+		# Try it again with the key.
+		request = paasmaker.common.api.InformationAPIRequest(self.configuration, self.io_loop)
+		request.set_apikey_auth(u.apikey)
+		request.send(self.stop)
+		response = self.wait()
+
+		# This should succeed.
+		self.failIf(not response.success)		
