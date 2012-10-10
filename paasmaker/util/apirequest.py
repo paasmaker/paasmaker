@@ -56,6 +56,10 @@ class APIRequest(object):
 		self.authmethod = 'token'
 		self.authvalue = key
 
+	def set_nodekey_auth(self, key):
+		self.authmethod = 'node'
+		self.authvalue = key
+
 	def build_payload(self):
 		# Override in your subclass.
 		return {}
