@@ -30,6 +30,7 @@ logger.addHandler(logging.NullHandler())
 
 # Set up command line options.
 define("debug", type=int, default=0, help="Enable Tornado debug mode.")
+define("configfile", type=str, default="", help="Override configuration file.")
 
 # The Configuration Schema.
 class PacemakerSchema(colander.MappingSchema):
@@ -245,6 +246,14 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.uuid = None
 		self.exchange = None
 		self.job_watcher = None
+
+	def load_from_file(self, search_path):
+		# If we were supplied a configuration file on the command line,
+		# insert that into the search path.
+		new_search_path = list(search_path)
+		if options.configfile != "":
+			new_search_path.insert(0, options.configfile)
+		super(Configuration, self).load_from_file(search_path)
 
 	def post_load(self):
 		# Make sure directories exist.

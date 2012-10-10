@@ -32,9 +32,14 @@ class OrmBase(object):
 	def flatten(self, field_list=None):
 		# If field_list is not None, return just those fields.
 		fields = {}
-		fields['id'] = self.__dict__['id']
-		fields['updated'] = self.__dict__['updated']
-		fields['created'] = self.__dict__['created']
+		if self.__dict__.has_key('id'):
+			fields['id'] = self.__dict__['id']
+			fields['updated'] = self.__dict__['updated']
+			fields['created'] = self.__dict__['created']
+		else:
+			fields['id'] = None
+			fields['updated'] = None
+			fields['created'] = None
 		fields['class'] = self.__class__.__name__
 		for field in field_list:
 			fields[field] = self.__dict__[field]
@@ -93,17 +98,14 @@ class User(OrmBase, Base):
 	password = Column(String, nullable=True)
 	name = Column(String, nullable=True)
 
-	def __init__(self):#, userkey, email, auth_source="internal"):
+	def __init__(self):
 		pass
-		#self.userkey = userkey
-		#self.email = email
-		#self.auth_source = auth_source
 
 	def __repr__(self):
 		return "<User('%s'@'%s')>" % (self.email, self.auth_source)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['email', 'auth_source', 'name'])
+		return super(User, self).flatten(['login', 'email', 'auth_source', 'name', 'enabled'])
 
 	def password_hash(self, plain):
 		# TODO: make this more secure!
@@ -370,7 +372,9 @@ class TestModel(unittest.TestCase):
 	def test_user_workspace(self):
 		s = self.__class__.session
 
-		user = User('danielf', 'freefoote@dview.net')
+		user = User()
+		user.login = 'danielf'
+		user.email = 'freefoote@dview.net'
 		role = Role('Administrator')
 		role_permission = RolePermission('ADMIN', True)
 		role.permissions.append(role_permission)

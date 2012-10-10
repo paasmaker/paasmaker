@@ -39,6 +39,13 @@
 			</a>
 			<a class="brand" href="/">Paasmaker</a>
 			<div class="nav-collapse collapse">
+				<p class="navbar-text pull-right">
+					{% if current_user %}
+						Logged in as <a href="#" class="navbar-link">{{ escape(current_user.name) }}</a>. <a href="/logout">Logout</a>
+					{% else %}
+						<a href="/login">Login</a>
+					{% end %}
+				</p>
 				<ul class="nav">
 					<li class="active"><a href="#">Home</a></li>
 					<li><a href="/information">Information</a></li>
@@ -55,7 +62,7 @@
 				{% if len(errors) > 0 %}
 					<ul class="errors">
 						{% for error in errors %}
-							<li>{{ error }}</li>
+							<li>{{ escape(error) }}</li>
 						{% end %}
 					</ul>
 				{% end %}

@@ -41,6 +41,14 @@ if configuration.is_pacemaker():
 	logging.info("Database connection and table creation...")
 	configuration.setup_database()
 
+	logging.info("Setting up pacemaker routes...")
+	routes.extend(paasmaker.pacemaker.controller.index.IndexController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.login.LoginController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.login.LogoutController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.user.UserController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.user.UserEditController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.user.UserListController.get_routes(route_extras))
+
 if configuration.is_heart():
 	# Heart setup.
 	pass
@@ -50,13 +58,9 @@ if configuration.is_router():
 	# Connect to redis.
 	pass
 
-#routes.extend(paasmaker.common.controller.example.ExampleController.get_routes(route_extras))
-#routes.extend(paasmaker.common.controller.example.ExampleFailController.get_routes(route_extras))
+logging.info("Setting up common routes...")
 routes.extend(paasmaker.common.controller.example.ExampleWebsocketHandler.get_routes(route_extras))
 routes.extend(paasmaker.common.controller.information.InformationController.get_routes(route_extras))
-routes.extend(paasmaker.pacemaker.controller.index.IndexController.get_routes(route_extras))
-routes.extend(paasmaker.pacemaker.controller.login.LoginController.get_routes(route_extras))
-routes.extend(paasmaker.pacemaker.controller.login.LogoutController.get_routes(route_extras))
 
 # Set up the application object.
 logging.info("Setting up the application.")
@@ -71,3 +75,4 @@ if __name__ == "__main__":
 	logging.info("Listening on port %d", configuration['http_port'])
 	# And start listening.
 	tornado.ioloop.IOLoop.instance().start()
+	logging.info("Exiting.")

@@ -18,7 +18,7 @@ class LoginController(BaseController):
 		username = self.param('username')
 		password = self.param('password')
 		user = self.db().query(paasmaker.model.User) \
-			.filter(paasmaker.model.User.userkey==username).first()
+			.filter(paasmaker.model.User.login==username).first()
 		success = False
 
 		if user:
@@ -83,7 +83,9 @@ class LoginControllerTest(BaseControllerTest):
 	def test_login(self):
 		# Create a test user.
 		s = self.configuration.get_database_session()
-		u = paasmaker.model.User('danielf', 'freefoote@dview.net')
+		u = paasmaker.model.User()
+		u.login = 'danielf'
+		u.email = 'freefoote@dview.net'
 		u.set_password('test')
 		s.add(u)
 		s.commit()
@@ -105,7 +107,9 @@ class LoginControllerTest(BaseControllerTest):
 	def test_login_json(self):
 		# Create a test user.
 		s = self.configuration.get_database_session()
-		u = paasmaker.model.User('danielf', 'freefoote@dview.net')
+		u = paasmaker.model.User()
+		u.login = 'danielf'
+		u.email = 'freefoote@dview.net'
 		u.set_password('test')
 		s.add(u)
 		s.commit()

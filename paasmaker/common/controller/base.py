@@ -62,6 +62,8 @@ class BaseController(tornado.web.RequestHandler):
 		self.allowed_authentication_methods = ['anonymous']
 		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
 
+		self.add_data_template('format_form_error', self.format_form_error)
+
 	def prepare(self):
 		self._set_format(self.get_argument('format', 'html'))
 
@@ -173,6 +175,12 @@ class BaseController(tornado.web.RequestHandler):
 
 	def add_data_template(self, key, name):
 		self.template[key] = name
+
+	def format_form_error(self, form, field):
+		if form.has_errors(field):
+			return '<ul class="error"><li>%s</li></ul>' % tornado.escape.xhtml_escape(form.get_first_error(field))
+		else:
+			return ''
 
 	def add_error(self, error):
 		self.errors.append(error)
