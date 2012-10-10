@@ -2,6 +2,7 @@ import unittest
 import json
 import sqlalchemy
 import datetime
+import uuid
 import paasmaker
 from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum
 from sqlalchemy.ext.declarative import declarative_base
@@ -98,6 +99,8 @@ class User(OrmBase, Base):
 	password = Column(String, nullable=True)
 	name = Column(String, nullable=True)
 
+	apikey = Column(String, nullable=True)
+
 	def __init__(self):
 		pass
 
@@ -115,6 +118,8 @@ class User(OrmBase, Base):
 
 	def set_password(self, plain):
 		self.password = self.password_hash(plain)
+		# TODO: This isn't the correct location to do this... move it.
+		self.apikey = str(uuid.uuid4())
 
 	def check_password(self, plain):
 		return self.password == self.password_hash(plain)
@@ -375,6 +380,7 @@ class TestModel(unittest.TestCase):
 		user = User()
 		user.login = 'danielf'
 		user.email = 'freefoote@dview.net'
+		user.set_password('test')
 		role = Role('Administrator')
 		role_permission = RolePermission('ADMIN', True)
 		role.permissions.append(role_permission)
@@ -384,6 +390,11 @@ class TestModel(unittest.TestCase):
 		s.add(role_permission)
 
 		s.commit()
+
+		# TODO: APIkey isn't set until the password is set.
+		# Fix this.
+		s.refresh(user)
+		self.assertTrue(user.apikey)
 
 		workspace = Workspace('Work Zone')
 		s.add(workspace)
