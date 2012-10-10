@@ -99,7 +99,7 @@ class User(OrmBase, Base):
 	password = Column(String, nullable=True)
 	name = Column(String, nullable=True)
 
-	apikey = Column(String, nullable=True)
+	apikey = Column(String, nullable=True, index=True)
 
 	def __init__(self):
 		pass

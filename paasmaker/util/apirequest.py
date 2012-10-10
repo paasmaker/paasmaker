@@ -45,8 +45,16 @@ class APIRequest(object):
 		self.configuration = configuration
 		self.io_loop = io_loop
 		self.target = self.get_master()
-		self.authmethod = 'node'
-		self.authvalue = self.configuration.get_flat('auth_token')
+		if configuration:
+			self.authmethod = 'node'
+			self.authvalue = self.configuration.get_flat('auth_token')
+		else:
+			self.authmethod = None
+			self.authvalue = None
+
+	def set_apikey_auth(self, key):
+		self.authmethod = 'token'
+		self.authvalue = key
 
 	def build_payload(self):
 		# Override in your subclass.

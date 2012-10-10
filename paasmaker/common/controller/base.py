@@ -157,6 +157,18 @@ class BaseController(tornado.web.RequestHandler):
 		if not self.configuration.is_pacemaker():
 			return None
 
+		# See if we're using token authentication.
+		if self.auth.has_key('method') and self.auth['method'] == 'token':
+			if self.auth.has_key('value'):
+				raw_token = self.auth['value']
+				# Lookup the user object.
+				user = self.db().query(paasmaker.model.User) \
+					.filter(paasmaker.model.User.apikey==raw_token).first()
+				# Make sure we have the user, and it's enabled and not deleted.
+				if user and user.enabled and not user.deleted:
+					self.user = user
+					return user
+
 		# Fetch their cookie.
 		raw = self.get_secure_cookie('user', max_age_days=self.configuration.get_flat('pacemaker.login_age'))
 		if raw:
