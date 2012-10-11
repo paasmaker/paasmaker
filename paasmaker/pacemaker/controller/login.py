@@ -33,7 +33,7 @@ class LoginController(BaseController):
 		else:
 			self.add_error("Invalid username or password.")
 
-		if success and self.format == 'html':
+		if success:
 			ret = self.param('rt')
 			if ret:
 				self.redirect(ret)

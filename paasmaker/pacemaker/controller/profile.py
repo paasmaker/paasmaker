@@ -15,6 +15,18 @@ class ProfileController(BaseController):
 		routes.append((r"/profile", ProfileController, configuration))
 		return routes
 
+class ProfileResetAPIKeyController(BaseController):
+	auth_methods = [BaseController.USER]
+
+	def post(self):
+		self.render("user/profile.html")
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/profile", ProfileController, configuration))
+		return routes
+
 class ProfileControllerTest(BaseControllerTest):
 	config_modules = ['pacemaker']
 
@@ -37,5 +49,4 @@ class ProfileControllerTest(BaseControllerTest):
 				.filter(paasmaker.model.User.login=='danielf') \
 				.first()
 
-		print response.body
 		self.assertIn(user.apikey, response.body, "API key not present in body.")

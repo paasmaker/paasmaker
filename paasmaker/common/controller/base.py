@@ -108,6 +108,14 @@ class BaseController(tornado.web.RequestHandler):
 		else:
 			return default
 
+	def redirect(self, target, **kwargs):
+		if self.format == 'html':
+			# Only actually redirect in HTML mode - we don't need to redirect API requests.
+			super(BaseController, self).redirect(target, **kwargs)
+		else:
+			# TODO: Don't assume that the request is ready for rendering.
+			self.render("api/apionly.html")
+
 	def require_authentication(self, methods):
 		if len(methods) == 0:
 			# No methods provided.
@@ -369,8 +377,6 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 		request.set_credentials('danielf', 'testtest')
 		request.send(self.stop)
 		response = self.wait()
-		print str(response.errors)
-		print str(response.data)
 		if not response.success:
 			raise Exception('Failed to login as test user.')
 
