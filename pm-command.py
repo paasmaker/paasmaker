@@ -2,7 +2,9 @@
 
 # External library imports.
 import tornado.ioloop
-import tornado.options
+import argparse
+
+import sys
 
 # Internal imports.
 import paasmaker
@@ -11,76 +13,121 @@ import paasmaker
 import logging
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-# Parse command line options.
-other_options = tornado.options.parse_command_line()
+class RootAction(object):
+	def options(self, parser):
+		# Define your options here.
+		pass
 
-# Load configuration
-logging.info("Loading configuration...")
-configuration = paasmaker.common.configuration.Configuration()
-configuration.load_from_file(['../paasmaker.yml', '/etc/paasmaker/paasmaker.yml'])
+	def process(self, args):
+		self.exit()
+
+	def describe(self):
+		raise NotImplementedError("Not implemented.")
+
+	def exit(self, code):
+		tornado.ioloop.IOLoop.instance().stop()
+		sys.exit(code)
+
+	def point_and_auth(self, args, apirequest):
+		host = "http://%s:%d" % (args.remote, args.port)
+		apirequest.set_target(host)
+		if args.apikey:
+			apirequest.set_apikey_auth(args.apikey)
+		elif args.nodekey:
+			apirequest.set_nodekey_auth(args.nodekey)
+
+	def generic_api_response(self, response):
+		if response.success:
+			logging.info("Successfully executed request.")
+			logging.debug("Server response: %s", str(response.data))
+			sys.exit(0)
+		else:
+			logging.error("Request failed.")
+			for error in response.errors:
+				logging.error(error)
+			self.exit(1)
+
+class UserCreateAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("login", help="User login name")
+		parser.add_argument("email", help="Email address")
+		parser.add_argument("name", help="User name")
+		parser.add_argument("password", help="Password")
+
+	def describe(self):
+		return "Create a user."
+
+	def process(self, args):
+		request = paasmaker.common.api.user.UserCreateAPIRequest(None)
+		request.set_user_params(args.name, args.login, args.email, True)
+		request.set_user_password(args.password)
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
+class HelpAction(RootAction):
+	def options(self, parser):
+		pass
+
+	def process(self, args):
+		for key, handler in ACTION_MAP.iteritems():
+			logging.info("%s: %s", key, handler.describe())
+
+		self.exit(0)
+
+	def describe(self):
+		return "Show a list of actions."
+
+# Peek ahead at the command line options for the main action.
+if len(sys.argv) == 1:
+	# Nothing supplied.
+	print "No module supplied. Usage: %s action" % sys.argv[0]
+	print "Try %s help" % sys.argv[0]
+	sys.exit(1)
+
+action = sys.argv[1]
+
+ACTION_MAP = {
+	'user-create': UserCreateAction(),
+	'help': HelpAction()
+}
+
+# If there is no action...
+if not ACTION_MAP.has_key(action):
+	print "No such action %s. Try %s help" % (action, sys.argv[0])
+	sys.exit(1)
+
+# Set up our parser.
+parser = argparse.ArgumentParser()
+parser.add_argument('action', help="The action to perform.")
+
+# Set up common command line options.
+parser.add_argument("-r", "--remote", default="localhost", help="The pacemaker host.")
+parser.add_argument("-p", "--port", type=int, default=8888, help="The pacemaker port.")
+parser.add_argument("-k", "--apikey", help="User API key to authenticate with.")
+parser.add_argument("--nodekey", help="Node key to authenticate with.")
+parser.add_argument("--loglevel", default="INFO", help="Log level, one of DEBUG|INFO|WARNING|ERROR|CRITICAL.")
+
+# Now get our action to set up it's options.
+ACTION_MAP[action].options(parser)
+
+# Parse all the arguments.
+args = parser.parse_args()
 
 # Reset the log level.
-logging.info("Resetting command log level to %s.", configuration['server_log_level'])
+logging.debug("Resetting log level to %s.", args.loglevel)
 logger = logging.getLogger()
-logger.setLevel(getattr(logging, configuration['server_log_level']))
+logger.setLevel(getattr(logging, args.loglevel))
 
-# Initialise the system.
-logging.debug("Initialising system.")
+logger.debug("Parsed command line arguments: %s", str(args))
 
-# TODO: Rewrite the argument handling. Completely!
+# Make sure we have an auth source.
+if not args.nodekey and not args.apikey:
+	logger.error("No API or node key passed.")
+	sys.exit(1)
 
-# Various commands that we can run.
-def user(params):
-	# TODO: Don't assume we have the right number of arguments.
-	method = params[0]
-	if method == 'create':
-		login = params[1]
-		name = params[2]
-		email = params[3]
-		password = params[4]
-
-		request = paasmaker.common.api.user.UserCreateAPIRequest(configuration)
-		request.set_user_params(name, login, email, True)
-		request.set_user_password(password)
-		request.send(generic_api_response)
-
-def info(params):
-	pass
-
-def help(descriptions):
-	for k, v in descriptions.iteritems():
-		logging.info("%s: %s", k, v)
-	exit()
-
-HELP = {}
-HELP['user'] = "Create and edit users."
-HELP['info'] = "Get information."
-HELP['help'] = "Get help."
-
-# Lifecycle callbacks.
+# Now we wait for the IO loop to start before starting.
 def on_start():
-	logging.debug("Starting...")
-	if len(other_options) == 0:
-		logging.info("No command provided. Try 'help'.")
-		exit()
-	elif other_options[0] == 'user':
-		user(other_options[1:])
-	elif other_options[0] == 'info':
-		info(other_options)
-	else:
-		help(HELP)
-
-def generic_api_response(response):
-	if response.success:
-		logging.info("Successfully executed request.")
-	else:
-		logging.error("Request failed.")
-		for error in response.errors:
-			logging.error(error)
-	exit()
-
-def exit():
-	tornado.ioloop.IOLoop.instance().stop()
+	ACTION_MAP[action].process(args)
 
 # Commence the application.
 if __name__ == "__main__":
