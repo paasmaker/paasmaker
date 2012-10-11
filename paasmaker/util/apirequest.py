@@ -44,7 +44,7 @@ class APIRequest(object):
 	def __init__(self, configuration, io_loop=None):
 		self.configuration = configuration
 		self.io_loop = io_loop
-		self.target = self.get_master()
+		self.target = None
 		if configuration:
 			self.authmethod = 'node'
 			self.authvalue = self.configuration.get_flat('auth_token')
@@ -111,6 +111,9 @@ class APIRequest(object):
 			# And call the user defined callback back.
 			if callback:
 				callback(our_response)
+
+		if not self.target:
+			self.target = self.get_master()
 
 		# Build and make the request.
 		endpoint = self.target + self.get_endpoint()

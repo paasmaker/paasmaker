@@ -1,0 +1,11 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Profile
+{% end %}
+
+{% block body %}
+	<h1>Profile</h1>
+
+	<p class="lead">Your API key: {{ current_user.apikey }}</p>
+{% end %}
