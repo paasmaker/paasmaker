@@ -45,6 +45,9 @@ class LoginController(BaseController):
 	def allow_user(self, user):
 		self.set_secure_cookie("user", unicode(user.id))
 		self.add_data('success', True)
+		# Token is not for use with the auth token authentication method - because
+		# it expires. Instead, it's supplied back as a cookie and in the data for
+		# unit tests or other short lived systems.
 		self.add_data('token', self.create_signed_value('user', unicode(user.id)))
 
 	@staticmethod
@@ -169,4 +172,4 @@ class LoginControllerTest(BaseControllerTest):
 		response = self.wait()
 
 		# This should succeed.
-		self.failIf(not response.success)		
+		self.failIf(not response.success)

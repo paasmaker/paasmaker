@@ -336,10 +336,54 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 		self.configuration.cleanup()
 		super(BaseControllerTest, self).tearDown()
 
-	def fetch_user_auth(self, url, user, **kwargs):
+	def fetch_with_user_auth(self, url, **kwargs):
+		"""
+		Fetch the given URL as a user, creating a user to authenticate as
+		if needed.
+
+		Calls self.stop when the request is ready, so your unit test should
+		call self.wait() for the response.
+
+		If URL contains '%d', this is replaced with the test HTTP port.
+		Otherwise, the URL is untouched.
+		"""
+		# Create a test user - if required.
+		s = self.configuration.get_database_session()
+		user = s.query(paasmaker.model.User) \
+				.filter(paasmaker.model.User.login=='danielf') \
+				.first()
+
+		if not user:
+			# Not found. Make one.
+			u = paasmaker.model.User()
+			u.login = 'danielf'
+			u.email = 'freefoote@dview.net'
+			u.name = 'Daniel Foote'
+			u.set_password('testtest')
+			s.add(u)
+			s.commit()
+			s.refresh(u)
+
+		# Ok, now that we've done that, try to log in.
+		request = paasmaker.common.api.LoginAPIRequest(self.configuration, self.io_loop)
+		request.set_credentials('danielf', 'testtest')
+		request.send(self.stop)
+		response = self.wait()
+		print str(response.errors)
+		print str(response.data)
+		if not response.success:
+			raise Exception('Failed to login as test user.')
+
+		# Athenticate the next request.
+		if not kwargs.has_key('headers'):
+			kwargs['headers'] = {}
+		kwargs['headers']['Cookie'] = 'user=' + response.data['token']
+
 		# Add a cookie header.
-		# TODO: Figure out how to do this.
-		request = tornado.httpclient.HTTPRequest(url, **kwargs)
+		resolved_url = url
+		if url.find('%d') > 0:
+			resolved_url = resolved_url % self.get_http_port()
+		request = tornado.httpclient.HTTPRequest(resolved_url, **kwargs)
 		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
 		client.fetch(request, self.stop)
 
