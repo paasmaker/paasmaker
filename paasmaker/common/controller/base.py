@@ -75,7 +75,7 @@ class BaseController(tornado.web.RequestHandler):
 		# If the post body is JSON, parse it and put it into the arguments.
 		# TODO: This JSON detection is lightweight, but there might be corner
 		# cases in it too...
-		if self.request.method == 'POST' and self.request.body[0] == '{' and self.request.body[-1] == '}':
+		if self.request.method == 'POST' and len(self.request.body) > 0 and self.request.body[0] == '{' and self.request.body[-1] == '}':
 			parsed = json.loads(self.request.body)
 			schema = APIRequestSchema()
 			try:

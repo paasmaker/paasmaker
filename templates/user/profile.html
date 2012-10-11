@@ -7,5 +7,7 @@
 {% block body %}
 	<h1>Profile</h1>
 
-	<p class="lead">Your API key: {{ current_user.apikey }}</p>
+	<p class="lead">Your API key: {{ current_user.apikey }}.</p>
+
+	<form method="post" action="/profile/reset-api-key"><button class="btn">Reset API key</button></form>
 {% end %}

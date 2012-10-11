@@ -119,6 +119,9 @@ class User(OrmBase, Base):
 	def set_password(self, plain):
 		self.password = self.password_hash(plain)
 		# TODO: This isn't the correct location to do this... move it.
+		self.generate_api_key()
+
+	def generate_api_key(self):
 		self.apikey = str(uuid.uuid4())
 
 	def check_password(self, plain):
