@@ -13,6 +13,8 @@ import paasmaker
 import logging
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
+# TODO: Write tests for all the actions in this file.
+
 class RootAction(object):
 	def options(self, parser):
 		# Define your options here.
