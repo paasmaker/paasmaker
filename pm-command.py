@@ -29,7 +29,10 @@ class RootAction(object):
 		sys.exit(code)
 
 	def point_and_auth(self, args, apirequest):
-		host = "http://%s:%d" % (args.remote, args.port)
+		scheme = 'http'
+		if args.ssl:
+			scheme = 'https'
+		host = "%s://%s:%d" % (scheme, args.remote, args.port)
 		apirequest.set_target(host)
 		if args.apikey:
 			apirequest.set_apikey_auth(args.apikey)
@@ -104,6 +107,7 @@ parser.add_argument('action', help="The action to perform.")
 parser.add_argument("-r", "--remote", default="localhost", help="The pacemaker host.")
 parser.add_argument("-p", "--port", type=int, default=8888, help="The pacemaker port.")
 parser.add_argument("-k", "--apikey", help="User API key to authenticate with.")
+parser.add_argument("--ssl", default=False, help="Use SSL to connect to the node.", action="store_true")
 parser.add_argument("--nodekey", help="Node key to authenticate with.")
 parser.add_argument("--loglevel", default="INFO", help="Log level, one of DEBUG|INFO|WARNING|ERROR|CRITICAL.")
 
