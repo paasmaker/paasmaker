@@ -5,28 +5,24 @@
 {% end %}
 
 {% block body %}
-	<h1>User</h1>
-
 	<form method="POST">
-		<div class="row">
-			<label for="name">Name:</label>
-			<input name="name" id="name" type="text" value="{{ form.get('name') }}" />
-			{{ format_form_error(form, 'name') }}
-		</div>
-		<div class="row">
-			<label for="login">Login:</label>
-			<input name="login" id="login" type="text" value="{{ form.get('login') }}" />
-			{{ format_form_error(form, 'login') }}
-		</div>
-		<div class="row">
-			<label for="email">Email address:</label>
-			<input name="email" id="email" type="email" value="{{ form.get('email') }}" />
-			{{ format_form_error(form, 'email') }}
-		</div>
-		<div class="row">
-			<label for="password">Password:</label>
-			<input name="password" id="password" type="password" value="" />
-			{{ format_form_error(form, 'password') }}
-		</div>
+		<label for="name">Name:</label>
+		<input name="name" id="name" type="text" value="{{ form.get('name') }}" />
+		{% raw format_form_error(form, 'name') %}
+
+		<label for="login">Login:</label>
+		<input name="login" id="login" type="text" value="{{ form.get('login') }}" />
+		{% raw format_form_error(form, 'login') %}
+
+		<label for="email">Email address:</label>
+		<input name="email" id="email" type="email" value="{{ form.get('email') }}" />
+		{% raw format_form_error(form, 'email') %}
+
+		<label for="password">Password:</label>
+		<input name="password" id="password" type="password" value="" />
+		{% raw format_form_error(form, 'password') %}
+
+		<br />
+		<button type="submit" class="btn">Submit</button>
 	</form>
 {% end %}

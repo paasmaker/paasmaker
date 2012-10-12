@@ -82,6 +82,7 @@ class UserEditController(BaseController):
 			self.add_data('user', user)
 
 		form = self.get_form(user)
+		form.validate(self.params)
 		self.add_data_template('form', form)
 
 		self.render("user/edit.html")
@@ -114,6 +115,9 @@ class UserEditController(BaseController):
 				session.refresh(user)
 
 				self.add_data('user', user)
+
+				self.redirect('/user/list')
+				return
 		else:
 			for key, message in form.errors.iteritems():
 				self.add_error("%s: %s" % (key, ", ".join(message)))
@@ -132,12 +136,15 @@ class UserEditController(BaseController):
 class UserListController(BaseController):
 	auth_methods = [BaseController.NODE, BaseController.USER]
 
-	def get(self, action):
+	def get(self):
 		# TODO: Permissions.
 		# TODO: Paginate...
 		users = self.db().query(paasmaker.model.User)
 		self.add_data('users', users)
 		self.render("user/list.html")
+
+	def post(self):
+		self.get()
 
 	@staticmethod
 	def get_routes(configuration):
@@ -252,3 +259,21 @@ class UserEditControllerTest(BaseControllerTest):
 		self.failIf(response.success)
 		self.assertTrue("email" in response.errors[0], "Missing message in error.")
 
+	def test_list(self):
+		# Create the user.
+		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration, self.io_loop)
+		request.set_user_params('Daniel Foote', 'danielf', 'freefoote@dview.net', True)
+		request.set_user_password('testtest')
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+
+		request = paasmaker.common.api.user.UserListAPIRequest(self.configuration, self.io_loop)
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertTrue(response.data.has_key('users'), "Missing users list.")
+		self.assertEquals(len(response.data['users']), 1, "Not enough users returned.")
+		self.assertEquals(response.data['users'][0]['name'], 'Daniel Foote', "Returned user is not as expected.")

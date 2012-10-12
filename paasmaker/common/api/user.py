@@ -78,3 +78,7 @@ class UserEditAPIRequest(UserCreateAPIRequest):
 
 	def get_endpoint(self):
 		return "/user/edit/%d" % self.user_id
+
+class UserListAPIRequest(paasmaker.util.APIRequest):
+	def get_endpoint(self):
+		return '/user/list'
