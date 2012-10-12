@@ -28,6 +28,7 @@ class APIResponse(object):
 
 				except ValueError, ex:
 					self.errors.append("Unable to parse JSON: " + str(ex))
+					self.errors.append("Supplied JSON: " + response.body)
 				except KeyError, ex:
 					self.errors.append("Response was malformed: " + str(ex))
 			else:

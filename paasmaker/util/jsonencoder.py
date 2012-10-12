@@ -3,6 +3,7 @@ import datetime
 import unittest
 import re
 import paasmaker
+import sqlalchemy
 
 class JsonEncoder(json.JSONEncoder):
 	def default(self, obj):
@@ -14,6 +15,12 @@ class JsonEncoder(json.JSONEncoder):
 			# These classes know how to flatten themselves.
 			# TODO: Pass a possibly mutatable list of fields to return.
 			return obj.flatten()
+		if isinstance(obj, sqlalchemy.orm.query.Query):
+			# Flatten the query into objects.
+			flat = []
+			for item in obj:
+				flat.append(item)
+			return flat
 		return json.JSONEncoder.default(self, obj)
 
 class TestJsonEncoder(unittest.TestCase):

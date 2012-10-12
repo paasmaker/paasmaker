@@ -5,3 +5,4 @@ from login import LoginController, LogoutController
 from node import NodeController
 from user import UserEditController, UserListController
 from profile import ProfileController, ProfileResetAPIKeyController
+from workspace import WorkspaceEditController, WorkspaceListController

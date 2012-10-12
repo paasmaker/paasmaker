@@ -1,0 +1,15 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Workspace List
+{% end %}
+
+{% block body %}
+	<p><a href="/workspace/create">Create a new workspace</a></p>
+
+	<ul>
+		{% for workspace in workspaces %}
+			<li><a href="/workspace/edit/{{ workspace.id }}">{{ workspace.name }}</a></li>
+		{% end %}
+	</ul>
+{% end %}

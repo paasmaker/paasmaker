@@ -50,6 +50,9 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.user.UserListController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.profile.ProfileController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.profile.ProfileResetAPIKeyController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceEditController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceListController.get_routes(route_extras))
 
 if configuration.is_heart():
 	# Heart setup.

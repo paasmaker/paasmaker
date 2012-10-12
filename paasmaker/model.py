@@ -169,14 +169,14 @@ class Workspace(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	name = Column(String, nullable=False, unique=True)
 
-	def __init__(self, name):
-		self.name = name
+	def __init__(self):
+		pass
 
 	def __repr__(self):
 		return "<Workspace('%s')>" % self.name
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['name', 'users', 'applications'])
+		return super(Workspace, self).flatten(['name'])
 
 class WorkspaceUser(OrmBase, Base):
 	__tablename__ = 'workspace_user'
@@ -399,7 +399,8 @@ class TestModel(unittest.TestCase):
 		s.refresh(user)
 		self.assertTrue(user.apikey)
 
-		workspace = Workspace('Work Zone')
+		workspace = Workspace()
+		workspace.name = 'Work Zone'
 		s.add(workspace)
 		s.commit()
 

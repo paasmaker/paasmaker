@@ -1,0 +1,15 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Workspace Editor
+{% end %}
+
+{% block body %}
+	<form method="POST">
+		<label for="name">Name:</label>
+		<input name="name" id="name" type="text" value="{{ form.get('name') }}" />
+		{% raw format_form_error(form, 'name') %}
+		<br />
+		<button type="submit" class="btn">Submit</button>
+	</form>
+{% end %}
