@@ -7,4 +7,7 @@ pypubsub
 tornado-redis
 pika==0.9.5
 mock
+# TODO: smallform pulls in all of pyramid which is not desirable.
 smallform
+# TODO: This is only required for the documentation.
+sphinx
