@@ -54,6 +54,7 @@ http {
 
 class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 	def get_app(self):
+		self.late_init_configuration()
 		routes = paasmaker.common.controller.example.ExampleController.get_routes({'configuration': self.configuration})
 		routes.extend(paasmaker.common.controller.example.ExampleFailController.get_routes({'configuration': self.configuration}))
 		routes.extend(paasmaker.common.controller.example.ExamplePostController.get_routes({'configuration': self.configuration}))
@@ -84,8 +85,9 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		nginxparams['test_port'] = self.nginxport
 		nginxparams['error_log'] = self.errorlog
 		nginxparams['access_log'] = self.accesslog
-		nginxparams['redis_host'] = self.redis_server.host
-		nginxparams['redis_port'] = self.redis_server.port
+		# TODO: This couples this test to the managed redis a bit too closely.
+		nginxparams['redis_host'] = self.redis_server.parameters['host']
+		nginxparams['redis_port'] = self.redis_server.parameters['port']
 
 		config = NGINX_CONFIG % nginxparams
 		open(self.nginxconfig, 'w').write(config)

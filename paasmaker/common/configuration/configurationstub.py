@@ -140,7 +140,7 @@ router:
 		os.unlink(self.configname)
 
 		if self.router_redis:
-			self.router_redis.stop()
+			self.router_redis.destroy()
 		if self.message_broker_server:
 			self.message_broker_server.stop()
 
