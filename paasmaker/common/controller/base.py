@@ -358,15 +358,15 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 		# Create a test user - if required.
 		s = self.configuration.get_database_session()
 		user = s.query(paasmaker.model.User) \
-				.filter(paasmaker.model.User.login=='danielf') \
+				.filter(paasmaker.model.User.login=='username') \
 				.first()
 
 		if not user:
 			# Not found. Make one.
 			u = paasmaker.model.User()
-			u.login = 'danielf'
-			u.email = 'freefoote@dview.net'
-			u.name = 'Daniel Foote'
+			u.login = 'username'
+			u.email = 'username@example.com'
+			u.name = 'User Name'
 			u.set_password('testtest')
 			s.add(u)
 			s.commit()
@@ -374,7 +374,7 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 
 		# Ok, now that we've done that, try to log in.
 		request = paasmaker.common.api.LoginAPIRequest(self.configuration, self.io_loop)
-		request.set_credentials('danielf', 'testtest')
+		request.set_credentials('username', 'testtest')
 		request.send(self.stop)
 		response = self.wait()
 		if not response.success:

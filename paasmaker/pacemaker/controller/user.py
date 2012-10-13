@@ -166,7 +166,7 @@ class UserEditControllerTest(BaseControllerTest):
 	def test_create(self):
 		# Create the user.
 		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration, self.io_loop)
-		request.set_user_params('Daniel Foote', 'danielf', 'freefoote@dview.net', True)
+		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
 		response = self.wait()
@@ -191,7 +191,7 @@ class UserEditControllerTest(BaseControllerTest):
 		self.assertTrue("Required" in response.errors[0], "Missing message in error.")
 
 		# Now update the request somewhat, but fail to set a password.
-		request.set_user_params('Daniel Foote', 'danielf', 'freefoote@dview.net', True)
+		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.send(self.stop)
 		response = self.wait()
 
@@ -201,7 +201,7 @@ class UserEditControllerTest(BaseControllerTest):
 	def test_edit(self):
 		# Create the user.
 		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration, self.io_loop)
-		request.set_user_params('Daniel Foote', 'danielf', 'freefoote@dview.net', True)
+		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
 		response = self.wait()
@@ -233,7 +233,7 @@ class UserEditControllerTest(BaseControllerTest):
 	def test_edit_fail(self):
 		# Create the user.
 		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration, self.io_loop)
-		request.set_user_params('Daniel Foote', 'danielf', 'freefoote@dview.net', True)
+		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
 		response = self.wait()
@@ -262,7 +262,7 @@ class UserEditControllerTest(BaseControllerTest):
 	def test_list(self):
 		# Create the user.
 		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration, self.io_loop)
-		request.set_user_params('Daniel Foote', 'danielf', 'freefoote@dview.net', True)
+		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
 		response = self.wait()
@@ -276,4 +276,4 @@ class UserEditControllerTest(BaseControllerTest):
 		self.failIf(not response.success)
 		self.assertTrue(response.data.has_key('users'), "Missing users list.")
 		self.assertEquals(len(response.data['users']), 1, "Not enough users returned.")
-		self.assertEquals(response.data['users'][0]['name'], 'Daniel Foote', "Returned user is not as expected.")
+		self.assertEquals(response.data['users'][0]['name'], 'User Name', "Returned user is not as expected.")

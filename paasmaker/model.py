@@ -381,8 +381,8 @@ class TestModel(unittest.TestCase):
 		s = self.__class__.session
 
 		user = User()
-		user.login = 'danielf'
-		user.email = 'freefoote@dview.net'
+		user.login = 'username'
+		user.email = 'username@example.com'
 		user.set_password('test')
 		role = Role('Administrator')
 		role_permission = RolePermission('ADMIN', True)

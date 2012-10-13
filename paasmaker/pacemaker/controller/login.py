@@ -87,15 +87,15 @@ class LoginControllerTest(BaseControllerTest):
 		# Create a test user.
 		s = self.configuration.get_database_session()
 		u = paasmaker.model.User()
-		u.login = 'danielf'
-		u.email = 'freefoote@dview.net'
-		u.name = 'Daniel Foote'
+		u.login = 'username'
+		u.email = 'username@example.com'
+		u.name = 'User Name'
 		u.set_password('test')
 		s.add(u)
 		s.commit()
 
 		# Ok, now that we've done that, try to log in.
-		body = "username=danielf&password=test"
+		body = "username=username&password=test"
 		request = tornado.httpclient.HTTPRequest(
 			"http://localhost:%d/login" % self.get_http_port(),
 			method="POST",
@@ -112,9 +112,9 @@ class LoginControllerTest(BaseControllerTest):
 		# Create a test user.
 		s = self.configuration.get_database_session()
 		u = paasmaker.model.User()
-		u.login = 'danielf'
-		u.email = 'freefoote@dview.net'
-		u.name = 'Daniel Foote'
+		u.login = 'username'
+		u.email = 'username@example.com'
+		u.name = 'User Name'
 		u.set_password('test')
 		s.add(u)
 		s.commit()
@@ -122,7 +122,7 @@ class LoginControllerTest(BaseControllerTest):
 
 		# Ok, now that we've done that, try to log in.
 		request = paasmaker.common.api.LoginAPIRequest(self.configuration, self.io_loop)
-		request.set_credentials('danielf', 'test')
+		request.set_credentials('username', 'test')
 		request.send(self.stop)
 		response = self.wait()
 
@@ -149,9 +149,9 @@ class LoginControllerTest(BaseControllerTest):
 		# Create a test user.
 		s = self.configuration.get_database_session()
 		u = paasmaker.model.User()
-		u.login = 'danielf'
-		u.email = 'freefoote@dview.net'
-		u.name = 'Daniel Foote'
+		u.login = 'username'
+		u.email = 'username@example.com'
+		u.name = 'User Name'
 		u.set_password('test')
 		s.add(u)
 		s.commit()

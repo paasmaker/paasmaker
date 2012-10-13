@@ -59,7 +59,7 @@ class ProfileControllerTest(BaseControllerTest):
 		# Fetch the user that this matches.
 		s = self.configuration.get_database_session()
 		user = s.query(paasmaker.model.User) \
-				.filter(paasmaker.model.User.login=='danielf') \
+				.filter(paasmaker.model.User.login=='username') \
 				.first()
 
 		self.assertIn(user.apikey, response.body, "API key not present in body.")
@@ -73,7 +73,7 @@ class ProfileControllerTest(BaseControllerTest):
 		# Fetch the user that this matches.
 		s = self.configuration.get_database_session()
 		user = s.query(paasmaker.model.User) \
-				.filter(paasmaker.model.User.login=='danielf') \
+				.filter(paasmaker.model.User.login=='username') \
 				.first()
 
 		self.assertIn(user.apikey, response.body, "API key not present in body.")
