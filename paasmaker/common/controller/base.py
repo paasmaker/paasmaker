@@ -138,6 +138,8 @@ class BaseController(tornado.web.RequestHandler):
 				found_allowed_method = True
 
 		if not found_allowed_method:
+			# YOU ... SHALL ... NOT ... PAAS!
+			# (But with less bridge breaking.)
 			if self.format == 'json':
 				raise tornado.web.HTTPError(403, 'Access is denied')
 			else:
