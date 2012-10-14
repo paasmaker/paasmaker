@@ -209,10 +209,6 @@ class Application(OrmBase, Base):
 	# Application names are globally unique.
 	name = Column(String, unique=True)
 
-	def __init__(self, name, workspace):
-		self.workspace = workspace
-		self.name = name
-
 	def __repr__(self):
 		return "<Application('%s')>" % self.name
 
@@ -228,10 +224,11 @@ class ApplicationVersion(OrmBase, Base):
 	version = Column(String, nullable=False)
 	is_current = Column(Boolean, nullable=False)
 	statistics = Column(Text, nullable=True)
+	manifest = Column(Text, nullable=False)
+	placement_provider = Column(Text, nullable=False)
+	placement_parameters = Column(Text, nullable=False)
 
-	def __init__(self, application, version):
-		self.application = application
-		self.version = version
+	def __init__(self):
 		self.is_current = False
 
 	def __repr__(self):
@@ -249,28 +246,48 @@ class ApplicationVersionServices(OrmBase, Base):
 	service_id = Column(Integer, ForeignKey('service.id'), nullable=False, index=True)
 	service = relationship("Service", backref=backref('services', order_by=id))
 
+	def __repr__(self):
+		return "<ApplicationVersionServices('%s' -> '%s')>" % (self.service, self.application_version)
+
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['service', 'application_version'])
+
+class ApplicationInstanceType(OrmBase, Base):
+	__tablename__ = 'application_instance_type'
+
+	id = Column(Integer, primary_key=True)
+	application_version_id = Column(Integer, ForeignKey('application_version.id'), nullable=False, index=True)
+	application_version = relationship("ApplicationVersion", backref=backref('instance_types', order_by=id))
+	name = Column(String, nullable=False, index=True)
+	quantity = Column(Integer, nullable=False)
+	provider = Column(Text, nullable=False)
+	provider_parameters = Column(Text, nullable=False)
+	provider_startup = Column(Text, nullable=False)
+
+	def __repr__(self):
+		return "<ApplicationInstanceType('%s'@'%s')>" % (self.name, self.provider)
+
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['name', 'application_version', 'quantity', 'provider'])
+
 class ApplicationInstance(OrmBase, Base):
 	__tablename__ = 'application_instance'
 
 	id = Column(Integer, primary_key=True)
-	application_version_id = Column(Integer, ForeignKey('application_version.id'), nullable=False, index=True)
-	application_version = relationship("ApplicationVersion", backref=backref('instances', order_by=id))
+	instance_id = Column(String, nullable=False)
+	application_instance_type_id = Column(Integer, ForeignKey('application_instance_type.id'), nullable=False, index=True)
+	application_instance_type = relationship("ApplicationInstanceType", backref=backref('instances', order_by=id))
 	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
 	node = relationship("Node", backref=backref('nodes', order_by=id))
 	configuration = Column(String, nullable=False, index=True)
-	status = Column(String, nullable=False, index=True)
+	state = Column(Enum(*constants.INSTANCE_STATES), nullable=False, index=True)
 	statistics = Column(Text, nullable=True)
 
-	def __init__(self, application_version, node):
-		self.application_version = application_version
-		self.node = node
-		self.status = status
-
 	def __repr__(self):
-		return "<ApplicationInstance('%s'@'%s' - %s)>" % (self.application_version, self.node, self.status)
+		return "<ApplicationInstance('%s'@'%s' - %s)>" % (self.application_instance_type, self.node, self.state)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['application_version', 'node', 'status'])
+		return super(Node, self).flatten(['application_instance_type', 'node', 'state'])
 
 class ApplicationHostname(OrmBase, Base):
 	__tablename__ = 'application_hostname'
@@ -281,10 +298,6 @@ class ApplicationHostname(OrmBase, Base):
 
 	hostname = Column(String, nullable=False, index=True)
 	statistics = Column(Text, nullable=True)
-
-	def __init__(self, application_version, hostname):
-		self.application_version = application_version
-		self.hostname = hostname
 
 	def __repr__(self):
 		return "<ApplicationHostname('%s' -> '%s')>" % (self.hostname, self.application_version)
@@ -298,7 +311,7 @@ class Service(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False, index=True)
 	workspace = relationship("Workspace", backref=backref('workspace', order_by=id))
-	name = Column(String, nullable=False, index=True)
+	name = Column(String, nullable=False, index=True, unique=True) # TODO: Unique per workspace.
 	provider = Column(String, nullable=False, index=True)
 	credentials = Column(Text, nullable=False)
 

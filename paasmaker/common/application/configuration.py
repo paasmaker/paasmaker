@@ -44,6 +44,7 @@ class Placement(colander.MappingSchema):
 	strategy = colander.SchemaNode(colander.String(),
 		title="Placement strategy",
 		description="The placement strategy to use")
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
 
 	@staticmethod
 	def default():
