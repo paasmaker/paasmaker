@@ -226,8 +226,6 @@ class ApplicationVersion(OrmBase, Base):
 	is_current = Column(Boolean, nullable=False)
 	statistics = Column(Text, nullable=True)
 	manifest = Column(Text, nullable=False)
-	placement_provider = Column(Text, nullable=False)
-	placement_parameters = Column(Text, nullable=False)
 
 	def __init__(self):
 		self.is_current = False
@@ -270,12 +268,17 @@ class ApplicationInstanceType(OrmBase, Base):
 	application_version = relationship("ApplicationVersion", backref=backref('instance_types', order_by=id))
 	name = Column(String, nullable=False, index=True)
 	quantity = Column(Integer, nullable=False)
-	provider = Column(Text, nullable=False)
-	provider_parameters = Column(Text, nullable=False)
-	provider_startup = Column(Text, nullable=False)
+	runtime_name = Column(Text, nullable=False)
+	runtime_parameters = Column(Text, nullable=False)
+	runtime_version = Column(Text, nullable=False)
+	startup = Column(Text, nullable=False)
+	placement_provider = Column(Text, nullable=False)
+	placement_parameters = Column(Text, nullable=False)
+
+	state = Column(Enum(*constants.INSTANCE_TYPE_STATES), nullable=False, index=True)
 
 	def __repr__(self):
-		return "<ApplicationInstanceType('%s'@'%s')>" % (self.name, self.provider)
+		return "<ApplicationInstanceType('%s'@'%s')>" % (self.name, self.runtime)
 
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['name', 'application_version', 'quantity', 'provider'])
@@ -299,21 +302,21 @@ class ApplicationInstance(OrmBase, Base):
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['application_instance_type', 'node', 'state'])
 
-class ApplicationVersionHostname(OrmBase, Base):
-	__tablename__ = 'application_hostname'
+class ApplicationInstanceTypeHostname(OrmBase, Base):
+	__tablename__ = 'application_instance_type_hostname'
 
 	id = Column(Integer, primary_key=True)
-	application_version_id = Column(Integer, ForeignKey('application_version.id'), nullable=False, index=True)
-	application_version = relationship("ApplicationVersion", backref=backref('hostnames', order_by=id))
+	application_instance_type_id = Column(Integer, ForeignKey('application_instance_type.id'), nullable=False, index=True)
+	application_instance_type = relationship("ApplicationInstanceType", backref=backref('hostnames', order_by=id))
 
 	hostname = Column(String, nullable=False, index=True)
 	statistics = Column(Text, nullable=True)
 
 	def __repr__(self):
-		return "<ApplicationVersionHostname('%s' -> '%s')>" % (self.hostname, self.application_version)
+		return "<ApplicationInstanceTypeHostname('%s' -> '%s')>" % (self.hostname, self.application_version)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['application_version', 'hostname'])
+		return super(Node, self).flatten(['application_instance_type', 'hostname'])
 
 class Service(OrmBase, Base):
 	__tablename__ = 'service'

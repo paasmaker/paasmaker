@@ -8,29 +8,6 @@ from paasmaker.util.configurationhelper import InvalidConfigurationException
 from paasmaker.common.controller import BaseControllerTest
 
 # Schema definition.
-class Runtime(colander.MappingSchema):
-	quantity = colander.SchemaNode(colander.Integer(),
-		title="Quantity",
-		description="The quantity of instances to start with.",
-		missing=1,
-		default=1)
-	provider = colander.SchemaNode(colander.String(),
-		title="Runtime provider",
-		description="Runtime provider symbolic name")
-	version = colander.SchemaNode(colander.String(),
-		title="Runtime version",
-		description="The version of the runtime to use.")
-	startup = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()),
-		title="Startup commands",
-		description="Commands used to prepare the code before starting the instance.",
-		default=[],
-		missing=[])
-	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Parameters",
-		description="Parameters to the runtime.",
-		missing={},
-		default={})
-
 class Service(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Service name",
@@ -76,13 +53,39 @@ class Manifest(colander.MappingSchema):
 		title="Manifest version",
 		description="The manifest format version number.")
 
+class Runtime(colander.MappingSchema):
+	name = colander.SchemaNode(colander.String(),
+		title="Runtime name",
+		description="The runtime plugin name.")
+	parameters = colander.SchemaNode(colander.String(),
+		title="Runtime parameters",
+		description="Any parameters to the runtime.",
+		default={},
+		missing={})
+	version = colander.SchemaNode(colander.String(),
+		title="Runtime version",
+		description="The requested runtime version.")
+
+class Instance(colander.MappingSchema):
+	quantity = colander.SchemaNode(colander.Integer(),
+		title="Quantity",
+		description="The quantity of instances to start with.",
+		missing=1,
+		default=1)
+	runtime = Runtime()
+	startup = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()),
+		title="Startup commands",
+		description="Commands used to prepare the code before starting the instance.",
+		default=[],
+		missing=[])
+	placement = Placement(default=Placement.default(), missing=Placement.default())
+	hostnames = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()), title="Hostnames", default=[], missing=[])
+
 class ConfigurationSchema(colander.MappingSchema):
 	application = Application()
-	hostnames = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()), title="Hostnames")
 	services = Services()
 	# TODO: Validate the sub items under here.
 	instances = colander.SchemaNode(colander.Mapping(unknown='preserve'))
-	placement = Placement(default=Placement.default(), missing=Placement.default())
 	manifest = Manifest()
 
 class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationHelper):
@@ -92,11 +95,14 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 	def post_load(self):
 		# Check the schema of nodes in the instances map.
 		# Because there doesn't seem to be a way to get colander to do so.
-		schema = Runtime()
+		schema = Instance()
 		for instance in self['instances']:
 			try:
 				# Validate.
 				valid = schema.deserialize(self['instances'][instance])
+				# Replace that section in our schema with the data.
+				# TODO: This won't update the flat data.
+				self['instances'][instance] = valid
 			except colander.Invalid, ex:
 				# Raise another exception that encapsulates more context.
 				# In future this can be used to print a nicer report.
@@ -107,8 +113,6 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 		application = paasmaker.model.Application()
 		application.workspace = workspace
 		application.name = self.get_flat('application.name')
-
-		session.add(application)
 
 		return application
 
@@ -122,18 +126,35 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 		version.application = application
 		version.version = new_version_number
 
-		# Import hostnames
-		for hostname in self['hostnames']:
-			h = paasmaker.model.ApplicationVersionHostname()
-			h.application_version = version
-			h.hostname = hostname
-			session.add(h)
+		# Import instances.
+		for name, imetadata in self['instances'].iteritems():
+			instance_type = paasmaker.model.ApplicationInstanceType()
 
-		# Set placement parameters.
-		version.placement_provider = self.get_flat('placement.strategy')
-		version.placement_parameters = json.dumps(self['placement']['parameters'])
+			# Basic information.
+			instance_type.name = name
+			instance_type.quantity = imetadata['quantity']
+			instance_type.state = 'NEW'
 
-		session.add(version)
+			# Runtime information.
+			instance_type.runtime_name = imetadata['runtime']['name']
+			instance_type.runtime_parameters = json.dumps(imetadata['runtime']['parameters'])
+			instance_type.runtime_version = json.dumps(imetadata['runtime']['version'])
+
+			# Placement data.
+			instance_type.placement_provider = imetadata['placement']['strategy']
+			instance_type.placement_parameters = json.dumps(imetadata['placement']['parameters'])
+
+			# Startup data.
+			instance_type.startup = json.dumps(imetadata['startup'])
+
+			# Import hostnames.
+			for hostname_raw in imetadata['hostnames']:
+				hostname = paasmaker.model.ApplicationInstanceTypeHostname()
+				hostname.application_instance_type = instance_type
+				hostname.hostname = hostname_raw
+				instance_type.hostnames.append(hostname)
+
+			version.instance_types.append(instance_type)
 
 		return version
 
@@ -159,29 +180,28 @@ application:
 instances:
   web:
     quantity: 1
-    provider: paasmaker.runtime.php
-    parameters:
-      document_root: web
-    version: 5.4
+    runtime:
+      name: paasmaker.runtime.php
+      parameters:
+        document_root: web
+      version: 5.4
     startup:
       - paasmaker.startup.symfony2
       - php app/console cache:warm
       - php app/console assets:deploy
-
-hostnames:
-  - foo.com
-  - foo.com.au
-  - www.foo.com.au
-  - www.foo.com
+    placement:
+      strategy: paasmaker.placement.default
+    hostnames:
+      - foo.com
+      - foo.com.au
+      - www.foo.com.au
+      - www.foo.com
 
 services:
   - name: test
     provider: paasmaker.service.test
     options:
       bar: foo
-
-placement:
-  strategy: paasmaker.placement.default
 """
 
 	bad_config = """
@@ -206,8 +226,8 @@ placement:
 		# Disabled until the schema can be sorted out.
 		#self.assertEquals(config.get_flat('instances.web.provider'), "paasmaker.runtime.php", "Runtime provider is not as expected.")
 		#self.assertEquals(config.get_flat('instances.web.version'), "5.4", "Runtime version is not as expected.")
-		self.assertEquals(len(config['hostnames']), 4, "Number of hostnames is not as expected.")
-		self.assertIn("www.foo.com.au", config['hostnames'], "Hostnames does not contain an expected item.")
+		self.assertEquals(len(config['instances']['web']['hostnames']), 4, "Number of hostnames is not as expected.")
+		self.assertIn("www.foo.com.au", config['instances']['web']['hostnames'], "Hostnames does not contain an expected item.")
 		self.assertEquals(len(config['services']), 1, "Services array does not contain the expected number of items.")
 		self.assertEquals(config.get_flat('application.name'), "foo.com", "Application name is not as expected.")
 
@@ -219,7 +239,7 @@ placement:
 		except InvalidConfigurationException, ex:
 			self.assertTrue(True, "Threw exception correctly.")
 
-	def test_unpack(self):
+	def test_unpack_configuration(self):
 		config = ApplicationConfiguration()
 		config.load(self.test_config)
 
@@ -233,11 +253,12 @@ placement:
 		application = config.create_application(session, workspace)
 		version = config.unpack_into_database(session, application)
 
+		session.add(application)
+		session.add(version)
 		session.commit()
 
 		session.refresh(application)
 		session.refresh(version)
-		session.refresh(workspace)
 
-		self.assertEquals(len(version.hostnames), 4, "Unexpected number of hostnames.")
-		# TODO: More tests here.
+		self.assertEquals(application.name, 'foo.com', 'Application name is not as expected.')
+		self.assertEquals(len(version.instance_types[0].hostnames), 4, "Unexpected number of hostnames.")
