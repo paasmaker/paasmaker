@@ -32,6 +32,7 @@ class ConfigurationHelper(dict):
 		self.parsed = {}
 		self.schema = schema
 		self.flat = {}
+		self.raw = None
 
 	def load(self, raw):
 		# Convert to Yaml.
@@ -43,6 +44,7 @@ class ConfigurationHelper(dict):
 			self.update(self.schema.deserialize(self.parsed))
 			# And flatten.
 			self.flat = self.schema.flatten(self)
+			self.raw = raw
 		except colander.Invalid, ex:
 			# Raise another exception that encapsulates more context.
 			# In future this can be used to print a nicer report.

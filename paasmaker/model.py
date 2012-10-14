@@ -8,6 +8,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, T
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.orm.interfaces import MapperExtension
+from sqlalchemy import func
 import hashlib
 
 from paasmaker.common.core import constants
@@ -221,7 +222,7 @@ class ApplicationVersion(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	application_id = Column(Integer, ForeignKey('application.id'), nullable=False, index=True)
 	application = relationship("Application", backref=backref('versions', order_by=id))
-	version = Column(String, nullable=False)
+	version = Column(Integer, nullable=False)
 	is_current = Column(Boolean, nullable=False)
 	statistics = Column(Text, nullable=True)
 	manifest = Column(Text, nullable=False)
@@ -236,6 +237,15 @@ class ApplicationVersion(OrmBase, Base):
 
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['application', 'version', 'is_current'])
+
+	@staticmethod
+	def get_next_version_number(session, application):
+		query = session.query(func.max(ApplicationVersion.version)).filter_by(application=application)
+		value = query[0][0]
+		if value:
+			return value + 1
+		else:
+			return 1
 
 class ApplicationVersionServices(OrmBase, Base):
 	__tablename__ = 'application_version_service'
@@ -289,7 +299,7 @@ class ApplicationInstance(OrmBase, Base):
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['application_instance_type', 'node', 'state'])
 
-class ApplicationHostname(OrmBase, Base):
+class ApplicationVersionHostname(OrmBase, Base):
 	__tablename__ = 'application_hostname'
 
 	id = Column(Integer, primary_key=True)
@@ -300,7 +310,7 @@ class ApplicationHostname(OrmBase, Base):
 	statistics = Column(Text, nullable=True)
 
 	def __repr__(self):
-		return "<ApplicationHostname('%s' -> '%s')>" % (self.hostname, self.application_version)
+		return "<ApplicationVersionHostname('%s' -> '%s')>" % (self.hostname, self.application_version)
 
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['application_version', 'hostname'])

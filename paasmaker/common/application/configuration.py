@@ -2,7 +2,10 @@ import unittest
 import colander
 import yaml
 import paasmaker
+import tornado
+import json
 from paasmaker.util.configurationhelper import InvalidConfigurationException
+from paasmaker.common.controller import BaseControllerTest
 
 # Schema definition.
 class Runtime(colander.MappingSchema):
@@ -48,7 +51,7 @@ class Placement(colander.MappingSchema):
 
 	@staticmethod
 	def default():
-		return {'strategy': 'default'}
+		return {'strategy': 'paasmaker.placement.default', 'parameters': {}}
 
 class ApplicationSource(colander.MappingSchema):
 	method = colander.SchemaNode(colander.String(),
@@ -100,8 +103,43 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 				# Because the default output is rather confusing...!
 				raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self['instance']['instances'])
 
+	def create_application(self, session, workspace):
+		application = paasmaker.model.Application()
+		application.workspace = workspace
+		application.name = self.get_flat('application.name')
 
-class TestApplicationConfiguration(unittest.TestCase):
+		session.add(application)
+
+		return application
+
+	def unpack_into_database(self, session, application):
+		# Figure out the new version number.
+		new_version_number = paasmaker.model.ApplicationVersion.get_next_version_number(session, application)
+
+		# Create a new version.
+		version = paasmaker.model.ApplicationVersion()
+		version.manifest = self.raw
+		version.application = application
+		version.version = new_version_number
+
+		# Import hostnames
+		for hostname in self['hostnames']:
+			h = paasmaker.model.ApplicationVersionHostname()
+			h.application_version = version
+			h.hostname = hostname
+			session.add(h)
+
+		# Set placement parameters.
+		version.placement_provider = self.get_flat('placement.strategy')
+		version.placement_parameters = json.dumps(self['placement']['parameters'])
+
+		session.add(version)
+
+		return version
+
+class TestApplicationConfiguration(BaseControllerTest):
+	config_modules = ['pacemaker']
+
 	test_config = """
 manifest:
   version: 1
@@ -150,10 +188,16 @@ placement:
 """
 
 	def setUp(self):
-		pass
+		super(TestApplicationConfiguration, self).setUp()
 
 	def tearDown(self):
-		pass
+		super(TestApplicationConfiguration, self).tearDown()
+
+	def get_app(self):
+		self.late_init_configuration()
+		routes = []
+		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
+		return application
 
 	def test_loading(self):
 		config = ApplicationConfiguration()
@@ -175,3 +219,25 @@ placement:
 		except InvalidConfigurationException, ex:
 			self.assertTrue(True, "Threw exception correctly.")
 
+	def test_unpack(self):
+		config = ApplicationConfiguration()
+		config.load(self.test_config)
+
+		session = self.configuration.get_database_session()
+
+		workspace = paasmaker.model.Workspace()
+		workspace.name = 'Test'
+		session.add(workspace)
+		session.commit()
+
+		application = config.create_application(session, workspace)
+		version = config.unpack_into_database(session, application)
+
+		session.commit()
+
+		session.refresh(application)
+		session.refresh(version)
+		session.refresh(workspace)
+
+		self.assertEquals(len(version.hostnames), 4, "Unexpected number of hostnames.")
+		# TODO: More tests here.
