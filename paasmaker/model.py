@@ -4,7 +4,7 @@ import sqlalchemy
 import datetime
 import uuid
 import paasmaker
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum, Table
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.orm.interfaces import MapperExtension
@@ -217,6 +217,12 @@ class Application(OrmBase, Base):
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['name', 'workspace'])
 
+# Joining table between Application Version and services.
+application_version_services = Table('application_version_service', Base.metadata,
+     Column('application_version_id', Integer, ForeignKey('application_version.id')),
+     Column('service_id', Integer, ForeignKey('service.id'))
+)
+
 class ApplicationVersion(OrmBase, Base):
 	__tablename__ = 'application_version'
 
@@ -227,6 +233,8 @@ class ApplicationVersion(OrmBase, Base):
 	is_current = Column(Boolean, nullable=False)
 	statistics = Column(Text, nullable=True)
 	manifest = Column(Text, nullable=False)
+
+	services = relationship('Service', secondary=application_version_services, backref='application_versions')
 
 	def __init__(self):
 		self.is_current = False
@@ -245,21 +253,6 @@ class ApplicationVersion(OrmBase, Base):
 			return value + 1
 		else:
 			return 1
-
-class ApplicationVersionServices(OrmBase, Base):
-	__tablename__ = 'application_version_service'
-
-	id = Column(Integer, primary_key=True)
-	application_version_id = Column(Integer, ForeignKey('application_version.id'), nullable=False, index=True)
-	application_version = relationship("ApplicationVersion", backref=backref('application_versions', order_by=id))
-	service_id = Column(Integer, ForeignKey('service.id'), nullable=False, index=True)
-	service = relationship("Service", backref=backref('services', order_by=id))
-
-	def __repr__(self):
-		return "<ApplicationVersionServices('%s' -> '%s')>" % (self.service, self.application_version)
-
-	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['service', 'application_version'])
 
 class ApplicationInstanceType(OrmBase, Base):
 	__tablename__ = 'application_instance_type'
@@ -327,6 +320,7 @@ class Service(OrmBase, Base):
 	workspace = relationship("Workspace", backref=backref('workspace', order_by=id))
 	name = Column(String, nullable=False, index=True, unique=True) # TODO: Unique per workspace.
 	provider = Column(String, nullable=False, index=True)
+	parameters = Column(Text, nullable=False)
 	credentials = Column(Text, nullable=True)
 	state = Column(Enum(*constants.SERVICE_STATES), nullable=False, index=True)
 

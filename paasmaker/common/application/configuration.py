@@ -15,7 +15,7 @@ class Service(colander.MappingSchema):
 	provider = colander.SchemaNode(colander.String(),
 		title="Provider name",
 		description="Provider symbolic name")
-	options = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
 
 class Services(colander.SequenceSchema):
 	service = Service(unknown='preserve')
@@ -156,6 +156,19 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 
 			version.instance_types.append(instance_type)
 
+		# Import and link services.
+		# TODO: Split this out somewhere else.
+		for servicemeta in self['services']:
+			# Create or fetch the service.
+			service = paasmaker.model.Service()
+			service.workspace = application.workspace
+			service.name = servicemeta['name']
+			service.provider = servicemeta['provider']
+			service.parameters = json.dumps(servicemeta['parameters'])
+			service.state = 'NEW'
+
+			version.services.append(service)
+
 		return version
 
 class TestApplicationConfiguration(BaseControllerTest):
@@ -200,7 +213,11 @@ instances:
 services:
   - name: test
     provider: paasmaker.service.test
-    options:
+    parameters:
+      bar: foo
+  - name: test-two
+    provider: paasmaker.service.test
+    parameters:
       bar: foo
 """
 
@@ -228,7 +245,7 @@ services:
 		#self.assertEquals(config.get_flat('instances.web.version'), "5.4", "Runtime version is not as expected.")
 		self.assertEquals(len(config['instances']['web']['hostnames']), 4, "Number of hostnames is not as expected.")
 		self.assertIn("www.foo.com.au", config['instances']['web']['hostnames'], "Hostnames does not contain an expected item.")
-		self.assertEquals(len(config['services']), 1, "Services array does not contain the expected number of items.")
+		self.assertEquals(len(config['services']), 2, "Services array does not contain the expected number of items.")
 		self.assertEquals(config.get_flat('application.name'), "foo.com", "Application name is not as expected.")
 
 	def test_bad_config(self):
@@ -262,3 +279,4 @@ services:
 
 		self.assertEquals(application.name, 'foo.com', 'Application name is not as expected.')
 		self.assertEquals(len(version.instance_types[0].hostnames), 4, "Unexpected number of hostnames.")
+		self.assertEquals(len(version.services), 2, "Unexpected number of services.")
