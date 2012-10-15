@@ -30,3 +30,10 @@ INSTANCE_TYPE_STATES = ['NEW', 'PREPARED', 'ERROR', 'READY']
 # Various classes of instance type states.
 INSTANCE_TYPE_ERROR_STATES = ['ERROR']
 INSTANCE_TYPE_READY_STATES = ['READY']
+
+# The possible service states.
+SERVICE_STATES = ['NEW', 'AVAILABLE', 'ERROR', 'DELETED']
+
+# Various classes of service states.
+SERVICE_ACTIVE_STATES = ['AVAILABLE']
+INSTANCE_ERROR_STATES = ['ERROR']

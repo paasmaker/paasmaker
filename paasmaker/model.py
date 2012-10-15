@@ -209,6 +209,7 @@ class Application(OrmBase, Base):
 	workspace = relationship("Workspace", backref=backref('applications', order_by=id))
 	# Application names are globally unique.
 	name = Column(String, unique=True)
+	manifest_path = Column(String, nullable=True)
 
 	def __repr__(self):
 		return "<Application('%s')>" % self.name
@@ -326,19 +327,35 @@ class Service(OrmBase, Base):
 	workspace = relationship("Workspace", backref=backref('workspace', order_by=id))
 	name = Column(String, nullable=False, index=True, unique=True) # TODO: Unique per workspace.
 	provider = Column(String, nullable=False, index=True)
-	credentials = Column(Text, nullable=False)
-
-	def __init__(self, workspace, name, provider, credentials):
-		self.name = name
-		self.workspace = workspace
-		self.provider = provider
-		self.credentials = credentials
+	credentials = Column(Text, nullable=True)
+	state = Column(Enum(*constants.SERVICE_STATES), nullable=False, index=True)
 
 	def __repr__(self):
 		return "<Service('%s'->'%s')>" % (self.provider, self.workspace)
 
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['workspace', 'provider', 'credentials'])
+
+class Job(OrmBase, Base):
+	__tablename__ = 'job'
+
+	id = Column(Integer, primary_key=True)
+	unique = Column(String, nullable=False, index=True)
+	title = Column(String, nullable=False)
+	summary = Column(String, nullable=True)
+
+	# This can refer to itself. The parent job should theoretically only
+	# succeed when all the child jobs succeed.
+	parent_id = Column(Integer, ForeignKey('job.id'), nullable=True)
+	children = relationship("Job")
+
+	state = Column(Enum(*constants.JOB_STATES), nullable=False, index=True)
+
+	def __repr__(self):
+		return "<Job('%s':'%s')>" % (self.unique, self.title)
+
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['unique', 'title', 'summary', 'state'])
 
 def init_db(engine):
 	Base.metadata.create_all(bind=engine)
