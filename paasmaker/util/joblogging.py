@@ -124,10 +124,8 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 		# Dump out some JSON to the log file.
 		flat_summary = {'state': state, 'summary': summary}
 		self.info(json.dumps(flat_summary))
-		# Publish to the audit queue.
-		self.configuration.send_job_complete(self.job_id, state, summary)
 		# And to the state queue.
-		self.configuration.send_job_status(self.job_id, state, summary)
+		self.configuration.send_job_status(self.job_id, state, summary=summary)
 		if self.watcher:
 			# Trigger a file watch.
 			self.watcher.trigger_watch(self.job_id)

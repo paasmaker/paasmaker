@@ -72,7 +72,7 @@ class MessageExchange:
 
 		# If we're the originating node, don't broadcast it, because we already have seen it.
 		if not self.configuration.get_node_uuid() == parsed['source']:
-			self.configuration.send_job_status(parsed['job_id'], parsed['state'], parsed['source'])
+			self.configuration.send_job_status(parsed['job_id'], state=parsed['state'], source=parsed['source'])
 		else:
 			logger.debug("Dropping incoming status message, as it was from our node originally.")
 
@@ -80,6 +80,7 @@ class MessageExchange:
 		logger.debug("Job audit incoming raw message: %s", body)
 		# Parse the message, and store in the database...
 		# TODO: Test and implement.
+		# TODO: Publish internally - another listener will accept and DB it.
 		channel.basic_ack(delivery_tag=method.delivery_tag)
 
 	def send_job_status(self, job_id, state, source):
@@ -111,7 +112,7 @@ class MessageExchangeTest(tornado.testing.AsyncTestCase):
 		self.configuration.cleanup()
 		super(MessageExchangeTest, self).tearDown()
 
-	def on_job_status_update(self, job_id, state, source):
+	def on_job_status_update(self, job_id=None, state=None, source=None):
 		self.stop({'job_id': job_id, 'state': state, 'source': source})
 
 	def test_basic(self):
@@ -127,13 +128,13 @@ class MessageExchangeTest(tornado.testing.AsyncTestCase):
 		self.wait()
 
 		# Now send off a job update. This shouldn't actually touch the broker.
-		self.configuration.send_job_status(job_id, 'TEST')
+		self.configuration.send_job_status(job_id, state='TEST')
 		status = self.wait()
 		self.assertEquals(status['job_id'], job_id, "Job ID was not as expected.")
 		self.assertEquals(status['state'], 'TEST', "Job status was not as expected.")
 
 		# Now this time, force it to go through the exchange and back out again.
-		self.configuration.exchange.send_job_status(job_id, 'ROUNDTRIP', source="BOGUS")
+		self.configuration.exchange.send_job_status(job_id, state='ROUNDTRIP', source="BOGUS")
 		status = self.wait()
 		self.assertEquals(status['job_id'], job_id, "Job ID was not as expected.")
 		self.assertEquals(status['state'], 'ROUNDTRIP', "Job status was not as expected.")

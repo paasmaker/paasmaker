@@ -378,32 +378,31 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			self.job_watcher = paasmaker.util.joblogging.JobWatcher(self, io_loop)
 	def get_job_watcher(self):
 		return self.job_watcher
-	def send_job_status(self, job_id, state, source=None):
+	def send_job_status(self, job_id, state, title=None, source=None, summary=None, parent_id=None):
 		"""
 		Propagate the status of a job to listeners who care inside our
 		instance, and also likely down the Rabbit hole to other listeners.
 		(Rabbit hole means RabbitMQ... so there is no confusion.)
+		Sends both an audit and an update message, as appropriate.
 		"""
-		topic = self.get_job_status_pub_topic(job_id)
+		# Sanity check.
+		if state in paasmaker.common.core.constants.JOB_FINISHED_STATES and not summary:
+			raise ValueError('You must supply summary in state %s' % state)
+		if state == 'NEW' and not title:
+			raise ValueError('You must supply a title in state %s' % state)
 
 		# If source is not supplied, send along our own UUID.
 		send_source = source
 		if not send_source:
 			send_source = self.get_node_uuid()
 
-		pub.sendMessage(topic, job_id=job_id, state=state, source=send_source)
-	def send_job_complete(self, job_id, state, summary, source=None):
-		"""
-		Send that a job is complete, with the given summary message.
-		"""
-		topic = self.get_job_audit_pub_topic(job_id)
+		status_topic = self.get_job_status_pub_topic(job_id)
+		audit_topic = self.get_job_audit_pub_topic(job_id)
 
-		# If source is not supplied, send along our own UUID.
-		send_source = source
-		if not send_source:
-			send_source = self.get_node_uuid()
-
-		pub.sendMessage(topic, job_id=job_id, state=state, summary=summary, source=send_source)
+		# Send the status message.
+		pub.sendMessage(status_topic, job_id=job_id, state=state, source=send_source)
+		# And then the audit message.
+		pub.sendMessage(audit_topic, job_id=job_id, title=title, state=state, summary=summary, source=send_source, parent_id=parent_id)
 
 	#
 	# IDENTITY HELPERS
