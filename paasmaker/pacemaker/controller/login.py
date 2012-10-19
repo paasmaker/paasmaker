@@ -90,7 +90,7 @@ class LoginControllerTest(BaseControllerTest):
 		u.login = 'username'
 		u.email = 'username@example.com'
 		u.name = 'User Name'
-		u.set_password('test')
+		u.password = 'test'
 		s.add(u)
 		s.commit()
 
@@ -115,7 +115,7 @@ class LoginControllerTest(BaseControllerTest):
 		u.login = 'username'
 		u.email = 'username@example.com'
 		u.name = 'User Name'
-		u.set_password('test')
+		u.password = 'test'
 		s.add(u)
 		s.commit()
 		s.refresh(u)
@@ -152,7 +152,7 @@ class LoginControllerTest(BaseControllerTest):
 		u.login = 'username'
 		u.email = 'username@example.com'
 		u.name = 'User Name'
-		u.set_password('test')
+		u.password = 'test'
 		s.add(u)
 		s.commit()
 		s.refresh(u)

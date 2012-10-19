@@ -8,6 +8,7 @@ from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, T
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.orm.interfaces import MapperExtension
+from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func
 import hashlib
 
@@ -97,16 +98,23 @@ class User(OrmBase, Base):
 	auth_meta = Column(String, nullable=True)
 	enabled = Column(Boolean, nullable=False, default=True)
 
-	password = Column(String, nullable=True)
+	_password = Column('password', String, nullable=True)
 	name = Column(String, nullable=True)
 
 	apikey = Column(String, nullable=True, index=True)
 
 	def __init__(self):
-		pass
+		self.generate_api_key()
 
 	def __repr__(self):
 		return "<User('%s'@'%s')>" % (self.email, self.auth_source)
+
+	@hybrid_property
+	def password(self):
+		return self._password
+	@password.setter
+	def password(self, val):
+		self._password = self.password_hash(val)
 
 	def flatten(self, field_list=None):
 		return super(User, self).flatten(['login', 'email', 'auth_source', 'name', 'enabled'])
@@ -116,11 +124,6 @@ class User(OrmBase, Base):
 		h = hashlib.md5()
 		h.update(plain)
 		return h.hexdigest()
-
-	def set_password(self, plain):
-		self.password = self.password_hash(plain)
-		# TODO: This isn't the correct location to do this... move it.
-		self.generate_api_key()
 
 	def generate_api_key(self):
 		self.apikey = str(uuid.uuid4())
@@ -420,7 +423,7 @@ class TestModel(unittest.TestCase):
 		user = User()
 		user.login = 'username'
 		user.email = 'username@example.com'
-		user.set_password('test')
+		user.password = 'test'
 		role = Role('Administrator')
 		role_permission = RolePermission('ADMIN', True)
 		role.permissions.append(role_permission)

@@ -369,7 +369,7 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 			u.login = 'username'
 			u.email = 'username@example.com'
 			u.name = 'User Name'
-			u.set_password('testtest')
+			u.password = 'testtest'
 			s.add(u)
 			s.commit()
 			s.refresh(u)
