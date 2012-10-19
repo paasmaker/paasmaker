@@ -105,7 +105,7 @@ class UserEditController(BaseController):
 			user = form.bind(user, exclude=('password',))
 			password_plain = self.param('password')
 			if password_plain and password_plain != '':
-				user.set_password(password_plain)
+				user.password = password_plain
 			if not user_id and (not password_plain or password_plain == ''):
 				self.add_error("No password supplied, and this is a new account.")
 			else:
