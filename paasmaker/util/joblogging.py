@@ -51,7 +51,7 @@ class JobLoggingFileHandler(logging.Handler):
 			self.handlers[job_id].close()
 			del self.handlers[job_id]
 
-	def job_status_change(self, job_id, state, source):
+	def job_status_change(self, job_id=None, state=None, source=None):
 		logger.debug("Job status change: job_id %s, state %s, source %s", job_id, state, source)
 		if state in paasmaker.common.core.constants.JOB_FINISHED_STATES:
 			# Pubsub callback for job status change.
@@ -223,7 +223,7 @@ class JobLoggingTest(tornado.testing.AsyncTestCase):
 		self.assertEquals(len(self.handler.handlers.keys()), 1, "A handler was expected.")
 
 		# Mark a job as completed.
-		job1logger.complete('FINISHED', "Success")
+		job1logger.complete('SUCCESS', "Success")
 		self.assertEquals(len(self.handler.handlers.keys()), 0, "Handler was not closed and freed.")
 
 		# Now check that the summary was written and parseable.
@@ -231,7 +231,7 @@ class JobLoggingTest(tornado.testing.AsyncTestCase):
 		job1path = self.configuration.get_job_log_path(id1)
 		contents = open(job1path, 'r').read()
 		self.assertIn('state', contents)
-		self.assertIn('FINISHED', contents)
+		self.assertIn('SUCCESS', contents)
 		self.assertIn('{', contents)
 		self.assertIn('}', contents)
 

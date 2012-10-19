@@ -83,7 +83,7 @@ class MessageExchange:
 		# TODO: Publish internally - another listener will accept and DB it.
 		channel.basic_ack(delivery_tag=method.delivery_tag)
 
-	def send_job_status(self, job_id, state, source):
+	def send_job_status(self, job_id=None, state=None, source=None):
 		body = {'job_id': job_id, 'state': state, 'source': source}
 		encoded = json.dumps(body)
 		logger.debug("Sending job status message: %s", encoded)

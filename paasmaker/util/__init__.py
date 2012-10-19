@@ -10,3 +10,4 @@ from memoryredis import MemoryRedis
 from temporaryrabbitmq import TemporaryRabbitMQ
 from commandsupervisor import CommandSupervisor, CommandSupervisorLauncher
 from popen import Popen
+from jobmanager import JobManager

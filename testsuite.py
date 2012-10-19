@@ -25,6 +25,7 @@ test_sets = {
 	paasmaker.util.commandsupervisor: ['all', 'slow', 'util', 'process'],
 	paasmaker.util.temporaryrabbitmq: ['all', 'slow', 'util', 'messaging', 'service'],
 	paasmaker.util.popen: ['all', 'slow', 'util', 'process'],
+	paasmaker.util.jobmanager: ['all', 'util', 'job', 'jobmanager'],
 
 	paasmaker.router.router: ['all', 'slow', 'router'],
 
