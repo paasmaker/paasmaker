@@ -5,6 +5,10 @@ import paasmaker
 from pubsub import pub
 import tornado
 import tornado.testing
+import logging
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 class JobRunner(object):
 	"""
@@ -20,6 +24,7 @@ class JobRunner(object):
 
 	def add_child_job(self, job):
 		self.job_children[job.job_id] = job
+
 	def completed_child_job(self, job_id):
 		if self.job_children.has_key(job_id):
 			del self.job_children[job_id]
@@ -63,30 +68,41 @@ class JobRunner(object):
 
 class JobManager(object):
 	def __init__(self, configuration, io_loop=None):
+		logger.debug("Initialising JobManager.")
 		self.configuration = configuration
 		# Map job_id => job
 		self.jobs = {}
 		# Map child_id => parent_id
 		self.parents = {}
 		if io_loop:
+			logger.debug("Using supplied IO loop.")
 			self.io_loop = io_loop
 		else:
+			logger.debug("Using global IO loop.")
 			self.io_loop = tornado.ioloop.IOLoop.instance()
 
+		logger.debug("Subscribing to job status updates.")
 		pub.subscribe(self.job_status_change, 'job.status')
 
 	def add_job(self, job_id, job):
+		logger.debug("Adding job object for %s", job_id)
 		if not isinstance(job, JobRunner):
 			raise ValueError("job parameter should be instance of JobRunner.")
 		job.set_job_parameters(job_id, self)
 		self.jobs[job_id] = job
+		logger.debug("Job %s is now stored.", job_id)
 
 	def add_child_job(self, parent_id, child_id):
-		# TODO: more error checking/exceptions here.
+		if not self.jobs.has_key(parent_id):
+			raise KeyError("No such parent job %s" % parent_id)
+		if not self.jobs.has_key(child_id):
+			raise KeyError("No such child job %s" % child_id)
+		logger.debug("Parent %s adding child %s", parent_id, child_id)
 		parent = self.jobs[parent_id]
 		child = self.jobs[child_id]
 		parent.add_child_job(child)
 		self.parents[child_id] = parent_id
+		logger.debug("Completed parent %s adding child %s", parent_id, child_id)
 
 		# Advertise that the job is now waiting, and the parent/child relationship.
 		# TODO: Test this. Probably via the audit writer?
@@ -95,20 +111,25 @@ class JobManager(object):
 	def evaluate(self):
 		# Evaluate and kick off any jobs that can be started now.
 		started_count = 0
+		logger.debug("Commencing job evaluation of %d entries", len(self.jobs))
 		for job_id, job in self.jobs.iteritems():
 			if job.is_ready():
+				logger.debug("Job %s is ready, placing on IO loop.", job_id)
 				# Do this on the IO loop, so it cooperates with everything else.
 				self.io_loop.add_callback(job.start_job_helper)
 				started_count += 1
 
+		logger.debug("Started %d (of %d) jobs this evaluation.", started_count, len(self.jobs))
 		return started_count
 
 	def finished(self, job_id, state, summary):
 		# Pipe off this to any listeners who want to know.
+		logger.debug("Signalling finished for job %s with state %s", job_id, state)
 		self.configuration.send_job_status(job_id, state=state, summary=summary)
 
 	def abort(self, job_id, reason="Aborted by user or system request."):
 		# Just signal that it's done. The callback will clean them all up.
+		logger.debug("Signalling abort for job %s.", job_id)
 		self.finished(job_id, 'ABORTED', reason)
 
 	def find_entire_subtree(self, parent):
@@ -119,6 +140,7 @@ class JobManager(object):
 		return subtree
 
 	def handle_fail(self, job_id):
+		logger.debug("Handling failure for job id %s", job_id)
 		# Find the ultimate parent of this job.
 		parent_id = job_id
 		# TODO: Check if we even have this job.
@@ -128,9 +150,13 @@ class JobManager(object):
 				parent = self.jobs[self.parents[parent_id]]
 				parent_id = parent.job_id
 
+		logger.debug("Ultimate parent of %s is %s.", job_id, parent_id)
+
 		# Now find the entire subtree for that job.
 		subtree = self.find_entire_subtree(parent)
 		subtree[parent.job_id] = parent
+
+		logger.debug("Found %d jobs in subtree for ultimate parent %s (source job %s)", len(subtree), parent_id, job_id)
 
 		# Remove this subtree from the internal database.
 		# This stops re-entrant kind of issues when we publish
@@ -144,26 +170,34 @@ class JobManager(object):
 		# Remove this job from the subtree - it's already failed/aborted.
 		del subtree[job_id]
 
+		logger.debug("Purged internal tree in handling failure for %s", job_id)
+
 		# Now fail them all.
 		for key, job in subtree.iteritems():
 			if job.job_running:
+				logger.debug("Job %s was running, asking it to abort.", key)
 				job.abort_job()
 			# Mark it as aborted (in case it's on the IO loop awaiting startup)
 			job.job_aborted = True
 			# Send the status of aborted.
 			self.finished(key, 'ABORTED', 'A related job failed or was aborted, so this job was aborted.')
 
+		logger.debug("Subtree aborted (source job %s)", job_id)
+
 	def job_status_change(self, job_id=None, state=None, source=None):
 		# Not in our database? Do nothing.
 		if not self.jobs.has_key(job_id):
+			logger.debug("Got message for job that's not in our database - job %s", job_id)
 			return
 
 		# Handle the incoming states.
 		if state in paasmaker.common.core.constants.JOB_ERROR_STATES:
+			logger.debug("Job %s in state %s - handling failure.", job_id, state)
 			# That job failed, or was aborted. Kill off related jobs.
 			self.handle_fail(job_id)
 
 		if state in paasmaker.common.core.constants.JOB_SUCCESS_STATES:
+			logger.debug("Job %s in state %s - evaluating new jobs for startup.", job_id, state)
 			# Success! Mark it as complete, then evaluate our jobs again.
 			# Does this job have a parent? If so, remove this job from
 			# the list, so it goes on to process the next one.
