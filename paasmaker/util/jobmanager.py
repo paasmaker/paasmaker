@@ -83,27 +83,33 @@ class JobManager(object):
 
 	def add_child_job(self, parent_id, child_id):
 		# TODO: more error checking/exceptions here.
-		# TODO: Send audit updates with the parent/child relationship, and WAITING state.
 		parent = self.jobs[parent_id]
 		child = self.jobs[child_id]
 		parent.add_child_job(child)
 		self.parents[child_id] = parent_id
 
+		# Advertise that the job is now waiting, and the parent/child relationship.
+		# TODO: Test this. Probably via the audit writer?
+		self.configuration.send_job_status(child_id, state='WAITING', parent_id=parent_id)
+
 	def evaluate(self):
 		# Evaluate and kick off any jobs that can be started now.
+		started_count = 0
 		for job_id, job in self.jobs.iteritems():
 			if job.is_ready():
 				# Do this on the IO loop, so it cooperates with everything else.
 				self.io_loop.add_callback(job.start_job_helper)
+				started_count += 1
+
+		return started_count
 
 	def finished(self, job_id, state, summary):
 		# Pipe off this to any listeners who want to know.
 		self.configuration.send_job_status(job_id, state=state, summary=summary)
 
-	def abort(self, job_id, reason="Aborted"):
-		# TODO: Find and kill the job.
-		#self.finished(job_id, 'ABORTED', reason)
-		pass
+	def abort(self, job_id, reason="Aborted by user or system request."):
+		# Just signal that it's done. The callback will clean them all up.
+		self.finished(job_id, 'ABORTED', reason)
 
 	def find_entire_subtree(self, parent):
 		subtree = {}
@@ -215,25 +221,12 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		# TODO: This storage overwrites the previous state. But I guess we're
 		# generally waiting for it to end up in a particular end state...
 		self.statuses[kwargs['job_id']] = kwargs
-		self.stop(kwargs)
 
-	def wait_until_state(self, state, job_ids=[]):
-		# See if it's one of our stored statuses.
-		# This is to stop race conditions around the test.
-		if len(job_ids) > 0:
-			for jid in self.statuses.keys():
-				if jid in job_ids and state == self.statuses[jid]['state']:
-					return self.statuses[jid]
-
-		# Now wait for the job like normal.
-		result = self.wait()
-		if len(job_ids) > 0:
-			while not result and result['state'] != state and result['job_id'] not in job_ids:
-				result = self.wait()
+	def get_state(self, job_id):
+		if self.statuses.has_key(job_id):
+			return self.statuses[job_id]
 		else:
-			while not result and result['state'] != state:
-				result = self.wait()
-		return result
+			return {'state': 'UNKNOWN', 'job_id': job_id}
 
 	def jid(self):
 		return str(uuid.uuid4())
@@ -246,9 +239,9 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 
 		self.manager.evaluate()
 
-		result = self.wait_until_state('SUCCESS')
+		self.short_wait_hack()
 
-		self.assertEquals(result['job_id'], job_id, 'Returned job was not expected job.')
+		result = self.get_state(job_id)
 		self.assertEquals(result['state'], 'SUCCESS', 'Test job was not successful.')
 
 	def test_manager_failed_job_simple(self):
@@ -259,9 +252,9 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 
 		self.manager.evaluate()
 
-		result = self.wait_until_state('FAILED')
+		self.short_wait_hack()
 
-		self.assertEquals(result['job_id'], job_id, 'Returned job was not expected job.')
+		result = self.get_state(job_id)
 		self.assertEquals(result['state'], 'FAILED', 'Test job was not a failure.')
 
 	def test_manager_success_tree(self):
@@ -290,14 +283,17 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		# Start processing them.
 		self.manager.evaluate()
 
-		# One of these two should finish.
-		self.wait_until_state('SUCCESS', [subsub1_id, sub2_id])
-		# Then one of these three.
-		self.wait_until_state('SUCCESS', [sub1_id, sub2_id, subsub1_id])
-		# Then one of these two.
-		self.wait_until_state('SUCCESS', [sub1_id, sub2_id])
-		# Then the root job.
-		self.wait_until_state('SUCCESS', [root_id])
+		self.short_wait_hack()
+
+		subsub1_status = self.get_state(subsub1_id)
+		sub1_status = self.get_state(sub1_id)
+		sub2_status = self.get_state(sub2_id)
+		root_status = self.get_state(root_id)
+
+		self.assertEquals(subsub1_status['state'], 'SUCCESS', "Sub Sub 1 should have succeeded.")
+		self.assertEquals(sub1_status['state'], 'SUCCESS', "Sub 1 should have succeeded.")
+		self.assertEquals(sub2_status['state'], 'SUCCESS', "Sub 2 should have succeeded.")
+		self.assertEquals(root_status['state'], 'SUCCESS', "Root should have succeeded.")
 
 	def test_manager_failed_subtree(self):
 		# Test that a subtree fails correctly.
@@ -310,12 +306,6 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		sub1_id = self.jid()
 		sub2_id = self.jid()
 		subsub1_id = self.jid()
-
-		#print
-		#print "Root", root_id
-		#print "Sub1", sub1_id
-		#print "Sub2", sub2_id
-		#print "Subsub1", subsub1_id
 
 		# Add the jobs.
 		self.manager.add_job(root_id, root)
@@ -333,18 +323,62 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 
 		self.short_wait_hack()
 
-		# Subsub1 should succeed.
-		self.wait_until_state('ABORTED', [subsub1_id])
-		# But Sub2 should fail.
-		self.wait_until_state('FAILED', [sub2_id])
-		# Which will cause sub1 and the root to abort.
-		self.wait_until_state('ABORTED', [sub1_id])
-		# Then the root job.
-		self.wait_until_state('ABORTED', [root_id])
+		subsub1_status = self.get_state(subsub1_id)
+		sub1_status = self.get_state(sub1_id)
+		sub2_status = self.get_state(sub2_id)
+		root_status = self.get_state(root_id)
+
+		if subsub1_status['state'] not in ['ABORTED', 'SUCCESS']:
+			self.assertTrue(False, "Subsub1 not in one of expected states.")
+		self.assertEquals(sub1_status['state'], 'ABORTED', "Sub 1 should have been aborted.")
+		self.assertEquals(sub2_status['state'], 'FAILED', "Sub 2 should have failed.")
+		self.assertEquals(root_status['state'], 'ABORTED', "Root should have been aborted.")
 
 	def test_manager_abort_tree(self):
-		pass
+		# Test that a subtree aborts correctly.
+		root = TestSuccessJobRunner()
+		sub1 = TestSuccessJobRunner()
+		sub2 = TestAbortJobRunner()
+		subsub1 = TestSuccessJobRunner()
+
+		root_id = self.jid()
+		sub1_id = self.jid()
+		sub2_id = self.jid()
+		subsub1_id = self.jid()
+
+		# Add the jobs.
+		self.manager.add_job(root_id, root)
+		self.manager.add_job(sub1_id, sub1)
+		self.manager.add_job(sub2_id, sub2)
+		self.manager.add_job(subsub1_id, subsub1)
+
+		# And then their relationships.
+		self.manager.add_child_job(root_id, sub1_id)
+		self.manager.add_child_job(sub1_id, subsub1_id)
+		self.manager.add_child_job(root_id, sub2_id)
+
+		# Start processing them.
+		self.manager.evaluate()
+
+		# Wait for things to settle.
+		self.short_wait_hack()
+
+		# Abort Sub2, which should currently be holding everything up.
+		self.manager.abort(sub2_id)
+
+		# Wait for things to settle.
+		self.short_wait_hack()
+
+		subsub1_status = self.get_state(subsub1_id)
+		sub1_status = self.get_state(sub1_id)
+		sub2_status = self.get_state(sub2_id)
+		root_status = self.get_state(root_id)
+
+		self.assertEquals(subsub1_status['state'], 'SUCCESS', "Sub Sub 1 should have succeeded.")
+		self.assertEquals(sub1_status['state'], 'SUCCESS', "Sub 1 should have succeeded.")
+		self.assertEquals(sub2_status['state'], 'ABORTED', "Sub 2 should have been aborted.")
+		self.assertEquals(root_status['state'], 'ABORTED', "Root should have been aborted.")
 
 	def short_wait_hack(self):
-		self.io_loop.add_timeout(time.time() + 0.1, self.stop)
+		self.io_loop.add_timeout(time.time() + 0.05, self.stop)
 		self.wait()
