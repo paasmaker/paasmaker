@@ -85,7 +85,7 @@ class JobManager(object):
 		pub.subscribe(self.job_status_change, 'job.status')
 
 	def add_job(self, job_id, job):
-		logger.debug("Adding job object for %s", job_id)
+		logger.info("Adding job object for %s", job_id)
 		if not isinstance(job, JobRunner):
 			raise ValueError("job parameter should be instance of JobRunner.")
 		job.set_job_parameters(job_id, self)
@@ -97,7 +97,7 @@ class JobManager(object):
 			raise KeyError("No such parent job %s" % parent_id)
 		if not self.jobs.has_key(child_id):
 			raise KeyError("No such child job %s" % child_id)
-		logger.debug("Parent %s adding child %s", parent_id, child_id)
+		logger.info("Parent %s adding child %s", parent_id, child_id)
 		parent = self.jobs[parent_id]
 		child = self.jobs[child_id]
 		parent.add_child_job(child)
@@ -119,17 +119,17 @@ class JobManager(object):
 				self.io_loop.add_callback(job.start_job_helper)
 				started_count += 1
 
-		logger.debug("Started %d (of %d) jobs this evaluation.", started_count, len(self.jobs))
+		logger.info("Started %d (of %d) jobs this evaluation.", started_count, len(self.jobs))
 		return started_count
 
 	def finished(self, job_id, state, summary):
 		# Pipe off this to any listeners who want to know.
-		logger.debug("Signalling finished for job %s with state %s", job_id, state)
+		logger.info("Signalling finished for job %s with state %s", job_id, state)
 		self.configuration.send_job_status(job_id, state=state, summary=summary)
 
 	def abort(self, job_id, reason="Aborted by user or system request."):
 		# Just signal that it's done. The callback will clean them all up.
-		logger.debug("Signalling abort for job %s.", job_id)
+		logger.info("Signalling abort for job %s.", job_id)
 		self.finished(job_id, 'ABORTED', reason)
 
 	def find_entire_subtree(self, parent):
@@ -192,12 +192,12 @@ class JobManager(object):
 
 		# Handle the incoming states.
 		if state in paasmaker.common.core.constants.JOB_ERROR_STATES:
-			logger.debug("Job %s in state %s - handling failure.", job_id, state)
+			logger.info("Job %s in state %s - handling failure.", job_id, state)
 			# That job failed, or was aborted. Kill off related jobs.
 			self.handle_fail(job_id)
 
 		if state in paasmaker.common.core.constants.JOB_SUCCESS_STATES:
-			logger.debug("Job %s in state %s - evaluating new jobs for startup.", job_id, state)
+			logger.info("Job %s in state %s - evaluating new jobs for startup.", job_id, state)
 			# Success! Mark it as complete, then evaluate our jobs again.
 			# Does this job have a parent? If so, remove this job from
 			# the list, so it goes on to process the next one.
