@@ -58,6 +58,7 @@ class JobRunner(object):
 		if not self.job_aborted:
 			self.job_running = True
 			self.job_manager.configuration.send_job_status(self.job_id, state='RUNNING')
+			# TODO: Catch sub exceptions, abort/fail job.
 			self.start_job()
 
 	def finished_job(self, state, summary):
