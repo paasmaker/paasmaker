@@ -27,6 +27,7 @@ class ParametersService(BaseService):
 
 	def create(self, callback, error_callback):
 		# Does the same thing as update.
+		self.logger.debug("Creating service with parameters: %s", str(self.raw_parameters))
 		self.update(callback, error_callback)
 
 	def update(self, callback, error_callback):
@@ -36,6 +37,7 @@ class ParametersService(BaseService):
 		services for which it does make sense.
 		"""
 		# We always succeed here, just passing back the options.
+		self.logger.debug("Updating service with parameters: %s", str(self.raw_parameters))
 		callback(self.raw_parameters, "Successfully modified service.")
 
 	def remove(self, callback, error_callback):

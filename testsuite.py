@@ -23,7 +23,7 @@ test_sets = {
 	paasmaker.util.port: ['all', 'slow', 'util', 'network'],
 	paasmaker.util.plugin: ['all', 'quick', 'util', 'configuration'],
 	paasmaker.util.commandsupervisor: ['all', 'slow', 'util', 'process'],
-	paasmaker.util.temporaryrabbitmq: ['all', 'slow', 'util', 'messaging', 'service'],
+	paasmaker.util.temporaryrabbitmq: ['all', 'slow', 'util', 'messaging'],
 	paasmaker.util.popen: ['all', 'slow', 'util', 'process'],
 	paasmaker.util.jobmanager: ['all', 'util', 'job', 'jobmanager'],
 

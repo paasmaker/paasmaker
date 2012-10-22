@@ -2,6 +2,7 @@
 import unittest
 import paasmaker
 import colander
+import logging
 
 # From http://stackoverflow.com/questions/452969/does-python-have-an-equivalent-to-java-class-forname
 def get_class( kls ):
@@ -18,10 +19,16 @@ class PluginMixin(object):
 	def get_parameters_schema(self):
 		raise NotImplementedError("You must implement get_parameters_schema")
 
-	def __init__(self, configuration, options, parameters):
+	def __init__(self, configuration, options, parameters, logger = None):
 		self.configuration = configuration
 		self.raw_options = options
 		self.raw_parameters = parameters
+
+		if not logger:
+			self.logger = logging.getLogger('paasmaker.plugin.' + self.__class__.__name__)
+			self.logger.addHandler(logging.NullHandler())
+		else:
+			self.logger = logger
 
 	def check_options(self):
 		try:
@@ -95,9 +102,9 @@ class PluginRegistry:
 		cls = get_class(self.class_registry[plugin])
 		return cls
 
-	def instantiate(self, plugin, parameters):
+	def instantiate(self, plugin, parameters, logger=None):
 		cls = get_class(self.class_registry[plugin])
-		instance = cls(self.configuration, self.data_registry[plugin], parameters)
+		instance = cls(self.configuration, self.data_registry[plugin], parameters, logger)
 
 		# Get it to recheck options, and also parameters - this unpacks it as well.
 		instance.check_options()
