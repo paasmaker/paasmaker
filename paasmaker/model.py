@@ -350,6 +350,19 @@ class Service(OrmBase, Base):
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['workspace', 'provider', 'credentials'])
 
+	@staticmethod
+	def get_or_create(session, workspace, name):
+		# Find an existing one.
+		service = session.query(Service).filter(Service.workspace == workspace and Service.name == name).first()
+		if service:
+			return service
+		else:
+			service = Service()
+			service.workspace = workspace
+			service.name = name
+			service.state = 'NEW'
+			return service
+
 class Job(OrmBase, Base):
 	__tablename__ = 'job'
 
