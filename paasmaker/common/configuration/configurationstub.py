@@ -33,6 +33,10 @@ master_port: %(master_port)d
 pacemaker:
   enabled: true
   dsn: "sqlite:///:memory:"
+  services:
+    - name: paasmaker.service.parameters
+      cls: paasmaker.pacemaker.service.parameters.ParametersService
+      title: Parameters Service
 """
 
 	heart_config = """

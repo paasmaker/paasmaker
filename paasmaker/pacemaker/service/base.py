@@ -6,21 +6,6 @@ import paasmaker
 # Base service.
 class BaseService(paasmaker.util.plugin.PluginMixin):
 
-	def get_server_configuration_schema(self):
-		"""
-		Get the colander schema for validating the incoming server-level
-		options. That is, the options used to later provide the service.
-		"""
-		pass
-
-	def get_parameters_schema(self):
-		"""
-		Get the colander schema for validating the
-		incoming parameters. That is, the parameters required to provision
-		the service.
-		"""
-		pass
-
 	def get_information(self):
 		"""
 		Get information about this particular service.

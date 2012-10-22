@@ -17,11 +17,9 @@ class ParametersService(BaseService):
 	for testing or for pumping in configuration or values from the manifest.
 	"""
 
-	def get_server_configuration_schema(self):
-		# Just an empty schema. Takes no options.
+	def get_options_schema(self):
 		return ParametersServiceConfigurationSchema()
-
-	def get_application_configuration_schema(self):
+	def get_parameters_schema(self):
 		return ParametersServiceParametersSchema()
 
 	def get_information(self):

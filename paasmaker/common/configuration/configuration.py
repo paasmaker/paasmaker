@@ -33,6 +33,25 @@ define("debug", type=int, default=0, help="Enable Tornado debug mode.")
 define("configfile", type=str, default="", help="Override configuration file.")
 
 # The Configuration Schema.
+class PacemakerServiceSchema(colander.MappingSchema):
+	name = colander.SchemaNode(colander.String(),
+		title="Symbolic name",
+		description="The symbolic name for this service, used to match it up in application configuration")
+	cls = colander.SchemaNode(colander.String(),
+		title="Service class",
+		description="The class used to provide this service")
+	title = colander.SchemaNode(colander.String(),
+		title="Friendly name",
+		description="The friendly name for this service")
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Runtime Parameters",
+		description="Parameters for this particular service",
+		missing={},
+		default={})
+
+class PacemakerServicesSchema(colander.SequenceSchema):
+	service = PacemakerServiceSchema()
+
 class PacemakerSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
 		title="Pacemaker enabled",
@@ -50,9 +69,15 @@ class PacemakerSchema(colander.MappingSchema):
 		default=7,
 		missing=7)
 
+	services = PacemakerServicesSchema(
+		title="Services",
+		description="A list of services offered by this pacemaker.",
+		missing=[],
+		default=[])
+
 	@staticmethod
 	def default():
-		return {'enabled': False}
+		return {'enabled': False, 'services': []}
 
 class HeartRuntimeSchema(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
@@ -182,7 +207,7 @@ class ConfigurationSchema(colander.MappingSchema):
 		missing=8888,
 		default=8888)
 
-	misc_ports = MiscPortsSchema(default=MiscPortsSchema.default(),missing=MiscPortsSchema.default())
+	misc_ports = MiscPortsSchema(default=MiscPortsSchema.default(), missing=MiscPortsSchema.default())
 
 	my_name = colander.SchemaNode(colander.String(),
 		title="Node name",
@@ -229,11 +254,11 @@ class ConfigurationSchema(colander.MappingSchema):
 		missing={},
 		default={})
 
-	broker = MessageBrokerSchema(default=MessageBrokerSchema.default(),missing=MessageBrokerSchema.default())
+	broker = MessageBrokerSchema(default=MessageBrokerSchema.default(), missing=MessageBrokerSchema.default())
 
-	pacemaker = PacemakerSchema(default=PacemakerSchema.default(),missing=PacemakerSchema.default())
-	heart = HeartSchema(defalt=HeartSchema.default(),missing=HeartSchema.default())
-	router = RouterSchema(default=RouterSchema.default(),missing=RouterSchema.default())
+	pacemaker = PacemakerSchema(default=PacemakerSchema.default(), missing=PacemakerSchema.default())
+	heart = HeartSchema(defalt=HeartSchema.default(), missing=HeartSchema.default())
+	router = RouterSchema(default=RouterSchema.default(), missing=RouterSchema.default())
 
 class ImNotA(Exception):
 	pass
@@ -272,6 +297,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# Load heart plugins.
 		if self.is_heart():
 			self.load_plugins(self.plugins, self['heart']['runtimes'])
+		# Load pacemaker plugins.
+		if self.is_pacemaker():
+			self.load_plugins(self.plugins, self['pacemaker']['services'])
 
 		self.update_flat()
 
