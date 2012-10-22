@@ -1,5 +1,5 @@
 tornado
-sqlalchemy
+sqlalchemy>=0.7.5
 pyyaml
 colander>=0.9.9
 ws4py

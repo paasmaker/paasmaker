@@ -353,7 +353,7 @@ class Service(OrmBase, Base):
 	@staticmethod
 	def get_or_create(session, workspace, name):
 		# Find an existing one.
-		service = session.query(Service).filter(Service.workspace == workspace and Service.name == name).first()
+		service = session.query(Service).filter(Service.workspace == workspace, Service.name == name).first()
 		if service:
 			return service
 		else:
