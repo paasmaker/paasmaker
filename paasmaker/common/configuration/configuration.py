@@ -246,6 +246,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.uuid = None
 		self.exchange = None
 		self.job_watcher = None
+		self.job_manager = paasmaker.util.jobmanager.JobManager(self)
 
 	def load_from_file(self, search_path):
 		# If we were supplied a configuration file on the command line,
@@ -346,6 +347,14 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	#
 	# JOB HELPERS
 	#
+	def make_job_id(self, title):
+		# All we need to do is allocate an ID and mark it as new.
+		# The messaging subsystem will handle persisting it to the DB.
+		job_id = str(uuid.uuid4())
+		self.send_job_status(job_id, 'NEW', title=title)
+		return job_id
+	def start_jobs(self):
+		self.job_manager.evaluate()
 	def get_job_logger(self, job_id):
 		return paasmaker.util.joblogging.JobLoggerAdapter(logging.getLogger('job'), job_id, self, self.get_job_watcher())
 	def get_job_log_path(self, job_id):

@@ -163,15 +163,11 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 			version.instance_types.append(instance_type)
 
 		# Import and link services.
-		# TODO: Split this out somewhere else.
 		for servicemeta in self['services']:
 			# Create or fetch the service.
-			service = paasmaker.model.Service()
-			service.workspace = application.workspace
-			service.name = servicemeta['name']
+			service = paasmaker.model.Service.get_or_create(application.workspace, servicemeta['name'])
 			service.provider = servicemeta['provider']
 			service.parameters = servicemeta['parameters']
-			service.state = 'NEW'
 
 			version.services.append(service)
 
