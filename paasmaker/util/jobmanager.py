@@ -23,11 +23,20 @@ class JobRunner(object):
 		self.job_aborted = False
 
 	def add_child_job(self, job):
+		# CAUTION: TODO: Not for subclass use. Move it.
 		self.job_children[job.job_id] = job
 
 	def completed_child_job(self, job_id):
+		# CAUTION: TODO: Not for subclass use. Move it.
 		if self.job_children.has_key(job_id):
 			del self.job_children[job_id]
+
+	def get_job_title(self):
+		return "Unknown job title"
+
+	def get_root_job(self):
+		# NOTE: May return this object.
+		return self.job_manager.get_root(self.job_id)
 
 	def is_ready(self):
 		return not self.job_running and not self.job_aborted and len(self.job_children.keys()) == 0
@@ -66,6 +75,15 @@ class JobRunner(object):
 
 		return self.job_cached_logger
 
+class ContainerJob(JobRunner):
+	# This is a super container for other jobs, that just succeeds when all of it's children succeed.
+	# You can subclass it to store state for your job tree. (A bit of a hack...)
+	def start_job(self):
+		self.finished_job('SUCCESS', "Completed successfully.")
+
+	def abort_job(self):
+		pass
+
 class JobManager(object):
 	def __init__(self, configuration, io_loop=None):
 		logger.debug("Initialising JobManager.")
@@ -84,7 +102,9 @@ class JobManager(object):
 		logger.debug("Subscribing to job status updates.")
 		pub.subscribe(self.job_status_change, 'job.status')
 
-	def add_job(self, job_id, job):
+	def add_job(self, job, job_id=None):
+		if not job_id:
+			job_id = self.configuration.make_job_id(job.get_job_title())
 		logger.info("Adding job object for %s", job_id)
 		if not isinstance(job, JobRunner):
 			raise ValueError("job parameter should be instance of JobRunner.")
@@ -92,21 +112,21 @@ class JobManager(object):
 		self.jobs[job_id] = job
 		logger.debug("Job %s is now stored.", job_id)
 
-	def add_child_job(self, parent_id, child_id):
-		if not self.jobs.has_key(parent_id):
-			raise KeyError("No such parent job %s" % parent_id)
-		if not self.jobs.has_key(child_id):
-			raise KeyError("No such child job %s" % child_id)
-		logger.info("Parent %s adding child %s", parent_id, child_id)
-		parent = self.jobs[parent_id]
-		child = self.jobs[child_id]
+	def add_child_job(self, parent, child):
+		if not self.jobs.has_key(parent.job_id):
+			raise KeyError("No such parent job %s" % parent.job_id)
+		if not self.jobs.has_key(child.job_id):
+			raise KeyError("No such child job %s" % child.job_id)
+		logger.info("Parent %s adding child %s", parent.job_id, child.job_id)
+		parent = self.jobs[parent.job_id]
+		child = self.jobs[child.job_id]
 		parent.add_child_job(child)
-		self.parents[child_id] = parent_id
-		logger.debug("Completed parent %s adding child %s", parent_id, child_id)
+		self.parents[child.job_id] = parent.job_id
+		logger.debug("Completed parent %s adding child %s", parent.job_id, child.job_id)
 
 		# Advertise that the job is now waiting, and the parent/child relationship.
 		# TODO: Test this. Probably via the audit writer?
-		self.configuration.send_job_status(child_id, state='WAITING', parent_id=parent_id)
+		self.configuration.send_job_status(child.job_id, state='WAITING', parent_id=parent.job_id)
 
 	def evaluate(self):
 		# Evaluate and kick off any jobs that can be started now.
@@ -139,9 +159,7 @@ class JobManager(object):
 			subtree.update(self.find_entire_subtree(child))
 		return subtree
 
-	def handle_fail(self, job_id):
-		logger.debug("Handling failure for job id %s", job_id)
-		# Find the ultimate parent of this job.
+	def get_root(self, job_id):
 		parent_id = job_id
 		# TODO: Check if we even have this job.
 		parent = self.jobs[job_id]
@@ -150,13 +168,20 @@ class JobManager(object):
 				parent = self.jobs[self.parents[parent_id]]
 				parent_id = parent.job_id
 
-		logger.debug("Ultimate parent of %s is %s.", job_id, parent_id)
+		return parent
+
+	def handle_fail(self, job_id):
+		logger.debug("Handling failure for job id %s", job_id)
+		# Find the ultimate parent of this job.
+		parent = self.get_root(job_id)
+
+		logger.debug("Ultimate parent of %s is %s.", job_id, parent.job_id)
 
 		# Now find the entire subtree for that job.
 		subtree = self.find_entire_subtree(parent)
 		subtree[parent.job_id] = parent
 
-		logger.debug("Found %d jobs in subtree for ultimate parent %s (source job %s)", len(subtree), parent_id, job_id)
+		logger.debug("Found %d jobs in subtree for ultimate parent %s (source job %s)", len(subtree), parent.job_id, job_id)
 
 		# Remove this subtree from the internal database.
 		# This stops re-entrant kind of issues when we publish
@@ -269,7 +294,7 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		# Set up a simple successful job.
 		job_id = self.jid()
 		job = TestSuccessJobRunner()
-		self.manager.add_job(job_id, job)
+		self.manager.add_job(job, job_id)
 
 		self.manager.evaluate()
 
@@ -282,7 +307,7 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		# Set up a simple failed job.
 		job_id = self.jid()
 		job = TestFailJobRunner()
-		self.manager.add_job(job_id, job)
+		self.manager.add_job(job, job_id)
 
 		self.manager.evaluate()
 
@@ -304,15 +329,15 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		subsub1_id = self.jid()
 
 		# Add the jobs.
-		self.manager.add_job(root_id, root)
-		self.manager.add_job(sub1_id, sub1)
-		self.manager.add_job(sub2_id, sub2)
-		self.manager.add_job(subsub1_id, subsub1)
+		self.manager.add_job(root, root_id)
+		self.manager.add_job(sub1, sub1_id)
+		self.manager.add_job(sub2, sub2_id)
+		self.manager.add_job(subsub1, subsub1_id)
 
 		# And then their relationships.
-		self.manager.add_child_job(root_id, sub1_id)
-		self.manager.add_child_job(sub1_id, subsub1_id)
-		self.manager.add_child_job(root_id, sub2_id)
+		self.manager.add_child_job(root, sub1)
+		self.manager.add_child_job(sub1, subsub1)
+		self.manager.add_child_job(root, sub2)
 
 		# Start processing them.
 		self.manager.evaluate()
@@ -342,15 +367,15 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		subsub1_id = self.jid()
 
 		# Add the jobs.
-		self.manager.add_job(root_id, root)
-		self.manager.add_job(sub1_id, sub1)
-		self.manager.add_job(sub2_id, sub2)
-		self.manager.add_job(subsub1_id, subsub1)
+		self.manager.add_job(root, root_id)
+		self.manager.add_job(sub1, sub1_id)
+		self.manager.add_job(sub2, sub2_id)
+		self.manager.add_job(subsub1, subsub1_id)
 
 		# And then their relationships.
-		self.manager.add_child_job(root_id, sub1_id)
-		self.manager.add_child_job(sub1_id, subsub1_id)
-		self.manager.add_child_job(root_id, sub2_id)
+		self.manager.add_child_job(root, sub1)
+		self.manager.add_child_job(sub1, subsub1)
+		self.manager.add_child_job(root, sub2)
 
 		# Start processing them.
 		self.manager.evaluate()
@@ -381,15 +406,15 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		subsub1_id = self.jid()
 
 		# Add the jobs.
-		self.manager.add_job(root_id, root)
-		self.manager.add_job(sub1_id, sub1)
-		self.manager.add_job(sub2_id, sub2)
-		self.manager.add_job(subsub1_id, subsub1)
+		self.manager.add_job(root, root_id)
+		self.manager.add_job(sub1, sub1_id)
+		self.manager.add_job(sub2, sub2_id)
+		self.manager.add_job(subsub1, subsub1_id)
 
 		# And then their relationships.
-		self.manager.add_child_job(root_id, sub1_id)
-		self.manager.add_child_job(sub1_id, subsub1_id)
-		self.manager.add_child_job(root_id, sub2_id)
+		self.manager.add_child_job(root, sub1)
+		self.manager.add_child_job(sub1, subsub1)
+		self.manager.add_child_job(root, sub2)
 
 		# Start processing them.
 		self.manager.evaluate()
