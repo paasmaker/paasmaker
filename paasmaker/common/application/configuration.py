@@ -80,6 +80,11 @@ class Instance(colander.MappingSchema):
 		missing=[])
 	placement = Placement(default=Placement.default(), missing=Placement.default())
 	hostnames = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()), title="Hostnames", default=[], missing=[])
+	exclusive = colander.SchemaNode(colander.Boolean(),
+		title="Version Exclusive",
+		description="If set to true, only one version of this instance type will run at a time. This is good for background workers that you don't want overlapping.",
+		default=False,
+		missing=False)
 
 class ConfigurationSchema(colander.MappingSchema):
 	application = Application()
@@ -134,6 +139,7 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 			instance_type.name = name
 			instance_type.quantity = imetadata['quantity']
 			instance_type.state = 'NEW'
+			instance_type.exclusive = imetadata['exclusive']
 
 			# Runtime information.
 			instance_type.runtime_name = imetadata['runtime']['name']

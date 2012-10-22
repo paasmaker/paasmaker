@@ -271,6 +271,7 @@ class ApplicationInstanceType(OrmBase, Base):
 	startup = Column(Text, nullable=False)
 	placement_provider = Column(Text, nullable=False)
 	placement_parameters = Column(Text, nullable=False)
+	exclusive = Column(Boolean, nullable=False)
 
 	state = Column(Enum(*constants.INSTANCE_TYPE_STATES), nullable=False, index=True)
 
