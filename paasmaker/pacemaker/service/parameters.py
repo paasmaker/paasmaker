@@ -27,20 +27,20 @@ class ParametersService(BaseService):
 	def get_information(self):
 		return ServiceInformation('Parameters', '1.0', ParametersService.__doc__)
 
-	def create(self, options, callback, error_callback):
+	def create(self, callback, error_callback):
 		# Does the same thing as update.
-		self.update(options, callback, error_callback)
+		self.update(callback, error_callback)
 
-	def update(self, options, callback, error_callback):
+	def update(self, callback, error_callback):
 		"""
 		Update the service (if required) returning new credentials. In many
 		cases this won't make sense for a service, but is provided for a few
 		services for which it does make sense.
 		"""
 		# We always succeed here, just passing back the options.
-		callback(options, "Successfully modified service.")
+		callback(self.raw_parameters, "Successfully modified service.")
 
-	def remove(self, options, callback, error_callback):
+	def remove(self, callback, error_callback):
 		"""
 		Remove the service, using the options supplied by the application,
 		and the credentials created when the service was created.
@@ -51,9 +51,8 @@ class ParametersServiceTest(BaseServiceTest):
 	def test_simple(self):
 		# There is very few ways this can go wrong,
 		# but this is an example for other services.
-		service = ParametersService(self.configuration, {})
-
-		service.create({'test': 'bar'}, self.success_callback, self.failure_callback)
+		service = ParametersService(self.configuration, {}, {'test': 'bar'})
+		service.create(self.success_callback, self.failure_callback)
 
 		self.wait()
 

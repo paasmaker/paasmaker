@@ -4,11 +4,7 @@ import tornado.testing
 import paasmaker
 
 # Base service.
-class BaseService(object):
-	def __init__(self, configuration, parameters):
-		# All configuration is the server-level configuration object.
-		self.configuration = configuration
-		self.parameters = parameters
+class BaseService(paasmaker.util.plugin.PluginMixin):
 
 	def get_server_configuration_schema(self):
 		"""
@@ -31,14 +27,14 @@ class BaseService(object):
 		"""
 		pass
 
-	def create(self, options, callback, error_callback):
+	def create(self, callback, error_callback):
 		"""
 		Create the service, using the parameters supplied by the application
 		in the request object.
 		"""
 		pass
 
-	def update(self, options, callback, error_callback):
+	def update(self, callback, error_callback):
 		"""
 		Update the service (if required) returning new credentials. In many
 		cases this won't make sense for a service, but is provided for a few
@@ -46,7 +42,7 @@ class BaseService(object):
 		"""
 		pass
 
-	def remove(self, options, callback, error_callback):
+	def remove(self, callback, error_callback):
 		"""
 		Remove the service, using the options supplied by the application,
 		and the credentials created when the service was created.

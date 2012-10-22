@@ -12,7 +12,7 @@ def get_class( kls ):
 		m = getattr(m, comp)
 	return m
 
-class PluginMixin:
+class PluginMixin(object):
 	def get_options_schema(self):
 		raise NotImplementedError("You must implement get_options_schema")
 	def get_parameters_schema(self):
