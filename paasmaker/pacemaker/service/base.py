@@ -1,5 +1,4 @@
 
-import unittest
 import tornado.testing
 import paasmaker
 
