@@ -1,10 +1,14 @@
+
+import unittest
+import tornado.testing
+import paasmaker
+
 # Base service.
-class ServiceBase():
+class BaseService(object):
 	def __init__(self, configuration, parameters):
 		# All configuration is the server-level configuration object.
 		self.configuration = configuration
 		self.parameters = parameters
-		pass
 
 	def get_server_configuration_schema(self):
 		"""
@@ -13,11 +17,11 @@ class ServiceBase():
 		"""
 		pass
 
-	def get_application_configuration_schema(self):
+	def get_parameters_schema(self):
 		"""
 		Get the colander schema for validating the
-		incoming application-level options. That is, the options
-		required to provision the service.
+		incoming parameters. That is, the parameters required to provision
+		the service.
 		"""
 		pass
 
@@ -27,19 +31,48 @@ class ServiceBase():
 		"""
 		pass
 
-	def create(self, options):
+	def create(self, options, callback, error_callback):
 		"""
-		Create the service, using the options supplied by the application.
-		Returns a dict containing the credentials used to access the service.
-		The returned dict should contain only simple types, as it's
-		converted to JSON and supplied to the application.
+		Create the service, using the parameters supplied by the application
+		in the request object.
 		"""
 		pass
 
-	def remove(self, options, credentials):
+	def update(self, options, callback, error_callback):
+		"""
+		Update the service (if required) returning new credentials. In many
+		cases this won't make sense for a service, but is provided for a few
+		services for which it does make sense.
+		"""
+		pass
+
+	def remove(self, options, callback, error_callback):
 		"""
 		Remove the service, using the options supplied by the application,
 		and the credentials created when the service was created.
 		"""
 		pass
 
+class BaseServiceTest(tornado.testing.AsyncTestCase):
+	def setUp(self):
+		super(BaseServiceTest, self).setUp()
+		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'], io_loop=self.io_loop)
+		self.credentials = None
+		self.success = None
+		self.message = None
+
+	def tearDown(self):
+		self.configuration.cleanup()
+		super(BaseServiceTest, self).tearDown()
+
+	def success_callback(self, credentials, message):
+		self.success = True
+		self.message = message
+		self.credentials = credentials
+		self.stop()
+
+	def failure_callback(self, message):
+		self.success = False
+		self.message = message
+		self.credentials = None
+		self.stop()
