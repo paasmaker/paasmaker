@@ -324,9 +324,25 @@ class Service(OrmBase, Base):
 	workspace = relationship("Workspace", backref=backref('workspace', order_by=id))
 	name = Column(String, nullable=False, index=True, unique=True) # TODO: Unique per workspace.
 	provider = Column(String, nullable=False, index=True)
-	parameters = Column(Text, nullable=False)
-	credentials = Column(Text, nullable=True)
+	_parameters = Column('parameters', Text, nullable=False)
+	_credentials = Column('credentials', Text, nullable=True)
 	state = Column(Enum(*constants.SERVICE_STATES), nullable=False, index=True)
+
+	@hybrid_property
+	def parameters(self):
+		return json.loads(self._parameters)
+	@parameters.setter
+	def parameters(self, val):
+		self._parameters = json.dumps(val)
+	@hybrid_property
+	def credentials(self):
+		if not self._credentials:
+			return None
+		else:
+			return json.loads(self._credentials)
+	@credentials.setter
+	def credentials(self, val):
+		self._credentials = json.dumps(val)
 
 	def __repr__(self):
 		return "<Service('%s'->'%s')>" % (self.provider, self.workspace)

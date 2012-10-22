@@ -170,7 +170,7 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 			service.workspace = application.workspace
 			service.name = servicemeta['name']
 			service.provider = servicemeta['provider']
-			service.parameters = json.dumps(servicemeta['parameters'])
+			service.parameters = servicemeta['parameters']
 			service.state = 'NEW'
 
 			version.services.append(service)
@@ -286,3 +286,4 @@ services:
 		self.assertEquals(application.name, 'foo.com', 'Application name is not as expected.')
 		self.assertEquals(len(version.instance_types[0].hostnames), 4, "Unexpected number of hostnames.")
 		self.assertEquals(len(version.services), 2, "Unexpected number of services.")
+		self.assertEquals(len(version.services[0].parameters), 1, "Unexpected number of keys in the services parameters.")
