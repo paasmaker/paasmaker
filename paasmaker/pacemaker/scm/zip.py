@@ -16,6 +16,8 @@ class ZipSCM(BaseSCM):
 		# Extract the supplied file to it.
 		command = ['unzip', '-d', path, self.raw_parameters['location']]
 
+		# CAUTION: This means the logger MUST be a job logger.
+		# TODO: Handle this nicer...
 		log_fp = self.logger.takeover_file()
 
 		def cb(code):
@@ -26,7 +28,11 @@ class ZipSCM(BaseSCM):
 				error_callback("Unable to extract files.")
 
 		# Start the extractor. This will call cb() defined above when done.
-		extractor = paasmaker.util.Popen(command, stdout=log_fp, stderr=log_fp, on_exit=cb, io_loop=self.configuration.io_loop)
+		extractor = paasmaker.util.Popen(command,
+			stdout=log_fp,
+			stderr=log_fp,
+			on_exit=cb,
+			io_loop=self.configuration.io_loop)
 
 class ZipSCMTest(BaseSCMTest):
 	def test_simple(self):
