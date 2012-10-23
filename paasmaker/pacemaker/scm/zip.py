@@ -11,10 +11,10 @@ class ZipSCM(BaseSCM):
 		path = self.get_temporary_scm_dir()
 
 		self.logger.info("Unpacking to %s", path)
-		self.logger.info("Source zip file %s", self.raw_parameters['location'])
+		self.logger.info("Source zip file %s", self.parameters['location'])
 
 		# Extract the supplied file to it.
-		command = ['unzip', '-d', path, self.raw_parameters['location']]
+		command = ['unzip', '-d', path, self.parameters['location']]
 
 		# CAUTION: This means the logger MUST be a job logger.
 		# TODO: Handle this nicer...
@@ -58,6 +58,12 @@ class ZipSCMTest(BaseSCMTest):
 		# Now unpack it using the plugin.
 		logger = self.configuration.get_job_logger('testscmzip')
 		plugin = ZipSCM(self.configuration, {}, {'location': tempzip}, logger=logger)
+
+		# Sanity check.
+		plugin.check_options()
+		plugin.check_parameters()
+
+		# Proceed.
 		plugin.create_working_copy(self.success_callback, self.failure_callback)
 
 		self.wait()

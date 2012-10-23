@@ -15,7 +15,7 @@ class BaseSCMConfigurationSchema(colander.MappingSchema):
 class BaseSCMParametersSchema(colander.MappingSchema):
 	# Must have a location parameter.
 	location = colander.SchemaNode(colander.String(),
-		name="Location of source",
+		title="Location of source",
 		description="The location to fetch the source code from - typically a URL of some kind.")
 
 class BaseSCM(paasmaker.util.plugin.PluginMixin):
