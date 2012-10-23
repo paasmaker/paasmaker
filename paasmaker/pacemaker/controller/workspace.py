@@ -131,16 +131,16 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 	config_modules = ['pacemaker']
 
 	def get_app(self):
-		self.late_init_configuration()
-		routes = WorkspaceEditController.get_routes({'configuration': self.configuration, 'io_loop': self.io_loop})
-		routes.extend(WorkspaceListController.get_routes({'configuration': self.configuration, 'io_loop': self.io_loop}))
-		routes.extend(WorkspaceController.get_routes({'configuration': self.configuration, 'io_loop': self.io_loop}))
+		self.late_init_configuration(self.io_loop)
+		routes = WorkspaceEditController.get_routes({'configuration': self.configuration})
+		routes.extend(WorkspaceListController.get_routes({'configuration': self.configuration}))
+		routes.extend(WorkspaceController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
 	def test_create(self):
 		# Create the workspace.
-		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
 		request.set_workspace_name('Test workspace')
 		request.send(self.stop)
 		response = self.wait()
@@ -154,7 +154,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 
 	def test_create_fail(self):
 		# Send through some bogus data.
-		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
 		request.set_workspace_name('a')
 		request.send(self.stop)
 		response = self.wait()
@@ -164,7 +164,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 
 	def test_edit(self):
 		# Create the workspace.
-		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
 		request.set_workspace_name('Test workspace')
 		request.send(self.stop)
 		response = self.wait()
@@ -174,7 +174,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		workspace_id = response.data['workspace']['id']
 
 		# Set up the request.
-		request = paasmaker.common.api.workspace.WorkspaceEditAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.workspace.WorkspaceEditAPIRequest(self.configuration)
 		# This loads the workspace data from the server.
 		request.load(workspace_id, self.stop)
 		load_response = self.wait()
@@ -195,7 +195,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 
 	def test_edit_fail(self):
 		# Create the workspace.
-		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
 		request.set_workspace_name('Test workspace')
 		request.send(self.stop)
 		response = self.wait()
@@ -205,7 +205,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		workspace_id = response.data['workspace']['id']
 
 		# Set up the request.
-		request = paasmaker.common.api.workspace.WorkspaceEditAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.workspace.WorkspaceEditAPIRequest(self.configuration)
 		# This loads the workspace data from the server.
 		request.load(workspace_id, self.stop)
 		load_response = self.wait()
@@ -223,14 +223,14 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 
 	def test_list(self):
 		# Create the workspace.
-		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
 		request.set_workspace_name('Test workspace')
 		request.send(self.stop)
 		response = self.wait()
 
 		self.failIf(not response.success)
 
-		request = paasmaker.common.api.workspace.WorkspaceListAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.workspace.WorkspaceListAPIRequest(self.configuration)
 		request.send(self.stop)
 		response = self.wait()
 

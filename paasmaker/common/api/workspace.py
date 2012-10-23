@@ -39,7 +39,7 @@ class WorkspaceEditAPIRequest(WorkspaceCreateAPIRequest):
 		self.workspace_id = workspace_id
 
 	def load(self, workspace_id, callback):
-		request = WorkspaceGetAPIRequest(self.configuration, self.io_loop)
+		request = WorkspaceGetAPIRequest(self.configuration)
 		request.set_workspace(workspace_id)
 		def on_load_complete(response):
 			logger.debug("Loading complete.")

@@ -150,7 +150,7 @@ class LogStreamHandlerTestClient(TornadoWebSocketClient):
 
 class LogStreamHandlerTest(BaseControllerTest):
 	def get_app(self):
-		self.late_init_configuration()
+		self.late_init_configuration(self.io_loop)
 		routes = LogStreamHandler.get_routes({'configuration': self.configuration})
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application

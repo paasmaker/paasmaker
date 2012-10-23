@@ -43,7 +43,7 @@ class ProfileControllerTest(BaseControllerTest):
 	config_modules = ['pacemaker']
 
 	def get_app(self):
-		self.late_init_configuration()
+		self.late_init_configuration(self.io_loop)
 		routes = ProfileController.get_routes({'configuration': self.configuration})
 		routes.extend(ProfileResetAPIKeyController.get_routes({'configuration': self.configuration}))
 		routes.extend(paasmaker.pacemaker.controller.login.LoginController.get_routes({'configuration': self.configuration}))

@@ -34,9 +34,11 @@ class ApplicationSource(colander.MappingSchema):
 	method = colander.SchemaNode(colander.String(),
 		title="Source fetching method",
 		description="The method to grab and prepare the source")
-	location = colander.SchemaNode(colander.String(),
-		title="Location of source",
-		description="The location to fetch the source from.")
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Parameters for the source fetcher.",
+		description="Any parameters to the source fetching method.",
+		default={},
+		missing={})
 	prepare = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()),
 		title="Prepare commands",
 		description="Commands used to prepare a pristine source for execution.")
@@ -57,7 +59,7 @@ class Runtime(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Runtime name",
 		description="The runtime plugin name.")
-	parameters = colander.SchemaNode(colander.String(),
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="Runtime parameters",
 		description="Any parameters to the runtime.",
 		default={},
@@ -186,7 +188,8 @@ application:
     tag: value
   source:
     method: paasmaker.scm.git
-    location: git@foo.com/paasmaker/paasmaker.git
+    parameters:
+      location: git@foo.com/paasmaker/paasmaker.git
     prepare:
       - paasmaker.prepare.symfony2
       - php composer.phar install

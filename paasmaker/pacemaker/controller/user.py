@@ -156,16 +156,16 @@ class UserEditControllerTest(BaseControllerTest):
 	config_modules = ['pacemaker']
 
 	def get_app(self):
-		self.late_init_configuration()
-		routes = UserEditController.get_routes({'configuration': self.configuration, 'io_loop': self.io_loop})
-		routes.extend(UserListController.get_routes({'configuration': self.configuration, 'io_loop': self.io_loop}))
-		routes.extend(UserController.get_routes({'configuration': self.configuration, 'io_loop': self.io_loop}))
+		self.late_init_configuration(self.io_loop)
+		routes = UserEditController.get_routes({'configuration': self.configuration})
+		routes.extend(UserListController.get_routes({'configuration': self.configuration}))
+		routes.extend(UserController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
 	def test_create(self):
 		# Create the user.
-		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
 		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
@@ -182,7 +182,7 @@ class UserEditControllerTest(BaseControllerTest):
 
 	def test_create_fail(self):
 		# Send through some bogus data.
-		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
 		request.set_user_params('', '', '', True)
 		request.send(self.stop)
 		response = self.wait()
@@ -200,7 +200,7 @@ class UserEditControllerTest(BaseControllerTest):
 
 	def test_edit(self):
 		# Create the user.
-		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
 		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
@@ -211,7 +211,7 @@ class UserEditControllerTest(BaseControllerTest):
 		user_id = response.data['user']['id']
 
 		# Set up the request.
-		request = paasmaker.common.api.user.UserEditAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.user.UserEditAPIRequest(self.configuration)
 		# This loads the user data from the server.
 		request.load(user_id, self.stop)
 		load_response = self.wait()
@@ -232,7 +232,7 @@ class UserEditControllerTest(BaseControllerTest):
 
 	def test_edit_fail(self):
 		# Create the user.
-		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
 		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
@@ -243,7 +243,7 @@ class UserEditControllerTest(BaseControllerTest):
 		user_id = response.data['user']['id']
 
 		# Set up the request.
-		request = paasmaker.common.api.user.UserEditAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.user.UserEditAPIRequest(self.configuration)
 		# This loads the user data from the server.
 		request.load(user_id, self.stop)
 		load_response = self.wait()
@@ -261,7 +261,7 @@ class UserEditControllerTest(BaseControllerTest):
 
 	def test_list(self):
 		# Create the user.
-		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
 		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
@@ -269,7 +269,7 @@ class UserEditControllerTest(BaseControllerTest):
 
 		self.failIf(not response.success)
 
-		request = paasmaker.common.api.user.UserListAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.user.UserListAPIRequest(self.configuration)
 		request.send(self.stop)
 		response = self.wait()
 

@@ -76,8 +76,6 @@ router:
 """
 
 	def __init__(self, port=8888, modules=[], io_loop=None):
-		self.io_loop = io_loop
-
 		# Choose filenames and set up example configuration.
 		configfile = tempfile.mkstemp()
 		self.params = {}
@@ -107,6 +105,9 @@ router:
 
 		# Call parent constructor.
 		super(ConfigurationStub, self).__init__()
+
+		# Replace the IO loop.
+		self.io_loop = io_loop
 
 		# Recreate the job manager with the IO loop.
 		self.job_manager = paasmaker.util.jobmanager.JobManager(self, io_loop=io_loop)

@@ -264,7 +264,7 @@ class ImNotA(Exception):
 	pass
 
 class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
-	def __init__(self):
+	def __init__(self, io_loop=None):
 		super(Configuration, self).__init__(ConfigurationSchema())
 		self.port_allocator = paasmaker.util.port.FreePortFinder()
 		self.plugins = paasmaker.util.PluginRegistry(self)
@@ -272,6 +272,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.exchange = None
 		self.job_watcher = None
 		self.job_manager = paasmaker.util.jobmanager.JobManager(self)
+		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
 
 	def load_from_file(self, search_path):
 		# If we were supplied a configuration file on the command line,

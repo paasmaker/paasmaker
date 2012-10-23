@@ -76,7 +76,7 @@ class LoginControllerTest(BaseControllerTest):
 	config_modules = ['pacemaker']
 
 	def get_app(self):
-		self.late_init_configuration()
+		self.late_init_configuration(self.io_loop)
 		routes = LoginController.get_routes({'configuration': self.configuration})
 		routes.extend(LogoutController.get_routes({'configuration': self.configuration}))
 		routes.extend(InformationController.get_routes({'configuration': self.configuration}))
@@ -121,7 +121,7 @@ class LoginControllerTest(BaseControllerTest):
 		s.refresh(u)
 
 		# Ok, now that we've done that, try to log in.
-		request = paasmaker.common.api.LoginAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.LoginAPIRequest(self.configuration)
 		request.set_credentials('username', 'test')
 		request.send(self.stop)
 		response = self.wait()
@@ -157,7 +157,7 @@ class LoginControllerTest(BaseControllerTest):
 		s.commit()
 		s.refresh(u)
 
-		request = paasmaker.common.api.InformationAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.InformationAPIRequest(self.configuration)
 		request.set_apikey_auth('bogus')
 		request.send(self.stop)
 		response = self.wait()
@@ -166,7 +166,7 @@ class LoginControllerTest(BaseControllerTest):
 		self.failIf(response.success)
 
 		# Try it again with the key.
-		request = paasmaker.common.api.InformationAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.InformationAPIRequest(self.configuration)
 		request.set_apikey_auth(u.apikey)
 		request.send(self.stop)
 		response = self.wait()

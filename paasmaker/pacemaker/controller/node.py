@@ -88,7 +88,7 @@ class NodeController(BaseController):
 
 		if do_connectivity_check:
 			# Attempt to connect to the node...
-			request = paasmaker.common.api.information.InformationAPIRequest(self.configuration, self.io_loop)
+			request = paasmaker.common.api.information.InformationAPIRequest(self.configuration)
 			request.set_target(node)
 			# TODO: Make the timeout configurable.
 			response = yield tornado.gen.Task(request.send, connect_timeout=1.0)
@@ -121,15 +121,15 @@ class NodeControllerTest(BaseControllerTest):
 	config_modules = ['pacemaker', 'heart']
 
 	def get_app(self):
-		self.late_init_configuration()
-		routes = NodeController.get_routes({'configuration': self.configuration, 'io_loop': self.io_loop})
+		self.late_init_configuration(self.io_loop)
+		routes = NodeController.get_routes({'configuration': self.configuration})
 		routes.extend(paasmaker.common.controller.InformationController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
 	def test_register(self):
 		# Register the node.
-		request = NodeRegisterAPIRequestLocalHost(self.configuration, self.io_loop)
+		request = NodeRegisterAPIRequestLocalHost(self.configuration)
 		request.send(self.stop)
 		response = self.wait()
 
@@ -145,14 +145,14 @@ class NodeControllerTest(BaseControllerTest):
 		first_id = response.data['node']['id']
 
 		# Register again. This should fail, as it detects the same route/port combination.
-		request = NodeRegisterAPIRequestLocalHost(self.configuration, self.io_loop)
+		request = NodeRegisterAPIRequestLocalHost(self.configuration)
 		request.send(self.stop)
 		response = self.wait()
 
 		self.failIf(response.success)
 
 		# Now update our node.
-		request = NodeUpdateAPIRequestLocalHost(self.configuration, self.io_loop)
+		request = NodeUpdateAPIRequestLocalHost(self.configuration)
 		request.send(self.stop)
 		response = self.wait()
 
@@ -166,7 +166,7 @@ class NodeControllerTest(BaseControllerTest):
 
 	def test_fail_connect_port(self):
 		# Test when it can't connect.
-		request = NodeRegisterAPIRequestFailPort(self.configuration, self.io_loop)
+		request = NodeRegisterAPIRequestFailPort(self.configuration)
 		request.send(self.stop)
 		response = self.wait()
 
@@ -175,7 +175,7 @@ class NodeControllerTest(BaseControllerTest):
 		self.assertEquals(len(response.warnings), 0, "There were warnings.")
 
 	def test_fail_update_no_exist(self):
-		request = NodeUpdateAPIRequestFailUUID(self.configuration, self.io_loop)
+		request = NodeUpdateAPIRequestFailUUID(self.configuration)
 		request.send(self.stop)
 		response = self.wait()
 
@@ -185,7 +185,7 @@ class NodeControllerTest(BaseControllerTest):
 
 	def test_fail_connect_host(self):
 		# Test when it can't connect.
-		request = NodeRegisterAPIRequestFailHost(self.configuration, self.io_loop)
+		request = NodeRegisterAPIRequestFailHost(self.configuration)
 		request.send(self.stop)
 		response = self.wait()
 

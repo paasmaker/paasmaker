@@ -327,7 +327,7 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 	config_modules = []
 
-	def late_init_configuration(self):
+	def late_init_configuration(self, io_loop):
 		"""
 		Late initialize configuration. This is to solve the chicken-and-egg issue of getting
 		this unit tests test HTTP port.
@@ -335,7 +335,8 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 		if not self.configuration:
 			self.configuration = paasmaker.common.configuration.ConfigurationStub(
 				port=self.get_http_port(),
-				modules=self.config_modules)
+				modules=self.config_modules,
+				io_loop=io_loop)
 		return self.configuration
 
 	def setUp(self):
@@ -375,7 +376,7 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 			s.refresh(u)
 
 		# Ok, now that we've done that, try to log in.
-		request = paasmaker.common.api.LoginAPIRequest(self.configuration, self.io_loop)
+		request = paasmaker.common.api.LoginAPIRequest(self.configuration)
 		request.set_credentials('username', 'testtest')
 		request.send(self.stop)
 		response = self.wait()

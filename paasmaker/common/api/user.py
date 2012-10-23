@@ -61,7 +61,7 @@ class UserEditAPIRequest(UserCreateAPIRequest):
 		self.user_id = user_id
 
 	def load(self, user_id, callback):
-		request = UserGetAPIRequest(self.configuration, self.io_loop)
+		request = UserGetAPIRequest(self.configuration)
 		request.set_user(user_id)
 		def on_load_complete(response):
 			logger.debug("Loading complete.")
