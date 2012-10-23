@@ -14,11 +14,6 @@ def get_class( kls ):
 	return m
 
 class PluginMixin(object):
-	def get_options_schema(self):
-		raise NotImplementedError("You must implement get_options_schema")
-	def get_parameters_schema(self):
-		raise NotImplementedError("You must implement get_parameters_schema")
-
 	def __init__(self, configuration, options, parameters, logger = None):
 		self.configuration = configuration
 		self.raw_options = options
@@ -29,6 +24,11 @@ class PluginMixin(object):
 			self.logger.addHandler(logging.NullHandler())
 		else:
 			self.logger = logger
+
+	def get_options_schema(self):
+		raise NotImplementedError("You must implement get_options_schema")
+	def get_parameters_schema(self):
+		raise NotImplementedError("You must implement get_parameters_schema")
 
 	def check_options(self):
 		try:
