@@ -127,7 +127,7 @@ class JobManager(object):
 		child = self.jobs[child.job_id]
 		parent.add_child_job(child)
 		self.parents[child.job_id] = parent.job_id
-		logger.debug("Completed parent %s adding child %s", parent.job_id, child.job_id)
+		logger.debug("Parent %s adding child %s complete.", parent.job_id, child.job_id)
 
 		# Advertise that the job is now waiting, and the parent/child relationship.
 		# TODO: Test this. Probably via the audit writer?

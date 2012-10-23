@@ -236,7 +236,7 @@ services:
 		super(TestApplicationConfiguration, self).tearDown()
 
 	def get_app(self):
-		self.late_init_configuration()
+		self.late_init_configuration(self.io_loop)
 		routes = []
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application

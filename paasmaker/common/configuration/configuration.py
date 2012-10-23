@@ -33,24 +33,28 @@ define("debug", type=int, default=0, help="Enable Tornado debug mode.")
 define("configfile", type=str, default="", help="Override configuration file.")
 
 # The Configuration Schema.
-class PacemakerServiceSchema(colander.MappingSchema):
+class PluginSchema(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Symbolic name",
-		description="The symbolic name for this service, used to match it up in application configuration")
+		description="The symbolic name for this plugin, used to match it up in application configuration")
 	cls = colander.SchemaNode(colander.String(),
-		title="Service class",
-		description="The class used to provide this service")
+		title="Plugin class",
+		description="The class used to provide this plugin")
 	title = colander.SchemaNode(colander.String(),
 		title="Friendly name",
-		description="The friendly name for this service")
+		description="The friendly name for this plugin")
 	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Runtime Parameters",
-		description="Parameters for this particular service",
+		title="Plugin Parameters",
+		description="Parameters for this particular plugin",
 		missing={},
 		default={})
 
 class PacemakerServicesSchema(colander.SequenceSchema):
-	service = PacemakerServiceSchema()
+	service = PluginSchema()
+class PacemakerSCMsSchema(colander.SequenceSchema):
+	scm = PluginSchema()
+class PacemakerPreparesSchema(colander.SequenceSchema):
+	prepare = PluginSchema()
 
 class PacemakerSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -74,10 +78,20 @@ class PacemakerSchema(colander.MappingSchema):
 		description="A list of services offered by this pacemaker.",
 		missing=[],
 		default=[])
+	scms = PacemakerSCMsSchema(
+		title="SCMs",
+		description="A list of SCMs and configuration available to this pacemaker.",
+		missing=[],
+		default=[])
+	prepares = PacemakerPreparesSchema(
+		title="Prepares",
+		description="A list of prepare plugins available to this pacemaker.",
+		missing=[],
+		default=[])
 
 	@staticmethod
 	def default():
-		return {'enabled': False, 'services': []}
+		return {'enabled': False, 'services': [], 'scms': [], 'prepares': []}
 
 class HeartRuntimeSchema(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
@@ -301,6 +315,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# Load pacemaker plugins.
 		if self.is_pacemaker():
 			self.load_plugins(self.plugins, self['pacemaker']['services'])
+			self.load_plugins(self.plugins, self['pacemaker']['scms'])
+			self.load_plugins(self.plugins, self['pacemaker']['prepares'])
 
 		self.update_flat()
 

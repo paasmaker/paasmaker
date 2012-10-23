@@ -37,6 +37,10 @@ pacemaker:
     - name: paasmaker.service.parameters
       cls: paasmaker.pacemaker.service.parameters.ParametersService
       title: Parameters Service
+  scms:
+    - name: paasmaker.scm.zip
+      cls: paasmaker.pacemaker.scm.zip.ZipSCM
+      title: Zip file SCM
 """
 
 	heart_config = """
