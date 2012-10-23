@@ -167,7 +167,10 @@ class Popen(subprocess.Popen):
     def join(self, rc):
         if hasattr(self, 'on_exit'):
             self.callback(self.on_exit, rc)
-        super(Popen, self).join()
+	sup = super(Popen, self)
+	if hasattr(sup, 'join'):
+	    sup.join()
+        #super(Popen, self).join()
 
 class PopenTest(tornado.testing.AsyncTestCase):
     def setUp(self):
