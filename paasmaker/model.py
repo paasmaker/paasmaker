@@ -236,6 +236,7 @@ class ApplicationVersion(OrmBase, Base):
 	is_current = Column(Boolean, nullable=False)
 	statistics = Column(Text, nullable=True)
 	manifest = Column(Text, nullable=False)
+	source_path = Column(String, nullable=True)
 
 	services = relationship('Service', secondary=application_version_services, backref='application_versions')
 
