@@ -363,6 +363,15 @@ class Service(OrmBase, Base):
 			service.state = 'NEW'
 			return service
 
+	@staticmethod
+	def get_credentials_for(session, version):
+		services = session.query(Service).filter(Service.application_version == version)
+		credentials = {}
+		for service in services:
+			credentials[service.name] = service.credentials
+
+		return credentials
+
 class Job(OrmBase, Base):
 	__tablename__ = 'job'
 
