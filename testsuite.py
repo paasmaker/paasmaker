@@ -48,7 +48,9 @@ test_sets = {
 	paasmaker.heart.runtime: ['all', 'slow', 'heart', 'runtime'],
 	paasmaker.heart.runtime.php: ['all', 'slow', 'heart', 'runtime', 'php'],
 
-	paasmaker.pacemaker.service.parameters: ['all', 'service', 'serviceparameters']
+	paasmaker.pacemaker.service.parameters: ['all', 'service', 'serviceparameters'],
+
+	paasmaker.pacemaker.scm.zip: ['all', 'scm', 'slow']
 }
 
 if __name__ == '__main__':
