@@ -59,7 +59,7 @@ class JobRunner(object):
 		raise NotImplementedError("Abort is not implemented.")
 
 	def start_job_helper(self):
-		if not self.job_aborted:
+		if not self.job_aborted and not self.job_running:
 			self.job_running = True
 			self.job_manager.configuration.send_job_status(self.job_id, state='RUNNING')
 			# TODO: Catch sub exceptions, abort/fail job.
@@ -223,11 +223,15 @@ class JobManager(object):
 		# Handle the incoming states.
 		if state in paasmaker.common.core.constants.JOB_ERROR_STATES:
 			logger.info("Job %s in state %s - handling failure.", job_id, state)
+			job = self.jobs[job_id]
+			logger.info("Failed job: %s", job.get_job_title())
 			# That job failed, or was aborted. Kill off related jobs.
 			self.handle_fail(job_id)
 
 		if state in paasmaker.common.core.constants.JOB_SUCCESS_STATES:
 			logger.info("Job %s in state %s - evaluating new jobs for startup.", job_id, state)
+			job = self.jobs[job_id]
+			logger.info("Completed job: %s", job.get_job_title())
 			# Success! Mark it as complete, then evaluate our jobs again.
 			# Does this job have a parent? If so, remove this job from
 			# the list, so it goes on to process the next one.
