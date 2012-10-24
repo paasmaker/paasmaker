@@ -412,6 +412,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			os.makedirs(container)
 		path = os.path.join(container, checksum[2:] + '.log')
 		return path
+	def debug_cat_job_log(self, job_id):
+		path = self.get_job_log_path(job_id)
+		fp = open(path, 'r')
+		print fp.read()
+		fp.close()
 	def get_job_message_pub_topic(self, job_id):
 		# Why add the 'j' to the job name? It seems a topic name
 		# can't start with a number.
