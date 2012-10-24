@@ -113,6 +113,9 @@ class JobManager(object):
 		logger.info("Adding job object for %s", job_id)
 		if not isinstance(job, JobRunner):
 			raise ValueError("job parameter should be instance of JobRunner.")
+		if hasattr(job, 'job_id'):
+			if self.jobs.has_key(job.job_id):
+				raise ValueError("This job already exists in this database. Don't readd it.")
 		job.set_job_parameters(job_id, self)
 		self.jobs[job_id] = job
 		logger.debug("Job %s is now stored.", job_id)
