@@ -1,5 +1,6 @@
 
 import os
+import subprocess
 
 import paasmaker
 from manifestreader import ManifestReaderJob
@@ -123,3 +124,10 @@ class PrepareJobTest(tornado.testing.AsyncTestCase):
 		result = self.wait()
 
 		self.assertEquals(result['state'], 'SUCCESS', "Should have succeeded.")
+
+		# Verify the package exists, and has the files we expect.
+		self.assertTrue(os.path.exists(root_job.package), "Packed file does not exist.")
+		files = subprocess.check_output(['tar', 'ztvf', root_job.package])
+		self.assertIn("app.py", files, "Can't find app.py.")
+		self.assertIn("manifest.yml", files, "Can't find manifest.")
+		self.assertIn("prepare.txt", files, "Can't find prepare.txt - prepare probably failed.")

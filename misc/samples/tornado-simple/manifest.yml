@@ -10,7 +10,7 @@ application:
     parameters:
       location: upload
     prepare:
-      - echo "prepare" > prepare.txt
+      - touch prepare.txt
 
 instances:
   web:
