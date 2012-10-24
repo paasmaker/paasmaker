@@ -116,6 +116,9 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 				# Because the default output is rather confusing...!
 				raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self['instance']['instances'])
 
+	def set_upload_location(self, location):
+		self['application']['source']['parameters']['location'] = location
+
 	def create_application(self, session, workspace):
 		application = paasmaker.model.Application()
 		application.workspace = workspace
