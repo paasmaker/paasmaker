@@ -22,6 +22,8 @@ class ZipSCM(BaseSCM):
 
 		def cb(code):
 			self.logger.untakeover_file(log_fp)
+			self.logger.info("Zip command returned code: %d", code)
+			#self.configuration.debug_cat_job_log(self.logger.job_id)
 			if code == 0:
 				callback(path, "Successfully extracted files.")
 			else:
