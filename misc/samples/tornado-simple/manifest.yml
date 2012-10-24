@@ -1,0 +1,34 @@
+manifest:
+  version: 1
+
+application:
+  name: tornado-simple
+  tags:
+    tag: value
+  source:
+    method: paasmaker.scm.zip
+    parameters:
+      location: upload
+    prepare:
+      - echo "prepare" > prepare.txt
+
+instances:
+  web:
+    quantity: 1
+    runtime:
+      name: paasmaker.runtime.shell
+      parameters:
+        launch_command: "python app.py --port=%(port)d"
+      version: 1
+    startup:
+      - echo "startup" > startup.txt
+    placement:
+      strategy: paasmaker.placement.default
+    hostnames:
+      - tornado-simple.paasmaker.com
+
+services:
+  - name: variables
+    provider: paasmaker.service.parameters
+    parameters:
+      one: two
