@@ -54,7 +54,7 @@ http {
 
 class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 	def get_app(self):
-		self.late_init_configuration()
+		self.late_init_configuration(self.io_loop)
 		routes = paasmaker.common.controller.example.ExampleController.get_routes({'configuration': self.configuration})
 		routes.extend(paasmaker.common.controller.example.ExampleFailController.get_routes({'configuration': self.configuration}))
 		routes.extend(paasmaker.common.controller.example.ExamplePostController.get_routes({'configuration': self.configuration}))
