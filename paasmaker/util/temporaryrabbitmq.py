@@ -86,6 +86,8 @@ class TemporaryRabbitMQ:
 			virtual_host='/',
 			credentials=credentials)
 		self.client = TornadoConnection(parameters, on_open_callback=callback, io_loop=io_loop)
+		# TODO: This supresses some warnings during unit tests, but maybe is not good for production.
+		self.client.set_backpressure_multiplier(1000)
 		return self.client
 
 	def stop(self):
