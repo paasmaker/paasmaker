@@ -33,6 +33,8 @@ class Manager(object):
         while True:
             try:
                 pid, rc = os.waitpid(-1, os.WNOHANG)
+                if pid == 0:
+                    break
             except OSError, e:
                 if e.errno != 10: # No child processes
                     raise
@@ -40,7 +42,8 @@ class Manager(object):
                     break
 
             child = self.children.pop(pid, None)
-            child.join(rc)
+            if child:
+                child.join(rc)
 
 class Popen(subprocess.Popen):
     _manager = None
@@ -176,9 +179,10 @@ class Popen(subprocess.Popen):
     def join(self, rc):
         if hasattr(self, 'on_exit'):
             self.callback(self.on_exit, rc)
-	sup = super(Popen, self)
-	if hasattr(sup, 'join'):
-	    sup.join()
+        # Sometimes the code below returns a Popen
+        # object that doesn't have a join() method.
+        # This is only during unit tests though,
+        # and when run in certain combinations and orders.
         #super(Popen, self).join()
 
 class PopenTest(tornado.testing.AsyncTestCase):
