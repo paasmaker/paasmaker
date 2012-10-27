@@ -51,6 +51,15 @@ class Popen(subprocess.Popen):
 
         self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
 
+        manager = self.manager
+
+        if manager.io_loop != self.io_loop:
+            # Manager has a different IO loop to us. This happens during
+            # unit tests and causes them to fail. Rather than recreating
+            # the manager instance and having race conditions with adding
+            # a new signal handler, just inject the new IO loop into it.
+            manager.io_loop = self.io_loop
+
         if on_stdout:
             self.on_stdout = stack_context.wrap(on_stdout)
             kwargs['stdout'] = subprocess.PIPE
@@ -76,7 +85,7 @@ class Popen(subprocess.Popen):
             if hasattr(self, 'on_stderr'):
                 self.prepare_fd('stderr')
 
-        self.manager.children[self.pid] = self
+        manager.children[self.pid] = self
 
     @property
     def manager(self):
@@ -229,14 +238,10 @@ class PopenTest(tornado.testing.AsyncTestCase):
 
     def test_popen(self):
         cmd = self.make_command(1, 0., 0.)
-        # CAUTION: This test is being a hiesen test. It works when you don't run
-        # all unit tests, but then sometimes fails when you run the whole suite.
-        # This bug should almost certainly be fixed at some time.
         self.p = Popen(cmd, io_loop=self.io_loop, close_fds=True, on_stdout=self.on_output_sink, on_stderr=self.on_output_sink, on_exit=self.stop)
         self.wait()
 
     def test_popen_exit_callback(self):
-        # TODO: This sometimes fails with a timeout depending on what unit tests it's run with.
         cmd = self.make_command(1, 0., 0.)
         def on_exit(rc):
             self.stop(rc)
