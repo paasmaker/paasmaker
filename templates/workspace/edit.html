@@ -9,7 +9,12 @@
 		<label for="name">Name:</label>
 		<input name="name" id="name" type="text" value="{{ form.get('name') }}" />
 		{% raw format_form_error(form, 'name') %}
+
+		<label for="tags">Tags:</label>
+		<input name="tags" id="tags" type="text" value="{{ form.get('tags') }}" />
+		{% raw format_form_error(form, 'tags') %}
 		<br />
+
 		<button type="submit" class="btn">Submit</button>
 	</form>
 {% end %}

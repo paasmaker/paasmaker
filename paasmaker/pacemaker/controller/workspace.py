@@ -53,7 +53,10 @@ class WorkspaceEditController(BaseController):
 	def get_form(self, workspace=None):
 		schema = WorkspaceSchema()
 		if workspace:
-			form = smallform.Form(schema, defaults=workspace.flatten())
+			# Special handling for tags.
+			defaults = workspace.flatten()
+			defaults['tags'] = json.dumps(workspace.tags)
+			form = smallform.Form(schema, defaults=defaults)
 		else:
 			form = smallform.Form(schema)
 		return form
@@ -84,6 +87,9 @@ class WorkspaceEditController(BaseController):
 				self.write_error(404, "No such workspace.")
 
 		form = self.get_form(workspace)
+		# Hack: if tags is a string, JSON decode it first.
+		if self.params.has_key('tags') and isinstance(self.params['tags'], basestring):
+			self.params['tags'] = json.loads(self.params['tags'])
 		values = form.validate(self.params)
 		if not form.errors:
 			if not workspace_id:
