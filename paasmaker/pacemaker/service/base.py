@@ -5,12 +5,6 @@ import paasmaker
 # Base service.
 class BaseService(paasmaker.util.plugin.PluginMixin):
 
-	def get_information(self):
-		"""
-		Get information about this particular service.
-		"""
-		pass
-
 	def create(self, callback, error_callback):
 		"""
 		Create the service, using the parameters supplied by the application

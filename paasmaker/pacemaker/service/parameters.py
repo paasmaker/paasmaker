@@ -22,9 +22,6 @@ class ParametersService(BaseService):
 	def get_parameters_schema(self):
 		return ParametersServiceParametersSchema()
 
-	def get_information(self):
-		return ServiceInformation('Parameters', '1.0', ParametersService.__doc__)
-
 	def create(self, callback, error_callback):
 		# Does the same thing as update.
 		self.logger.debug("Creating service with parameters: %s", str(self.raw_parameters))
@@ -52,6 +49,11 @@ class ParametersServiceTest(BaseServiceTest):
 		# There is very few ways this can go wrong,
 		# but this is an example for other services.
 		service = ParametersService(self.configuration, {}, {'test': 'bar'})
+
+		# Sanity check.
+		service.check_options()
+		service.check_parameters()
+
 		service.create(self.success_callback, self.failure_callback)
 
 		self.wait()
