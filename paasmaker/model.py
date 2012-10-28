@@ -45,7 +45,11 @@ class OrmBase(object):
 			fields['created'] = None
 		fields['class'] = self.__class__.__name__
 		for field in field_list:
-			fields[field] = self.__dict__[field]
+			try:
+				fields[field] = self.__dict__[field]
+			except KeyError, ex:
+				# Try again with the attribute getter, as it might be overriden.
+				fields[field] = getattr(self, field)
 		return fields
 
 	def delete(self):
@@ -172,6 +176,7 @@ class Workspace(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String, nullable=False, unique=True)
+	_tags = Column('tags', Text, nullable=True)
 
 	def __init__(self):
 		pass
@@ -180,7 +185,18 @@ class Workspace(OrmBase, Base):
 		return "<Workspace('%s')>" % self.name
 
 	def flatten(self, field_list=None):
-		return super(Workspace, self).flatten(['name'])
+		return super(Workspace, self).flatten(['name', 'tags'])
+
+	@hybrid_property
+	def tags(self):
+		if self._tags:
+			return json.loads(self._tags)
+		else:
+			return {}
+
+	@tags.setter
+	def tags(self, val):
+		self._tags = json.dumps(val)
 
 class WorkspaceUser(OrmBase, Base):
 	__tablename__ = 'workspace_user'
@@ -479,6 +495,7 @@ class TestModel(unittest.TestCase):
 
 		workspace = Workspace()
 		workspace.name = 'Work Zone'
+		workspace.tags = {'test': 'tag'}
 		s.add(workspace)
 		s.commit()
 
@@ -487,6 +504,7 @@ class TestModel(unittest.TestCase):
 		s.commit()
 
 		self.assertEquals(len(workspace.users), 1, "Workspace does not have a user.")
+		self.assertEquals(len(workspace.tags.keys()), 1, "Workspace tags is not correct.")
 		self.assertEquals(len(role.workspaces), 1, "Role does not have a workspace.")
 		self.assertEquals(len(role.permissions), 1, "Role does not have any permissions.")
 

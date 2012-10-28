@@ -19,6 +19,11 @@ class WorkspaceSchema(colander.MappingSchema):
 		title="Workspace Name",
 		description="The name of this workspace.",
 		validator=colander.Length(min=2))
+	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Workspace Tags",
+		description="A set of tags for this workspace.",
+		missing={},
+		default={})
 
 class WorkspaceController(BaseController):
 	auth_methods = [BaseController.NODE, BaseController.USER]

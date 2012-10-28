@@ -24,6 +24,9 @@ class WorkspaceCreateAPIRequest(paasmaker.util.APIRequest):
 	def set_workspace_name(self, name):
 		self.params['name'] = name
 
+	def set_workspace_tags(self, tags):
+		self.params['tags'] = tags
+
 	def build_payload(self):
 		return self.params
 
