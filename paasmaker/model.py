@@ -71,7 +71,7 @@ class Node(OrmBase, Base):
 	pacemaker = Column(Boolean, nullable=False, default=False)
 	router = Column(Boolean, nullable=False, default=False)
 
-	tags = Column(Text, nullable=False, default="{}")
+	_tags = Column('tags', Text, nullable=False, default="{}")
 
 	def __init__(self, name, route, apiport, uuid, state):
 		self.name = name
@@ -84,13 +84,20 @@ class Node(OrmBase, Base):
 	def __repr__(self):
 		return "<Node('%s','%s')>" % (self.name, self.route)
 
-	def parsed_tags(self):
-		return json.loads(self.tags)
-
 	def flatten(self, field_list=None):
-		data = super(Node, self).flatten(['name', 'route', 'apiport', 'uuid', 'state', 'last_heard', 'heart', 'pacemaker', 'router'])
-		data['tags'] = self.parsed_tags()
+		data = super(Node, self).flatten(['name', 'route', 'apiport', 'uuid', 'state', 'last_heard', 'heart', 'pacemaker', 'router', 'tags'])
 		return data
+
+	@hybrid_property
+	def tags(self):
+		if self._tags:
+			return json.loads(self._tags)
+		else:
+			return {}
+
+	@tags.setter
+	def tags(self, val):
+		self._tags = json.dumps(val)
 
 class User(OrmBase, Base):
 	__tablename__ = 'user'
