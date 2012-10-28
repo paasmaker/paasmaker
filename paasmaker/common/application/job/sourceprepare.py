@@ -1,5 +1,6 @@
 
 import paasmaker
+from paasmaker.common.core import constants
 
 class SourcePreparerJob(paasmaker.util.jobmanager.JobRunner):
 	def __init__(self, configuration, prepare):
@@ -26,7 +27,7 @@ class SourcePreparerJob(paasmaker.util.jobmanager.JobRunner):
 		# CAUTION: The environment is not shared between commands.
 		if len(self.prepare) == 0:
 			logger.info("No tasks to progress, so successfully completed.")
-			self.finished_job('SUCCESS', 'No tasks to process.')
+			self.finished_job(constants.JOB.SUCCESS, 'No tasks to process.')
 		else:
 			logger.info("Running through %d tasks.", len(self.prepare))
 			task = self.prepare.pop()
@@ -41,7 +42,7 @@ class SourcePreparerJob(paasmaker.util.jobmanager.JobRunner):
 		except IndexError, ex:
 			# No more tasks to pop. So we're done!
 			logger.info("Completed all tasks successfully.")
-			self.finished_job('SUCCESS', 'Completed all prepare tasks successfully.')
+			self.finished_job(constants.JOB.SUCCESS, 'Completed all prepare tasks successfully.')
 
 	def do_prepare_task(self, task):
 		# If the task matches a plugin, run and execute that.
@@ -65,7 +66,7 @@ class SourcePreparerJob(paasmaker.util.jobmanager.JobRunner):
 					self.find_next_task()
 				else:
 					logger.error("Command did not complete successfully. Aborting.")
-					self.finished_job('FAILED', 'Command did not complete successfully. Aborting.')
+					self.finished_job(constants.JOB.FAILED, 'Command did not complete successfully. Aborting.')
 
 			# TODO: Commands that use shell redirection don't work,
 			# eg "echo foo > bar.txt"
@@ -83,4 +84,4 @@ class SourcePreparerJob(paasmaker.util.jobmanager.JobRunner):
 		self.find_next_task()
 
 	def plugin_failure(self, message):
-		self.finished_job('FAILED', message)
+		self.finished_job(constants.JOB.FAILED, message)

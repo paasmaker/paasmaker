@@ -3,6 +3,7 @@ import os
 import subprocess
 
 import paasmaker
+from paasmaker.common.core import constants
 from manifestreader import ManifestReaderJob
 
 import tornado
@@ -48,7 +49,7 @@ class ApplicationPrepareRootJob(paasmaker.util.jobmanager.ContainerJob):
 		self.session.add(version)
 		self.session.commit()
 
-		self.finished_job('SUCCESS', "Completed successfully.")
+		self.finished_job(constants.JOB.SUCCESS, "Completed successfully.")
 
 	@staticmethod
 	def start(configuration, name, manifest, workspace_id, application_id=None, uploaded_file=None):
@@ -123,7 +124,7 @@ class PrepareJobTest(tornado.testing.AsyncTestCase):
 
 		result = self.wait()
 
-		self.assertEquals(result['state'], 'SUCCESS', "Should have succeeded.")
+		self.assertEquals(result['state'], constants.JOB.SUCCESS, "Should have succeeded.")
 
 		# Verify the package exists, and has the files we expect.
 		self.assertTrue(os.path.exists(root_job.package), "Packed file does not exist.")

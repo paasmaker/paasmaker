@@ -7,6 +7,8 @@ import json
 from paasmaker.util.configurationhelper import InvalidConfigurationException
 from paasmaker.common.controller import BaseControllerTest
 
+from paasmaker.common.core import constants
+
 # Schema definition.
 class Service(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
@@ -143,7 +145,7 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 			# Basic information.
 			instance_type.name = name
 			instance_type.quantity = imetadata['quantity']
-			instance_type.state = 'NEW'
+			instance_type.state = constants.INSTANCE_TYPE.NEW
 			instance_type.exclusive = imetadata['exclusive']
 
 			# Runtime information.

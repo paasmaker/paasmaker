@@ -7,6 +7,8 @@ import json
 
 import tornado.testing
 
+from paasmaker.common.core import constants
+
 from pubsub import pub
 
 logger = logging.getLogger(__name__)
@@ -53,7 +55,7 @@ class JobLoggingFileHandler(logging.Handler):
 
 	def job_status_change(self, job_id=None, state=None, source=None):
 		logger.debug("Job status change: job_id %s, state %s, source %s", job_id, state, source)
-		if state in paasmaker.common.core.constants.JOB_FINISHED_STATES:
+		if state in constants.JOB_FINISHED_STATES:
 			# Pubsub callback for job status change.
 			# Close off that handler.
 			self.close_handler(job_id)
@@ -219,11 +221,11 @@ class JobLoggingTest(tornado.testing.AsyncTestCase):
 		self.assertEquals(len(self.handler.handlers.keys()), 1, "A handler was expected.")
 
 		# Send a job update (that's not a finished status) and make sure the handler is still open.
-		self.configuration.send_job_status(id1, 'RUNNING')
+		self.configuration.send_job_status(id1, constants.JOB.RUNNING)
 		self.assertEquals(len(self.handler.handlers.keys()), 1, "A handler was expected.")
 
 		# Mark a job as completed.
-		job1logger.complete('SUCCESS', "Success")
+		job1logger.complete(constants.JOB.SUCCESS, "Success")
 		self.assertEquals(len(self.handler.handlers.keys()), 0, "Handler was not closed and freed.")
 
 		# Now check that the summary was written and parseable.
@@ -231,7 +233,7 @@ class JobLoggingTest(tornado.testing.AsyncTestCase):
 		job1path = self.configuration.get_job_log_path(id1)
 		contents = open(job1path, 'r').read()
 		self.assertIn('state', contents)
-		self.assertIn('SUCCESS', contents)
+		self.assertIn(constants.JOB.SUCCESS, contents)
 		self.assertIn('{', contents)
 		self.assertIn('}', contents)
 

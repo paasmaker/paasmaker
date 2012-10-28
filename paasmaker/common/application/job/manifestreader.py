@@ -1,9 +1,11 @@
 
 import paasmaker
+from paasmaker.common.core import constants
 from packer import SourcePackerJob
 from service import ServiceJob, ServiceContainerJob
 from sourceprepare import SourcePreparerJob
 from sourcescm import SourceSCMJob
+from paasmaker.common.core import constants
 
 class ManifestReaderJob(paasmaker.util.jobmanager.JobRunner):
 	def __init__(self, configuration):
@@ -28,13 +30,13 @@ class ManifestReaderJob(paasmaker.util.jobmanager.JobRunner):
 		except paasmaker.common.configuration.InvalidConfigurationException, ex:
 			logger.critical("Failed to load configuration:")
 			logger.critical(ex)
-			self.finished_job('FAILED', "Failed to load configuration.")
+			self.finished_job(constants.JOB.FAILED, "Failed to load configuration.")
 			return
 
 		# Check that the source SCM exists.
 		if not self.configuration.plugins.exists(self.manifest['application']['source']['method']):
 			logger.critical("SCM plugin %s does not exist.", self.manifest['application']['source']['method'])
-			self.finished_job('FAILED', "SCM plugin %s does not exist." % self.manifest['application']['source']['method'])
+			self.finished_job(constants.JOB.FAILED, "SCM plugin %s does not exist." % self.manifest['application']['source']['method'])
 
 		# If the file is uploaded, inject it into the manifest.
 		if root.uploaded_file:
@@ -82,7 +84,7 @@ class ManifestReaderJob(paasmaker.util.jobmanager.JobRunner):
 		for service in root.version.services:
 			if not self.configuration.plugins.exists(service.provider):
 				logger.critical("No service provider %s found.", service.provider)
-				self.finished_job('FAILED', "Bad service provider supplied.")
+				self.finished_job(constants.JOB.FAILED, "Bad service provider supplied.")
 				return
 
 			# Create a job for it.
@@ -93,4 +95,4 @@ class ManifestReaderJob(paasmaker.util.jobmanager.JobRunner):
 		# So now we're all queued up.
 		# Mark this job as finished, which causes the other queued jobs to commence executing.
 		logger.debug("All jobs set up, signalling startup for those jobs.")
-		self.finished_job('SUCCESS', 'Successfully queued up other tasks.')
+		self.finished_job(constants.JOB.SUCCESS, 'Successfully queued up other tasks.')

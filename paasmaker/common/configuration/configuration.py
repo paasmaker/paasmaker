@@ -2,6 +2,7 @@
 import paasmaker
 from paasmaker.util.configurationhelper import InvalidConfigurationException
 from paasmaker.util.configurationhelper import NoConfigurationFileException
+from paasmaker.common.core import constants
 import unittest
 import os
 import signal
@@ -396,7 +397,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# All we need to do is allocate an ID and mark it as new.
 		# The messaging subsystem will handle persisting it to the DB.
 		job_id = str(uuid.uuid4())
-		self.send_job_status(job_id, 'NEW', title=title)
+		self.send_job_status(job_id, constants.JOB.NEW, title=title)
 		return job_id
 	def start_jobs(self):
 		self.job_manager.evaluate()
@@ -445,9 +446,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		Sends both an audit and an update message, as appropriate.
 		"""
 		# Sanity check.
-		if state in paasmaker.common.core.constants.JOB_FINISHED_STATES and not summary:
+		if state in constants.JOB_FINISHED_STATES and not summary:
 			raise ValueError('You must supply summary in state %s' % state)
-		if state == 'NEW' and not title:
+		if state == constants.JOB.NEW and not title:
 			raise ValueError('You must supply a title in state %s' % state)
 
 		# If source is not supplied, send along our own UUID.

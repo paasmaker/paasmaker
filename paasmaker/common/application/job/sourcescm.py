@@ -1,5 +1,6 @@
 
 import paasmaker
+from paasmaker.common.core import constants
 
 class SourceSCMJob(paasmaker.util.jobmanager.JobRunner):
 	def __init__(self, configuration, parameters):
@@ -16,7 +17,7 @@ class SourceSCMJob(paasmaker.util.jobmanager.JobRunner):
 		except paasmaker.common.configuration.InvalidConfigurationException, ex:
 			logger.critical("Failed to start a SCM plugin for %s.", self.parameters['method'])
 			logger.critical(ex)
-			self.finished_job('FAILED', "Failed to start a SCM plugin.")
+			self.finished_job(constants.JOB.FAILED, "Failed to start a SCM plugin.")
 			return
 
 		# Now that SCM plugin should create us a directory that we can work on.
@@ -30,8 +31,8 @@ class SourceSCMJob(paasmaker.util.jobmanager.JobRunner):
 		root.source_path = path
 
 		# And signal completion.
-		self.finished_job('SUCCESS', message)
+		self.finished_job(constants.JOB.SUCCESS, message)
 
 	def scm_failure(self, message):
 		# Signal failure.
-		self.finished_job('FAILED', message)
+		self.finished_job(constants.JOB.FAILED, message)

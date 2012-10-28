@@ -2,6 +2,7 @@
 import os
 
 import paasmaker
+from paasmaker.common.core import constants
 
 class SourcePackerJob(paasmaker.util.jobmanager.JobRunner):
 	def __init__(self, configuration):
@@ -33,10 +34,10 @@ class SourcePackerJob(paasmaker.util.jobmanager.JobRunner):
 			logger.untakeover_file(log_fp)
 			logger.info("Command result: %d" % code)
 			if code == 0:
-				self.finished_job('SUCCESS', 'Successfully packed source code.')
+				self.finished_job(constants.JOB.SUCCESS, 'Successfully packed source code.')
 			else:
 				logger.error("Unable to pack up source code.")
-				self.finished_job('FAILED', 'Unable to pack up source code.')
+				self.finished_job(constants.JOB.FAILED, 'Unable to pack up source code.')
 
 		command = ['tar', 'zcvf', package_full_name, '.']
 

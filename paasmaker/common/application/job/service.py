@@ -2,6 +2,7 @@
 import json
 
 import paasmaker
+from paasmaker.common.core import constants
 
 class ServiceContainerJob(paasmaker.util.jobmanager.ContainerJob):
 	def __init__(self, configuration):
@@ -20,7 +21,7 @@ class ServiceContainerJob(paasmaker.util.jobmanager.ContainerJob):
 		root.environment['PM_SERVICES'] = json.dumps(credentials)
 
 		# And signal success so the prepare jobs can start.
-		self.finished_job('SUCCESS', 'All services prepared.')
+		self.finished_job(constants.JOB.SUCCESS, 'All services prepared.')
 
 class ServiceJob(paasmaker.util.jobmanager.JobRunner):
 	def __init__(self, configuration, service):
@@ -38,11 +39,11 @@ class ServiceJob(paasmaker.util.jobmanager.JobRunner):
 		except paasmaker.common.configuration.InvalidConfigurationException, ex:
 			logger.critical("Failed to start a service plugin for %s.", self.service.provider)
 			logger.critical(ex)
-			self.finished_job('FAILED', "Failed to start a service plugin.")
+			self.finished_job(constants.JOB.FAILED, "Failed to start a service plugin.")
 			return
 
 		# Get this service plugin to create it's service.
-		if self.service.state == 'NEW':
+		if self.service.state == constants.SERVICE.NEW:
 			service_plugin.create(self.service_success, self.service_failure)
 		else:
 			service_plugin.update(self.service_success, self.service_failure)
@@ -54,12 +55,12 @@ class ServiceJob(paasmaker.util.jobmanager.JobRunner):
 
 		# Record the new state.
 		self.service.credentials = credentials
-		self.service.state = 'AVAILABLE'
+		self.service.state = constants.SERVICE.AVAILABLE
 		root.session.add(self.service)
 		root.session.commit()
 
 		# And signal completion.
-		self.finished_job('SUCCESS', message)
+		self.finished_job(constants.JOB.SUCCESS, message)
 
 	def service_failure(self, message):
 		root = self.get_root_job()
@@ -68,9 +69,9 @@ class ServiceJob(paasmaker.util.jobmanager.JobRunner):
 
 		# Record the new state.
 		self.service.credentials = credentials
-		self.service.state = 'ERROR'
+		self.service.state = constants.SERVICE.ERROR
 		root.session.add(self.service)
 		root.session.commit()
 
 		# Signal failure.
-		self.finished_job('FAILED', message)
+		self.finished_job(constants.JOB.FAILED, message)

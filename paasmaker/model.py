@@ -64,7 +64,7 @@ class Node(OrmBase, Base):
 	route = Column(String, nullable=False)
 	apiport = Column(Integer, nullable=False)
 	uuid = Column(String, nullable=False, unique=True, index=True)
-	state = Column(Enum(*constants.NODE_STATES), nullable=False)
+	state = Column(Enum(*constants.NODE.ALL), nullable=False)
 	last_heard = Column(DateTime, nullable=False)
 
 	heart = Column(Boolean, nullable=False, default=False)
@@ -297,7 +297,7 @@ class ApplicationInstanceType(OrmBase, Base):
 	placement_parameters = Column(Text, nullable=False)
 	exclusive = Column(Boolean, nullable=False)
 
-	state = Column(Enum(*constants.INSTANCE_TYPE_STATES), nullable=False, index=True)
+	state = Column(Enum(*constants.INSTANCE_TYPE.ALL), nullable=False, index=True)
 
 	def __repr__(self):
 		return "<ApplicationInstanceType('%s'@'%s')>" % (self.name, self.runtime)
@@ -315,7 +315,7 @@ class ApplicationInstance(OrmBase, Base):
 	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
 	node = relationship("Node", backref=backref('nodes', order_by=id))
 	configuration = Column(String, nullable=False, index=True)
-	state = Column(Enum(*constants.INSTANCE_STATES), nullable=False, index=True)
+	state = Column(Enum(*constants.INSTANCE.ALL), nullable=False, index=True)
 	statistics = Column(Text, nullable=True)
 
 	def __repr__(self):
@@ -350,7 +350,7 @@ class Service(OrmBase, Base):
 	provider = Column(String, nullable=False, index=True)
 	_parameters = Column('parameters', Text, nullable=False)
 	_credentials = Column('credentials', Text, nullable=True)
-	state = Column(Enum(*constants.SERVICE_STATES), nullable=False, index=True)
+	state = Column(Enum(*constants.SERVICE.ALL), nullable=False, index=True)
 
 	@hybrid_property
 	def parameters(self):
@@ -384,7 +384,7 @@ class Service(OrmBase, Base):
 			service = Service()
 			service.workspace = workspace
 			service.name = name
-			service.state = 'NEW'
+			service.state = constants.SERVICE.NEW
 			return service
 
 class Job(OrmBase, Base):
@@ -400,7 +400,7 @@ class Job(OrmBase, Base):
 	parent_id = Column(Integer, ForeignKey('job.id'), nullable=True)
 	children = relationship("Job")
 
-	state = Column(Enum(*constants.JOB_STATES), nullable=False, index=True)
+	state = Column(Enum(*constants.JOB.ALL), nullable=False, index=True)
 
 	def __repr__(self):
 		return "<Job('%s':'%s')>" % (self.unique, self.title)
@@ -419,8 +419,8 @@ class TestModel(unittest.TestCase):
 	metadata = None
 
 	test_items = [
-		Node(name='test', route='1.test.com', apiport=8888, uuid='1', state='ACTIVE'),
-		Node(name='test2', route='2.test.com', apiport=8888, uuid='2', state='ACTIVE')
+		Node(name='test', route='1.test.com', apiport=8888, uuid='1', state=constants.NODE.ACTIVE),
+		Node(name='test2', route='2.test.com', apiport=8888, uuid='2', state=constants.NODE.ACTIVE)
 	]
 
 	def setUp(self):
@@ -451,17 +451,17 @@ class TestModel(unittest.TestCase):
 
 	def test_created_timestamps(self):
 		s = self.__class__.session
-		n = Node('foo', 'bar', 8888, 'baz1', 'ACTIVE')
+		n = Node('foo', 'bar', 8888, 'baz1', constants.NODE.ACTIVE)
 		s.add(n)
 		s.commit()
-		n2 = Node('foo', 'bar', 8888, 'baz2', 'ACTIVE')
+		n2 = Node('foo', 'bar', 8888, 'baz2', constants.NODE.ACTIVE)
 		s.add(n2)
 		s.commit()
 		self.assertTrue(n2.created > n.created, "Created timestamp is not greater.")
 
 	def test_updated_timestamp(self):
 		s = self.__class__.session
-		n = Node('foo', 'bar', 8888, 'baz3', 'ACTIVE')
+		n = Node('foo', 'bar', 8888, 'baz3', constants.NODE.ACTIVE)
 		s.add(n)
 		s.commit()
 		ts1 = str(n.updated)
