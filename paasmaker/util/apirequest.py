@@ -48,9 +48,11 @@ class APIRequest(object):
 		if configuration:
 			self.authmethod = 'node'
 			self.authvalue = self.configuration.get_flat('auth_token')
+			self.io_loop = configuration.io_loop
 		else:
 			self.authmethod = None
 			self.authvalue = None
+			self.io_loop = tornado.ioloop.IOLoop.instance()
 
 	def set_apikey_auth(self, key):
 		self.authmethod = 'token'
@@ -124,7 +126,7 @@ class APIRequest(object):
 			endpoint += '&format=json'
 		logger.debug("Endpoint for request: %s", endpoint)
 		request = tornado.httpclient.HTTPRequest(endpoint, **kwargs)
-		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.configuration.io_loop)
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
 		client.fetch(request, our_callback)
 
 # TODO: Add unit tests!
