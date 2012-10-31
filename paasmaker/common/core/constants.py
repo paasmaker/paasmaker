@@ -1,4 +1,3 @@
-
 # From http://stackoverflow.com/questions/36932/whats-the-best-way-to-implement-an-enum-in-python
 # (Plus some tweaks)
 # Why do this at all? Originally they were just strings and arrays of strings, and I used them

@@ -1,8 +1,8 @@
 # paasmaker module init.
-import model
-import util
 import common
+import util
+import model
+import thirdparty
 import heart
 import router
-import thirdparty
 import pacemaker
