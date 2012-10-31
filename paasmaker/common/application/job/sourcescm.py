@@ -13,7 +13,7 @@ class SourceSCMJob(paasmaker.util.jobmanager.JobRunner):
 	def start_job(self):
 		logger = self.job_logger()
 		try:
-			scm_plugin = self.configuration.plugins.instantiate(self.parameters['method'], self.parameters['parameters'], logger)
+			scm_plugin = self.configuration.plugins.instantiate(self.parameters['method'], paasmaker.util.plugin.MODE.SCM_EXPORT, self.parameters['parameters'], logger)
 		except paasmaker.common.configuration.InvalidConfigurationException, ex:
 			logger.critical("Failed to start a SCM plugin for %s.", self.parameters['method'])
 			logger.critical(ex)

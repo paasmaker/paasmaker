@@ -3,7 +3,7 @@ import tornado.testing
 import paasmaker
 
 # Base service.
-class BaseService(paasmaker.util.plugin.PluginMixin):
+class BaseService(paasmaker.util.plugin.Plugin):
 
 	def create(self, callback, error_callback):
 		"""

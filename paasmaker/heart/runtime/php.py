@@ -1,4 +1,5 @@
 
+import paasmaker
 from base import BaseRuntime, BaseRuntimeTest
 import colander
 
@@ -30,10 +31,9 @@ class PHPRuntimeParametersSchema(colander.MappingSchema):
 		default=False)
 
 class PHPRuntime(BaseRuntime):
-	def get_options_schema(self):
-		return PHPRuntimeOptionsSchema()
-	def get_parameters_schema(self):
-		return PHPRuntimeParametersSchema()
+	MODES = [paasmaker.util.plugin.MODE.RUNTIME_STARTUP]
+	OPTIONS_SCHEMA = PHPRuntimeOptionsSchema()
+	PARAMETERS_SCHEMA = PHPRuntimeParametersSchema()
 
 	# TODO: Implement the rest of this...
 
@@ -49,5 +49,5 @@ class PHPRuntimeTest(BaseRuntimeTest):
 
 	def test_options(self):
 		self.registry.register('paasmaker.runtime.php', 'paasmaker.heart.runtime.PHPRuntime', {'apache_config_dir': 'value'})
-		instance = self.registry.instantiate('paasmaker.runtime.php', {'document_root': 'web/'})
+		instance = self.registry.instantiate('paasmaker.runtime.php', paasmaker.util.plugin.MODE.RUNTIME_STARTUP, {'document_root': 'web/'})
 		self.assertTrue(True, "Should have got here...")

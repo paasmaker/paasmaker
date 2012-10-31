@@ -7,7 +7,7 @@ from paasmaker.common.core import constants
 # TODO: Add logging!
 
 # Base placement.
-class BasePlacement(paasmaker.util.plugin.PluginMixin):
+class BasePlacement(paasmaker.util.plugin.Plugin):
 
 	# Helper functions for subclasses.
 	def get_active_nodes(self, session):

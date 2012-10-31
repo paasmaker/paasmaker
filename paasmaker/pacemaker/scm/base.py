@@ -18,11 +18,11 @@ class BaseSCMParametersSchema(colander.MappingSchema):
 		title="Location of source",
 		description="The location to fetch the source code from - typically a URL of some kind.")
 
-class BaseSCM(paasmaker.util.plugin.PluginMixin):
-	def get_options_schema(self):
-		return BaseSCMConfigurationSchema()
-	def get_parameters_schema(self):
-		return BaseSCMParametersSchema()
+class BaseSCM(paasmaker.util.plugin.Plugin):
+	MODES = [paasmaker.util.plugin.MODE.SCM_EXPORT]
+	# These are defaults - you should set your own.
+	OPTIONS_SCHEMA = BaseSCMConfigurationSchema()
+	PARAMETERS_SCHEMA = BaseSCMParametersSchema()
 
 	def get_this_scm_path(self, postfix):
 		scratch_path = self.configuration.get_flat('scratch_directory')

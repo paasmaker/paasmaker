@@ -18,10 +18,14 @@ def get_class( kls ):
 MODE_REQUIRE_PARAMS = {
 	'TEST_PARAM': True,
 	'TEST_NOPARAM': False,
-	'SERVICE_MAKER': True,
-	'RUNTIME': True,
+	'SERVICE_CREATE': True,
+	'SERVICE_STARTUP': False,
+	'RUNTIME_STARTUP': True,
+	'RUNTIME_VERSIONS': False,
 	'SCM_EXPORT': True,
-	'RUNTIME_VERSIONS': False
+	'SCM_LIST': False,
+	'PREPARE_COMMAND': True,
+	'PLACEMENT': True
 }
 
 # Mode constants.

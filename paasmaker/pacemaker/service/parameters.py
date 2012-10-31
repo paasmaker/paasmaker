@@ -1,6 +1,7 @@
 
 import colander
 from base import BaseService, BaseServiceTest
+import paasmaker
 
 class ParametersServiceConfigurationSchema(colander.MappingSchema):
 	# No options defined.
@@ -16,11 +17,9 @@ class ParametersService(BaseService):
 	This service simply returns, encoded, the parameters passed into it. Useful
 	for testing or for pumping in configuration or values from the manifest.
 	"""
-
-	def get_options_schema(self):
-		return ParametersServiceConfigurationSchema()
-	def get_parameters_schema(self):
-		return ParametersServiceParametersSchema()
+	MODES = [paasmaker.util.plugin.MODE.SERVICE_CREATE]
+	OPTIONS_SCHEMA = ParametersServiceConfigurationSchema()
+	PARAMETERS_SCHEMA = ParametersServiceParametersSchema()
 
 	def create(self, callback, error_callback):
 		# Does the same thing as update.
@@ -48,7 +47,7 @@ class ParametersServiceTest(BaseServiceTest):
 	def test_simple(self):
 		# There is very few ways this can go wrong,
 		# but this is an example for other services.
-		service = ParametersService(self.configuration, {}, {'test': 'bar'})
+		service = ParametersService(self.configuration, paasmaker.util.plugin.MODE.SERVICE_CREATE, {}, {'test': 'bar'})
 
 		# Sanity check.
 		service.check_options()

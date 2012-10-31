@@ -35,7 +35,7 @@ class ServiceJob(paasmaker.util.jobmanager.JobRunner):
 		root = self.get_root_job()
 
 		try:
-			service_plugin = self.configuration.plugins.instantiate(self.service.provider, self.service.parameters, self.job_logger())
+			service_plugin = self.configuration.plugins.instantiate(self.service.provider, paasmaker.util.plugin.MODE.SERVICE_CREATE, self.service.parameters, self.job_logger())
 		except paasmaker.common.configuration.InvalidConfigurationException, ex:
 			logger.critical("Failed to start a service plugin for %s.", self.service.provider)
 			logger.critical(ex)

@@ -47,9 +47,9 @@ class SourcePreparerJob(paasmaker.util.jobmanager.JobRunner):
 	def do_prepare_task(self, task):
 		# If the task matches a plugin, run and execute that.
 		logger = self.job_logger()
-		if self.configuration.plugins.exists(task):
+		if self.configuration.plugins.exists(task, paasmaker.util.plugin.MODE.PREPARE_COMMAND):
 			logger.info("Starting up plugin %s...", task)
-			plugin = self.configuration.plugins.instantiate(task, {'path': self.path}, self.logger)
+			plugin = self.configuration.plugins.instantiate(task, paasmaker.util.plugin.MODE.PREPARE_COMMAND, {'path': self.path}, self.logger)
 			plugin.prepare(self.plugin_success, self.plugin_failure)
 		else:
 			# It's a shell command. Set it up and do it.

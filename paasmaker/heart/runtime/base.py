@@ -2,7 +2,7 @@ import paasmaker
 import unittest
 
 # Base runtime interface.
-class BaseRuntime(paasmaker.util.plugin.PluginMixin):
+class BaseRuntime(paasmaker.util.plugin.Plugin):
 
 	def check_system(self):
 		"""

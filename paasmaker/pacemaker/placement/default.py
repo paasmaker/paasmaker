@@ -4,6 +4,7 @@ import random
 import colander
 from base import BasePlacement, BasePlacementTest
 from paasmaker.common.core import constants
+import paasmaker
 
 class DefaultPlacementConfigurationSchema(colander.MappingSchema):
 	# No options defined.
@@ -21,11 +22,9 @@ class DefaultPlacement(BasePlacement):
 	not to start more than one instance of an application on a single node,
 	but will allow repeats to satisfy quotas.
 	"""
-
-	def get_options_schema(self):
-		return DefaultPlacementConfigurationSchema()
-	def get_parameters_schema(self):
-		return DefaultPlacementParametersSchema()
+	MODES = [paasmaker.util.plugin.MODE.PLACEMENT]
+	OPTIONS_SCHEMA = DefaultPlacementConfigurationSchema()
+	PARAMETERS_SCHEMA = DefaultPlacementParametersSchema()
 
 	def choose(self, session, instance_type, quantity, callback, error_callback):
 		# Query active nodes first.
@@ -48,7 +47,7 @@ class DefaultPlacementTest(BasePlacementTest):
 		session = self.configuration.get_database_session()
 		self.create_sample_nodes(session, 10)
 
-		plugin = DefaultPlacement(self.configuration, {}, {})
+		plugin = DefaultPlacement(self.configuration, paasmaker.util.plugin.MODE.PLACEMENT, {}, {})
 
 		# Sanity check.
 		plugin.check_options()

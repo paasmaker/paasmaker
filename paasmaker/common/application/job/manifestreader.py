@@ -34,7 +34,7 @@ class ManifestReaderJob(paasmaker.util.jobmanager.JobRunner):
 			return
 
 		# Check that the source SCM exists.
-		if not self.configuration.plugins.exists(self.manifest['application']['source']['method']):
+		if not self.configuration.plugins.exists(self.manifest['application']['source']['method'], paasmaker.util.plugin.MODE.SCM_EXPORT):
 			logger.critical("SCM plugin %s does not exist.", self.manifest['application']['source']['method'])
 			self.finished_job(constants.JOB.FAILED, "SCM plugin %s does not exist." % self.manifest['application']['source']['method'])
 
@@ -82,7 +82,7 @@ class ManifestReaderJob(paasmaker.util.jobmanager.JobRunner):
 		# For each service, check that it has a matching provider,
 		# and that the parameters passed are valid.
 		for service in root.version.services:
-			if not self.configuration.plugins.exists(service.provider):
+			if not self.configuration.plugins.exists(service.provider, paasmaker.util.plugin.MODE.SERVICE_CREATE):
 				logger.critical("No service provider %s found.", service.provider)
 				self.finished_job(constants.JOB.FAILED, "Bad service provider supplied.")
 				return

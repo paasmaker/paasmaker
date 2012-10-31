@@ -5,7 +5,6 @@ from base import BaseSCM, BaseSCMTest
 import paasmaker
 
 class ZipSCM(BaseSCM):
-
 	def create_working_copy(self, callback, error_callback):
 		# Make a directory to extract to.
 		path = self.get_temporary_scm_dir()
@@ -59,7 +58,7 @@ class ZipSCMTest(BaseSCMTest):
 
 		# Now unpack it using the plugin.
 		logger = self.configuration.get_job_logger('testscmzip')
-		plugin = ZipSCM(self.configuration, {}, {'location': tempzip}, logger=logger)
+		plugin = ZipSCM(self.configuration, paasmaker.util.plugin.MODE.SCM_EXPORT, {}, {'location': tempzip}, logger=logger)
 
 		# Sanity check.
 		plugin.check_options()
