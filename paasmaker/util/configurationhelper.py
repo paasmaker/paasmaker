@@ -88,10 +88,10 @@ class ConfigurationHelper(dict):
 	def load_plugins(self, registry, datasource):
 		for entry in datasource:
 			name = entry['name']
-			cls = entry['cls']
+			klass = entry['class']
 			params = entry['parameters']
 
-			registry.register(name, cls, params)
+			registry.register(name, klass, params)
 
 class TestConfigurationSchema(colander.MappingSchema):
 	str_item = colander.SchemaNode(colander.String())

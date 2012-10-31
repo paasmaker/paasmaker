@@ -33,13 +33,12 @@ master_port: %(master_port)d
 pacemaker:
   enabled: true
   dsn: "sqlite:///:memory:"
-  services:
+  plugins:
     - name: paasmaker.service.parameters
-      cls: paasmaker.pacemaker.service.parameters.ParametersService
+      class: paasmaker.pacemaker.service.parameters.ParametersService
       title: Parameters Service
-  scms:
     - name: paasmaker.scm.zip
-      cls: paasmaker.pacemaker.scm.zip.ZipSCM
+      class: paasmaker.pacemaker.scm.zip.ZipSCM
       title: Zip file SCM
 """
 
@@ -47,21 +46,15 @@ pacemaker:
 heart:
   enabled: true
   working_dir: %(heart_working_dir)s
-  runtimes:
+  plugins:
     - name: paasmaker.runtime.php
-      cls: paasmaker.heart.runtime.PHPRuntime
+      class: paasmaker.heart.runtime.PHPRuntime
       title: PHP
-      versions:
-        - 5.3
-        - 5.4
       parameters:
         apache_config_dir: /tmp/foo
     #- name: paasmaker.runtime.ruby
-    #  cls: paasmaker.heart.runtime.RubyRuntime
+    #  class: paasmaker.heart.runtime.RubyRuntime
     #  title: Ruby
-    #  versions:
-    #    - 1.8.7
-    #    - 1.9.3
     #  parameters:
     #    foo: bar
     #    baz: bar

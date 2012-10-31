@@ -38,7 +38,8 @@ class PluginSchema(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Symbolic name",
 		description="The symbolic name for this plugin, used to match it up in application configuration")
-	cls = colander.SchemaNode(colander.String(),
+	klass = colander.SchemaNode(colander.String(),
+		name="class",
 		title="Plugin class",
 		description="The class used to provide this plugin")
 	title = colander.SchemaNode(colander.String(),
@@ -50,12 +51,8 @@ class PluginSchema(colander.MappingSchema):
 		missing={},
 		default={})
 
-class PacemakerServicesSchema(colander.SequenceSchema):
-	service = PluginSchema()
-class PacemakerSCMsSchema(colander.SequenceSchema):
-	scm = PluginSchema()
-class PacemakerPreparesSchema(colander.SequenceSchema):
-	prepare = PluginSchema()
+class PluginsSchema(colander.SequenceSchema):
+	plugin = PluginSchema()
 
 class PacemakerSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -74,48 +71,15 @@ class PacemakerSchema(colander.MappingSchema):
 		default=7,
 		missing=7)
 
-	services = PacemakerServicesSchema(
-		title="Services",
-		description="A list of services offered by this pacemaker.",
-		missing=[],
-		default=[])
-	scms = PacemakerSCMsSchema(
-		title="SCMs",
-		description="A list of SCMs and configuration available to this pacemaker.",
-		missing=[],
-		default=[])
-	prepares = PacemakerPreparesSchema(
-		title="Prepares",
-		description="A list of prepare plugins available to this pacemaker.",
+	plugins = PluginsSchema(
+		title="Plugins",
+		description="A list of plugins registered on this pacemaker.",
 		missing=[],
 		default=[])
 
 	@staticmethod
 	def default():
-		return {'enabled': False, 'services': [], 'scms': [], 'prepares': []}
-
-class HeartRuntimeSchema(colander.MappingSchema):
-	name = colander.SchemaNode(colander.String(),
-		title="Symbolic name",
-		description="The symbolic name for this runtime, used to match it up in application configuration")
-	cls = colander.SchemaNode(colander.String(),
-		title="Runtime Class",
-		description="The class used to provide this runtime")
-	title = colander.SchemaNode(colander.String(),
-		title="Friendly name",
-		description="The friendly name for this runtime")
-	versions = colander.SchemaNode(colander.Sequence(),
-		colander.SchemaNode(colander.String(),
-		title="Versions",
-		description="List of versions that are supported"))
-	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Runtime Parameters",
-		description="Parameters for this particular runtime",
-		missing={},
-		default={})
-
-class HeartRuntimesSchema(colander.SequenceSchema):
-	runtime = HeartRuntimeSchema()
+		return {'enabled': False, 'plugins': []}
 
 class HeartSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -128,15 +92,15 @@ class HeartSchema(colander.MappingSchema):
 		title="Working directory",
 		description="Directory where heart working files are stored")
 
-	runtimes = HeartRuntimesSchema(
-		title="Runtimes",
-		description="A list of runtimes offered by this heart",
+	plugins = PluginsSchema(
+		title="Plugins",
+		description="A list of plugins registered on this heart.",
 		missing=[],
 		default=[])
 
 	@staticmethod
 	def default():
-		return {'enabled': False, 'runtimes': []}
+		return {'enabled': False, 'plugins': []}
 
 class RedisConnectionSchema(colander.MappingSchema):
 	host = colander.SchemaNode(colander.String(),
@@ -312,12 +276,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 		# Load heart plugins.
 		if self.is_heart():
-			self.load_plugins(self.plugins, self['heart']['runtimes'])
+			self.load_plugins(self.plugins, self['heart']['plugins'])
 		# Load pacemaker plugins.
 		if self.is_pacemaker():
-			self.load_plugins(self.plugins, self['pacemaker']['services'])
-			self.load_plugins(self.plugins, self['pacemaker']['scms'])
-			self.load_plugins(self.plugins, self['pacemaker']['prepares'])
+			self.load_plugins(self.plugins, self['pacemaker']['plugins'])
 
 		self.update_flat()
 
@@ -328,13 +290,17 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def is_router(self):
 		return self.get_flat('router.enabled')
 
-	def get_runtime_tags(self):
+	def get_runtimes(self):
 		if not self.is_heart():
 			raise ImNotA("I'm not a heart, so I have no runtimes.")
 
 		tags = {}
-		for meta in self['heart']['runtimes']:
-			tags[meta['name']] = True
+		runtime_plugins = self.plugins.plugins_for(paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
+		for plugin in runtime_plugins:
+			runtime = self.plugins.instantiate(plugin, paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
+			versions = runtime.get_versions()
+
+			tags[plugin] = versions
 
 		return tags
 

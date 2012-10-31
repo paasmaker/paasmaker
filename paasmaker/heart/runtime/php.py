@@ -1,4 +1,7 @@
 
+import subprocess
+import re
+
 import paasmaker
 from base import BaseRuntime, BaseRuntimeTest
 import colander
@@ -31,9 +34,24 @@ class PHPRuntimeParametersSchema(colander.MappingSchema):
 		default=False)
 
 class PHPRuntime(BaseRuntime):
-	MODES = [paasmaker.util.plugin.MODE.RUNTIME_STARTUP]
+	MODES = [paasmaker.util.plugin.MODE.RUNTIME_STARTUP, paasmaker.util.plugin.MODE.RUNTIME_VERSIONS]
 	OPTIONS_SCHEMA = PHPRuntimeOptionsSchema()
 	PARAMETERS_SCHEMA = PHPRuntimeParametersSchema()
+
+	def get_versions(self):
+		# TODO: Handle when this fails, rather than letting it bubble.
+		raw_version = subprocess.check_output(['php', '-v'])
+		# Parse out the version number.
+		match = re.match(r'PHP ([\d.]+)', raw_version)
+		if match:
+			version = match.group(1)
+			bits = version.split(".")
+			major_version = ".".join(bits[0:2])
+
+			return [major_version, version]
+		else:
+			# No versions available.
+			return []
 
 	# TODO: Implement the rest of this...
 
@@ -51,3 +69,16 @@ class PHPRuntimeTest(BaseRuntimeTest):
 		self.registry.register('paasmaker.runtime.php', 'paasmaker.heart.runtime.PHPRuntime', {'apache_config_dir': 'value'})
 		instance = self.registry.instantiate('paasmaker.runtime.php', paasmaker.util.plugin.MODE.RUNTIME_STARTUP, {'document_root': 'web/'})
 		self.assertTrue(True, "Should have got here...")
+
+	def test_versions(self):
+		self.registry.register('paasmaker.runtime.php', 'paasmaker.heart.runtime.PHPRuntime', {'apache_config_dir': 'value'})
+		instance = self.registry.instantiate('paasmaker.runtime.php', paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
+
+		versions = instance.get_versions()
+
+		comparison = subprocess.check_output(['php', '-v'])
+		self.assertEquals(len(versions), 2, "Should have returned two values.")
+		self.assertEquals(versions[0], versions[1][0:len(versions[0])], "First version should have been substring of later version.")
+		for version in versions:
+			self.assertIn(".", version, "Version is not properly qualified.")
+			self.assertIn(version, comparison, "Missing version in output.")

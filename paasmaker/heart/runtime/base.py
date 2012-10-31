@@ -4,6 +4,15 @@ import unittest
 # Base runtime interface.
 class BaseRuntime(paasmaker.util.plugin.Plugin):
 
+	def get_versions(self):
+		"""
+		Get the versions that this runtime supports. Return an array
+		of versions.
+		"""
+		# NOTE: This is not asynchronous, so you probably don't want to
+		# spend a long time doing anything.
+		pass
+
 	def check_system(self):
 		"""
 		Confirm that the system is able to run this runtime.

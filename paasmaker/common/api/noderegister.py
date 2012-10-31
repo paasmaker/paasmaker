@@ -29,13 +29,15 @@ class NodeRegisterAPIRequest(paasmaker.util.APIRequest):
 
 		# Runtimes.
 		if self.configuration.is_heart():
-			runtimes = self.configuration.get_runtime_tags()
+			runtimes = self.configuration.get_runtimes()
 			tags['runtimes'] = runtimes
 
 		# Include node tags.
 		tags['node'] = self.configuration['tags']
 
 		payload['tags'] = tags
+
+		logger.debug("Sending node tags: %s", str(tags))
 
 		return payload
 

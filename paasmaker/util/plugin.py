@@ -125,9 +125,9 @@ class PluginRegistry:
 		# Map mode to a list of plugins.
 		self.mode_registry = {}
 
-	def register(self, plugin, cls, options):
+	def register(self, plugin, klass, options):
 		# Find the class object that matches the supplied string name.
-		former = get_class(cls)
+		former = get_class(klass)
 
 		# Make sure it's a subclass of the plugin.
 		if not issubclass(former, Plugin):
@@ -152,7 +152,7 @@ class PluginRegistry:
 			raise ValueError("Supplied class has no modes.")
 
 		# If we got here, all good!
-		self.class_registry[plugin] = cls
+		self.class_registry[plugin] = klass
 		self.options_registry[plugin] = options
 
 		# Now go ahead and put it into the mode registry.
@@ -169,15 +169,15 @@ class PluginRegistry:
 		return has_class and has_mode
 
 	def class_for(self, plugin):
-		cls = get_class(self.class_registry[plugin])
-		return cls
+		klass = get_class(self.class_registry[plugin])
+		return klass
 
 	def instantiate(self, plugin, mode, parameters=None, logger=None):
-		cls = get_class(self.class_registry[plugin])
-		if mode not in cls.MODES:
+		klass = get_class(self.class_registry[plugin])
+		if mode not in klass.MODES:
 			raise ValueError("Plugin %s does not have mode %s" % (plugin, mode))
 
-		instance = cls(self.configuration, mode, self.options_registry[plugin], parameters, logger)
+		instance = klass(self.configuration, mode, self.options_registry[plugin], parameters, logger)
 
 		# Get it to recheck options.
 		instance.check_options()
@@ -189,6 +189,14 @@ class PluginRegistry:
 			instance.check_parameters()
 
 		return instance
+
+	def plugins_for(self, mode):
+		if not self.mode_registry.has_key(mode):
+			# No plugins match this mode.
+			return []
+		else:
+			# Return the list of them.
+			return self.mode_registry[mode]
 
 class PluginExampleOptionsSchema(colander.MappingSchema):
 	# Required key.
