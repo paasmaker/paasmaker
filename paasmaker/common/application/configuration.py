@@ -150,15 +150,15 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 
 			# Runtime information.
 			instance_type.runtime_name = imetadata['runtime']['name']
-			instance_type.runtime_parameters = json.dumps(imetadata['runtime']['parameters'])
-			instance_type.runtime_version = json.dumps(imetadata['runtime']['version'])
+			instance_type.runtime_parameters = imetadata['runtime']['parameters']
+			instance_type.runtime_version = imetadata['runtime']['version']
 
 			# Placement data.
 			instance_type.placement_provider = imetadata['placement']['strategy']
-			instance_type.placement_parameters = json.dumps(imetadata['placement']['parameters'])
+			instance_type.placement_parameters = imetadata['placement']['parameters']
 
 			# Startup data.
-			instance_type.startup = json.dumps(imetadata['startup'])
+			instance_type.startup = imetadata['startup']
 
 			# Import hostnames.
 			for hostname_raw in imetadata['hostnames']:

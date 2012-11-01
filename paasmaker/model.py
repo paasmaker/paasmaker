@@ -297,11 +297,11 @@ class ApplicationInstanceType(OrmBase, Base):
 	name = Column(String, nullable=False, index=True)
 	quantity = Column(Integer, nullable=False)
 	runtime_name = Column(Text, nullable=False)
-	runtime_parameters = Column(Text, nullable=False)
+	_runtime_parameters = Column("runtime_parameters", Text, nullable=False)
 	runtime_version = Column(Text, nullable=False)
-	startup = Column(Text, nullable=False)
+	_startup = Column("startup", Text, nullable=False)
 	placement_provider = Column(Text, nullable=False)
-	placement_parameters = Column(Text, nullable=False)
+	_placement_parameters = Column("placement_parameters", Text, nullable=False)
 	exclusive = Column(Boolean, nullable=False)
 
 	state = Column(Enum(*constants.INSTANCE_TYPE.ALL), nullable=False, index=True)
@@ -311,6 +311,39 @@ class ApplicationInstanceType(OrmBase, Base):
 
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['name', 'application_version', 'quantity', 'provider'])
+
+	@hybrid_property
+	def placement_parameters(self):
+		if self._placement_parameters:
+			return json.loads(self._placement_parameters)
+		else:
+			return {}
+
+	@placement_parameters.setter
+	def placement_parameters(self, val):
+		self._placement_parameters = json.dumps(val)
+
+	@hybrid_property
+	def runtime_parameters(self):
+		if self._runtime_parameters:
+			return json.loads(self._runtime_parameters)
+		else:
+			return {}
+
+	@runtime_parameters.setter
+	def runtime_parameters(self, val):
+		self._runtime_parameters = json.dumps(val)
+
+	@hybrid_property
+	def startup(self):
+		if self._startup:
+			return json.loads(self._startup)
+		else:
+			return {}
+
+	@startup.setter
+	def startup(self, val):
+		self._startup = json.dumps(val)
 
 class ApplicationInstance(OrmBase, Base):
 	__tablename__ = 'application_instance'
