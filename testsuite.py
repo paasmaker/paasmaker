@@ -52,6 +52,7 @@ test_sets = {
 	paasmaker.pacemaker.service.parameters: ['all', 'service', 'serviceparameters'],
 
 	paasmaker.pacemaker.scm.zip: ['all', 'scm', 'slow'],
+	paasmaker.pacemaker.scm.tarball: ['all', 'scm', 'slow'],
 
 	paasmaker.common.job.prepare.prepareroot: ['all', 'slow', 'application', 'prepare'],
 	paasmaker.common.job.coordinate.selectlocations: ['all', 'slow', 'application', 'coordinate'],
