@@ -133,7 +133,7 @@ class BasePlacementTest(tornado.testing.AsyncTestCase):
 		instance_type.runtime_name = runtime_name
 		instance_type.runtime_parameters = runtime_parameters
 		instance_type.runtime_version = runtime_version
-		instance_type.startup = ''
+		instance_type.startup = {}
 		instance_type.placement_provider = 'paasmaker.placement.default'
 		instance_type.placement_parameters = {}
 		instance_type.exclusive = False

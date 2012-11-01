@@ -354,15 +354,25 @@ class ApplicationInstance(OrmBase, Base):
 	application_instance_type = relationship("ApplicationInstanceType", backref=backref('instances', order_by=id))
 	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
 	node = relationship("Node", backref=backref('nodes', order_by=id))
-	configuration = Column(String, nullable=False, index=True)
 	state = Column(Enum(*constants.INSTANCE.ALL), nullable=False, index=True)
-	statistics = Column(Text, nullable=True)
+	_statistics = Column("statistics", Text, nullable=True)
 
 	def __repr__(self):
 		return "<ApplicationInstance('%s'@'%s' - %s)>" % (self.application_instance_type, self.node, self.state)
 
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['application_instance_type', 'node', 'state'])
+
+	@hybrid_property
+	def statistics(self):
+		if self._statistics:
+			return json.loads(self._statistics)
+		else:
+			return {}
+
+	@statistics.setter
+	def statistics(self, val):
+		self._statistics = json.dumps(val)
 
 class ApplicationInstanceTypeHostname(OrmBase, Base):
 	__tablename__ = 'application_instance_type_hostname'

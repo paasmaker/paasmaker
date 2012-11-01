@@ -183,7 +183,7 @@ class PluginRegistry:
 		instance.check_options()
 
 		# And recheck parameters if it requires them.
-		if MODE_REQUIRE_PARAMS[mode] and not parameters:
+		if MODE_REQUIRE_PARAMS[mode] and parameters is None:
 			raise ValueError("Plugin %s requires parameters but none were passed.")
 		if MODE_REQUIRE_PARAMS[mode]:
 			instance.check_parameters()

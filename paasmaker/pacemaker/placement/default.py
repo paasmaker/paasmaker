@@ -26,7 +26,7 @@ class DefaultPlacement(BasePlacement):
 	OPTIONS_SCHEMA = DefaultPlacementConfigurationSchema()
 	PARAMETERS_SCHEMA = DefaultPlacementParametersSchema()
 
-	def fail(self, nodes, callback, reason):
+	def fail_if_none(self, nodes, callback, reason):
 		if len(nodes) == 0:
 			callback(reason)
 			return True
@@ -39,8 +39,10 @@ class DefaultPlacement(BasePlacement):
 
 		self.logger.info("Stage 1: Found %d active nodes.", len(nodes))
 
-		if self.fail(nodes, error_callback, "No active nodes found to run this instance."):
+		if self.fail_if_none(nodes, error_callback, "No active nodes found to run this instance."):
 			return
+
+		physical_nodes = len(nodes)
 
 		# Filter by the required runtime.
 		runtime_tags = {}
@@ -49,8 +51,10 @@ class DefaultPlacement(BasePlacement):
 		nodes = self.filter_by_tags(nodes, 'runtimes', runtime_tags)
 		self.logger.info("Stage 2: Found %d nodes that can run this instance.", len(nodes))
 
-		if self.fail(nodes, error_callback, "No nodes can service the runtime %s, version %s." % (instance_type.runtime_name, instance_type.runtime_version)):
+		if self.fail_if_none(nodes, error_callback, "No nodes can service the runtime %s, version %s." % (instance_type.runtime_name, instance_type.runtime_version)):
 			return
+
+		runtime_nodes = len(nodes)
 
 		# Filter them by the user tags supplied.
 		tags = {}
@@ -60,8 +64,10 @@ class DefaultPlacement(BasePlacement):
 		nodes = self.filter_by_tags(nodes, 'node', tags)
 		self.logger.info("Stage 3: Found %d nodes that match these tags.", len(nodes))
 
-		if self.fail(nodes, error_callback, "No nodes match the supplied tags: %s" % str(tags)):
+		if self.fail_if_none(nodes, error_callback, "No nodes match the supplied tags: %s" % str(tags)):
 			return
+
+		tagged_nodes = len(nodes)
 
 		if len(nodes) < quantity:
 			# We need duplicates to make this work.
@@ -78,7 +84,10 @@ class DefaultPlacement(BasePlacement):
 
 		self.logger.info("Stage 4: Successfully selected %d nodes." % len(nodes))
 
-		callback(nodes, "Successfully located nodes.")
+		callback(nodes,
+			"Successfully chosen %d nodes, from %d physical nodes, and %d nodes that can run this instance." % \
+			(len(nodes), physical_nodes, runtime_nodes)
+		)
 
 class DefaultPlacementTest(BasePlacementTest):
 
