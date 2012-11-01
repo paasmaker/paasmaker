@@ -242,6 +242,35 @@ class ConfigurationSchema(colander.MappingSchema):
 class ImNotA(Exception):
 	pass
 
+class JobStatusMessage(object):
+	def __init__(self, job_id, state, source):
+		self.job_id = job_id
+		self.state = state
+		self.source = source
+
+	def flatten(self):
+		return {'job_id': self.job_id, 'state': self.state, 'source': self.source}
+
+class JobAuditMessage(JobStatusMessage):
+	def __init__(self, job_id, state, source, title=None, summary=None, parent_id=None):
+		super(JobAuditMessage, self).__init__(job_id, state, source)
+
+		if state in constants.JOB_FINISHED_STATES and not summary:
+			raise ValueError('You must supply summary in state %s' % state)
+		if state == constants.JOB.NEW and not title:
+			raise ValueError('You must supply a title in state %s' % state)
+
+		self.title = title
+		self.summary = summary
+		self.parent_id = parent_id
+
+	def flatten(self):
+		flat = super(JobAuditMessage, self).flatten()
+		flat['title'] = self.title
+		flat['summary'] = self.summary
+		flat['parent_id'] = self.parent_id
+		return flat
+
 class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def __init__(self, io_loop=None):
 		super(Configuration, self).__init__(ConfigurationSchema())
@@ -411,24 +440,22 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		(Rabbit hole means RabbitMQ... so there is no confusion.)
 		Sends both an audit and an update message, as appropriate.
 		"""
-		# Sanity check.
-		if state in constants.JOB_FINISHED_STATES and not summary:
-			raise ValueError('You must supply summary in state %s' % state)
-		if state == constants.JOB.NEW and not title:
-			raise ValueError('You must supply a title in state %s' % state)
-
 		# If source is not supplied, send along our own UUID.
 		send_source = source
 		if not send_source:
 			send_source = self.get_node_uuid()
 
+		# Make the message objects.
+		status = JobStatusMessage(job_id, state, send_source)
+		audit = JobAuditMessage(job_id, state, send_source, title=title, summary=summary, parent_id=parent_id)
+
 		status_topic = self.get_job_status_pub_topic(job_id)
 		audit_topic = self.get_job_audit_pub_topic(job_id)
 
 		# Send the status message.
-		pub.sendMessage(status_topic, job_id=job_id, state=state, source=send_source)
+		pub.sendMessage(status_topic, message=status)
 		# And then the audit message.
-		pub.sendMessage(audit_topic, job_id=job_id, title=title, state=state, summary=summary, source=send_source, parent_id=parent_id)
+		pub.sendMessage(audit_topic, message=audit)
 
 	#
 	# IDENTITY HELPERS

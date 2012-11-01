@@ -83,18 +83,18 @@ class MessageExchange:
 		# TODO: Publish internally - another listener will accept and DB it.
 		channel.basic_ack(delivery_tag=method.delivery_tag)
 
-	def send_job_status(self, job_id=None, state=None, source=None):
-		body = {'job_id': job_id, 'state': state, 'source': source}
+	def send_job_status(self, message):
+		body = message.flatten()
 		encoded = json.dumps(body)
 		logger.debug("Sending job status message: %s", encoded)
 		properties = pika.BasicProperties(content_type="application/json", delivery_mode=1)
 		self.channel.basic_publish(exchange='job.status',
 				routing_key='job.status',
-				body = encoded,
+				body=encoded,
 				properties=properties)
 
-	def send_audit_status(self, job_id, state):
-		body = {'job_id': job_id, 'state': state}
+	def send_audit_status(self, message):
+		body = message.flatten()
 		encoded = json.dumps(body)
 		logger.debug("Sending job audit message: %s", encoded)
 		properties = pika.BasicProperties(content_type="application/json", delivery_mode=2)
@@ -112,8 +112,8 @@ class MessageExchangeTest(tornado.testing.AsyncTestCase):
 		self.configuration.cleanup()
 		super(MessageExchangeTest, self).tearDown()
 
-	def on_job_status_update(self, job_id=None, state=None, source=None):
-		self.stop({'job_id': job_id, 'state': state, 'source': source})
+	def on_job_status_update(self, message):
+		self.stop(message)
 
 	def test_basic(self):
 		# Subscribe so we can catch the status update as it comes out.
@@ -130,15 +130,16 @@ class MessageExchangeTest(tornado.testing.AsyncTestCase):
 		# Now send off a job update. This shouldn't actually touch the broker.
 		self.configuration.send_job_status(job_id, state='TEST')
 		status = self.wait()
-		self.assertEquals(status['job_id'], job_id, "Job ID was not as expected.")
-		self.assertEquals(status['state'], 'TEST', "Job status was not as expected.")
+		self.assertEquals(status.job_id, job_id, "Job ID was not as expected.")
+		self.assertEquals(status.state, 'TEST', "Job status was not as expected.")
 
 		# Now this time, force it to go through the exchange and back out again.
-		self.configuration.exchange.send_job_status(job_id, state='ROUNDTRIP', source="BOGUS")
+		message = paasmaker.common.configuration.JobStatusMessage(job_id, 'ROUNDTRIP', 'BOGUS')
+		self.configuration.exchange.send_job_status(message)
 		status = self.wait()
-		self.assertEquals(status['job_id'], job_id, "Job ID was not as expected.")
-		self.assertEquals(status['state'], 'ROUNDTRIP', "Job status was not as expected.")
-		self.assertEquals(status['source'], 'BOGUS', 'Source was correct.')
+		self.assertEquals(status.job_id, job_id, "Job ID was not as expected.")
+		self.assertEquals(status.state, 'ROUNDTRIP', "Job status was not as expected.")
+		self.assertEquals(status.source, 'BOGUS', 'Source was correct.')
 
 	def short_wait_hack(self):
 		self.io_loop.add_timeout(time.time() + 0.1, self.stop)

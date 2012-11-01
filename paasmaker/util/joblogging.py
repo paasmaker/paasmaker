@@ -53,12 +53,12 @@ class JobLoggingFileHandler(logging.Handler):
 			self.handlers[job_id].close()
 			del self.handlers[job_id]
 
-	def job_status_change(self, job_id=None, state=None, source=None):
-		logger.debug("Job status change: job_id %s, state %s, source %s", job_id, state, source)
-		if state in constants.JOB_FINISHED_STATES:
+	def job_status_change(self, message):
+		logger.debug("Job status change: job_id %s, state %s, source %s", message.job_id, message.state, message.source)
+		if message.state in constants.JOB_FINISHED_STATES:
 			# Pubsub callback for job status change.
 			# Close off that handler.
-			self.close_handler(job_id)
+			self.close_handler(message.job_id)
 
 	def job_file_takeover(self, job_id):
 		# Close the handler for that job - freeing up the file.

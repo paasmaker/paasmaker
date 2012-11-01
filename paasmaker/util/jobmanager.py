@@ -98,6 +98,8 @@ class JobManager(object):
 		self.jobs = {}
 		# Map child_id => parent_id
 		self.parents = {}
+
+		# Select an appropriate IO loop.
 		if io_loop:
 			logger.debug("Using supplied IO loop.")
 			self.io_loop = io_loop
@@ -218,7 +220,10 @@ class JobManager(object):
 
 		logger.debug("Subtree aborted (source job %s)", job_id)
 
-	def job_status_change(self, job_id=None, state=None, source=None):
+	def job_status_change(self, message):
+		job_id = message.job_id
+		state = message.state
+
 		# Not in our database? Do nothing.
 		if not self.jobs.has_key(job_id):
 			logger.debug("Got message for job that's not in our database - job %s", job_id)
@@ -288,17 +293,17 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		self.configuration.cleanup()
 		super(JobManagerTest, self).tearDown()
 
-	def on_job_status(self, **kwargs):
-		#print str(kwargs)
+	def on_job_status(self, message):
+		#print str(message)
 		# TODO: This storage overwrites the previous state. But I guess we're
 		# generally waiting for it to end up in a particular end state...
-		self.statuses[kwargs['job_id']] = kwargs
+		self.statuses[message.job_id] = message
 
 	def get_state(self, job_id):
 		if self.statuses.has_key(job_id):
 			return self.statuses[job_id]
 		else:
-			return {'state': 'UNKNOWN', 'job_id': job_id}
+			return paasmaker.common.configuration.JobStatusMessage(job_id, 'UNKNOWN', None)
 
 	def jid(self):
 		return str(uuid.uuid4())
@@ -314,7 +319,7 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		self.short_wait_hack()
 
 		result = self.get_state(job_id)
-		self.assertEquals(result['state'], constants.JOB.SUCCESS, 'Test job was not successful.')
+		self.assertEquals(result.state, constants.JOB.SUCCESS, 'Test job was not successful.')
 
 	def test_manager_failed_job_simple(self):
 		# Set up a simple failed job.
@@ -327,7 +332,7 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		self.short_wait_hack()
 
 		result = self.get_state(job_id)
-		self.assertEquals(result['state'], constants.JOB.FAILED, 'Test job was not a failure.')
+		self.assertEquals(result.state, constants.JOB.FAILED, 'Test job was not a failure.')
 
 	def test_manager_success_tree(self):
 		# Test that a subtree processes correctly.
@@ -362,10 +367,10 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		sub2_status = self.get_state(sub2_id)
 		root_status = self.get_state(root_id)
 
-		self.assertEquals(subsub1_status['state'], constants.JOB.SUCCESS, "Sub Sub 1 should have succeeded.")
-		self.assertEquals(sub1_status['state'], constants.JOB.SUCCESS, "Sub 1 should have succeeded.")
-		self.assertEquals(sub2_status['state'], constants.JOB.SUCCESS, "Sub 2 should have succeeded.")
-		self.assertEquals(root_status['state'], constants.JOB.SUCCESS, "Root should have succeeded.")
+		self.assertEquals(subsub1_status.state, constants.JOB.SUCCESS, "Sub Sub 1 should have succeeded.")
+		self.assertEquals(sub1_status.state, constants.JOB.SUCCESS, "Sub 1 should have succeeded.")
+		self.assertEquals(sub2_status.state, constants.JOB.SUCCESS, "Sub 2 should have succeeded.")
+		self.assertEquals(root_status.state, constants.JOB.SUCCESS, "Root should have succeeded.")
 
 	def test_manager_failed_subtree(self):
 		# Test that a subtree fails correctly.
@@ -400,11 +405,11 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		sub2_status = self.get_state(sub2_id)
 		root_status = self.get_state(root_id)
 
-		if subsub1_status['state'] not in [constants.JOB.ABORTED, constants.JOB.SUCCESS]:
+		if subsub1_status.state not in [constants.JOB.ABORTED, constants.JOB.SUCCESS]:
 			self.assertTrue(False, "Subsub1 not in one of expected states.")
-		self.assertEquals(sub1_status['state'], constants.JOB.ABORTED, "Sub 1 should have been aborted.")
-		self.assertEquals(sub2_status['state'], constants.JOB.FAILED, "Sub 2 should have failed.")
-		self.assertEquals(root_status['state'], constants.JOB.ABORTED, "Root should have been aborted.")
+		self.assertEquals(sub1_status.state, constants.JOB.ABORTED, "Sub 1 should have been aborted.")
+		self.assertEquals(sub2_status.state, constants.JOB.FAILED, "Sub 2 should have failed.")
+		self.assertEquals(root_status.state, constants.JOB.ABORTED, "Root should have been aborted.")
 
 	def test_manager_abort_tree(self):
 		# Test that a subtree aborts correctly.
@@ -446,10 +451,10 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		sub2_status = self.get_state(sub2_id)
 		root_status = self.get_state(root_id)
 
-		self.assertEquals(subsub1_status['state'], constants.JOB.SUCCESS, "Sub Sub 1 should have succeeded.")
-		self.assertEquals(sub1_status['state'], constants.JOB.SUCCESS, "Sub 1 should have succeeded.")
-		self.assertEquals(sub2_status['state'], constants.JOB.ABORTED, "Sub 2 should have been aborted.")
-		self.assertEquals(root_status['state'], constants.JOB.ABORTED, "Root should have been aborted.")
+		self.assertEquals(subsub1_status.state, constants.JOB.SUCCESS, "Sub Sub 1 should have succeeded.")
+		self.assertEquals(sub1_status.state, constants.JOB.SUCCESS, "Sub 1 should have succeeded.")
+		self.assertEquals(sub2_status.state, constants.JOB.ABORTED, "Sub 2 should have been aborted.")
+		self.assertEquals(root_status.state, constants.JOB.ABORTED, "Root should have been aborted.")
 
 	def short_wait_hack(self):
 		self.io_loop.add_timeout(time.time() + 0.05, self.stop)

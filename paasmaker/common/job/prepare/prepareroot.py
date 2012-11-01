@@ -74,12 +74,12 @@ class PrepareJobTest(tornado.testing.AsyncTestCase):
 		self.configuration.cleanup()
 		super(PrepareJobTest, self).tearDown()
 
-	def on_job_status(self, job_id, state, source):
-		self.stop({'job_id': job_id, 'state': state, 'source': source})
+	def on_job_status(self, message):
+		self.stop(message)
 
-	def on_job_catchall(self, **kwargs):
+	def on_job_catchall(self, message):
 		# This is for debugging.
-		#print str(kwargs)
+		#print str(message.flatten())
 		pass
 
 	def test_simple(self):
@@ -124,7 +124,7 @@ class PrepareJobTest(tornado.testing.AsyncTestCase):
 
 		result = self.wait()
 
-		self.assertEquals(result['state'], constants.JOB.SUCCESS, "Should have succeeded.")
+		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
 
 		# Verify the package exists, and has the files we expect.
 		self.assertTrue(os.path.exists(root_job.package), "Packed file does not exist.")

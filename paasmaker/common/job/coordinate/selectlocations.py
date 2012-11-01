@@ -67,17 +67,17 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
 		self.configuration.cleanup()
 		super(SelectLocationsJobTest, self).tearDown()
 
-	def on_job_status(self, job_id, state, source):
-		self.stop({'job_id': job_id, 'state': state, 'source': source})
+	def on_job_status(self, message):
+		self.stop(message)
 
-	def on_job_catchall(self, **kwargs):
+	def on_job_catchall(self, message):
 		# This is for debugging.
-		#print str(kwargs)
+		#print str(message.flatten())
 		pass
 
-	def on_audit_catchall(self, **kwargs):
+	def on_audit_catchall(self, message):
 		# This is for debugging.
-		#print str(kwargs)
+		#print str(message.flatten())
 		pass
 
 	def create_sample_application(self, session, runtime_name, runtime_parameters, runtime_version):
@@ -155,7 +155,7 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
 
 		result = self.wait()
 
-		self.assertEquals(result['state'], constants.JOB.SUCCESS, "Should have succeeded.")
+		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
 
 		# Verify that we got what we wanted.
 		instances = s.query(paasmaker.model.ApplicationInstance)
@@ -191,5 +191,5 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
 
 		result = self.wait()
 
-		self.assertEquals(result['state'], constants.JOB.FAILED, "Should have failed.")
+		self.assertEquals(result.state, constants.JOB.FAILED, "Should have failed.")
 		# TODO: Make sure it failed for the advertised reason.
