@@ -53,7 +53,7 @@ test_sets = {
 
 	paasmaker.pacemaker.scm.zip: ['all', 'scm', 'slow'],
 
-	paasmaker.common.application.job.prepareroot: ['all', 'slow', 'application', 'prepare'],
+	paasmaker.common.job.prepare.prepareroot: ['all', 'slow', 'application', 'prepare'],
 
 	paasmaker.pacemaker.placement.default: ['all', 'slow', 'application', 'placement'],
 }
