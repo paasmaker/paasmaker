@@ -25,12 +25,6 @@ class ApplicationPrepareRootJob(paasmaker.util.jobmanager.ContainerJob):
 		else:
 			self.application = None
 
-		# Environment starts as a copy of Paasmaker's environment.
-		# TODO: This may or may not be a good idea...
-		self.environment = {}
-		for key, value in os.environ.iteritems():
-			self.environment[key] = value
-
 	def get_job_title(self):
 		return "Prepare container for %s" % self.name
 

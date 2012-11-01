@@ -71,6 +71,8 @@ class ManifestReaderJob(paasmaker.util.jobmanager.JobRunner):
 		manager = self.configuration.job_manager
 		manager.add_job(source_preparer)
 		manager.add_job(source_scm)
+		# We always add a service root job, even if there are no services
+		# as it sets up the environment for prepare runs.
 		manager.add_job(service_root)
 		manager.add_job(packer)
 

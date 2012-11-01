@@ -16,9 +16,8 @@ class ServiceContainerJob(paasmaker.util.jobmanager.ContainerJob):
 		# for the prepare tasks.
 		root = self.get_root_job()
 
-		credentials = root.version.get_service_credentials()
-
-		root.environment['PM_SERVICES'] = json.dumps(credentials)
+		# Build our environment for later.
+		root.environment = paasmaker.common.application.environment.ApplicationEnvironment.get_environment(self.configuration, root.version)
 
 		# And signal success so the prepare jobs can start.
 		self.finished_job(constants.JOB.SUCCESS, 'All services prepared.')

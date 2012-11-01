@@ -229,7 +229,7 @@ class ConfigurationSchema(colander.MappingSchema):
 
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="User tags",
-		description="A generic set of tags or information stored for the node. Can be used to write custom placement filters, or find nodes.",
+		description="A generic set of tags or information stored for the node. Can be used to write custom placement filters, or find nodes. Applications are passed these tags as well, so you will want to be careful what you put in here.",
 		missing={},
 		default={})
 

@@ -243,6 +243,10 @@ class Application(OrmBase, Base):
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['name', 'workspace'])
 
+	def flatten_for_heart(self):
+		instance_fields = ['name']
+		return super(ApplicationVersion, self).flatten(fields)
+
 # Joining table between Application Version and services.
 application_version_services = Table('application_version_service', Base.metadata,
      Column('application_version_id', Integer, ForeignKey('application_version.id')),
@@ -270,7 +274,11 @@ class ApplicationVersion(OrmBase, Base):
 		return "<ApplicationVersion('%s'@'%s' - active: %s)>" % (self.version, self.application, str(self.is_current))
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['application', 'version', 'is_current'])
+		return super(ApplicationVersion, self).flatten(['application', 'version', 'is_current'])
+
+	def flatten_for_heart(self):
+		instance_fields = ['version', 'source_path']
+		return super(ApplicationVersion, self).flatten(fields)
 
 	@staticmethod
 	def get_next_version_number(session, application):
@@ -310,7 +318,14 @@ class ApplicationInstanceType(OrmBase, Base):
 		return "<ApplicationInstanceType('%s'@'%s')>" % (self.name, self.runtime)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['name', 'application_version', 'quantity', 'provider'])
+		return super(ApplicationInstanceType, self).flatten(['name', 'application_version', 'quantity', 'provider'])
+
+	def flatten_for_heart(self):
+		data = {}
+		instance_fields = ['name', 'runtime_name', 'runtime_parameters', 'runtime_version', 'startup', 'exclusive']
+		data['instance'] = super(ApplicationInstanceType, self).flatten(fields)
+		data['application_version'] = self.application_version.flatten_for_heart()
+		data['application'] = self.application_version.application.flatten_for_heart()
 
 	@hybrid_property
 	def placement_parameters(self):
