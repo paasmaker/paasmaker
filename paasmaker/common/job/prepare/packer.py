@@ -27,24 +27,52 @@ class SourcePackerJob(paasmaker.util.jobmanager.JobRunner):
 		root.package = package_full_name
 
 		logger.info("Packaging source code...")
-		log_fp = logger.takeover_file()
+		self.log_fp = logger.takeover_file()
 
-		# The callback to handle success/failure.
-		def callback(code):
-			logger.untakeover_file(log_fp)
-			logger.info("Command result: %d" % code)
-			if code == 0:
+		pack_result = 0
+
+		# The callback to handle source complete.
+		def cleanup_complete(code):
+			logger.untakeover_file(self.log_fp)
+			logger.info("Finished removing temporary directory. Code %d.", code)
+			#self.configuration.debug_cat_job_log(logger.job_id)
+			if pack_result == 0:
 				self.finished_job(constants.JOB.SUCCESS, 'Successfully packed source code.')
 			else:
-				logger.error("Unable to pack up source code.")
 				self.finished_job(constants.JOB.FAILED, 'Unable to pack up source code.')
 
-		command = ['tar', 'zcvf', package_full_name, '.']
+		# The callback to handle packaging completion.
+		def pack_complete(code):
+			logger.untakeover_file(self.log_fp)
+			logger.info("Command result: %d" % code)
+			pack_result = code
+			if code == 0:
+				logger.info("Successfully packed source code.")
+			else:
+				logger.error("Unable to pack up source code.")
 
-		runner = paasmaker.util.Popen(command,
-			stdout=log_fp,
-			stderr=log_fp,
-			on_exit=callback,
+			# Remove the working directory. This occurs regardless of
+			# success or not.
+			# We do this as a subprocess, so it doesn't block our process.
+			# The callback to this then completes our job.
+			self.log_fp = logger.takeover_file()
+			cleanup_command = ['rm', '-rfv', root.source_path]
+
+			cleanup_runner = paasmaker.util.Popen(cleanup_command,
+				stdout=self.log_fp,
+				stderr=self.log_fp,
+				on_exit=cleanup_complete,
+				cwd=self.path,
+				io_loop=self.configuration.io_loop,
+				env=root.environment)
+
+		# Fire off the pack command.
+		pack_command = ['tar', 'zcvf', package_full_name, '.']
+
+		packer_runner = paasmaker.util.Popen(pack_command,
+			stdout=self.log_fp,
+			stderr=self.log_fp,
+			on_exit=pack_complete,
 			cwd=self.path,
 			io_loop=self.configuration.io_loop,
 			env=root.environment)
