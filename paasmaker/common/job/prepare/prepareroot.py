@@ -9,6 +9,8 @@ from manifestreader import ManifestReaderJob
 import tornado
 from pubsub import pub
 
+# TODO: Implement abort features for all of these jobs.
+
 class ApplicationPrepareRootJob(paasmaker.util.jobmanager.ContainerJob):
 	def __init__(self, configuration, name, manifest, workspace_id, application_id=None, uploaded_file=None):
 		self.configuration = configuration
