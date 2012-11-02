@@ -25,7 +25,7 @@ instances:
     placement:
       strategy: paasmaker.placement.default
     hostnames:
-      - tornado-simple.paasmaker.com
+      - tornado-simple.local.paasmaker.net
 
 services:
   - name: variables
