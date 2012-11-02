@@ -16,8 +16,6 @@ import pika
 # https://github.com/pika/pika/blob/master/examples/demo_tornado.py
 
 class TemporaryRabbitMQ:
-	# TODO: Ubuntu specific, most likely!
-	server_binary_path = "/usr/lib/rabbitmq/bin/rabbitmq-server"
 	server_config = """
 [
     {rabbit, [{tcp_listeners, [%(RABBITMQ_PORT)s]}]}
@@ -56,7 +54,7 @@ class TemporaryRabbitMQ:
 
 		# Fire up the server.
 		logging.info("Starting up rabbitmq server because requested by test.")
-		self.process = subprocess.Popen([self.server_binary_path], env=environment,
+		self.process = subprocess.Popen([self.configuration.get_flat('rabbitmq_binary')], env=environment,
 			stdout=self.spoolfd, stderr=self.spoolfd)
 
 		# As this takes a while, wait until it's started.

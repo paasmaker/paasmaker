@@ -8,9 +8,6 @@ import signal
 import paasmaker
 import tornado.testing
 
-# TODO: This is specific to the setup.
-NGINX_BINARY_PATH = "/usr/local/openresty/nginx/sbin/nginx"
-
 NGINX_CONFIG = """
 worker_processes  1;
 error_log  %(error_log)s debug;
@@ -95,7 +92,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# Kick off the instance. It will fork in the background once it's
 		# successfully started.
 		# check_call throws an exception if it failed to start.
-		subprocess.check_call([NGINX_BINARY_PATH, '-c', self.nginxconfig], stderr=subprocess.PIPE)
+		subprocess.check_call([self.configuration.get_flat('nginx_binary'), '-c', self.nginxconfig], stderr=subprocess.PIPE)
 
 	def tearDown(self):
 		super(RouterTest, self).tearDown()

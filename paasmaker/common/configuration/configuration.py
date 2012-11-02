@@ -239,6 +239,25 @@ class ConfigurationSchema(colander.MappingSchema):
 	heart = HeartSchema(defalt=HeartSchema.default(), missing=HeartSchema.default())
 	router = RouterSchema(default=RouterSchema.default(), missing=RouterSchema.default())
 
+	# Server related configuration. This is for an Ubuntu server, set up as
+	# per the installation instructions. Obviously, for other platforms
+	# this will need to be altered.
+	redis_binary = colander.SchemaNode(colander.String(),
+		title="Redis server binary",
+		description="The full path to the redis server binary.",
+		default="/usr/bin/redis-server",
+		missing="/usr/bin/redis-server")
+	rabbitmq_binary = colander.SchemaNode(colander.String(),
+		title="RabbitMQ server binary",
+		description="The full path to the RabbitMQ server binary.",
+		default="/usr/lib/rabbitmq/bin/rabbitmq-server",
+		missing="/usr/lib/rabbitmq/bin/rabbitmq-server")
+	nginx_binary =colander.SchemaNode(colander.String(),
+		title="nginx server binary",
+		description="The full path to the nginx server binary.",
+		default="/usr/local/openresty/nginx/sbin/nginx",
+		missing="/usr/local/openresty/nginx/sbin/nginx")
+
 class ImNotA(Exception):
 	pass
 

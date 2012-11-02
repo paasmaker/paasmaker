@@ -13,8 +13,6 @@ class ManagedRedisError(Exception):
 	pass
 
 class ManagedRedis(object):
-	# TODO: too specific to the server setup.
-	redis_binary_path = "/usr/bin/redis-server"
 	redis_server_config = """
 daemonize yes
 pidfile %(working_dir)s/redis.pid
@@ -126,7 +124,7 @@ vm-enabled no
 
 		# Fire up the server.
 		logging.info("Starting up redis server on port %d." % self.parameters['port'])
-		subprocess.check_call([self.redis_binary_path, self.get_configuration_path(self.parameters['working_dir'])])
+		subprocess.check_call([self.configuration.get_flat('redis_binary'), self.get_configuration_path(self.parameters['working_dir'])])
 
 	def get_client(self, io_loop=None):
 		"""
