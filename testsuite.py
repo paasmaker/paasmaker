@@ -50,6 +50,7 @@ test_sets = {
 
 	paasmaker.heart.runtime: ['all', 'slow', 'heart', 'runtime'],
 	paasmaker.heart.runtime.php: ['all', 'slow', 'heart', 'runtime', 'php'],
+	paasmaker.heart.runtime.shell: ['all', 'slow', 'heart', 'runtime', 'shell'],
 
 	paasmaker.pacemaker.service.parameters: ['all', 'service', 'serviceparameters'],
 
