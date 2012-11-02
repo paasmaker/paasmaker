@@ -322,10 +322,11 @@ class ApplicationInstanceType(OrmBase, Base):
 
 	def flatten_for_heart(self):
 		data = {}
-		instance_fields = ['name', 'runtime_name', 'runtime_parameters', 'runtime_version', 'startup', 'exclusive']
+		instance_fields = ['name', 'runtime_name', 'runtime_parameters', 'runtime_version', 'startup', 'exclusive', 'state']
 		data['instance'] = super(ApplicationInstanceType, self).flatten(fields)
 		data['application_version'] = self.application_version.flatten_for_heart()
 		data['application'] = self.application_version.application.flatten_for_heart()
+		return data
 
 	@hybrid_property
 	def placement_parameters(self):
