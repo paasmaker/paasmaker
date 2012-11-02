@@ -1,5 +1,6 @@
 import subprocess
 import unittest
+import platform
 
 class NoFreePortException(Exception):
 	pass
@@ -37,7 +38,9 @@ class FreePortFinder:
 		# fills up. However, I'm using this to prevent the stderr from
 		# being printed out - and relying on the fact that it won't
 		# print very much output to stderr.
-		output = subprocess.check_output(['netstat', '-ltnp'], stderr=subprocess.PIPE)
+		if platform.system() == 'Linux':
+			command = ['netstat', '-ltnp']
+		output = subprocess.check_output(command, stderr=subprocess.PIPE)
 		port = start
 		free = (output.find(":%d " % port) == -1) and (port not in self.preallocated)
 		while not free and port < upper:
