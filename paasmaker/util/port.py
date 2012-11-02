@@ -74,17 +74,17 @@ class FreePortFinderTest(unittest.TestCase):
 
 		# And now we should be returned ports around that.
 		port = finder.free_in_range(10000, 10100)
-		self.assertEquals(port, 10001)
+		self.assertNotIn(port, [10000, 10002])
 		port = finder.free_in_range(10000, 10100)
-		self.assertEquals(port, 10003)
+		self.assertNotIn(port, [10000, 10002])
 
 		# Add a few more, via a list.
 		finder.add_allocated_port([10004, 10006])
 
 		port = finder.free_in_range(10000, 10100)
-		self.assertEquals(port, 10005)
+		self.assertNotIn(port, [10004, 10006])
 		port = finder.free_in_range(10000, 10100)
-		self.assertEquals(port, 10007)
+		self.assertNotIn(port, [10004, 10006])
 
 	def test_in_use(self):
 		finder = FreePortFinder()
