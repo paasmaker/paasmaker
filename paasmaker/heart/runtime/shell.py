@@ -23,16 +23,16 @@ class ShellRuntime(BaseRuntime):
 		# Just return this version.
 		return ['1']
 
-	def start(self, manager, instance, callback, error_callback):
+	def start(self, manager, instance_id, instance, callback, error_callback):
 		raise NotImplementedError("You must implement start.")
 
-	def stop(self, manager, instance, callback, error_callback):
+	def stop(self, manager, instance_id, instance, callback, error_callback):
 		raise NotImplementedError("You must implement stop.")
 
-	def status(self, manager, instance, callback, error_callback):
+	def status(self, manager, instance_id, instance, callback, error_callback):
 		raise NotImplementedError("You must implement stop.")
 
-	def statistics(self, manager, instance, callback, error_callback):
+	def statistics(self, manager, instance_id, instance, callback, error_callback):
 		raise NotImplementedError("You must implement stop.")
 
 class ShellRuntimeTest(BaseRuntimeTest):

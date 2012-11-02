@@ -13,7 +13,7 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		# spend a long time doing anything.
 		pass
 
-	def start(self, manager, instance, callback, error_callback):
+	def start(self, manager, instance_id, instance, callback, error_callback):
 		"""
 		Start the given instance of this application. Instance is a
 		dict of data from the instance manager. You should not mutate
@@ -22,19 +22,19 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		"""
 		raise NotImplementedError("You must implement start.")
 
-	def stop(self, manager, instance, callback, error_callback):
+	def stop(self, manager, instance_id, instance, callback, error_callback):
 		"""
 		Stop the given instance of this application.
 		"""
 		raise NotImplementedError("You must implement stop.")
 
-	def status(self, manager, instance, callback, error_callback):
+	def status(self, manager, instance_id, instance, callback, error_callback):
 		"""
 		Determine the status of this instance.
 		"""
 		raise NotImplementedError("You must implement stop.")
 
-	def statistics(self, manager, instance, callback, error_callback):
+	def statistics(self, manager, instance_id, instance, callback, error_callback):
 		"""
 		Generate some application instance statistics.
 		You should at least return a dict containing:
