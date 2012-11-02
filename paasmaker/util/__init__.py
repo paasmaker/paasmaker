@@ -11,4 +11,4 @@ from temporaryrabbitmq import TemporaryRabbitMQ
 from commandsupervisor import CommandSupervisor, CommandSupervisorLauncher
 from popen import Popen
 from jobmanager import JobManager
-from enum import Enum
+from streamingchecksum import StreamingChecksum
