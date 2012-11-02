@@ -72,7 +72,7 @@ class APIRequest(object):
 
 	def get_endpoint(self):
 		# Override in your subclass to change the URI.
-		return '/'
+		raise NotImplementedError("You must implement get_endpoint().")
 
 	def set_target(self, target):
 		if isinstance(target, basestring):
