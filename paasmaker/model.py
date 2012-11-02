@@ -244,8 +244,8 @@ class Application(OrmBase, Base):
 		return super(Node, self).flatten(['name', 'workspace'])
 
 	def flatten_for_heart(self):
-		instance_fields = ['name']
-		return super(ApplicationVersion, self).flatten(fields)
+		fields = ['name']
+		return super(Application, self).flatten(fields)
 
 # Joining table between Application Version and services.
 application_version_services = Table('application_version_service', Base.metadata,
@@ -277,7 +277,7 @@ class ApplicationVersion(OrmBase, Base):
 		return super(ApplicationVersion, self).flatten(['application', 'version', 'is_current'])
 
 	def flatten_for_heart(self):
-		instance_fields = ['version', 'source_path']
+		fields = ['version', 'source_path']
 		return super(ApplicationVersion, self).flatten(fields)
 
 	@staticmethod
@@ -321,12 +321,8 @@ class ApplicationInstanceType(OrmBase, Base):
 		return super(ApplicationInstanceType, self).flatten(['name', 'application_version', 'quantity', 'provider'])
 
 	def flatten_for_heart(self):
-		data = {}
-		instance_fields = ['name', 'runtime_name', 'runtime_parameters', 'runtime_version', 'startup', 'exclusive', 'state']
-		data['instance'] = super(ApplicationInstanceType, self).flatten(fields)
-		data['application_version'] = self.application_version.flatten_for_heart()
-		data['application'] = self.application_version.application.flatten_for_heart()
-		return data
+		fields = ['name', 'runtime_name', 'runtime_parameters', 'runtime_version', 'startup', 'exclusive']
+		return super(ApplicationInstanceType, self).flatten(fields)
 
 	@hybrid_property
 	def placement_parameters(self):
@@ -365,11 +361,12 @@ class ApplicationInstance(OrmBase, Base):
 	__tablename__ = 'application_instance'
 
 	id = Column(Integer, primary_key=True)
-	instance_id = Column(String, nullable=False)
+	instance_id = Column(String, nullable=False, index=True)
 	application_instance_type_id = Column(Integer, ForeignKey('application_instance_type.id'), nullable=False, index=True)
 	application_instance_type = relationship("ApplicationInstanceType", backref=backref('instances', order_by=id))
 	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
 	node = relationship("Node", backref=backref('nodes', order_by=id))
+	port = Column(Integer, nullable=True, index=True)
 	state = Column(Enum(*constants.INSTANCE.ALL), nullable=False, index=True)
 	_statistics = Column("statistics", Text, nullable=True)
 
@@ -377,7 +374,17 @@ class ApplicationInstance(OrmBase, Base):
 		return "<ApplicationInstance('%s'@'%s' - %s)>" % (self.application_instance_type, self.node, self.state)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['application_instance_type', 'node', 'state'])
+		return super(Node, self).flatten(['application_instance_type', 'node', 'state', 'port'])
+
+	def flatten_for_heart(self):
+		data = {}
+		fields = ['instance_id', 'state']
+		data['instance'] = super(ApplicationInstance, self).flatten(fields)
+		data['instance_type'] = self.application_instance_type.flatten_for_heart()
+		data['application_version'] = self.application_instance_type.application_version.flatten_for_heart()
+		data['application'] = self.application_instance_type.application_version.application.flatten_for_heart()
+		data['environment'] = paasmaker.common.application.environment.ApplicationEnvironment.get_instance_environment(self.application_instance_type.application_version)
+		return data
 
 	@hybrid_property
 	def statistics(self):
