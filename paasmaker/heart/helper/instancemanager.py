@@ -59,6 +59,9 @@ class InstanceManager(object):
 
 		# Add it and save immediately.
 		logger.info("Adding instance %s to our collection.", instance_id)
+		# Create a dict for data for the runtime - the runtime can
+		# store what it likes in there.
+		data['runtime'] = {}
 		self.catalog[instance_id] = data
 		self.save()
 
