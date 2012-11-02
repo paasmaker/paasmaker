@@ -303,10 +303,19 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			# TODO: improve this detection and use.
 			self['my_route'] = socket.getfqdn()
 
-		# Load heart plugins.
+		# Heart initialisation.
 		if self.is_heart():
+			# Plugins.
 			self.load_plugins(self.plugins, self['heart']['plugins'])
-		# Load pacemaker plugins.
+
+			# Instance manager.
+			self.instances = paasmaker.heart.helper.instancemanager.InstanceManager(self)
+
+			# Mark allocated ports as allocated.
+			allocated_ports = self.instances.get_used_ports()
+			self.port_allocator.add_allocated_port(allocated_ports)
+
+		# Pacemaker initialisation.
 		if self.is_pacemaker():
 			self.load_plugins(self.plugins, self['pacemaker']['plugins'])
 
@@ -407,6 +416,13 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		if not os.path.exists(container):
 			os.makedirs(container)
 		path = os.path.join(container, checksum[2:] + '.log')
+		# Create the file if it doesn't exist - prevents errors
+		# trying to watch the file before anything's been written to it
+		# (shouldn't be an issue for production, but causes issues in
+		# unit tests with weird global log levels.)
+		if not os.path.exists(path):
+			fp = open(path, 'a')
+			fp.close()
 		return path
 	def debug_cat_job_log(self, job_id):
 		path = self.get_job_log_path(job_id)
@@ -491,6 +507,31 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			pass
 
 		return self.uuid
+
+	#
+	# HEART HELPERS
+	#
+	def get_instance_path(self, instance_id):
+		path = os.path.join(
+			self.get_flat('heart.working_dir'),
+			'instance',
+			instance_id
+		)
+
+		if not os.path.exists(path):
+			os.makedirs(path)
+
+		return path
+
+	def get_instance_package_path(self):
+		path = os.path.join(
+			self.get_flat('heart.working_dir'),
+			'packages'
+		)
+		if not os.path.exists(path):
+			os.makedirs(path)
+
+		return path
 
 class TestConfiguration(unittest.TestCase):
 	minimum_config = """

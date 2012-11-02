@@ -27,6 +27,7 @@ test_sets = {
 	paasmaker.util.temporaryrabbitmq: ['all', 'slow', 'util', 'messaging'],
 	paasmaker.util.popen: ['all', 'slow', 'util', 'process'],
 	paasmaker.util.jobmanager: ['all', 'util', 'job', 'jobmanager'],
+	paasmaker.util.streamingchecksum: ['all', 'util', 'checksum'],
 
 	paasmaker.router.router: ['all', 'slow', 'router'],
 
@@ -45,6 +46,7 @@ test_sets = {
 	paasmaker.pacemaker.controller.node: ['all', 'slow', 'controller', 'node'],
 	paasmaker.pacemaker.controller.profile: ['all', 'slow', 'controller', 'login', 'profile'],
 	paasmaker.pacemaker.controller.workspace: ['all', 'slow', 'controller', 'workspace'],
+	paasmaker.heart.controller.instance: ['all', 'slow', 'controller', 'instance', 'heart'],
 
 	paasmaker.heart.runtime: ['all', 'slow', 'heart', 'runtime'],
 	paasmaker.heart.runtime.php: ['all', 'slow', 'heart', 'runtime', 'php'],
@@ -58,6 +60,8 @@ test_sets = {
 	paasmaker.common.job.coordinate.selectlocations: ['all', 'slow', 'application', 'coordinate'],
 
 	paasmaker.pacemaker.placement.default: ['all', 'slow', 'application', 'placement'],
+
+	paasmaker.heart.helper.instancemanager: ['all', 'application', 'heart']
 }
 
 if __name__ == '__main__':

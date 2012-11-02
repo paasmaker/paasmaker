@@ -5,3 +5,4 @@ from nodeupdate import NodeUpdateAPIRequest
 from login import LoginAPIRequest
 from user import UserCreateAPIRequest, UserEditAPIRequest
 from workspace import WorkspaceCreateAPIRequest, WorkspaceEditAPIRequest
+from instanceregister import InstanceRegisterAPIRequest
