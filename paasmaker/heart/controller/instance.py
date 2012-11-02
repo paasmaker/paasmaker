@@ -12,6 +12,7 @@ from paasmaker.common.core import constants
 
 import tornado
 import tornado.testing
+from pubsub import pub
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -93,6 +94,9 @@ class InstanceRegisterControllerTest(BaseControllerTest):
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
+	def on_job_status(self, message):
+		self.stop(message)
+
 	def test_registration(self):
 		session = self.configuration.get_database_session()
 		instance = self.create_sample_instance(session, 'paasmaker.runtime.php', {}, '5.3')
@@ -107,10 +111,21 @@ class InstanceRegisterControllerTest(BaseControllerTest):
 		self.assertEquals(len(response.errors), 0, "There were errors.")
 		self.assertEquals(len(response.warnings), 0, "There were warnings.")
 		self.assertTrue(response.data.has_key('port'), "Response did not contain a port.")
+		self.assertTrue(response.data.has_key('job_id'), "Missing job ID in response.")
+
+		# Wait for the register job to complete.
+		job_id = response.data['job_id']
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(job_id))
+
+		result = self.wait()
+		while result.state != constants.JOB.SUCCESS:
+			result = self.wait()
+
+		self.assertEquals(result.state, constants.JOB.SUCCESS, "Job did not succeed.")
 
 		# Reload the instance and make sure the port was set.
 		session.refresh(instance)
-		self.assertEquals(response.data['port'], instance.port)
+		self.assertEquals(response.data['port'], instance.port, "Port was not set.")
 
 		# Try to register again. This will fail.
 		request.send(self.stop)

@@ -124,7 +124,7 @@ class PrepareJobTest(tornado.testing.AsyncTestCase):
 		self.configuration.job_manager.evaluate()
 
 		result = self.wait()
-		while result.job_id != root_job_id or result.state != constants.JOB.SUCCESS:
+		while result.state != constants.JOB.SUCCESS:
 			result = self.wait()
 
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
