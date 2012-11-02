@@ -7,6 +7,17 @@ class NoFreePortException(Exception):
 class FreePortFinder:
 	def __init__(self):
 		self.last_allocated = None
+		self.preallocated = set()
+
+	def add_allocated_port(self, port):
+		if isinstance(port, list):
+			self.preallocated.update(port)
+		else:
+			self.preallocated.add(port)
+
+	def remove_allocated_port(self, port):
+		if port in self.preallocated:
+			self.preallocated.remove(port)
 
 	def free_in_range(self, lower, upper, complete_scan=False):
 		start = lower
@@ -28,10 +39,10 @@ class FreePortFinder:
 		# print very much output to stderr.
 		output = subprocess.check_output(['netstat', '-ltnp'], stderr=subprocess.PIPE)
 		port = start
-		free = output.find(":%d " % port) == -1
+		free = (output.find(":%d " % port) == -1) and (port not in self.preallocated)
 		while not free and port < upper:
 			port += 1
-			free = output.find(":%d " % port) == -1
+			free = (output.find(":%d " % port) == -1) and (port not in self.preallocated)
 		if not free:
 			# If we were using the last allocated port,
 			# we might not have scanned the bottom of the range.
@@ -51,6 +62,30 @@ class FreePortFinderTest(unittest.TestCase):
 		port = finder.free_in_range(10000, 10100)
 		self.assertTrue(port >= 10000 and port <= 10100)
 
+	def test_allocated(self):
+		finder = FreePortFinder()
+
+		port = finder.free_in_range(10000, 10100)
+		self.assertEquals(port, 10000)
+
+		# Mask out the following ports.
+		finder.add_allocated_port(10000)
+		finder.add_allocated_port(10002)
+
+		# And now we should be returned ports around that.
+		port = finder.free_in_range(10000, 10100)
+		self.assertEquals(port, 10001)
+		port = finder.free_in_range(10000, 10100)
+		self.assertEquals(port, 10003)
+
+		# Add a few more, via a list.
+		finder.add_allocated_port([10004, 10006])
+
+		port = finder.free_in_range(10000, 10100)
+		self.assertEquals(port, 10005)
+		port = finder.free_in_range(10000, 10100)
+		self.assertEquals(port, 10007)
+
 	def test_in_use(self):
 		finder = FreePortFinder()
 
@@ -59,7 +94,7 @@ class FreePortFinderTest(unittest.TestCase):
 			self.assertTrue(False, "Found port 22 was free.")
 		except NoFreePortException, ex:
 			self.assertTrue("Didn't find port 22 as free.")
-		
+
 		# Try again, but go 22->24. One of those should be free.
 		port = finder.free_in_range(22, 24)
 		self.assertTrue(port == 23 or port == 24)
