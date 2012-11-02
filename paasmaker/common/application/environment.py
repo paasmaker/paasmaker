@@ -5,7 +5,7 @@ import json
 
 class ApplicationEnvironment(object):
 	@staticmethod
-	def get_instance_environment(configuration, version):
+	def get_instance_environment(version):
 		"""
 		Fetch only the instance environment that is not node specific.
 		Intended only to capture data that can be seralized and passed to
@@ -54,7 +54,7 @@ class ApplicationEnvironment(object):
 		calling node, and should not be sent to another node.
 		"""
 		# Helper to get the instance environment and our local environment in one go.
-		environment = ApplicationEnvironment.get_instance_environment(configuration, version)
+		environment = ApplicationEnvironment.get_instance_environment(version)
 		environment = ApplicationEnvironment.merge_local_environment(configuration, environment)
 
 		return environment
