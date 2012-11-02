@@ -40,10 +40,17 @@ class ApplicationPrepareRootJob(paasmaker.util.jobmanager.ContainerJob):
 		version = self.version
 		self.session.refresh(version)
 		version.source_path = "paasmaker://%s/%s" % (self.configuration.get_node_uuid(), self.package)
-		self.session.add(version)
-		self.session.commit()
+		# Calculate the checksum of this source package.
+		checksum = paasmaker.util.streamingchecksum.StreamingChecksum(self.package, self.configuration.io_loop, logger)
 
-		self.finished_job(constants.JOB.SUCCESS, "Completed successfully.")
+		def checksum_complete(checksum):
+			version.source_checksum = checksum
+			self.session.add(version)
+			self.session.commit()
+
+			self.finished_job(constants.JOB.SUCCESS, "Completed successfully.")
+
+		checksum.start(checksum_complete)
 
 	@staticmethod
 	def start(configuration, name, manifest, workspace_id, application_id=None, uploaded_file=None):
@@ -117,6 +124,8 @@ class PrepareJobTest(tornado.testing.AsyncTestCase):
 		self.configuration.job_manager.evaluate()
 
 		result = self.wait()
+		while result.job_id != root_job_id or result.state != constants.JOB.SUCCESS:
+			result = self.wait()
 
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
 
