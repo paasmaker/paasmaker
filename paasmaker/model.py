@@ -264,6 +264,7 @@ class ApplicationVersion(OrmBase, Base):
 	statistics = Column(Text, nullable=True)
 	manifest = Column(Text, nullable=False)
 	source_path = Column(String, nullable=True)
+	source_checksum = Column(String, nullable=True)
 
 	services = relationship('Service', secondary=application_version_services, backref='application_versions')
 
@@ -277,7 +278,7 @@ class ApplicationVersion(OrmBase, Base):
 		return super(ApplicationVersion, self).flatten(['application', 'version', 'is_current'])
 
 	def flatten_for_heart(self):
-		fields = ['version', 'source_path']
+		fields = ['version', 'source_path', 'source_checksum']
 		return super(ApplicationVersion, self).flatten(fields)
 
 	@staticmethod
