@@ -40,7 +40,17 @@ class FreePortFinder:
 		# print very much output to stderr.
 		if platform.system() == 'Linux':
 			command = ['netstat', '-ltnp']
+		if platform.system() == 'Windows':
+			command = ['netstat', '-na', '-p', 'tcp']
 		output = subprocess.check_output(command, stderr=subprocess.PIPE)
+		# Post process the output a little bit.
+		raw_lines = output.split("\n")
+		lines = []
+		for line in raw_lines:
+			if line.find("LISTEN") != -1:
+				lines.append(line)
+		output = "\n".join(lines)
+		# Now begin the search.
 		port = start
 		free = (output.find(":%d " % port) == -1) and (port not in self.preallocated)
 		while not free and port < upper:
