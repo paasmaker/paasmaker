@@ -28,6 +28,8 @@ class ShellPrepare(BasePrepare):
 		# Prevent the script from continuing when one of the commands
 		# fails. Because we want to abort in this situation.
 		fp.write("\nset -xe\n")
+		# From: http://stackoverflow.com/questions/821396/aborting-a-shell-script-if-any-command-returns-a-non-zero-value
+		fp.write("set -o pipefail\n")
 
 		for command in self.parameters['commands']:
 			self.logger.info("Queuing command: %s", command)
