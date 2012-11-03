@@ -52,13 +52,13 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		super(ShellRuntimeTest, self).tearDown()
 
 	def test_options(self):
-		self.registry.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {})
-		instance = self.registry.instantiate('paasmaker.runtime.shell', paasmaker.util.plugin.MODE.RUNTIME_STARTUP, {})
+		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {})
+		instance = self.configuration.plugins.instantiate('paasmaker.runtime.shell', paasmaker.util.plugin.MODE.RUNTIME_STARTUP, {})
 		self.assertTrue(True, "Should have got here...")
 
 	def test_versions(self):
-		self.registry.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {})
-		instance = self.registry.instantiate('paasmaker.runtime.shell', paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
+		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {})
+		instance = self.configuration.plugins.instantiate('paasmaker.runtime.shell', paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
 
 		versions = instance.get_versions()
 

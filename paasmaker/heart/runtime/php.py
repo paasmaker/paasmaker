@@ -56,23 +56,15 @@ class PHPRuntime(BaseRuntime):
 	# TODO: Implement the rest of this...
 
 class PHPRuntimeTest(BaseRuntimeTest):
-	def setUp(self):
-		super(PHPRuntimeTest, self).setUp()
-
-		# Select a directory for apache.
-		# TODO: Do this...
-
-	def tearDown(self):
-		super(PHPRuntimeTest, self).tearDown()
 
 	def test_options(self):
-		self.registry.register('paasmaker.runtime.php', 'paasmaker.heart.runtime.PHPRuntime', {'apache_config_dir': 'value'})
-		instance = self.registry.instantiate('paasmaker.runtime.php', paasmaker.util.plugin.MODE.RUNTIME_STARTUP, {'document_root': 'web/'})
+		self.configuration.plugins.register('paasmaker.runtime.php', 'paasmaker.heart.runtime.PHPRuntime', {'apache_config_dir': 'value'})
+		instance = self.configuration.plugins.instantiate('paasmaker.runtime.php', paasmaker.util.plugin.MODE.RUNTIME_STARTUP, {'document_root': 'web/'})
 		self.assertTrue(True, "Should have got here...")
 
 	def test_versions(self):
-		self.registry.register('paasmaker.runtime.php', 'paasmaker.heart.runtime.PHPRuntime', {'apache_config_dir': 'value'})
-		instance = self.registry.instantiate('paasmaker.runtime.php', paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
+		self.configuration.plugins.register('paasmaker.runtime.php', 'paasmaker.heart.runtime.PHPRuntime', {'apache_config_dir': 'value'})
+		instance = self.configuration.plugins.instantiate('paasmaker.runtime.php', paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
 
 		versions = instance.get_versions()
 

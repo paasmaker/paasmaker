@@ -1,5 +1,6 @@
 import paasmaker
-import unittest
+
+import tornado.testing
 
 # Base runtime interface.
 class BaseRuntime(paasmaker.util.plugin.Plugin):
@@ -55,11 +56,24 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		"""
 		raise NotImplementedError("You must implement statistics().")
 
-class BaseRuntimeTest(unittest.TestCase):
+class BaseRuntimeTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
-		# TODO: Create an appropriate configuration stub.
-		self.registry = paasmaker.util.plugin.PluginRegistry({})
+		super(BaseRuntimeTest, self).setUp()
+		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['heart'], io_loop=self.io_loop)
+
+		self.success = None
+		self.message = None
 
 	def tearDown(self):
-		# TODO: Clean up the configuration stub, when that's implemented.
-		pass
+		self.configuration.cleanup()
+		super(BaseRuntimeTest, self).tearDown()
+
+	def success_callback(self, message):
+		self.success = True
+		self.message = message
+		self.stop()
+
+	def failure_callback(self, message):
+		self.success = False
+		self.message = message
+		self.stop()
