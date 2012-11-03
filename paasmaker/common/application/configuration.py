@@ -1,9 +1,12 @@
-import unittest
+
+import re
+import json
+
 import colander
 import yaml
 import paasmaker
 import tornado
-import json
+
 from paasmaker.util.configurationhelper import InvalidConfigurationException
 from paasmaker.common.controller import BaseControllerTest
 
@@ -80,7 +83,8 @@ class ApplicationSource(colander.MappingSchema):
 class Application(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Application name",
-		decription="The name of the application")
+		decription="The name of the application",
+		validator=colander.Regex(re.compile("[-A-Za-z0-9.]{1,}"), "Application names must match [-A-Za-z0-9.]{1,}."))
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
 	source = ApplicationSource()
 
