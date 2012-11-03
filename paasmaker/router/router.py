@@ -18,7 +18,12 @@ events {
 }
 
 http {
-	access_log %(access_log)s;
+	log_format paasmaker '{"key":$logkey,"bytes":$bytes_sent,'
+		'"code":$status,"upstream_response_time":"$upstream_response_time",'
+		'"time":$msec,"nginx_response_time":$request_time}';
+
+	access_log %(access_log_stats)s paasmaker;
+	access_log %(access_log_combined)s combined;
 
 	client_body_temp_path %(temp_dir)s/;
 	proxy_temp_path %(temp_dir)s/;
@@ -34,6 +39,7 @@ http {
 			set $redis_host %(redis_host)s;
 			set $redis_port %(redis_port)d;
 			set $upstream "";
+			set $logkey "null";
 			rewrite_by_lua_file %(router_root)s/rewrite.lua;
 			proxy_set_header Host $host;
 			proxy_buffering             off;
@@ -74,14 +80,16 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# For debugging... they are unlinked in tearDown()
 		# but you can inspect them in the meantime.
 		self.errorlog = tempfile.mkstemp()[1]
-		self.accesslog = tempfile.mkstemp()[1]
+		self.accesslog_stats = tempfile.mkstemp()[1]
+		self.accesslog_combined = tempfile.mkstemp()[1]
 
 		nginxparams = {}
 		nginxparams['temp_dir'] = self.nginxtempdir
 		nginxparams['router_root'] = os.path.normpath(os.path.dirname(__file__))
 		nginxparams['test_port'] = self.nginxport
 		nginxparams['error_log'] = self.errorlog
-		nginxparams['access_log'] = self.accesslog
+		nginxparams['access_log_stats'] = self.accesslog_stats
+		nginxparams['access_log_combined'] = self.accesslog_combined
 		# TODO: This couples this test to the managed redis a bit too closely.
 		nginxparams['redis_host'] = self.redis_server.parameters['host']
 		nginxparams['redis_port'] = self.redis_server.parameters['port']
@@ -105,7 +113,8 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		shutil.rmtree(self.nginxtempdir)
 		os.unlink(self.nginxconfig)
 		os.unlink(self.errorlog)
-		os.unlink(self.accesslog)
+		os.unlink(self.accesslog_stats)
+		os.unlink(self.accesslog_combined)
 
 	def test_simple_request(self):
 		request = tornado.httpclient.HTTPRequest(
@@ -127,11 +136,14 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# Now insert a record for it.
 		# Inserted records MUST be IP addresses.
 		target = "127.0.0.1:%d" % self.get_http_port()
-		self.redis.sadd('foo.com', target, callback=self.stop)
+		self.redis.sadd('instances_foo.com', target, callback=self.stop)
+		self.wait()
+		logkey = 1
+		self.redis.set('logkey_foo.com', logkey, callback=self.stop)
 		self.wait()
 
 		# Fetch the set members.
-		self.redis.smembers('foo.com', callback=self.stop)
+		self.redis.smembers('instances_foo.com', callback=self.stop)
 		members = self.wait()
 		self.assertIn(target, members, "Target is not in set.")
 
@@ -141,6 +153,8 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 		#print response.body
 		#print open(self.errorlog, 'r').read()
+		#print open(self.accesslog_stats, 'r').read()
+		#print open(self.accesslog_combined, 'r').read()
 
 		# Should be 200 this time.
 		self.assertEquals(response.code, 200, "Response is not 200.")
