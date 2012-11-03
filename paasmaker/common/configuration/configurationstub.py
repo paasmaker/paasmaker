@@ -40,6 +40,9 @@ pacemaker:
     - name: paasmaker.scm.zip
       class: paasmaker.pacemaker.scm.zip.ZipSCM
       title: Zip file SCM
+    - name: paasmaker.prepare.shell
+      class: paasmaker.pacemaker.prepare.shell.ShellPrepare
+      title: Shell preparer
 """
 
 	heart_config = """

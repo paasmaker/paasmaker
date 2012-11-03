@@ -10,7 +10,10 @@ application:
     parameters:
       location: upload
     prepare:
-      - touch prepare.txt
+      - plugin: paasmaker.prepare.shell
+        parameters:
+          commands:
+            - echo "foo" > prepare.txt
 
 instances:
   web:

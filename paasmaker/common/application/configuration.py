@@ -32,6 +32,19 @@ class Placement(colander.MappingSchema):
 	def default():
 		return {'strategy': 'paasmaker.placement.default', 'parameters': {}}
 
+class PrepareSchema(colander.MappingSchema):
+	plugin = colander.SchemaNode(colander.String(),
+		title="Plugin name",
+		description="The plugin to be used for this prepare action.")
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Plugin Parameters",
+		description="Parameters for this particular plugin",
+		missing={},
+		default={})
+
+class PreparesSchema(colander.SequenceSchema):
+	prepare = PrepareSchema()
+
 class ApplicationSource(colander.MappingSchema):
 	method = colander.SchemaNode(colander.String(),
 		title="Source fetching method",
@@ -41,9 +54,7 @@ class ApplicationSource(colander.MappingSchema):
 		description="Any parameters to the source fetching method.",
 		default={},
 		missing={})
-	prepare = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()),
-		title="Prepare commands",
-		description="Commands used to prepare a pristine source for execution.")
+	prepare = PreparesSchema()
 
 class Application(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
@@ -196,9 +207,12 @@ application:
     parameters:
       location: git@foo.com/paasmaker/paasmaker.git
     prepare:
-      - paasmaker.prepare.symfony2
-      - php composer.phar install
-      - php app/console cache:clear
+      - plugin: paasmaker.prepare.symfony2
+      - plugin: paasmaker.prepare.shell
+        parameters:
+          commands:
+            - php composer.phar install
+            - php app/console cache:clear
 
 instances:
   web:

@@ -45,42 +45,18 @@ class SourcePreparerJob(paasmaker.util.jobmanager.JobRunner):
 			self.finished_job(constants.JOB.SUCCESS, 'Completed all prepare tasks successfully.')
 
 	def do_prepare_task(self, task):
-		# If the task matches a plugin, run and execute that.
 		logger = self.job_logger()
-		if self.configuration.plugins.exists(task, paasmaker.util.plugin.MODE.PREPARE_COMMAND):
-			logger.info("Starting up plugin %s...", task)
-			plugin = self.configuration.plugins.instantiate(task, paasmaker.util.plugin.MODE.PREPARE_COMMAND, {'path': self.path}, self.logger)
-			plugin.prepare(self.plugin_success, self.plugin_failure)
+		plugin_name = task['plugin']
+		if self.configuration.plugins.exists(plugin_name, paasmaker.util.plugin.MODE.PREPARE_COMMAND):
+			logger.info("Starting up plugin %s...", plugin_name)
+			plugin = self.configuration.plugins.instantiate(plugin_name, paasmaker.util.plugin.MODE.PREPARE_COMMAND, task['parameters'], logger)
+			plugin.prepare(self.environment, self.path, self.plugin_success, self.plugin_failure)
 		else:
-			# It's a shell command. Set it up and do it.
-			logger.info("Running command: %s", task)
-			log_fp = logger.takeover_file()
+			# Invalid plugin.
+			logger.error("No such prepare plugin %s", plugin_name)
+			self.finished_job(constants.JOB.FAILED, "No such prepare plugin %s" % plugin_name)
 
-			# The callback to handle success/failure.
-			def callback(code):
-				logger.untakeover_file(log_fp)
-				logger.info("Command result: %d" % code)
-				# For debugging:
-				#self.configuration.debug_cat_job_log(self.job_id)
-				if code == 0:
-					self.find_next_task()
-				else:
-					logger.error("Command did not complete successfully. Aborting.")
-					self.finished_job(constants.JOB.FAILED, 'Command did not complete successfully. Aborting.')
-
-			# TODO: Commands that use shell redirection don't work,
-			# eg "echo foo > bar.txt"
-
-			# And the runner that runs the task.
-			runner = paasmaker.util.Popen(task,
-				stdout=log_fp,
-				stderr=log_fp,
-				on_exit=callback,
-				cwd=self.path,
-				io_loop=self.configuration.io_loop,
-				env=self.environment)
-
-	def plugin_success(self):
+	def plugin_success(self, message):
 		self.find_next_task()
 
 	def plugin_failure(self, message):
