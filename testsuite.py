@@ -54,6 +54,8 @@ test_sets = {
 
 	paasmaker.pacemaker.service.parameters: ['all', 'service', 'serviceparameters'],
 
+	paasmaker.pacemaker.prepare.shell: ['all', 'prepare', 'slow', 'shellprepare'],
+
 	paasmaker.pacemaker.scm.zip: ['all', 'scm', 'slow'],
 	paasmaker.pacemaker.scm.tarball: ['all', 'scm', 'slow'],
 
