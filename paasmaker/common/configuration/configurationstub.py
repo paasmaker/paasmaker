@@ -43,6 +43,9 @@ pacemaker:
     - name: paasmaker.prepare.shell
       class: paasmaker.pacemaker.prepare.shell.ShellPrepare
       title: Shell preparer
+    - name: paasmaker.runtime.shell
+      class: paasmaker.heart.runtime.ShellRuntime
+      title: Shell Runtime
 """
 
 	heart_config = """
@@ -55,6 +58,12 @@ heart:
       title: PHP
       parameters:
         apache_config_dir: /tmp/foo
+    - name: paasmaker.startup.shell
+      class: paasmaker.pacemaker.prepare.shell.ShellPrepare
+      title: Shell startup
+    - name: paasmaker.runtime.shell
+      class: paasmaker.heart.runtime.ShellRuntime
+      title: Shell Runtime
     #- name: paasmaker.runtime.ruby
     #  class: paasmaker.heart.runtime.RubyRuntime
     #  title: Ruby

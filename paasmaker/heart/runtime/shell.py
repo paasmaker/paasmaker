@@ -15,13 +15,21 @@ class ShellRuntimeParametersSchema(colander.MappingSchema):
 	pass
 
 class ShellRuntime(BaseRuntime):
-	MODES = [paasmaker.util.plugin.MODE.RUNTIME_STARTUP, paasmaker.util.plugin.MODE.RUNTIME_VERSIONS]
+	MODES = [
+		paasmaker.util.plugin.MODE.RUNTIME_STARTUP,
+		paasmaker.util.plugin.MODE.RUNTIME_VERSIONS,
+		paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT
+	]
 	OPTIONS_SCHEMA = ShellRuntimeOptionsSchema()
 	PARAMETERS_SCHEMA = ShellRuntimeParametersSchema()
 
 	def get_versions(self):
 		# Just return this version.
 		return ['1']
+
+	def environment(self, version, environment, callback, error_callback):
+		# Nothing to set up - so just proceed.
+		callback("Ready.")
 
 	def start(self, manager, instance_id, instance, callback, error_callback):
 		raise NotImplementedError("You must implement start.")

@@ -13,6 +13,15 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		# spend a long time doing anything.
 		pass
 
+	def environment(self, version, environment, callback, error_callback):
+		"""
+		Set up any environment required to run this runtime. This assumes
+		that the runtime can just do it's work via an environment. You
+		should mutate the supplied environment, and call the callback
+		when you're done.
+		"""
+		raise NotImplementedError("You must implement environment().")
+
 	def start(self, manager, instance_id, instance, callback, error_callback):
 		"""
 		Start the given instance of this application. Instance is a
@@ -20,19 +29,19 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		any of it, except for the runtime dict to keep a track of anything
 		you want to know.
 		"""
-		raise NotImplementedError("You must implement start.")
+		raise NotImplementedError("You must implement start().")
 
 	def stop(self, manager, instance_id, instance, callback, error_callback):
 		"""
 		Stop the given instance of this application.
 		"""
-		raise NotImplementedError("You must implement stop.")
+		raise NotImplementedError("You must implement stop().")
 
 	def status(self, manager, instance_id, instance, callback, error_callback):
 		"""
 		Determine the status of this instance.
 		"""
-		raise NotImplementedError("You must implement stop.")
+		raise NotImplementedError("You must implement status().")
 
 	def statistics(self, manager, instance_id, instance, callback, error_callback):
 		"""
@@ -44,7 +53,7 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		If you're unable to gather this information, return zero
 		for the figures.
 		"""
-		raise NotImplementedError("You must implement stop.")
+		raise NotImplementedError("You must implement statistics().")
 
 class BaseRuntimeTest(unittest.TestCase):
 	def setUp(self):

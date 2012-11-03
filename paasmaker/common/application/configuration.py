@@ -32,42 +32,6 @@ class Placement(colander.MappingSchema):
 	def default():
 		return {'strategy': 'paasmaker.placement.default', 'parameters': {}}
 
-class PrepareSchema(colander.MappingSchema):
-	plugin = colander.SchemaNode(colander.String(),
-		title="Plugin name",
-		description="The plugin to be used for this prepare action.")
-	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Plugin Parameters",
-		description="Parameters for this particular plugin",
-		missing={},
-		default={})
-
-class PreparesSchema(colander.SequenceSchema):
-	prepare = PrepareSchema()
-
-class ApplicationSource(colander.MappingSchema):
-	method = colander.SchemaNode(colander.String(),
-		title="Source fetching method",
-		description="The method to grab and prepare the source")
-	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Parameters for the source fetcher.",
-		description="Any parameters to the source fetching method.",
-		default={},
-		missing={})
-	prepare = PreparesSchema()
-
-class Application(colander.MappingSchema):
-	name = colander.SchemaNode(colander.String(),
-		title="Application name",
-		decription="The name of the application")
-	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
-	source = ApplicationSource()
-
-class Manifest(colander.MappingSchema):
-	version = colander.SchemaNode(colander.Integer(),
-		title="Manifest version",
-		description="The manifest format version number.")
-
 class Runtime(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Runtime name",
@@ -81,6 +45,50 @@ class Runtime(colander.MappingSchema):
 		title="Runtime version",
 		description="The requested runtime version.")
 
+class PrepareCommand(colander.MappingSchema):
+	plugin = colander.SchemaNode(colander.String(),
+		title="Plugin name",
+		description="The plugin to be used for this prepare action.")
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Plugin Parameters",
+		description="Parameters for this particular plugin",
+		missing={},
+		default={})
+
+class Prepares(colander.SequenceSchema):
+	command = PrepareCommand()
+
+class PrepareSection(colander.MappingSchema):
+	commands = Prepares(missing=[], default=[])
+	runtime = Runtime(missing={'name': None}, default={'name': None})
+
+	@staticmethod
+	def default():
+		return {'commands': [], 'runtime': {'name': None}}
+
+class ApplicationSource(colander.MappingSchema):
+	method = colander.SchemaNode(colander.String(),
+		title="Source fetching method",
+		description="The method to grab and prepare the source")
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Parameters for the source fetcher.",
+		description="Any parameters to the source fetching method.",
+		default={},
+		missing={})
+	prepare = PrepareSection(default=PrepareSection.default(), missing=PrepareSection.default())
+
+class Application(colander.MappingSchema):
+	name = colander.SchemaNode(colander.String(),
+		title="Application name",
+		decription="The name of the application")
+	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
+	source = ApplicationSource()
+
+class Manifest(colander.MappingSchema):
+	version = colander.SchemaNode(colander.Integer(),
+		title="Manifest version",
+		description="The manifest format version number.")
+
 class Instance(colander.MappingSchema):
 	quantity = colander.SchemaNode(colander.Integer(),
 		title="Quantity",
@@ -88,11 +96,7 @@ class Instance(colander.MappingSchema):
 		missing=1,
 		default=1)
 	runtime = Runtime()
-	startup = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()),
-		title="Startup commands",
-		description="Commands used to prepare the code before starting the instance.",
-		default=[],
-		missing=[])
+	startup = Prepares(default=[], missing=[])
 	placement = Placement(default=Placement.default(), missing=Placement.default())
 	hostnames = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()), title="Hostnames", default=[], missing=[])
 	exclusive = colander.SchemaNode(colander.Boolean(),
@@ -207,12 +211,16 @@ application:
     parameters:
       location: git@foo.com/paasmaker/paasmaker.git
     prepare:
-      - plugin: paasmaker.prepare.symfony2
-      - plugin: paasmaker.prepare.shell
-        parameters:
-          commands:
-            - php composer.phar install
-            - php app/console cache:clear
+      runtime:
+        name: paasmaker.runtime.shell
+        version: 1
+      commands:
+        - plugin: paasmaker.prepare.symfony2
+        - plugin: paasmaker.prepare.shell
+          parameters:
+            commands:
+              - php composer.phar install
+              - php app/console cache:clear
 
 instances:
   web:
@@ -223,9 +231,11 @@ instances:
         document_root: web
       version: 5.4
     startup:
-      - paasmaker.startup.symfony2
-      - php app/console cache:warm
-      - php app/console assets:deploy
+      - plugin: paasmaker.prepare.shell
+        parameters:
+          commands:
+            - php app/console cache:warm
+            - php app/console assets:deploy
     placement:
       strategy: paasmaker.placement.default
     hostnames:

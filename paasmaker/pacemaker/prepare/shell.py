@@ -16,7 +16,11 @@ class ShellPrepareParametersSchema(colander.MappingSchema):
 	commands = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()), title="Commands")
 
 class ShellPrepare(BasePrepare):
-	MODES = [paasmaker.util.plugin.MODE.PREPARE_COMMAND]
+	# NOTE: This plugin can also be used to run commands prior to an instance starting.
+	MODES = [
+		paasmaker.util.plugin.MODE.PREPARE_COMMAND,
+		paasmaker.util.plugin.MODE.RUNTIME_STARTUP
+	]
 	OPTIONS_SCHEMA = ShellPrepareConfigurationSchema()
 	PARAMETERS_SCHEMA = ShellPrepareParametersSchema()
 
