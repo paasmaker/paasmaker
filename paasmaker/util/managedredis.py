@@ -109,6 +109,10 @@ vm-enabled no
 		else:
 			return None
 
+	def start_if_not_running(self):
+		if not self.is_running():
+			self.start()
+
 	def start(self):
 		"""
 		Start up the server for this instance.
@@ -139,6 +143,13 @@ vm-enabled no
 		self.client.connect()
 
 		return self.client
+
+	def is_running(self):
+		# TODO: Make this more robust than checking if the PID file exists.
+		if self.get_pid():
+			return True
+		else:
+			return False
 
 	def stop(self):
 		"""

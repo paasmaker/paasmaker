@@ -33,6 +33,16 @@ logger.addHandler(logging.NullHandler())
 define("debug", type=int, default=0, help="Enable Tornado debug mode.")
 define("configfile", type=str, default="", help="Override configuration file.")
 
+# Default ports.
+DEFAULT_API_PORT = 42500
+
+DEFAULT_ROUTER_REDIS_MASTER = 42510
+DEFAULT_ROUTER_REDIS_SLAVE = 42511
+DEFAULT_ROUTER_REDIS_STATS = 42512
+
+DEFAULT_APPLICATION_MIN = 42600
+DEFAULT_APPLICATION_MAX = 42699
+
 # The Configuration Schema.
 class PluginSchema(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
@@ -112,12 +122,31 @@ class RedisConnectionSchema(colander.MappingSchema):
 	password = colander.SchemaNode(colander.String(),
 		title="Password",
 		description="Redis Password",
-		missing="",
-		default="")
+		missing=None,
+		default=None)
+	managed = colander.SchemaNode(colander.Boolean(),
+		title="Managed",
+		description="If true, this is a managed redis instance. Paasmaker will create it on demand and manage storing it's data.",
+		default=False,
+		missing=False)
 
-class RouterRedisSchema(colander.MappingSchema):
-	master = RedisConnectionSchema()
-	local = RedisConnectionSchema()
+	@staticmethod
+	def default_router_table():
+		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_MASTER, 'managed': False}
+	@staticmethod
+	def default_router_stats():
+		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_STATS, 'managed': False}
+
+class RedisConnectionSlaveSchema(RedisConnectionSchema):
+	enabled = colander.SchemaNode(colander.Boolean(),
+		title="Enable automatic slaving",
+		description="Enable automatic slaving of this router table to the supplied values.",
+		missing=False,
+		default=False)
+
+	@staticmethod
+	def default():
+		return {'enabled': False}
 
 class RouterSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -126,31 +155,34 @@ class RouterSchema(colander.MappingSchema):
 		missing=False,
 		default=False)
 
-	redis = RouterRedisSchema()
+	table = RedisConnectionSchema(default=RedisConnectionSchema.default_router_table(), missing=RedisConnectionSchema.default_router_table())
+	stats = RedisConnectionSchema(default=RedisConnectionSchema.default_router_stats(), missing=RedisConnectionSchema.default_router_stats())
+	slaveof = RedisConnectionSlaveSchema(default=RedisConnectionSlaveSchema.default(), missing=RedisConnectionSlaveSchema.default())
 
 	@staticmethod
 	def default():
-		redis_default = {
-			'master': {'host':'localhost', 'port':6379},
-			'local': {'host':'localhost', 'port':6379}
+		return {
+			'enabled': False,
+			'table': RedisConnectionSchema.default_router_table(),
+			'stats': RedisConnectionSchema.default_router_stats(),
+			'slaveof': RedisConnectionSlaveSchema.default()
 		}
-		return {'enabled': False, 'redis': redis_default}
 
 class MiscPortsSchema(colander.MappingSchema):
 	minimum = colander.SchemaNode(colander.Integer(),
 		title="Minimum port",
 		description="Lower end of the port range to search for free ports on.",
-		missing=10100,
-		default=10100)
+		missing=DEFAULT_APPLICATION_MIN,
+		default=DEFAULT_APPLICATION_MIN)
 	maximum = colander.SchemaNode(colander.Integer(),
 		title="Maximum port",
 		description="Upper end of the port range to search for free ports on.",
-		missing=10500,
-		default=10500)
+		missing=DEFAULT_APPLICATION_MAX,
+		default=DEFAULT_APPLICATION_MAX)
 
 	@staticmethod
 	def default():
-		return {'minimum': 10100, 'maximum': 10500}
+		return {'minimum': DEFAULT_APPLICATION_MIN, 'maximum': DEFAULT_APPLICATION_MAX}
 
 class MessageBrokerSchema(colander.MappingSchema):
 	hostname = colander.SchemaNode(colander.String(),
@@ -179,12 +211,31 @@ class MessageBrokerSchema(colander.MappingSchema):
 	def default():
 		return {'hostname': 'localhost', 'port': 5672, 'username': 'guest', 'password': 'guest', 'virtualhost': '/'}
 
+class MasterSchema(colander.MappingSchema):
+	host = colander.SchemaNode(colander.String(),
+		title="Master Node",
+		description="The master node for this cluster.")
+	port = colander.SchemaNode(colander.Integer(),
+		title="Master Node HTTP port",
+		description="The master node HTTP port for API requests.",
+		default=DEFAULT_API_PORT,
+		missing=DEFAULT_API_PORT)
+	isitme = colander.SchemaNode(colander.Boolean(),
+		title="Am I the master?",
+		description="If true, I'm the master node.",
+		default=False,
+		missing=False)
+
+	@staticmethod
+	def default():
+		return {'host': 'localhost', 'port': DEFAULT_API_PORT, 'isitme': False}
+
 class ConfigurationSchema(colander.MappingSchema):
 	http_port = colander.SchemaNode(colander.Integer(),
 		title="HTTP Port",
 		description="The HTTP port that this node listens on for API requests",
-		missing=8888,
-		default=8888)
+		missing=DEFAULT_API_PORT,
+		default=DEFAULT_API_PORT)
 
 	misc_ports = MiscPortsSchema(default=MiscPortsSchema.default(), missing=MiscPortsSchema.default())
 
@@ -218,14 +269,7 @@ class ConfigurationSchema(colander.MappingSchema):
 		title="Scratch Directory",
 		description="Directory used for random temporary files. Should be somewhere persistent between reboots, eg, not /tmp.")
 
-	master_host = colander.SchemaNode(colander.String(),
-		title="Master Node",
-		description="The master node for this cluster.")
-	master_port = colander.SchemaNode(colander.Integer(),
-		title="Master Node HTTP port",
-		description="The master node HTTP port for API requests.",
-		default=8888,
-		missing=8888)
+	master = MasterSchema(default=MasterSchema.default(), missing=MasterSchema.default())
 
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="User tags",
@@ -587,5 +631,5 @@ master_host: localhost
 		open(self.tempnam, 'w').write(self.minimum_config)
 		config = Configuration()
 		config.load_from_file([self.tempnam])
-		self.assertEqual(config.get_flat('http_port'), 8888, 'No default present.')
+		self.assertEqual(config.get_flat('http_port'), DEFAULT_API_PORT, 'No default present.')
 

@@ -68,7 +68,7 @@ class APIRequest(object):
 
 	def get_master(self):
 		# TODO: SSL ?
-		return "http://%s:%d" % (self.configuration.get_flat('master_host'), self.configuration.get_flat('master_port'))
+		return "http://%s:%d" % (self.configuration.get_flat('master.host'), self.configuration.get_flat('master.port'))
 
 	def get_endpoint(self):
 		# Override in your subclass to change the URI.

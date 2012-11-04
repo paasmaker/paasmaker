@@ -25,8 +25,10 @@ http_port: %(master_port)d
 auth_token: %(auth_token)s
 log_directory: %(log_dir)s
 scratch_directory: %(scratch_dir)s
-master_host: localhost
-master_port: %(master_port)d
+master:
+  host: localhost
+  port: %(master_port)d
+  isitme: true
 """
 
 	pacemaker_config = """
@@ -46,6 +48,15 @@ pacemaker:
     - name: paasmaker.runtime.shell
       class: paasmaker.heart.runtime.ShellRuntime
       title: Shell Runtime
+  router:
+    table:
+      host: 0.0.0.0
+      port: %(router_table_port)d
+      managed: true
+    stats:
+      host: 0.0.0.0
+      port: %(router_stats_port)d
+      managed: true
 """
 
 	heart_config = """
@@ -75,25 +86,32 @@ heart:
 	router_config = """
 router:
   enabled: true
-  redis:
-    master:
-      host: localhost
-      port: 6379
-    local:
-      host: localhost
-      port: 6379
+  table:
+    host: localhost
+    port: %(router_table_port)d
+  # slaveof:
+  #   enabled: true
+  #   host: localhost
+  #   port: 1234
+  stats:
+    host: localhost
+    port: %(router_stats_port)d
 """
 
-	def __init__(self, port=8888, modules=[], io_loop=None):
+	def __init__(self, port=42500, modules=[], io_loop=None):
 		# Choose filenames and set up example configuration.
 		configfile = tempfile.mkstemp()
 		self.params = {}
+
+		allocator = paasmaker.util.port.FreePortFinder()
 
 		self.params['log_dir'] = tempfile.mkdtemp()
 		self.params['auth_token'] = str(uuid.uuid4())
 		self.params['heart_working_dir'] = tempfile.mkdtemp()
 		self.params['scratch_dir'] = tempfile.mkdtemp()
 		self.params['master_port'] = port
+		self.params['router_table_port'] = allocator.free_in_range(42510, 42599)
+		self.params['router_stats_port'] = allocator.free_in_range(42510, 42599)
 
 		# Create the configuration file.
 		configuration = self.default_config % self.params
