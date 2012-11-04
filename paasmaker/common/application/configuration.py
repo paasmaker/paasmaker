@@ -12,14 +12,21 @@ from paasmaker.common.controller import BaseControllerTest
 
 from paasmaker.common.core import constants
 
+# Validation constants.
+# Identifiers, like application and service names.
+VALID_IDENTIFIER = re.compile("[-A-Za-z0-9.]{1,}")
+VALID_PLUGIN_NAME = re.compile("[-a-z0-9.]")
+
 # Schema definition.
 class Service(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Service name",
-		description="Your name for the service to identify it")
+		description="Your name for the service to identify it",
+		validator=colander.Regex(VALID_IDENTIFIER, "Service names must match " + VALID_IDENTIFIER.pattern))
 	provider = colander.SchemaNode(colander.String(),
 		title="Provider name",
-		description="Provider symbolic name")
+		description="Provider symbolic name",
+		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern))
 	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
 
 class Services(colander.SequenceSchema):
@@ -28,7 +35,8 @@ class Services(colander.SequenceSchema):
 class Placement(colander.MappingSchema):
 	strategy = colander.SchemaNode(colander.String(),
 		title="Placement strategy",
-		description="The placement strategy to use")
+		description="The placement strategy to use",
+		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern))
 	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
 
 	@staticmethod
@@ -38,7 +46,8 @@ class Placement(colander.MappingSchema):
 class Runtime(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Runtime name",
-		description="The runtime plugin name.")
+		description="The runtime plugin name.",
+		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern))
 	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="Runtime parameters",
 		description="Any parameters to the runtime.",
@@ -51,7 +60,8 @@ class Runtime(colander.MappingSchema):
 class PrepareCommand(colander.MappingSchema):
 	plugin = colander.SchemaNode(colander.String(),
 		title="Plugin name",
-		description="The plugin to be used for this prepare action.")
+		description="The plugin to be used for this prepare action.",
+		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern))
 	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="Plugin Parameters",
 		description="Parameters for this particular plugin",
@@ -72,7 +82,8 @@ class PrepareSection(colander.MappingSchema):
 class ApplicationSource(colander.MappingSchema):
 	method = colander.SchemaNode(colander.String(),
 		title="Source fetching method",
-		description="The method to grab and prepare the source")
+		description="The method to grab and prepare the source",
+		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern))
 	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="Parameters for the source fetcher.",
 		description="Any parameters to the source fetching method.",
@@ -84,7 +95,7 @@ class Application(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Application name",
 		decription="The name of the application",
-		validator=colander.Regex(re.compile("[-A-Za-z0-9.]{1,}"), "Application names must match [-A-Za-z0-9.]{1,}."))
+		validator=colander.Regex(VALID_IDENTIFIER, "Application names must match " + VALID_IDENTIFIER.pattern))
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
 	source = ApplicationSource()
 
@@ -112,7 +123,8 @@ class Instance(colander.MappingSchema):
 class ConfigurationSchema(colander.MappingSchema):
 	application = Application()
 	services = Services()
-	# TODO: Validate the sub items under here.
+	# NOTE: We validate the instances ApplicationConfiguration.post_load(), because
+	# there didn't seem to be an easy way to get Colander to validate them.
 	instances = colander.SchemaNode(colander.Mapping(unknown='preserve'))
 	manifest = Manifest()
 
