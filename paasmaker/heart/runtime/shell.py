@@ -11,8 +11,9 @@ class ShellRuntimeOptionsSchema(colander.MappingSchema):
 	pass
 
 class ShellRuntimeParametersSchema(colander.MappingSchema):
-	# No options.
-	pass
+	launch_command = colander.SchemaNode(colander.String(),
+		title="Launch command",
+		description="The command to launch the instance. Substitutes %%(port)d with the allocated port.")
 
 class ShellRuntime(BaseRuntime):
 	MODES = [
@@ -53,7 +54,7 @@ class ShellRuntimeTest(BaseRuntimeTest):
 
 	def test_options(self):
 		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {})
-		instance = self.configuration.plugins.instantiate('paasmaker.runtime.shell', paasmaker.util.plugin.MODE.RUNTIME_STARTUP, {})
+		instance = self.configuration.plugins.instantiate('paasmaker.runtime.shell', paasmaker.util.plugin.MODE.RUNTIME_STARTUP, {'launch_command': 'test.py'})
 		self.assertTrue(True, "Should have got here...")
 
 	def test_versions(self):
