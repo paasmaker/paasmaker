@@ -44,6 +44,8 @@ class RegisterJob(paasmaker.util.jobmanager.JobRunner):
 				logger.info("tar command returned code: %d", code)
 				#self.configuration.debug_cat_job_log(logger.job_id)
 				if code == 0:
+					instance_data['runtime']['path'] = instance_path
+					self.configuration.instances.save()
 					self.finished_job(constants.JOB.SUCCESS, "Completed successfully.")
 				else:
 					self.finished_job(constants.JOB.FAILURE, "Failed to extract files.")
