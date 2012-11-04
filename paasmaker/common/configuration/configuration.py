@@ -343,6 +343,15 @@ class JobAuditMessage(JobStatusMessage):
 		flat['parent_id'] = self.parent_id
 		return flat
 
+class InstanceStatusMessage(object):
+	def __init__(self, instance_id, state, source):
+		self.instance_id = instance_id
+		self.state = state
+		self.source = source
+
+	def flatten(self):
+		return {'instance_id': self.instance_id, 'state': self.state, 'source': self.source}
+
 class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def __init__(self, io_loop=None):
 		super(Configuration, self).__init__(ConfigurationSchema())
@@ -604,6 +613,35 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			os.makedirs(path)
 
 		return path
+
+	def get_instance_status_pub_topic(self, instance_id):
+		# Why add the 'i' to the instance name? It seems a topic name
+		# can't start with a number.
+		return ('instance', 'status', 'i' + instance_id)
+	def get_instance_audit_pub_topic(self, instance_id):
+		# Why add the 'j' to the job name? It seems a topic name
+		# can't start with a number.
+		return ('instance', 'audit', 'j' + instance_id)
+	def send_instance_status(self, instance_id, state, source=None):
+		"""
+		Propagate the status of an instance, potentially via the message
+		broker.
+		"""
+		# If source is not supplied, send along our own UUID.
+		send_source = source
+		if not send_source:
+			send_source = self.get_node_uuid()
+
+		# Make the message objects.
+		status = InstanceStatusMessage(instance_id, state, send_source)
+
+		status_topic = self.get_instance_status_pub_topic(instance_id)
+		audit_topic = self.get_instance_audit_pub_topic(instance_id)
+
+		# Send the status message.
+		pub.sendMessage(status_topic, message=status)
+		# And then the audit message.
+		pub.sendMessage(audit_topic, message=status)
 
 class TestConfiguration(unittest.TestCase):
 	minimum_config = """

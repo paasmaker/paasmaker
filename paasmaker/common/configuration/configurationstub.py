@@ -188,7 +188,12 @@ router:
 		settings['debug'] = True
 		return settings
 
-	def setup_message_exchange(self, status_ready_callback=None, audit_ready_callback=None, io_loop=None):
+	def setup_message_exchange(self,
+			job_status_ready_callback=None,
+			job_audit_ready_callback=None,
+			instance_status_ready_callback=None,
+			instance_audit_ready_callback=None,
+			io_loop=None):
 		self.exchange = paasmaker.common.core.MessageExchange(self)
 		if not self.message_broker_server:
 			logger.debug("Firing up temporary rabbitmq server... (this can take a few seconds)")
@@ -196,7 +201,13 @@ router:
 			# A callback that finishes the setup.
 			def on_connection_ready(client):
 				logger.debug("Temporary rabbitmq server is running. Setting up exchange.")
-				self.exchange.setup(client, status_ready_callback, audit_ready_callback)
+				self.exchange.setup(
+					client,
+					job_status_ready_callback,
+					job_audit_ready_callback,
+					instance_status_ready_callback,
+					instance_audit_ready_callback
+				)
 
 			# Start up a message broker.
 			self.message_broker_server = paasmaker.util.temporaryrabbitmq.TemporaryRabbitMQ(self)
@@ -204,10 +215,14 @@ router:
 			self.message_broker_server.get_client(io_loop=io_loop, callback=on_connection_ready)
 		else:
 			# Already fired up. Just call the callbacks.
-			if status_ready_callback:
-				status_ready_callback()
-			if audit_ready_callback:
-				audit_ready_callback()
+			if job_status_ready_callback:
+				job_status_ready_callback()
+			if job_audit_ready_callback:
+				job_audit_ready_callback()
+			if instance_status_ready_callback:
+				instance_status_ready_callback()
+			if instance_audit_ready_callback:
+				instance_audit_ready_callback()
 
 class TestConfigurationStub(unittest.TestCase):
 	def test_simple(self):
