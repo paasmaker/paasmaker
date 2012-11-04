@@ -141,6 +141,12 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		logkey = 1
 		self.redis.set('logkey_foo.com', logkey, callback=self.stop)
 		self.wait()
+		target = "127.0.0.1:%d" % self.get_http_port()
+		self.redis.sadd('instances_*.foo.com', target, callback=self.stop)
+		self.wait()
+		logkey = 1
+		self.redis.set('logkey_*.foo.com', logkey, callback=self.stop)
+		self.wait()
 
 		# Fetch the set members.
 		self.redis.smembers('instances_foo.com', callback=self.stop)
@@ -159,3 +165,15 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# Should be 200 this time.
 		self.assertEquals(response.code, 200, "Response is not 200.")
 
+		# Try to fetch the one level wildcard version.
+		request = tornado.httpclient.HTTPRequest(
+			"http://localhost:%d/example" % self.nginxport,
+			method="GET",
+			headers={'Host': 'www.foo.com'})
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, self.stop)
+		response = self.wait()
+
+		#print open(self.errorlog, 'r').read()
+
+		self.assertEquals(response.code, 200, "Response is not 200.")
