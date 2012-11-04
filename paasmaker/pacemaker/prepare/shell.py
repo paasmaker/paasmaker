@@ -22,7 +22,10 @@ class ShellPrepare(BasePrepare):
 		paasmaker.util.plugin.MODE.RUNTIME_STARTUP
 	]
 	OPTIONS_SCHEMA = ShellPrepareConfigurationSchema()
-	PARAMETERS_SCHEMA = ShellPrepareParametersSchema()
+	PARAMETERS_SCHEMA = {
+		paasmaker.util.plugin.MODE.PREPARE_COMMAND: ShellPrepareParametersSchema(),
+		paasmaker.util.plugin.MODE.RUNTIME_STARTUP: ShellPrepareParametersSchema()
+	}
 
 	def prepare(self, environment, directory, callback, error_callback):
 		# Unpack the commands we've been supplied into a shell script.
@@ -80,7 +83,7 @@ class ShellPrepareTestTest(BasePrepareTest):
 
 		# Sanity check.
 		plugin.check_options()
-		plugin.check_parameters()
+		plugin.check_parameters(paasmaker.util.plugin.MODE.PREPARE_COMMAND)
 
 		# Proceed.
 		plugin.prepare(os.environ, self.tempdir, self.success_callback, self.failure_callback)

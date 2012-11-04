@@ -62,7 +62,7 @@ class ZipSCMTest(BaseSCMTest):
 
 		# Sanity check.
 		plugin.check_options()
-		plugin.check_parameters()
+		plugin.check_parameters(paasmaker.util.plugin.MODE.SCM_EXPORT)
 
 		# Proceed.
 		plugin.create_working_copy(self.success_callback, self.failure_callback)

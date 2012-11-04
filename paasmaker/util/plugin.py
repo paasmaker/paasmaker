@@ -44,7 +44,7 @@ class Plugin(object):
 	"""
 	MODES = []
 	OPTIONS_SCHEMA = None
-	PARAMETERS_SCHEMA = None
+	PARAMETERS_SCHEMA = {}
 
 	def __init__(self, configuration, mode, options, parameters, logger=None):
 		self.configuration = configuration
@@ -77,7 +77,7 @@ class Plugin(object):
 			# Because the default output is rather confusing...!
 			raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self.raw_options)
 
-	def check_parameters(self):
+	def check_parameters(self, mode):
 		"""
 		Helper function to validate the parameters supplied when instantiated,
 		and to throw an exception if it fails. This also stores a flat version
@@ -85,9 +85,9 @@ class Plugin(object):
 		"""
 		try:
 			# Validate.
-			self.parameters = self.PARAMETERS_SCHEMA.deserialize(self.raw_parameters)
+			self.parameters = self.PARAMETERS_SCHEMA[mode].deserialize(self.raw_parameters)
 			# And flatten.
-			self.parameters_flat = self.PARAMETERS_SCHEMA.flatten(self.parameters)
+			self.parameters_flat = self.PARAMETERS_SCHEMA[mode].flatten(self.parameters)
 		except colander.Invalid, ex:
 			# Raise another exception that encapsulates more context.
 			# In future this can be used to print a nicer report.
@@ -161,7 +161,7 @@ class PluginRegistry:
 			if not self.mode_registry.has_key(mode):
 				self.mode_registry[mode] = []
 			self.mode_registry[mode].append(plugin)
-			if MODE_REQUIRE_PARAMS[mode] and not former.PARAMETERS_SCHEMA:
+			if MODE_REQUIRE_PARAMS[mode] and not former.PARAMETERS_SCHEMA.has_key(mode):
 				raise ValueError("Supplied class does not have a parameter schema, but has a mode that accepts parameters.")
 
 	def exists(self, plugin, mode):
@@ -184,10 +184,13 @@ class PluginRegistry:
 		instance.check_options()
 
 		# And recheck parameters if it requires them.
-		if MODE_REQUIRE_PARAMS[mode] and parameters is None:
-			raise ValueError("Plugin %s requires parameters but none were passed.")
 		if MODE_REQUIRE_PARAMS[mode]:
-			instance.check_parameters()
+			if parameters is None:
+				raise ValueError("Plugin %s requires parameters but none were passed." % plugin)
+			elif not instance.PARAMETERS_SCHEMA.has_key(mode):
+				raise ValueError("Plugin %s does not have a paramters schema, but it should." % plugin)
+			else:
+				instance.check_parameters(mode)
 
 		return instance
 
@@ -212,7 +215,7 @@ class PluginExampleParametersSchema(colander.MappingSchema):
 class PluginExample(Plugin):
 	MODES = [MODE.TEST_PARAM, MODE.TEST_NOPARAM]
 	OPTIONS_SCHEMA = PluginExampleOptionsSchema()
-	PARAMETERS_SCHEMA = PluginExampleParametersSchema()
+	PARAMETERS_SCHEMA = {MODE.TEST_PARAM: PluginExampleParametersSchema()}
 
 	def do_nothing(self):
 		pass

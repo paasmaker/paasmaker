@@ -24,7 +24,7 @@ class DefaultPlacement(BasePlacement):
 	"""
 	MODES = [paasmaker.util.plugin.MODE.PLACEMENT]
 	OPTIONS_SCHEMA = DefaultPlacementConfigurationSchema()
-	PARAMETERS_SCHEMA = DefaultPlacementParametersSchema()
+	PARAMETERS_SCHEMA = {paasmaker.util.plugin.MODE.PLACEMENT: DefaultPlacementParametersSchema()}
 
 	def fail_if_none(self, nodes, callback, reason):
 		if len(nodes) == 0:
@@ -96,7 +96,7 @@ class DefaultPlacementTest(BasePlacementTest):
 
 		# Sanity check.
 		plugin.check_options()
-		plugin.check_parameters()
+		plugin.check_parameters(paasmaker.util.plugin.MODE.PLACEMENT)
 
 		# Test node.
 		ctr = 1
@@ -157,7 +157,7 @@ class DefaultPlacementTest(BasePlacementTest):
 
 		# Sanity check.
 		plugin.check_options()
-		plugin.check_parameters()
+		plugin.check_parameters(paasmaker.util.plugin.MODE.PLACEMENT)
 
 		plugin.choose(session, instance_type, 1, self.success_callback, self.failure_callback)
 
@@ -177,7 +177,7 @@ class DefaultPlacementTest(BasePlacementTest):
 
 		# Sanity check.
 		plugin.check_options()
-		plugin.check_parameters()
+		plugin.check_parameters(paasmaker.util.plugin.MODE.PLACEMENT)
 
 		# Request more than we have available.
 		plugin.choose(session, instance_type, 20, self.success_callback, self.failure_callback)
@@ -198,7 +198,7 @@ class DefaultPlacementTest(BasePlacementTest):
 
 		# Sanity check.
 		plugin.check_options()
-		plugin.check_parameters()
+		plugin.check_parameters(paasmaker.util.plugin.MODE.PLACEMENT)
 
 		plugin.choose(session, instance_type, 1, self.success_callback, self.failure_callback)
 

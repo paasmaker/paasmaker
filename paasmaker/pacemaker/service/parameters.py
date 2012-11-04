@@ -19,7 +19,7 @@ class ParametersService(BaseService):
 	"""
 	MODES = [paasmaker.util.plugin.MODE.SERVICE_CREATE]
 	OPTIONS_SCHEMA = ParametersServiceConfigurationSchema()
-	PARAMETERS_SCHEMA = ParametersServiceParametersSchema()
+	PARAMETERS_SCHEMA = {paasmaker.util.plugin.MODE.SERVICE_CREATE: ParametersServiceParametersSchema()}
 
 	def create(self, callback, error_callback):
 		# Does the same thing as update.
@@ -51,7 +51,7 @@ class ParametersServiceTest(BaseServiceTest):
 
 		# Sanity check.
 		service.check_options()
-		service.check_parameters()
+		service.check_parameters(paasmaker.util.plugin.MODE.SERVICE_CREATE)
 
 		service.create(self.success_callback, self.failure_callback)
 

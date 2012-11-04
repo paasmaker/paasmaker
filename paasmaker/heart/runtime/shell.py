@@ -15,6 +15,10 @@ class ShellRuntimeParametersSchema(colander.MappingSchema):
 		title="Launch command",
 		description="The command to launch the instance. Substitutes %%(port)d with the allocated port.")
 
+class ShellEnvironmentParametersSchema(colander.MappingSchema):
+	# No options.
+	pass
+
 class ShellRuntime(BaseRuntime):
 	MODES = [
 		paasmaker.util.plugin.MODE.RUNTIME_STARTUP,
@@ -22,7 +26,10 @@ class ShellRuntime(BaseRuntime):
 		paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT
 	]
 	OPTIONS_SCHEMA = ShellRuntimeOptionsSchema()
-	PARAMETERS_SCHEMA = ShellRuntimeParametersSchema()
+	PARAMETERS_SCHEMA = {
+		paasmaker.util.plugin.MODE.RUNTIME_STARTUP: ShellRuntimeParametersSchema(),
+		paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT: ShellEnvironmentParametersSchema()
+	}
 
 	def get_versions(self):
 		# Just return this version.

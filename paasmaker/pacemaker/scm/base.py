@@ -22,7 +22,7 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 	MODES = [paasmaker.util.plugin.MODE.SCM_EXPORT]
 	# These are defaults - you should set your own.
 	OPTIONS_SCHEMA = BaseSCMConfigurationSchema()
-	PARAMETERS_SCHEMA = BaseSCMParametersSchema()
+	PARAMETERS_SCHEMA = {paasmaker.util.plugin.MODE.SCM_EXPORT: BaseSCMParametersSchema()}
 
 	def get_this_scm_path(self, postfix):
 		scratch_path = self.configuration.get_flat('scratch_directory')
