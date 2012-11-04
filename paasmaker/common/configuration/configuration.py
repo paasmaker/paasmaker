@@ -305,6 +305,15 @@ class ConfigurationSchema(colander.MappingSchema):
 class ImNotA(Exception):
 	pass
 
+class ImNotAHeart(ImNotA):
+	pass
+
+class ImNotAPacemaker(ImNotA):
+	pass
+
+class ImNotARouter(ImNotA):
+	pass
+
 class JobStatusMessage(object):
 	def __init__(self, job_id, state, source):
 		self.job_id = job_id
@@ -393,7 +402,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 	def get_runtimes(self):
 		if not self.is_heart():
-			raise ImNotA("I'm not a heart, so I have no runtimes.")
+			raise ImNotAHeart("I'm not a heart, so I have no runtimes.")
 
 		tags = {}
 		runtime_plugins = self.plugins.plugins_for(paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
@@ -407,7 +416,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 	def setup_database(self):
 		if not self.is_pacemaker():
-			raise ImNotA("I'm not a pacemaker.")
+			raise ImNotAPacemaker("I'm not a pacemaker, so I have no database.")
 
 		# Connect.
 		self.engine = create_engine(self.get_flat('pacemaker.dsn'))
@@ -427,7 +436,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		calls will fetch new sessions every time.
 		"""
 		if not self.is_pacemaker():
-			raise ImNotA("I'm not a pacemaker.")
+			raise ImNotA("I'm not a pacemaker, so I have no database.")
 		return self.session()
 
 	def get_router_redis(self):
