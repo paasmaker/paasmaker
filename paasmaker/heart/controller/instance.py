@@ -164,6 +164,14 @@ class InstanceRegisterControllerTest(BaseControllerTest):
 		workspace = paasmaker.model.Workspace()
 		workspace.name = 'Test'
 
+		service = paasmaker.model.Service()
+		service.workspace = workspace
+		service.name = 'test'
+		service.provider = 'paasmaker.service.parameters'
+		service.parameters = {'test': 'bar'}
+		service.credentials = {'test': 'bar'}
+		service.state = constants.SERVICE.AVAILABLE
+
 		application = paasmaker.model.Application()
 		application.workspace = workspace
 		application.name = 'foo.com'
@@ -175,6 +183,8 @@ class InstanceRegisterControllerTest(BaseControllerTest):
 		application_version.manifest = ''
 		application_version.source_path = "paasmaker://%s/%s" % (our_uuid, temptarball)
 		application_version.source_checksum = 'dummychecksumhere'
+
+		application_version.services.append(service)
 
 		instance_type = paasmaker.model.ApplicationInstanceType()
 		instance_type.application_version = application_version
