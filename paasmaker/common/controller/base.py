@@ -11,6 +11,8 @@ import time
 
 import colander
 
+from ..testhelpers import TestHelpers
+
 # Types of API requests.
 # 1. Node->Node. (ie, nodes talking to each other)
 # 2. User->Pacemaker (cookie auth) (ie, AJAX browser callback)
@@ -324,7 +326,8 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 	def encode_message(self, message):
 		return json.dumps(message, cls=paasmaker.util.jsonencoder.JsonEncoder)
 
-class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
+class BaseControllerTest(tornado.testing.AsyncHTTPTestCase, TestHelpers):
+
 	config_modules = []
 
 	def late_init_configuration(self, io_loop):
@@ -395,7 +398,3 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase):
 		request = tornado.httpclient.HTTPRequest(resolved_url, **kwargs)
 		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
 		client.fetch(request, self.stop)
-
-	def short_wait_hack(self):
-		self.io_loop.add_timeout(time.time() + 0.1, self.stop)
-		self.wait()

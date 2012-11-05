@@ -8,6 +8,8 @@ import tornado
 import tornado.testing
 import logging
 
+from ..common.testhelpers import TestHelpers
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -279,7 +281,7 @@ class TestAbortJobRunner(JobRunner):
 		# Do something?
 		pass
 
-class JobManagerTest(tornado.testing.AsyncTestCase):
+class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		super(JobManagerTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'])
@@ -455,7 +457,3 @@ class JobManagerTest(tornado.testing.AsyncTestCase):
 		self.assertEquals(sub1_status.state, constants.JOB.SUCCESS, "Sub 1 should have succeeded.")
 		self.assertEquals(sub2_status.state, constants.JOB.ABORTED, "Sub 2 should have been aborted.")
 		self.assertEquals(root_status.state, constants.JOB.ABORTED, "Root should have been aborted.")
-
-	def short_wait_hack(self):
-		self.io_loop.add_timeout(time.time() + 0.05, self.stop)
-		self.wait()

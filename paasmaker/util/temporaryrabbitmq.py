@@ -13,6 +13,8 @@ import signal
 from paasmaker.thirdparty.pika import TornadoConnection
 import pika
 
+from ..common.testhelpers import TestHelpers
+
 # https://github.com/pika/pika/blob/master/examples/demo_tornado.py
 
 class TemporaryRabbitMQ:
@@ -99,7 +101,7 @@ class TemporaryRabbitMQ:
 			os.unlink(self.outputspoolfile)
 			shutil.rmtree(self.dir)
 
-class TemporaryRabbitMQTest(tornado.testing.AsyncTestCase):
+class TemporaryRabbitMQTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [])
 		super(TemporaryRabbitMQTest, self).setUp()
@@ -141,7 +143,3 @@ class TemporaryRabbitMQTest(tornado.testing.AsyncTestCase):
 
 		# Finish up.
 		client.close()
-
-	def short_wait_hack(self):
-		self.io_loop.add_timeout(time.time() + 0.1, self.stop)
-		self.wait()

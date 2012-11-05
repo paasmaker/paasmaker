@@ -9,6 +9,8 @@ import uuid
 
 from pubsub import pub
 
+from ..testhelpers import TestHelpers
+
 # TODO: Pubsub - handle errors.
 # TODO: Pubsub - async ??
 
@@ -181,7 +183,7 @@ class MessageExchange:
 				body = encoded,
 				properties=properties)
 
-class MessageExchangeTest(tornado.testing.AsyncTestCase):
+class MessageExchangeTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		super(MessageExchangeTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'])
@@ -256,6 +258,3 @@ class MessageExchangeTest(tornado.testing.AsyncTestCase):
 		self.assertEquals(status.state, 'ROUNDTRIP', "Instance status was not as expected.")
 		self.assertEquals(status.source, 'BOGUS', 'Source was correct.')
 
-	def short_wait_hack(self):
-		self.io_loop.add_timeout(time.time() + 0.1, self.stop)
-		self.wait()
