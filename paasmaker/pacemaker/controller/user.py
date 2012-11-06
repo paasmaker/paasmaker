@@ -39,7 +39,7 @@ class UserSchema(colander.MappingSchema):
 		validator=colander.Length(min=8))
 
 class UserController(BaseController):
-	auth_methods = [BaseController.NODE, BaseController.USER]
+	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
 
 	def get(self, user_id):
 		# TODO: Permissions.
@@ -61,7 +61,7 @@ class UserController(BaseController):
 		return routes
 
 class UserEditController(BaseController):
-	auth_methods = [BaseController.NODE, BaseController.USER]
+	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
 
 	def get_form(self, user=None):
 		schema = UserSchema()
@@ -134,7 +134,7 @@ class UserEditController(BaseController):
 		return routes
 
 class UserListController(BaseController):
-	auth_methods = [BaseController.NODE, BaseController.USER]
+	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
 
 	def get(self):
 		# TODO: Permissions.

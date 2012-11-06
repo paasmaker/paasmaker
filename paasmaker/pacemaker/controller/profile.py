@@ -5,7 +5,7 @@ import json
 from paasmaker.common.controller import BaseController, BaseControllerTest
 
 class ProfileController(BaseController):
-	auth_methods = [BaseController.USER]
+	AUTH_METHODS = [BaseController.USER]
 
 	def get(self):
 		# TODO: Permissions.
@@ -21,7 +21,7 @@ class ProfileController(BaseController):
 		return routes
 
 class ProfileResetAPIKeyController(BaseController):
-	auth_methods = [BaseController.USER]
+	AUTH_METHODS = [BaseController.USER]
 
 	def post(self):
 		user = self.get_current_user()

@@ -44,7 +44,7 @@ class BaseController(tornado.web.RequestHandler):
 	USER = 2
 
 	# You must override this in your subclass.
-	auth_methods = []
+	AUTH_METHODS = []
 
 	"""
 	Base class for all controllers in the system.
@@ -89,7 +89,7 @@ class BaseController(tornado.web.RequestHandler):
 			self.params.update(result['data'])
 
 		# Must be one of the supported auth methods.
-		self.require_authentication(self.auth_methods)
+		self.require_authentication(self.AUTH_METHODS)
 
 	def validate_data(self, schema):
 		"""

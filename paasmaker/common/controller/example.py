@@ -9,7 +9,7 @@ import tornado.testing
 from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 class ExampleController(BaseController):
-	auth_methods = [BaseController.ANONYMOUS]
+	AUTH_METHODS = [BaseController.ANONYMOUS]
 
 	def get(self):
 		self.add_data("test", "Hello")
@@ -23,7 +23,7 @@ class ExampleController(BaseController):
 		return routes
 
 class ExampleFailController(BaseController):
-	auth_methods = [BaseController.ANONYMOUS]
+	AUTH_METHODS = [BaseController.ANONYMOUS]
 
 	def get(self):
 		self.add_data("test", "Hello")
@@ -38,7 +38,7 @@ class ExampleFailController(BaseController):
 		return routes
 
 class ExamplePostController(BaseController):
-	auth_methods = [BaseController.ANONYMOUS]
+	AUTH_METHODS = [BaseController.ANONYMOUS]
 
 	def post(self):
 		self.add_data("test", "Hello")

@@ -26,7 +26,7 @@ class WorkspaceSchema(colander.MappingSchema):
 		default={})
 
 class WorkspaceController(BaseController):
-	auth_methods = [BaseController.NODE, BaseController.USER]
+	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
 
 	def get(self, workspace_id):
 		# TODO: Permissions.
@@ -48,7 +48,7 @@ class WorkspaceController(BaseController):
 		return routes
 
 class WorkspaceEditController(BaseController):
-	auth_methods = [BaseController.NODE, BaseController.USER]
+	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
 
 	def get_form(self, workspace=None):
 		schema = WorkspaceSchema()
@@ -120,7 +120,7 @@ class WorkspaceEditController(BaseController):
 		return routes
 
 class WorkspaceListController(BaseController):
-	auth_methods = [BaseController.NODE, BaseController.USER]
+	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
 
 	def get(self):
 		# TODO: Permissions.

@@ -7,7 +7,7 @@ import tornado
 import unittest
 
 class LoginController(BaseController):
-	auth_methods = [BaseController.ANONYMOUS]
+	AUTH_METHODS = [BaseController.ANONYMOUS]
 
 	def get(self):
 		self.render("login/login.html")
@@ -57,7 +57,7 @@ class LoginController(BaseController):
 		return routes
 
 class LogoutController(BaseController):
-	auth_methods = [BaseController.USER]
+	AUTH_METHODS = [BaseController.USER]
 
 	def get(self):
 		self.post()

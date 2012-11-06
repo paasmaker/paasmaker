@@ -38,7 +38,7 @@ class InstanceRegisterController(BaseController):
 	aware of the instance. Other controllers handle actually
 	starting and stopping the instance.
 	"""
-	auth_methods = [BaseController.NODE]
+	AUTH_METHODS = [BaseController.NODE]
 
 	def get(self):
 		self.render("api/apionly.html")
@@ -91,7 +91,7 @@ class InstanceExitController(BaseController):
 	designed to be used by runtimes to indicate exiting easily.
 	Allows anonymous access, but is authorized internally by a unique key.
 	"""
-	auth_methods = [BaseController.ANONYMOUS]
+	AUTH_METHODS = [BaseController.ANONYMOUS]
 
 	def get(self, instance_id, unique_key, code):
 		# Force response to be JSON.

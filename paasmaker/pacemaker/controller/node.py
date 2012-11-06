@@ -32,7 +32,7 @@ class NodeUpdateSchema(NodeRegisterSchema):
 		description="The existing UUID of the node.")
 
 class NodeController(BaseController):
-	auth_methods = [BaseController.NODE]
+	AUTH_METHODS = [BaseController.NODE]
 
 	def get(self):
 		self.render("api/apionly.html")

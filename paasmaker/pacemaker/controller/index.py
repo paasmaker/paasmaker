@@ -4,7 +4,7 @@ import tornado
 from paasmaker.common.controller import BaseController
 
 class IndexController(BaseController):
-	auth_methods = [BaseController.ANONYMOUS]
+	AUTH_METHODS = [BaseController.ANONYMOUS]
 
 	def get(self):
 		self.render("index.html")
