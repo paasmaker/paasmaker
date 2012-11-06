@@ -1,3 +1,5 @@
+import uuid
+
 import paasmaker
 
 import tornado.testing
@@ -55,6 +57,31 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		for the figures.
 		"""
 		raise NotImplementedError("You must implement statistics().")
+
+	def generate_exit_report_command(self, configuration, manager, instance_id):
+		"""
+		Generate an exit report command that can be used by runtimes
+		to report that they've exited or changed state to the heart.
+		There are quite a few keys returned, allowing the runtime
+		to use a few different options to implement this.
+		"""
+		instance = manager.get_instance(instance_id)
+		unique_key = str(uuid.uuid4())
+		# CAUTION: The URL still needs the process exit code
+		# appended to the end of it to be the full URL.
+		url = '/instance/exit/%s/%s/' % (instance_id, unique_key)
+		full_url = 'http://localhost:%d%s' % (configuration.get_flat('http_port'), url)
+
+		if not instance['runtime'].has_key('exit'):
+			instance['runtime']['exit'] = {}
+		if not instance['runtime']['exit'].has_key('keys'):
+			instance['runtime']['exit']['keys'] = []
+
+		instance['runtime']['exit']['keys'].append(unique_key)
+		instance['runtime']['exit']['url'] = url
+		instance['runtime']['exit']['full_url'] = full_url
+
+		manager.save()
 
 class BaseRuntimeTest(tornado.testing.AsyncTestCase):
 	def setUp(self):

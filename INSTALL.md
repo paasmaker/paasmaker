@@ -7,10 +7,14 @@ at some stage.
 
 All these steps currently use Ubuntu 12.04.
 
-## Tools
+## Tools - development
 
 	sudo apt-get install git-core
 	sudo apt-get install build-essential
+
+## Tools - runtime
+
+	sudo apt-get install curl
 
 ## Redis
 
