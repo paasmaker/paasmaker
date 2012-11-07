@@ -31,6 +31,34 @@ class FreePortFinder:
 			else:
 				start = self.last_allocated + 1
 		# Fetch the current list of ports.
+		output = self.fetch_netstat()
+		# Now begin the search.
+		port = start
+		free = (output.find(":%d " % port) == -1) and (port not in self.preallocated)
+		while not free and port < upper:
+			port += 1
+			free = (output.find(":%d " % port) == -1) and (port not in self.preallocated)
+		if not free:
+			# If we were using the last allocated port,
+			# we might not have scanned the bottom of the range.
+			if using_last_allocated:
+				# Scan again from the bottom.
+				self.free_in_range(lower, upper, complete_scan=True)
+			else:
+				raise NoFreePortException("Can't find a free port between %d and %d." % (lower, upper))
+		# Return the port.
+		self.last_allocated = port
+		return port
+
+	def in_use(self, port):
+		"""
+		Quickly check if a port is in use. This is not a way to allocate
+		ports.
+		"""
+		output = self.fetch_netstat()
+		return (output.find(":%d " % port) != -1)
+
+	def fetch_netstat(self):
 		# TODO: This is HIGHLY platform specific, but it's fast.
 		# TODO: This will block the whole process... but only for ~20ms.
 		# NOTE: The docs say not to use subprocess.PIPE with the command
@@ -50,23 +78,7 @@ class FreePortFinder:
 			if line.find("LISTEN") != -1:
 				lines.append(line)
 		output = "\n".join(lines)
-		# Now begin the search.
-		port = start
-		free = (output.find(":%d " % port) == -1) and (port not in self.preallocated)
-		while not free and port < upper:
-			port += 1
-			free = (output.find(":%d " % port) == -1) and (port not in self.preallocated)
-		if not free:
-			# If we were using the last allocated port,
-			# we might not have scanned the bottom of the range.
-			if using_last_allocated:
-				# Scan again from the bottom.
-				self.free_in_range(lower, upper, complete_scan=True)
-			else:
-				raise NoFreePortException("Can't find a free port between %d and %d." % (lower, upper))
-		# Return the port.
-		self.last_allocated = port
-		return port
+		return output
 
 class FreePortFinderTest(unittest.TestCase):
 	def test_free(self):
@@ -99,7 +111,7 @@ class FreePortFinderTest(unittest.TestCase):
 		port = finder.free_in_range(10000, 10100)
 		self.assertNotIn(port, [10004, 10006])
 
-	def test_in_use(self):
+	def test_finder_in_use(self):
 		finder = FreePortFinder()
 
 		try:
@@ -111,6 +123,12 @@ class FreePortFinderTest(unittest.TestCase):
 		# Try again, but go 22->24. One of those should be free.
 		port = finder.free_in_range(22, 24)
 		self.assertTrue(port == 23 or port == 24)
+
+	def test_in_use(self):
+		finder = FreePortFinder()
+
+		self.assertTrue(finder.in_use(22), "Found port 22 was free.")
+		self.assertFalse(finder.in_use(1), "Didn't find port 1 as free.")
 
 if __name__ == '__main__':
 	unittest.main()
