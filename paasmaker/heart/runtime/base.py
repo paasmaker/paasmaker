@@ -1,6 +1,7 @@
 import uuid
 
 import paasmaker
+#from ..testhelpers import TestHelpers
 
 import tornado.testing
 
@@ -83,16 +84,21 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 
 		manager.save()
 
-class BaseRuntimeTest(tornado.testing.AsyncTestCase):
+class BaseRuntimeTest(paasmaker.common.controller.BaseControllerTest):
+	config_modules = ['heart']
+
+	def get_app(self):
+		self.late_init_configuration(self.io_loop)
+		routes = paasmaker.heart.controller.InstanceExitController.get_routes({'configuration': self.configuration})
+		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
+		return application
+
 	def setUp(self):
 		super(BaseRuntimeTest, self).setUp()
-		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['heart'], io_loop=self.io_loop)
-
 		self.success = None
 		self.message = None
 
 	def tearDown(self):
-		self.configuration.cleanup()
 		super(BaseRuntimeTest, self).tearDown()
 
 	def success_callback(self, message):
