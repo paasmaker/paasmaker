@@ -3,6 +3,7 @@ import os
 import logging
 import json
 import unittest
+import uuid
 
 import paasmaker
 from paasmaker.common.core import constants
@@ -61,7 +62,8 @@ class InstanceManager(object):
 		logger.info("Adding instance %s to our collection.", instance_id)
 		# Create a dict for data for the runtime - the runtime can
 		# store what it likes in there.
-		data['runtime'] = {}
+		if not data.has_key('runtime'):
+			data['runtime'] = {'exit': {'keys': []}}
 		self.catalog[instance_id] = data
 		self.save()
 
@@ -95,10 +97,17 @@ class InstanceManager(object):
 
 		return result
 
+	def generate_exit_key(self, instance_id):
+		instance = self.get_instance(instance_id)
+		exit_key = str(uuid.uuid4())
+		instance['runtime']['exit']['keys'].append(exit_key)
+		self.save()
+		return exit_key
+
 	def get_used_ports(self):
 		ports = []
 		for instance_id, data in self.catalog.iteritems():
-			if data['instance'].has_key('port'):
+			if data.has_key('instance') and data['instance'].has_key('port'):
 				ports.append(data['instance']['port'])
 
 		return ports
