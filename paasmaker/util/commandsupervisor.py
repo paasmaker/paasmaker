@@ -7,10 +7,15 @@ import subprocess
 import unittest
 import uuid
 import time
-import paasmaker
 import datetime
+import urllib2
 
-class CommandSupervisor():
+import paasmaker
+from paasmaker.common.controller import BaseController, BaseControllerTest
+
+import tornado
+
+class CommandSupervisor(object):
 	def __init__(self, configuration, logfile):
 		self.configuration = configuration
 		self.process = None
@@ -20,13 +25,14 @@ class CommandSupervisor():
 	def run(self, data):
 		# Prepare to run.
 		# NOTE: Assumes that data is as expected...
-		job_id = data['job_id']
-		self.logger = self.configuration.get_job_logger(job_id)
+		instance_id = data['instance_id']
+		self.logger = self.configuration.get_job_logger(instance_id)
 		command = data['command'] # Should be an array!
 		shell = False
 		if data.has_key('shell'):
 			shell = data['shell']
-		pidfile = self.configuration.get_scratch_path("%s.pid" % job_id)
+		# TODO: Make this a subdir of the scratch dir.
+		pidfile = self.configuration.get_scratch_path("%s.pid" % instance_id)
 
 		# Install a signal handler to abort this process.
 		# NOTE: This assumes that you're running this code in
@@ -43,7 +49,9 @@ class CommandSupervisor():
 				stdin=None,
 				stdout=self.job_fp,
 				stderr=self.job_fp,
-				shell=shell
+				shell=shell,
+				cwd=data['cwd'],
+				env=data['environment']
 			)
 
 			# Write out OUR pid.
@@ -62,11 +70,17 @@ class CommandSupervisor():
 			# And record the result.
 			self.logger.info("Completed with result code %d", self.process.returncode)
 
-			# TODO: Announce the completion by pubsub.
+			# Announce the completion.
+			self.announce_completion(
+				data['port'],
+				instance_id,
+				data['exit_key'],
+				self.process.returncode
+			)
 
 		except OSError, ex:
-			if job_fp:
-				job_fp.close()
+			if self.job_fp:
+				self.job_fp.close()
 			self.logger.error(ex)
 			self.logger.error("Failed to execute subcommand: %s", str(ex))
 
@@ -87,54 +101,113 @@ class CommandSupervisor():
 		self.kill()
 		self.logger.info("Got signal %d", signum)
 
-class CommandSupervisorLauncher():
-	def __init__(self, configuration):
+	def announce_completion(self, port, instance_id, exit_key, code, depth=1):
+		url = "http://localhost:%d/instance/exit/%s/%s/%d" % \
+			(port, instance_id, exit_key, code)
+		try:
+			response = urllib2.urlopen(url)
+		except urllib2.URLError, ex:
+			# Retry a few more times.
+			if depth < 10:
+				time.sleep(5)
+				self.announce_completion(port, instance_id, exit_key, code, depth + 1)
+			else:
+				# TODO: Print ex to log file.
+				raise ex
+
+class CommandSupervisorLauncher(object):
+	def __init__(self, configuration, instance_id):
 		self.configuration = configuration
 		self.process = None
+		self.instance_id = instance_id
 
-	def launch(self, job_id, command):
-		# TODO: Allow environment variables.
+	def launch(self, command, cwd, environment, exit_key, port):
 		payload = {}
-		payload['job_id'] = job_id
+		payload['instance_id'] = self.instance_id
 		payload['command'] = command
+		payload['cwd'] = cwd
+		payload['environment'] = environment
+		payload['exit_key'] = exit_key
+		payload['port'] = port
 
-		payload_path = self.configuration.get_scratch_path("%s_launch.json" % job_id)
-		open(payload_path, 'w').write(json.dumps(payload))
+		payload_path = self.get_payload_path()
+		fp = open(payload_path, 'w')
+		fp.write(json.dumps(payload))
+		fp.close()
 
 		# Launch it.
 		supervisor = self.configuration.get_supervisor_path()
-		log_file = self.configuration.get_job_log_path(job_id)
-		# The second argument is optional, but allows unit tests to work properly.
+		log_file = self.configuration.get_job_log_path(self.instance_id)
+		# The last argument - config file - is optional,
+		# but allows unit tests to work properly.
 		self.process = subprocess.Popen([supervisor, log_file, payload_path, self.configuration.filename])
 
+	def get_pid_path(self):
+		return self.configuration.get_scratch_path("%s.pid" % self.instance_id)
+
+	def get_payload_path(self):
+		return self.configuration.get_scratch_path("%s_supervisor.json" % self.instance_id)
+
 	def kill(self):
-		os.kill(self.process.pid, signal.SIGHUP)
+		if self.process:
+			os.kill(self.process.pid, signal.SIGHUP)
+		else:
+			pidfile = self.get_pid_path()
+			if os.path.exists(pidfile):
+				fp = open(pidfile, 'r')
+				pid = int(fp.read())
+				fp.close()
+				os.kill(pid, signal.SIGHUP)
 
-	def kill_job(self, job_id):
-		pidfile = self.configuration.get_scratch_path("%s.pid" % job_id)
-		if os.path.exists(pidfile):
-			pid = int(open(pidfile, 'r').read())
-			os.kill(pid, signal.SIGHUP)
+	def is_running(self, instance_id):
+		# TODO: This is only a best effort guess.
+		pidfile = self.get_pid_path()
+		return os.path.exists(pidfile)
 
-class CommandSupervisorTest(unittest.TestCase):
-	def setUp(self):
-		self.configuration = paasmaker.common.configuration.ConfigurationStub(modules=[])
-		super(CommandSupervisorTest, self).setUp()
-	def tearDown(self):
-		self.configuration.cleanup()
-		super(CommandSupervisorTest, self).tearDown()
+class CommandSupervisorTest(BaseControllerTest):
+	config_modules = ['heart']
+
+	def get_app(self):
+		self.late_init_configuration(self.io_loop)
+		routes = paasmaker.heart.controller.instance.InstanceExitController.get_routes({'configuration': self.configuration})
+		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
+		return application
+
+	def get_misc_path(self):
+		return os.path.normpath(os.path.dirname(__file__) + '/../../misc')
+
+	def get_env(self):
+		return paasmaker.common.application.environment.ApplicationEnvironment.merge_local_environment(self.configuration, {})
+
+	def get_exit_key(self, instance_id):
+		# Add a test instance. Bare minimum info.
+		test_instance = {'instance': {'state':'ALLOCATED'}}
+		self.configuration.instances.add_instance(instance_id, test_instance)
+		return self.configuration.instances.generate_exit_key(instance_id)
 
 	def test_normal_execution(self):
 		# Make me a launcher.
-		job_id = str(uuid.uuid4())
-		launcher = CommandSupervisorLauncher(self.configuration)
-		launcher.launch(job_id, ["echo", "test"])
+		instance_id = str(uuid.uuid4())
+		exit_key = self.get_exit_key(instance_id)
+		environment = self.get_env()
+		launcher = CommandSupervisorLauncher(self.configuration, instance_id)
+		launcher.launch(
+			["echo", "test"],
+			self.get_misc_path(),
+			environment,
+			exit_key,
+			self.get_http_port()
+		)
 
 		# Wait for the subprocess to finish.
-		launcher.process.wait()
+		finished = None
+		while finished is None:
+			self.short_wait_hack()
+			launcher.process.poll()
+			finished = launcher.process.returncode
 
 		# Check that it output what we expected.
-		job_path = self.configuration.get_job_log_path(job_id)
+		job_path = self.configuration.get_job_log_path(instance_id)
 		job_contents =""
 		if os.path.exists(job_path):
 			job_contents = open(job_path, 'r').read()
@@ -143,21 +216,64 @@ class CommandSupervisorTest(unittest.TestCase):
 
 	def test_abort_execution(self):
 		# Make me a launcher.
-		job_id = str(uuid.uuid4())
-		launcher = CommandSupervisorLauncher(self.configuration)
-		launcher.launch(job_id, ["./misc/hanger-test.sh"])
+		instance_id = str(uuid.uuid4())
+		exit_key = self.get_exit_key(instance_id)
+		environment = self.get_env()
+		launcher = CommandSupervisorLauncher(self.configuration, instance_id)
+		launcher.launch(
+			["./hanger-test.sh"],
+			self.get_misc_path(),
+			environment,
+			exit_key,
+			self.get_http_port()
+		)
 
 		# Give the process some time to start.
-		time.sleep(0.5)
+		self.short_wait_hack(length=0.5)
 
 		# Now kill it off.
 		launcher.kill()
 
 		# Wait for everything to settle down.
-		time.sleep(0.5)
+		self.short_wait_hack(length=0.5)
 
 		# Check that it output what we expected.
-		job_path = self.configuration.get_job_log_path(job_id)
+		job_path = self.configuration.get_job_log_path(instance_id)
+		job_contents =""
+		if os.path.exists(job_path):
+			job_contents = open(job_path, 'r').read()
+
+		self.assertIn("Start...", job_contents, "Missing output.")
+		self.assertIn("Killed", job_contents, "Missing output.")
+
+	def test_abort_detached(self):
+		# Make me a launcher.
+		instance_id = str(uuid.uuid4())
+		exit_key = self.get_exit_key(instance_id)
+		environment = self.get_env()
+		launcher = CommandSupervisorLauncher(self.configuration, instance_id)
+		launcher.launch(
+			["./hanger-test.sh"],
+			self.get_misc_path(),
+			environment,
+			exit_key,
+			self.get_http_port()
+		)
+
+		# Give the process some time to start.
+		self.short_wait_hack(length=0.5)
+
+		# Create a detached launcher.
+		launcher = CommandSupervisorLauncher(self.configuration, instance_id)
+
+		# Kill it off.
+		launcher.kill()
+
+		# Wait for everything to settle down.
+		self.short_wait_hack(length=0.5)
+
+		# Check that it output what we expected.
+		job_path = self.configuration.get_job_log_path(instance_id)
 		job_contents =""
 		if os.path.exists(job_path):
 			job_contents = open(job_path, 'r').read()
