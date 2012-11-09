@@ -36,7 +36,9 @@ class ApplicationEnvironment(object):
 		environment = copy.deepcopy(other_environment)
 
 		# Add in our nodes tags.
-		meta = json.loads(environment['PM_METADATA'])
+		meta = {}
+		if environment.has_key('PM_METADATA'):
+			meta = json.loads(environment['PM_METADATA'])
 		meta['node'] = configuration['tags']
 		environment['PM_METADATA'] = json.dumps(meta)
 
