@@ -119,6 +119,11 @@ class Instance(colander.MappingSchema):
 		description="If set to true, only one version of this instance type will run at a time. This is good for background workers that you don't want overlapping.",
 		default=False,
 		missing=False)
+	standalone = colander.SchemaNode(colander.Boolean(),
+		title="Standalone",
+		description="If true, this instance doesn't require a TCP port. Affects the startup of the application.",
+		default=False,
+		missing=False)
 
 class ConfigurationSchema(colander.MappingSchema):
 	application = Application()
