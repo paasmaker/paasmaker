@@ -8,11 +8,6 @@ class InternalUserConfigurationSchema(colander.MappingSchema):
 	# No options defined.
 	pass
 
-class InternalUserParametersSchema(colander.MappingSchema):
-	# No parameter schema defined. We just accept whatever we're supplied.
-	pass
-
-# Parameters service.
 class InternalAuth(BaseAuth):
 	"""
 	This is the internal authentication plugin.
@@ -39,16 +34,16 @@ class InternalAuth(BaseAuth):
 
 class InternalAuthTest(BaseAuthTest):
 	def test_simple_fail(self):
-		auth = InternalAuth(
-			self.configuration,
-			paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN,
-			{},
-			{},
-			'paasmaker.auth.internal'
-		)
 
-		# Sanity check.
-		auth.check_options()
+		self.registry.register(
+			'paasmaker.auth.internal',
+			'paasmaker.pacemaker.auth.internal.InternalAuth',
+			{}
+		)
+		auth = self.registry.instantiate(
+			'paasmaker.auth.internal',
+			paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN
+		)
 
 		session = self.configuration.get_database_session()
 		auth.authenticate(
@@ -64,12 +59,14 @@ class InternalAuthTest(BaseAuthTest):
 		self.assertFalse(self.success, "User authentication failed.")
 
 	def test_simple_success(self):
-		auth = InternalAuth(
-			self.configuration,
-			paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN,
-			{},
-			{},
-			'paasmaker.auth.internal'
+		self.registry.register(
+			'paasmaker.auth.internal',
+			'paasmaker.pacemaker.auth.internal.InternalAuth',
+			{}
+		)
+		auth = self.registry.instantiate(
+			'paasmaker.auth.internal',
+			paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN
 		)
 
 		session = self.configuration.get_database_session()
@@ -80,9 +77,6 @@ class InternalAuthTest(BaseAuthTest):
 		u.password = 'test'
 		session.add(u)
 		session.commit()
-
-		# Sanity check.
-		auth.check_options()
 
 		auth.authenticate(
 			session,
@@ -94,16 +88,18 @@ class InternalAuthTest(BaseAuthTest):
 
 		self.wait()
 
-		self.assertTrue(self.success, "User authentication succeeded.")
+		self.assertTrue(self.success, "User authentication failed.")
 		self.assertEquals(self.user.id, u.id, "User does not match.")
 
 	def test_wrong_password(self):
-		auth = InternalAuth(
-			self.configuration,
-			paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN,
-			{},
-			{},
-			'paasmaker.auth.internal'
+		self.registry.register(
+			'paasmaker.auth.internal',
+			'paasmaker.pacemaker.auth.internal.InternalAuth',
+			{}
+		)
+		auth = self.registry.instantiate(
+			'paasmaker.auth.internal',
+			paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN
 		)
 
 		session = self.configuration.get_database_session()
@@ -114,9 +110,6 @@ class InternalAuthTest(BaseAuthTest):
 		u.password = 'test'
 		session.add(u)
 		session.commit()
-
-		# Sanity check.
-		auth.check_options()
 
 		auth.authenticate(
 			session,

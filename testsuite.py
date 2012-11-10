@@ -60,6 +60,7 @@ test_sets = {
 	paasmaker.pacemaker.scm.tarball: ['all', 'scm', 'slow'],
 
 	paasmaker.pacemaker.auth.internal: ['all', 'auth'],
+	paasmaker.pacemaker.auth.allowany: ['all', 'auth'],
 
 	paasmaker.common.job.prepare.prepareroot: ['all', 'slow', 'application', 'prepare'],
 	paasmaker.common.job.coordinate.selectlocations: ['all', 'slow', 'application', 'coordinate'],
