@@ -142,9 +142,17 @@ class User(OrmBase, Base):
 		return super(User, self).flatten(['login', 'email', 'auth_source', 'name', 'enabled'])
 
 	def password_hash(self, plain):
-		# TODO: make this more secure!
+		# Select a salt, if we don't already have one for this user.
+		meta = self.auth_meta
+		if not meta.has_key('salt'):
+			meta['salt'] = str(uuid.uuid4())
+		self.auth_meta = meta
+
+		# Now hash their password, plus the salt.
 		h = hashlib.md5()
+		h.update(meta['salt'])
 		h.update(plain)
+		h.update(meta['salt'])
 		return h.hexdigest()
 
 	def generate_api_key(self):
