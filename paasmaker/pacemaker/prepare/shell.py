@@ -79,11 +79,18 @@ class ShellPrepareTestTest(BasePrepareTest):
 				'md5sum bar.txt > sum.txt'
 			]
 		}
-		plugin = ShellPrepare(self.configuration, paasmaker.util.plugin.MODE.PREPARE_COMMAND, {}, parameters, logger=logger)
 
-		# Sanity check.
-		plugin.check_options()
-		plugin.check_parameters(paasmaker.util.plugin.MODE.PREPARE_COMMAND)
+		self.registry.register(
+			'paasmaker.prepare.shell',
+			'paasmaker.pacemaker.prepare.shell.ShellPrepare',
+			{}
+		)
+		plugin = self.registry.instantiate(
+			'paasmaker.prepare.shell',
+			paasmaker.util.plugin.MODE.PREPARE_COMMAND,
+			parameters,
+			logger
+		)
 
 		# Proceed.
 		plugin.prepare(os.environ, self.tempdir, self.success_callback, self.failure_callback)

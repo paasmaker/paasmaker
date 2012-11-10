@@ -58,11 +58,17 @@ class ZipSCMTest(BaseSCMTest):
 
 		# Now unpack it using the plugin.
 		logger = self.configuration.get_job_logger('testscmzip')
-		plugin = ZipSCM(self.configuration, paasmaker.util.plugin.MODE.SCM_EXPORT, {}, {'location': tempzip}, logger=logger)
-
-		# Sanity check.
-		plugin.check_options()
-		plugin.check_parameters(paasmaker.util.plugin.MODE.SCM_EXPORT)
+		self.registry.register(
+			'paasmaker.scm.zip',
+			'paasmaker.pacemaker.scm.zip.ZipSCM',
+			{}
+		)
+		plugin = self.registry.instantiate(
+			'paasmaker.scm.zip',
+			paasmaker.util.plugin.MODE.SCM_EXPORT,
+			{'location': tempzip},
+			logger
+		)
 
 		# Proceed.
 		plugin.create_working_copy(self.success_callback, self.failure_callback)

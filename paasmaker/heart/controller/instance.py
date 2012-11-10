@@ -217,7 +217,7 @@ class InstanceRegisterControllerTest(BaseControllerTest):
 		baseruntime = paasmaker.heart.runtime.BaseRuntime(
 			self.configuration,
 			paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT,
-			{}, {})
+			{}, {}, 'paasmaker.runtime.base')
 		baseruntime.generate_exit_report_command(self.configuration,
 			self.configuration.instances,
 			instance.instance_id)

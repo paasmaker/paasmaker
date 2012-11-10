@@ -92,11 +92,16 @@ class DefaultPlacement(BasePlacement):
 class DefaultPlacementTest(BasePlacementTest):
 
 	def test_core_tags_filter(self):
-		plugin = DefaultPlacement(self.configuration, paasmaker.util.plugin.MODE.PLACEMENT, {}, {})
-
-		# Sanity check.
-		plugin.check_options()
-		plugin.check_parameters(paasmaker.util.plugin.MODE.PLACEMENT)
+		self.registry.register(
+			'paasmaker.placement.default',
+			'paasmaker.pacemaker.placement.default.DefaultPlacement',
+			{}
+		)
+		plugin = self.registry.instantiate(
+			'paasmaker.placement.default',
+			paasmaker.util.plugin.MODE.PLACEMENT,
+			{}
+		)
 
 		# Test node.
 		ctr = 1
@@ -153,11 +158,16 @@ class DefaultPlacementTest(BasePlacementTest):
 		self.create_sample_nodes(session, 10)
 		instance_type = self.create_sample_application(session, 'paasmaker.runtime.php', {}, '5.3')
 
-		plugin = DefaultPlacement(self.configuration, paasmaker.util.plugin.MODE.PLACEMENT, {}, {})
-
-		# Sanity check.
-		plugin.check_options()
-		plugin.check_parameters(paasmaker.util.plugin.MODE.PLACEMENT)
+		self.registry.register(
+			'paasmaker.placement.default',
+			'paasmaker.pacemaker.placement.default.DefaultPlacement',
+			{}
+		)
+		plugin = self.registry.instantiate(
+			'paasmaker.placement.default',
+			paasmaker.util.plugin.MODE.PLACEMENT,
+			{}
+		)
 
 		plugin.choose(session, instance_type, 1, self.success_callback, self.failure_callback)
 
@@ -173,11 +183,16 @@ class DefaultPlacementTest(BasePlacementTest):
 		self.create_sample_nodes(session, 10)
 		instance_type = self.create_sample_application(session, 'paasmaker.runtime.php', {}, '5.3')
 
-		plugin = DefaultPlacement(self.configuration, paasmaker.util.plugin.MODE.PLACEMENT, {}, {})
-
-		# Sanity check.
-		plugin.check_options()
-		plugin.check_parameters(paasmaker.util.plugin.MODE.PLACEMENT)
+		self.registry.register(
+			'paasmaker.placement.default',
+			'paasmaker.pacemaker.placement.default.DefaultPlacement',
+			{}
+		)
+		plugin = self.registry.instantiate(
+			'paasmaker.placement.default',
+			paasmaker.util.plugin.MODE.PLACEMENT,
+			{}
+		)
 
 		# Request more than we have available.
 		plugin.choose(session, instance_type, 20, self.success_callback, self.failure_callback)
@@ -194,11 +209,16 @@ class DefaultPlacementTest(BasePlacementTest):
 		self.create_sample_nodes(session, 10)
 		instance_type = self.create_sample_application(session, 'paasmaker.runtime.noexist', {}, '1.0')
 
-		plugin = DefaultPlacement(self.configuration, paasmaker.util.plugin.MODE.PLACEMENT, {}, {})
-
-		# Sanity check.
-		plugin.check_options()
-		plugin.check_parameters(paasmaker.util.plugin.MODE.PLACEMENT)
+		self.registry.register(
+			'paasmaker.placement.default',
+			'paasmaker.pacemaker.placement.default.DefaultPlacement',
+			{}
+		)
+		plugin = self.registry.instantiate(
+			'paasmaker.placement.default',
+			paasmaker.util.plugin.MODE.PLACEMENT,
+			{}
+		)
 
 		plugin.choose(session, instance_type, 1, self.success_callback, self.failure_callback)
 

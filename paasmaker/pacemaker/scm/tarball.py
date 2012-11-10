@@ -68,11 +68,18 @@ class TarballSCMTest(BaseSCMTest):
 
 		# Now unpack it using the plugin.
 		logger = self.configuration.get_job_logger('testscmtarball')
-		plugin = TarballSCM(self.configuration, paasmaker.util.plugin.MODE.SCM_EXPORT, {}, {'location': temptarball}, logger=logger)
-
-		# Sanity check.
-		plugin.check_options()
-		plugin.check_parameters(paasmaker.util.plugin.MODE.SCM_EXPORT)
+		logger = self.configuration.get_job_logger('testscmzip')
+		self.registry.register(
+			'paasmaker.scm.tarball',
+			'paasmaker.pacemaker.scm.tarball.TarballSCM',
+			{}
+		)
+		plugin = self.registry.instantiate(
+			'paasmaker.scm.tarball',
+			paasmaker.util.plugin.MODE.SCM_EXPORT,
+			{'location': temptarball},
+			logger
+		)
 
 		# Proceed.
 		plugin.create_working_copy(self.success_callback, self.failure_callback)

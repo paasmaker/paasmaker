@@ -47,11 +47,16 @@ class ParametersServiceTest(BaseServiceTest):
 	def test_simple(self):
 		# There is very few ways this can go wrong,
 		# but this is an example for other services.
-		service = ParametersService(self.configuration, paasmaker.util.plugin.MODE.SERVICE_CREATE, {}, {'test': 'bar'})
-
-		# Sanity check.
-		service.check_options()
-		service.check_parameters(paasmaker.util.plugin.MODE.SERVICE_CREATE)
+		self.registry.register(
+			'paasmaker.service.parameters',
+			'paasmaker.pacemaker.service.parameters.ParametersService',
+			{}
+		)
+		service = self.registry.instantiate(
+			'paasmaker.service.parameters',
+			paasmaker.util.plugin.MODE.SERVICE_CREATE,
+			{'test': 'bar'}
+		)
 
 		service.create(self.success_callback, self.failure_callback)
 

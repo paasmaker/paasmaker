@@ -13,6 +13,7 @@ class BasePrepareTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
 		super(BasePrepareTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'], io_loop=self.io_loop)
+		self.registry = self.configuration.plugins
 		self.success = None
 		self.message = None
 		self.tempdir = tempfile.mkdtemp()
