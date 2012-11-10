@@ -8,7 +8,7 @@ from port import FreePortFinder, NoFreePortException
 from managedredis import ManagedRedis
 from memoryredis import MemoryRedis
 from temporaryrabbitmq import TemporaryRabbitMQ
-from commandsupervisor import CommandSupervisor, CommandSupervisorLauncher
+from commandsupervisor import CommandSupervisorLauncher
 from popen import Popen
 from jobmanager import JobManager
 from streamingchecksum import StreamingChecksum
