@@ -26,7 +26,8 @@ MODE_REQUIRE_PARAMS = {
 	'SCM_EXPORT': True,
 	'SCM_LIST': False,
 	'PREPARE_COMMAND': True,
-	'PLACEMENT': True
+	'PLACEMENT': True,
+	'USER_AUTHENTICATE_PLAIN': False
 }
 
 # Mode constants.
@@ -46,11 +47,12 @@ class Plugin(object):
 	OPTIONS_SCHEMA = None
 	PARAMETERS_SCHEMA = {}
 
-	def __init__(self, configuration, mode, options, parameters, logger=None):
+	def __init__(self, configuration, mode, options, parameters, called_name, logger=None):
 		self.configuration = configuration
 		self.raw_options = options
 		self.raw_parameters = parameters
 		self.mode = mode
+		self.called_name = called_name
 
 		if not logger:
 			# Create a logger for the plugins use.
@@ -178,7 +180,7 @@ class PluginRegistry:
 		if mode not in klass.MODES:
 			raise ValueError("Plugin %s does not have mode %s" % (plugin, mode))
 
-		instance = klass(self.configuration, mode, self.options_registry[plugin], parameters, logger)
+		instance = klass(self.configuration, mode, self.options_registry[plugin], parameters, plugin, logger)
 
 		# Get it to recheck options.
 		instance.check_options()
@@ -199,8 +201,8 @@ class PluginRegistry:
 			# No plugins match this mode.
 			return []
 		else:
-			# Return the list of them.
-			return self.mode_registry[mode]
+			# Return the list of them. A copy.
+			return list(self.mode_registry[mode])
 
 class PluginExampleOptionsSchema(colander.MappingSchema):
 	# Required key.

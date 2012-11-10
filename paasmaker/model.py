@@ -105,8 +105,8 @@ class User(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	login = Column(String, nullable=False, index=True, unique=True)
 	email = Column(String, nullable=False, index=True, unique=True)
-	auth_source = Column(String, nullable=False, default="internal")
-	auth_meta = Column(String, nullable=True)
+	auth_source = Column(String, nullable=False, default="paasmaker.auth.internal")
+	_auth_meta = Column("auth_meta", Text, nullable=True)
 	enabled = Column(Boolean, nullable=False, default=True)
 
 	_password = Column('password', String, nullable=True)
@@ -126,6 +126,17 @@ class User(OrmBase, Base):
 	@password.setter
 	def password(self, val):
 		self._password = self.password_hash(val)
+
+	@hybrid_property
+	def auth_meta(self):
+		if self._auth_meta:
+			return json.loads(self._auth_meta)
+		else:
+			return {}
+
+	@auth_meta.setter
+	def auth_meta(self, val):
+		self._auth_meta = json.dumps(val)
 
 	def flatten(self, field_list=None):
 		return super(User, self).flatten(['login', 'email', 'auth_source', 'name', 'enabled'])

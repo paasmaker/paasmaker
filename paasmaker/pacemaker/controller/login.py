@@ -12,35 +12,68 @@ class LoginController(BaseController):
 	def get(self):
 		self.render("login/login.html")
 
+	@tornado.web.asynchronous
 	def post(self):
 		# Check the username/password supplied.
-		# Only internal auth is supported here.
 		username = self.param('username')
 		password = self.param('password')
-		user = self.db().query(paasmaker.model.User) \
-			.filter(paasmaker.model.User.login==username).first()
-		success = False
 
-		if user:
-			# Found that user. Check their authentication.
-			if user.auth_source == 'internal':
-				if user.check_password(password):
-					self.allow_user(user)
-					success = True
+		# Find auth plugins.
+		plugins = self.configuration.plugins.plugins_for(paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN)
+		plugins.reverse()
+
+		# And with each of them, try to authenticate.
+		session = self.db()
+
+		def complete_request(authenticated):
+			if authenticated:
+				# Note: redirect() calls finish().
+				ret = self.param('rt')
+				if ret:
+					self.redirect(ret)
 				else:
-					self.add_error("Invalid username or password.")
-			# TODO: Other authentication sources...
-		else:
-			self.add_error("Invalid username or password.")
-
-		if success:
-			ret = self.param('rt')
-			if ret:
-				self.redirect(ret)
+					self.redirect('/')
 			else:
-				self.redirect('/')
+				self.add_error("Unable to authenticate you.")
+				self.render("login/login.html")
+				self.finish()
+
+		def try_plugin(plugin):
+			login_handler = self.configuration.plugins.instantiate(
+				plugin,
+				paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN
+			)
+
+			def success_login(user, message):
+				# Success! Record that user.
+				self.allow_user(user)
+				complete_request(True)
+
+			def failed_login(reason, message):
+				# Add it as a warning.
+				self.add_warning("%s: %s", (plugin, message))
+
+				# And move onto the next plugin.
+				# Unless there are no more.
+				if len(plugins) == 0:
+					complete_request(False)
+				else:
+					try_plugin(plugins.pop())
+
+			login_handler.authenticate(
+				session,
+				username,
+				password,
+				success_login,
+				failed_login
+			)
+
+		# And kick off the first plugin.
+		if len(plugins) == 0:
+			self.add_error("Server is misconfigured - we know of no way to authenticate you.")
+			complete_request(False)
 		else:
-			self.render("login/login.html")
+			try_plugin(plugins.pop())
 
 	def allow_user(self, user):
 		self.set_secure_cookie("user", unicode(user.id))

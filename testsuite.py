@@ -44,7 +44,7 @@ test_sets = {
 	paasmaker.pacemaker.controller.user: ['all', 'slow', 'controller', 'user'],
 	paasmaker.pacemaker.controller.login: ['all', 'slow', 'controller', 'login'],
 	paasmaker.pacemaker.controller.node: ['all', 'slow', 'controller', 'node'],
-	paasmaker.pacemaker.controller.profile: ['all', 'slow', 'controller', 'login', 'profile'],
+	paasmaker.pacemaker.controller.profile: ['all', 'slow', 'controller', 'profile'],
 	paasmaker.pacemaker.controller.workspace: ['all', 'slow', 'controller', 'workspace'],
 	paasmaker.heart.controller.instance: ['all', 'slow', 'controller', 'instance', 'heart'],
 
@@ -58,6 +58,8 @@ test_sets = {
 
 	paasmaker.pacemaker.scm.zip: ['all', 'scm', 'slow'],
 	paasmaker.pacemaker.scm.tarball: ['all', 'scm', 'slow'],
+
+	paasmaker.pacemaker.auth.internal: ['all', 'auth'],
 
 	paasmaker.common.job.prepare.prepareroot: ['all', 'slow', 'application', 'prepare'],
 	paasmaker.common.job.coordinate.selectlocations: ['all', 'slow', 'application', 'coordinate'],

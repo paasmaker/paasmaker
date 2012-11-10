@@ -48,6 +48,9 @@ pacemaker:
     - name: paasmaker.runtime.shell
       class: paasmaker.heart.runtime.ShellRuntime
       title: Shell Runtime
+    - name: paasmaker.auth.internal
+      class: paasmaker.pacemaker.auth.internal.InternalAuth
+      title: Internal Authentication
   router:
     table:
       host: 0.0.0.0

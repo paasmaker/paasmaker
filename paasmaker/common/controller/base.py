@@ -117,6 +117,7 @@ class BaseController(tornado.web.RequestHandler):
 		else:
 			# TODO: Don't assume that the request is ready for rendering.
 			self.render("api/apionly.html")
+			self.finish()
 
 	def require_authentication(self, methods):
 		if len(methods) == 0:
