@@ -105,6 +105,7 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
 		instance_type.placement_provider = 'paasmaker.placement.default'
 		instance_type.placement_parameters = {}
 		instance_type.exclusive = False
+		instance_type.standalone = False
 		instance_type.state = constants.INSTANCE_TYPE.PREPARED
 
 		session.add(instance_type)

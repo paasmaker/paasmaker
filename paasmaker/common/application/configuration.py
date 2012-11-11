@@ -183,6 +183,7 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 			instance_type.quantity = imetadata['quantity']
 			instance_type.state = constants.INSTANCE_TYPE.NEW
 			instance_type.exclusive = imetadata['exclusive']
+			instance_type.standalone = imetadata['standalone']
 
 			# Runtime information.
 			instance_type.runtime_name = imetadata['runtime']['name']

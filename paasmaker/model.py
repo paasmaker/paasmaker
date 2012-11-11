@@ -331,6 +331,7 @@ class ApplicationInstanceType(OrmBase, Base):
 	placement_provider = Column(Text, nullable=False)
 	_placement_parameters = Column("placement_parameters", Text, nullable=False)
 	exclusive = Column(Boolean, nullable=False)
+	standalone = Column(Boolean, nullable=False)
 
 	state = Column(Enum(*constants.INSTANCE_TYPE.ALL), nullable=False, index=True)
 
@@ -341,7 +342,7 @@ class ApplicationInstanceType(OrmBase, Base):
 		return super(ApplicationInstanceType, self).flatten(['name', 'application_version', 'quantity', 'provider'])
 
 	def flatten_for_heart(self):
-		fields = ['name', 'runtime_name', 'runtime_parameters', 'runtime_version', 'startup', 'exclusive']
+		fields = ['name', 'runtime_name', 'runtime_parameters', 'runtime_version', 'startup', 'exclusive', 'standalone']
 		return super(ApplicationInstanceType, self).flatten(fields)
 
 	@hybrid_property
