@@ -4,6 +4,7 @@ import uuid
 import os
 import json
 import signal
+import shlex
 
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest
@@ -17,6 +18,8 @@ class CommandSupervisorLauncher(object):
 		self.instance_id = instance_id
 
 	def launch(self, command, cwd, environment, exit_key, port):
+		if isinstance(command, basestring):
+			command = shlex.split(str(command))
 		payload = {}
 		payload['instance_id'] = self.instance_id
 		payload['command'] = command

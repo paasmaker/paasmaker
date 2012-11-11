@@ -119,5 +119,7 @@ supervisor = CommandSupervisor(data)
 supervisor.run()
 
 # Clean up.
-os.unlink(data['pidfile'])
-os.unlink(control_file)
+if os.path.exists(data['pidfile']):
+	os.unlink(data['pidfile'])
+if os.path.exists(control_file):
+	os.unlink(control_file)

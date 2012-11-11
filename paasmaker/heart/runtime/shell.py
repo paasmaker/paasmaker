@@ -20,7 +20,12 @@ class ShellRuntimeOptionsSchema(colander.MappingSchema):
 class ShellRuntimeParametersSchema(colander.MappingSchema):
 	launch_command = colander.SchemaNode(colander.String(),
 		title="Launch command",
-		description="The command to launch the instance. Substitutes %%(port)d with the allocated port.")
+		description="The command to launch the instance. Substitutes %(port)d with the allocated port.")
+	start_timeout = colander.SchemaNode(colander.Integer(),
+		title="Startup timeout",
+		description="The maximum time to wait for the application to start listening on it's assigned port.",
+		missing=60,
+		default=60)
 
 class ShellEnvironmentParametersSchema(colander.MappingSchema):
 	# No options.
@@ -46,95 +51,70 @@ class ShellRuntime(BaseRuntime):
 		# Nothing to set up - so just proceed.
 		callback("Ready.")
 
-	def start(self, manager, instance_id, instance, callback, error_callback):
-		# Generate the exit command and keys.
-		self.generate_exit_report_command(self.configuration, manager, instance_id)
-		# Create the start script.
-		script = self.make_start_script(instance)
-		# Get the log file for this instance id (using the job_id system).
-		log_file = self.configuration.get_job_log_path(instance_id)
-		log_fp = open(log_file, 'a')
-		# Launch it.
-		launcher = paasmaker.util.Popen(['bash', script],
-			stdout=log_fp,
-			stderr=log_fp,
-			io_loop=self.configuration.io_loop,
-			cwd=instance['runtime']['path'],
-			env=instance['environment'])
-
-		# Make a note of the PID.
-		instance['runtime']['pid'] = launcher.pid
-		manager.save()
-
-		# Wait until the port is no longer free.
-		# TODO: This won't work with standalone instances that don't use a TCP port.
-		def wait_for_startup():
-			if self.configuration.port_allocator.in_use(instance['instance']['port']):
-				# And say that we're done.
-				callback("Started.")
-			else:
-				# Wait a little bit longer.
-				self.configuration.io_loop.add_timeout(time.time() + 0.1, wait_for_startup)
-
-		self.configuration.io_loop.add_timeout(time.time() + 0.1, wait_for_startup)
-
-	def stop(self, manager, instance_id, instance, callback, error_callback):
-		# From the instance, kill the PID.
-		os.kill(instance['runtime']['pid'], signal.SIGTERM)
-		# Wait until the port is free.
-		# TODO: This won't work with standalone instances that don't use a TCP port.
-		def wait_for_shutdown():
-			if not self.configuration.port_allocator.in_use(instance['instance']['port']):
-				# And say that we're done.
-				callback("Stopped instance.")
-			else:
-				# Wait a little bit longer.
-				self.configuration.io_loop.add_timeout(time.time() + 0.1, wait_for_shutdown)
-
-		self.configuration.io_loop.add_timeout(time.time() + 0.1, wait_for_shutdown)
-
-	def status(self, manager, instance_id, instance, callback, error_callback):
-		raise NotImplementedError("You must implement stop.")
-
-	def statistics(self, manager, instance_id, instance, callback, error_callback):
-		raise NotImplementedError("You must implement stop.")
-
-	def make_start_script(self, instance):
-		template = """
-# Abort if any command fails.
-set -xe
-# And abort if a piped process fails.
-set -o pipefail
-
-# Launch the instance.
-%(launch_command)s
-
-# When it exits, grab the return code.
-EXITCODE=$?
-
-# Report the status.
-curl "%(exit_url)s$EXITCODE"
-
-"""
-		start_script = tempfile.mkstemp()[1]
-
-		fp = open(start_script, 'w')
-
-		# Write out the launch command.
+	def start(self, instance_id, callback, error_callback):
+		# Prepare the launch command.
+		instance = self.configuration.instances.get_instance(instance_id)
 		launch_params = {}
 		launch_params['port'] = instance['instance']['port']
-
 		launch_command = self.parameters['launch_command'] % launch_params
 
-		script_params = {}
-		script_params['launch_command'] = launch_command
-		script_params['exit_url'] = instance['runtime']['exit']['full_url']
+		# Launch it.
+		self.supervise_start(
+			instance_id,
+			launch_command,
+			instance['runtime']['path'],
+			instance['environment']
+		)
 
-		fp.write(template % script_params)
+		# If it's not standalone, wait for it to assume it's TCP port.
+		if not instance['instance_type']['standalone']:
+			# TODO: Handle the case where the instance id gets a stop signal
+			# because the subprocess terminated.
+			def abort_result(message):
+				error_callback("Failed to start up instance inside timeout.")
 
-		fp.close()
+			def abort_startup(message):
+				# Failed to start up in time. Stop the instance.
+				self.stop(instance_id, abort_result, abort_result)
 
-		return start_script
+			self.wait_until_port_used(
+				instance['instance']['port'],
+				self.parameters['start_timeout'],
+				callback,
+				abort_startup
+			)
+		else:
+			# Assume that it's running, until the instance tells
+			# us otherwise.
+			callback("Started successfully.")
+
+	def stop(self, instance_id, callback, error_callback):
+		# Issue the stop command.
+		self.supervise_stop(instance_id)
+
+		# Wait for it to free up the port, if it's not standalone.
+		# If it's not standalone, wait for it to assume it's TCP port.
+		instance = self.configuration.instances.get_instance(instance_id)
+		if not instance['instance_type']['standalone']:
+			def timeout(message):
+				# Failed to stop listening, so it's not responding.
+				error_callback(message)
+
+			self.wait_until_port_free(
+				instance['instance']['port'],
+				self.parameters['start_timeout'],
+				callback,
+				timeout
+			)
+		else:
+			# Assume that it's stopped.
+			callback("Started successfully.")
+
+	def status(self, instance_id, callback, error_callback):
+		raise NotImplementedError("You must implement stop.")
+
+	def statistics(self, instance_id, callback, error_callback):
+		raise NotImplementedError("You must implement stop.")
 
 class ShellRuntimeTest(BaseRuntimeTest):
 
@@ -164,6 +144,7 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		instance = {}
 		instance['instance'] = {'instance_id': instance_id}
 		instance['instance']['port'] = self.configuration.get_free_port()
+		instance['instance_type'] = {'standalone': False}
 		start_environment = {'PM_METADATA': '{}'}
 		instance['environment'] = paasmaker.common.application.environment.ApplicationEnvironment.merge_local_environment(self.configuration, start_environment)
 
@@ -180,9 +161,7 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		)
 
 		runtime.start(
-			self.configuration.instances,
 			instance_id,
-			instance,
 			self.success_callback,
 			self.failure_callback
 		)
@@ -210,9 +189,7 @@ class ShellRuntimeTest(BaseRuntimeTest):
 
 		# Stop the instance.
 		runtime.stop(
-			self.configuration.instances,
 			instance_id,
-			instance,
 			self.success_callback,
 			self.failure_callback
 		)
@@ -229,8 +206,6 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		client.fetch(request, self.stop)
 		response = self.wait()
 
-		print str(response)
+		self.assertNotEquals(response.code, 200)
 
-		self.failIf(response.error)
-
-		print open(log_path, 'r').read()
+		#print open(log_path, 'r').read()
