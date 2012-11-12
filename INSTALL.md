@@ -15,6 +15,7 @@ All these steps currently use Ubuntu 12.04.
 ## Tools - runtime
 
 	sudo apt-get install curl
+    sudo apt-get install zip
 
 ## Redis
 
@@ -46,3 +47,9 @@ be easily possible.
 	sudo apt-get install python-dev
 	sudo pip install -r requirements.txt
     sudo pip install coverage
+
+## PHP
+
+The target version is 5.3, which ships with Ubuntu 12.04.
+
+    sudo apt-get install php5-cli
