@@ -29,6 +29,9 @@ save 60 10000
 
 dbfilename dump.rdb
 
+# Optional password line.
+%(auth_line)s
+
 timeout 300
 loglevel notice
 logfile %(working_dir)s/redis.log
@@ -41,16 +44,16 @@ vm-enabled no
 		self.parameters = {}
 		self.client = None
 
-	def configure(self, working_dir, port, bind_host):
+	def configure(self, working_dir, port, bind_host, password=None):
 		"""
 		Configure this instance.
 		"""
-		# TODO: Allow setting a password.
 		# TODO: Allow a memory limit.
 		# TODO: Allow custom configuration entries.
 		self.parameters['working_dir'] = working_dir
 		self.parameters['port'] = port
 		self.parameters['host'] = bind_host
+		self.parameters['password'] = password
 
 		# Create the working dir. If this fails, let it bubble up.
 		if not os.path.exists(working_dir):
@@ -65,6 +68,7 @@ vm-enabled no
 		Throws an exception if that directory is not configured.
 		"""
 		parameters_path = self.get_parameters_path(working_dir)
+		config_path = self.get_configuration_path(working_dir)
 		if os.path.exists(config_path):
 			# TODO: Some more error checking.
 			fp = open(config_path, 'r')
@@ -121,6 +125,10 @@ vm-enabled no
 		"""
 		# Write out the configuration.
 		configfile = self.get_configuration_path(self.parameters['working_dir'])
+		if self.parameters['password']:
+			self.parameters['auth_line'] = "requirepass %s" % self.parameters['password']
+		else:
+			self.parameters['auth_line'] = ''
 		redisconfig = self.redis_server_config % self.parameters
 		fp = open(configfile, 'w')
 		fp.write(redisconfig)
@@ -151,7 +159,7 @@ vm-enabled no
 		else:
 			return False
 
-	def stop(self):
+	def stop(self, sig=signal.SIGTERM):
 		"""
 		Stop this instance of the redis server, allowing for it to be restarted later.
 		"""
@@ -161,7 +169,7 @@ vm-enabled no
 
 		pid = self.get_pid()
 		if pid:
-			os.kill(pid, signal.SIGTERM)
+			os.kill(pid, sig)
 
 	def destroy(self):
 		"""
