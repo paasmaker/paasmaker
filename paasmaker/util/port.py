@@ -1,11 +1,12 @@
 import subprocess
 import unittest
 import platform
+import time
 
 class NoFreePortException(Exception):
 	pass
 
-class FreePortFinder:
+class FreePortFinder(object):
 	def __init__(self):
 		self.last_allocated = None
 		self.preallocated = set()
@@ -79,6 +80,28 @@ class FreePortFinder:
 				lines.append(line)
 		output = "\n".join(lines)
 		return output
+
+	def wait_until_port_used(self, io_loop, port, timeout, callback, timeout_callback):
+		self.wait_until_port_state(io_loop, port, True, timeout, callback, timeout_callback)
+	def wait_until_port_free(self, io_loop, port, timeout, callback, timeout_callback):
+		self.wait_until_port_state(io_loop, port, False, timeout, callback, timeout_callback)
+
+	def wait_until_port_state(self, io_loop, port, state, timeout, callback, timeout_callback):
+		# Wait until the port is no longer free.
+		end_timeout = time.time() + timeout
+
+		def wait_for_state():
+			if self.in_use(port) == state:
+				# And say that we're done.
+				callback("In appropriate state.")
+			else:
+				if time.time() > end_timeout:
+					timeout_callback("Failed to end up in appropriate state in time.")
+				else:
+					# Wait a little bit longer.
+					io_loop.add_timeout(time.time() + 0.1, wait_for_state)
+
+		io_loop.add_timeout(time.time() + 0.1, wait_for_state)
 
 class FreePortFinderTest(unittest.TestCase):
 	def test_free(self):
