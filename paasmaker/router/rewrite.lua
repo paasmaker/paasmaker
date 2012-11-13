@@ -1,3 +1,5 @@
+
+
 -- Include the relevant libraries.
 local redis = require("resty.redis")
 local red = redis:new()
@@ -5,8 +7,8 @@ local red = redis:new()
 -- Connect to Redis. Or fail with a 500 server error if we can't.
 local ok, err = red:connect(ngx.var.redis_host, ngx.var.redis_port)
 if err then
-	ngx.say(ngx.HTTP_INTERNAL_SERVER_ERROR)
-	return
+	ngx.log(ngx.DEBUG, "Unable to connect to redis.")
+	ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
 -- Now look up the hostname.

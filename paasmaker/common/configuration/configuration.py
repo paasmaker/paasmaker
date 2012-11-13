@@ -20,6 +20,7 @@ from pubsub import pub
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import colander
+import tornadoredis
 
 # For parsing command line options.
 from tornado.options import define, options
@@ -155,6 +156,13 @@ class RouterSchema(colander.MappingSchema):
 		missing=False,
 		default=False)
 
+	@staticmethod
+	def default():
+		return {
+			'enabled': False
+		}
+
+class RedisSchema(colander.MappingSchema):
 	table = RedisConnectionSchema(default=RedisConnectionSchema.default_router_table(), missing=RedisConnectionSchema.default_router_table())
 	stats = RedisConnectionSchema(default=RedisConnectionSchema.default_router_stats(), missing=RedisConnectionSchema.default_router_stats())
 	slaveof = RedisConnectionSlaveSchema(default=RedisConnectionSlaveSchema.default(), missing=RedisConnectionSlaveSchema.default())
@@ -162,7 +170,6 @@ class RouterSchema(colander.MappingSchema):
 	@staticmethod
 	def default():
 		return {
-			'enabled': False,
 			'table': RedisConnectionSchema.default_router_table(),
 			'stats': RedisConnectionSchema.default_router_stats(),
 			'slaveof': RedisConnectionSlaveSchema.default()
@@ -282,6 +289,8 @@ class ConfigurationSchema(colander.MappingSchema):
 	pacemaker = PacemakerSchema(default=PacemakerSchema.default(), missing=PacemakerSchema.default())
 	heart = HeartSchema(defalt=HeartSchema.default(), missing=HeartSchema.default())
 	router = RouterSchema(default=RouterSchema.default(), missing=RouterSchema.default())
+
+	redis = RedisSchema(default=RedisSchema.default(), missing=RedisSchema.default())
 
 	# Server related configuration. This is for an Ubuntu server, set up as
 	# per the installation instructions. Obviously, for other platforms
@@ -448,9 +457,95 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			raise ImNotA("I'm not a pacemaker, so I have no database.")
 		return self.session()
 
-	def get_router_redis(self):
-		# TODO: Implement!
-		pass
+	def _connect_redis(self, credentials, callback, error_callback):
+		"""
+		Internal function to connect to the given redis server, calling
+		the callback when it's ready with the client object.
+		"""
+		client = tornadoredis.Client(
+			host=credentials['host'],
+			port=credentials['port'],
+			password=credentials['password'],
+			io_loop=self.io_loop
+		)
+		client.connect()
+
+		# TODO: Handle where it failed.
+		callback(client)
+
+	def _get_redis(self, name, credentials, callback, error_callback):
+		"""
+		Internal helper to get a redis connection.
+		- Not a managed redis? Proceed to fetching a connection.
+		- A managed redis? And not started? Start it, and then
+		  return a client to it.
+		- A managed redis? And still starting up? Queue up the incoming
+		  requests.
+		- A managed redis that's started? Proceed to fetching a connection.
+		"""
+		if not credentials['managed']:
+			# It's not managed. Just attempt to connect to it.
+			self._connect_redis(credentials, callback, error_callback)
+		else:
+			# It's managed. Check it's state.
+			meta_key = "%s_%d" % (credentials['host'], credentials['port'])
+			if not hasattr(self, 'redis_meta'):
+				self.redis_meta = {}
+			if not self.redis_meta.has_key(meta_key):
+				self.redis_meta[meta_key] = {'state': 'CREATE', 'queue': []}
+
+			meta = self.redis_meta[meta_key]
+
+			# Callback to handle when it's up and running.
+			def on_redis_started(message):
+				# Mark it as started.
+				# TODO: Detect and handle where it didn't start.
+				meta['state'] = 'STARTED'
+
+				# Play back all our callbacks.
+				for queued in meta['queue']:
+					self._connect_redis(queued[0], queued[1], queued[2])
+
+			# Change the action based on our state.
+			if meta['state'] == 'CREATE':
+				# This is the first attempt to access it.
+				# Start up the service.
+				meta['state'] = 'STARTING'
+				meta['queue'].append((credentials, callback, error_callback))
+
+				directory = self.get_scratch_path_exists(
+					'redis', name
+				)
+				meta['manager'] = paasmaker.util.managedredis.ManagedRedis(self)
+				try:
+					meta['manager'].load_parameters(directory)
+				except paasmaker.util.ManagedRedisError, ex:
+					# Doesn't yet exist. Create it.
+					meta['manager'].configure(directory, credentials['port'], credentials['host'], credentials['password'])
+
+				meta['manager'].start_if_not_running()
+
+				# Wait for the port to be in use.
+				self.port_allocator.wait_until_port_used(
+					self.io_loop,
+					credentials['port'],
+					5,
+					on_redis_started,
+					None # TODO: This is the timeout callback.
+				)
+
+			elif meta['state'] == 'STARTING':
+				# Queue up our callbacks.
+				meta['queue'].append((credentials, callback, error_callback))
+			else:
+				# Must be started. Just connect.
+				self._connect_redis(credentials, callback, error_callback)
+
+	def get_router_table_redis(self, callback, error_callback):
+		self._get_redis('table', self['redis']['table'], callback, error_callback)
+
+	def get_stats_redis(self):
+		self._get_redis('stats', self['redis']['stats'], callback, error_callback)
 
 	def setup_message_exchange(self, status_ready_callback=None, audit_ready_callback=None, io_loop=None):
 		"""
@@ -471,6 +566,12 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 	def get_scratch_path(self, filename):
 		return os.path.join(self.get_flat('scratch_directory'), filename)
+
+	def get_scratch_path_exists(self, *args):
+		path = os.path.join(self.get_flat('scratch_directory'), *args)
+		if not os.path.exists(path):
+			os.makedirs(path)
+		return path
 
 	def get_supervisor_path(self):
 		return os.path.normpath(os.path.dirname(__file__) + '/../../../pm-supervisor.py')

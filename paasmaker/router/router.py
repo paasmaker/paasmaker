@@ -68,9 +68,6 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 	def setUp(self):
 		super(RouterTest, self).setUp()
 
-		self.redis = self.configuration.get_router_redis(self)
-		self.redis_server = self.configuration.get_router_redis_object()
-
 		# Fire up an nginx instance.
 		self.nginxconfig = tempfile.mkstemp()[1]
 		self.nginxtempdir = tempfile.mkdtemp()
@@ -90,9 +87,11 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		nginxparams['error_log'] = self.errorlog
 		nginxparams['access_log_stats'] = self.accesslog_stats
 		nginxparams['access_log_combined'] = self.accesslog_combined
-		# TODO: This couples this test to the managed redis a bit too closely.
-		nginxparams['redis_host'] = self.redis_server.parameters['host']
-		nginxparams['redis_port'] = self.redis_server.parameters['port']
+
+		# NOTE: The host might be 0.0.0.0, but this will still work
+		# on the managing host.
+		nginxparams['redis_host'] = self.configuration.get_flat('redis.table.host')
+		nginxparams['redis_port'] = self.configuration.get_flat('redis.table.port')
 
 		config = NGINX_CONFIG % nginxparams
 		open(self.nginxconfig, 'w').write(config)
@@ -116,6 +115,12 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		os.unlink(self.accesslog_stats)
 		os.unlink(self.accesslog_combined)
 
+	def get_redis_client(self):
+		# CAUTION: The second callback is the error callback,
+		# and this will break if it tries to call it.
+		self.configuration.get_router_table_redis(self.stop, None)
+		return self.wait()
+
 	def test_simple_request(self):
 		request = tornado.httpclient.HTTPRequest(
 			"http://localhost:%d/example" % self.nginxport,
@@ -130,26 +135,42 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# The nginx error log - will contain lua debug info.
 		#print open(self.errorlog, 'r').read()
 
-		# Should be 'not found'.
+		# Should be 500 - router redis does not yet exist.
+		self.assertEquals(response.code, 500, "Response is not 500.")
+
+		# Get the router redis. This fires up a redis instance.
+		self.get_redis_client()
+
+		# And try it again!
+		client.fetch(request, self.stop)
+		response = self.wait()
+
+		#print response.body
+		#print open(self.errorlog, 'r').read()
+		#print open(self.accesslog_stats, 'r').read()
+		#print open(self.accesslog_combined, 'r').read()
+
+		# Should be 404 this time.
 		self.assertEquals(response.code, 404, "Response is not 404.")
 
 		# Now insert a record for it.
 		# Inserted records MUST be IP addresses.
 		target = "127.0.0.1:%d" % self.get_http_port()
-		self.redis.sadd('instances_foo.com', target, callback=self.stop)
+		redis = self.get_redis_client()
+		redis.sadd('instances_foo.com', target, callback=self.stop)
 		self.wait()
 		logkey = 1
-		self.redis.set('logkey_foo.com', logkey, callback=self.stop)
+		redis.set('logkey_foo.com', logkey, callback=self.stop)
 		self.wait()
 		target = "127.0.0.1:%d" % self.get_http_port()
-		self.redis.sadd('instances_*.foo.com', target, callback=self.stop)
+		redis.sadd('instances_*.foo.com', target, callback=self.stop)
 		self.wait()
 		logkey = 1
-		self.redis.set('logkey_*.foo.com', logkey, callback=self.stop)
+		redis.set('logkey_*.foo.com', logkey, callback=self.stop)
 		self.wait()
 
 		# Fetch the set members.
-		self.redis.smembers('instances_foo.com', callback=self.stop)
+		redis.smembers('instances_foo.com', callback=self.stop)
 		members = self.wait()
 		self.assertIn(target, members, "Target is not in set.")
 

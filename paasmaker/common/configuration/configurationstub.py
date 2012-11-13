@@ -29,6 +29,20 @@ master:
   host: localhost
   port: %(master_port)d
   isitme: true
+
+redis:
+  table:
+    host: 0.0.0.0
+    port: %(router_table_port)d
+    managed: true
+  # slaveof:
+  #   enabled: true
+  #   host: localhost
+  #   port: 1234
+  stats:
+    host: 0.0.0.0
+    port: %(router_stats_port)d
+    managed: true
 """
 
 	pacemaker_config = """
@@ -51,15 +65,6 @@ pacemaker:
     - name: paasmaker.auth.internal
       class: paasmaker.pacemaker.auth.internal.InternalAuth
       title: Internal Authentication
-  router:
-    table:
-      host: 0.0.0.0
-      port: %(router_table_port)d
-      managed: true
-    stats:
-      host: 0.0.0.0
-      port: %(router_stats_port)d
-      managed: true
 """
 
 	heart_config = """
@@ -89,16 +94,6 @@ heart:
 	router_config = """
 router:
   enabled: true
-  table:
-    host: localhost
-    port: %(router_table_port)d
-  # slaveof:
-  #   enabled: true
-  #   host: localhost
-  #   port: 1234
-  stats:
-    host: localhost
-    port: %(router_stats_port)d
 """
 
 	def __init__(self, port=42500, modules=[], io_loop=None):
@@ -152,38 +147,21 @@ router:
 		if 'pacemaker' in modules:
 			self.setup_database()
 
-	def get_router_redis(self, testcase=None):
-		if not self.router_redis:
-			if not testcase:
-				# This is to remain API compatible with the original configuration object.
-				raise ValueError("You must call the first time with a testcase argument, to initialize it.")
-
-			self.router_redis = paasmaker.util.memoryredis.MemoryRedis(self)
-			self.router_redis.start()
-
-			# Wait for it to start up.
-			testcase.short_wait_hack()
-
-			self.router_redis_client = self.router_redis.get_client(io_loop=testcase.io_loop)
-
-		return self.router_redis_client
-
-	def get_router_redis_object(self):
-		if not self.router_redis:
-			raise Exception("Router redis not initialized.")
-		return self.router_redis
-
 	def cleanup(self):
+		# Shut down any services we used.
+		if hasattr(self, 'redis_meta'):
+			for key, meta in self.redis_meta.iteritems():
+				if meta['state'] == 'STARTED':
+					meta['manager'].stop(signal.SIGKILL)
+
+		if self.message_broker_server:
+			self.message_broker_server.stop()
+
 		# Remove files that we created.
 		shutil.rmtree(self.params['log_dir'])
 		shutil.rmtree(self.params['heart_working_dir'])
 		shutil.rmtree(self.params['scratch_dir'])
 		os.unlink(self.configname)
-
-		if self.router_redis:
-			self.router_redis.destroy()
-		if self.message_broker_server:
-			self.message_broker_server.stop()
 
 	def get_tornado_configuration(self):
 		settings = super(ConfigurationStub, self).get_tornado_configuration()
