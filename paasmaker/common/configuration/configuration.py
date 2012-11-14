@@ -40,6 +40,7 @@ DEFAULT_API_PORT = 42500
 DEFAULT_ROUTER_REDIS_MASTER = 42510
 DEFAULT_ROUTER_REDIS_SLAVE = 42511
 DEFAULT_ROUTER_REDIS_STATS = 42512
+DEFAULT_REDIS_JOBS = 42513
 
 DEFAULT_APPLICATION_MIN = 42600
 DEFAULT_APPLICATION_MAX = 42699
@@ -137,6 +138,9 @@ class RedisConnectionSchema(colander.MappingSchema):
 	@staticmethod
 	def default_router_stats():
 		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_STATS, 'managed': False}
+	@staticmethod
+	def default_jobs():
+		return {'host': 'localhost', 'port': DEFAULT_REDIS_JOBS, 'managed': False}
 
 class RedisConnectionSlaveSchema(RedisConnectionSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -166,6 +170,7 @@ class RedisSchema(colander.MappingSchema):
 	table = RedisConnectionSchema(default=RedisConnectionSchema.default_router_table(), missing=RedisConnectionSchema.default_router_table())
 	stats = RedisConnectionSchema(default=RedisConnectionSchema.default_router_stats(), missing=RedisConnectionSchema.default_router_stats())
 	slaveof = RedisConnectionSlaveSchema(default=RedisConnectionSlaveSchema.default(), missing=RedisConnectionSlaveSchema.default())
+	jobs = RedisConnectionSchema(default=RedisConnectionSchema.default_jobs(), missing=RedisConnectionSchema.default_jobs())
 
 	@staticmethod
 	def default():
@@ -544,8 +549,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def get_router_table_redis(self, callback, error_callback):
 		self._get_redis('table', self['redis']['table'], callback, error_callback)
 
-	def get_stats_redis(self):
+	def get_stats_redis(self, callback, error_callback):
 		self._get_redis('stats', self['redis']['stats'], callback, error_callback)
+
+	def get_jobs_redis(self, callback, error_callback):
+		self._get_redis('jobs', self['redis']['jobs'], callback, error_callback)
 
 	def setup_message_exchange(self, status_ready_callback=None, audit_ready_callback=None, io_loop=None):
 		"""

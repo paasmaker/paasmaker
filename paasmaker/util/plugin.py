@@ -27,7 +27,8 @@ MODE_REQUIRE_PARAMS = {
 	'SCM_LIST': False,
 	'PREPARE_COMMAND': True,
 	'PLACEMENT': True,
-	'USER_AUTHENTICATE_PLAIN': False
+	'USER_AUTHENTICATE_PLAIN': False,
+	'JOB': True
 }
 
 # Mode constants.

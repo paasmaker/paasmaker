@@ -43,6 +43,10 @@ redis:
     host: 0.0.0.0
     port: %(router_stats_port)d
     managed: true
+  jobs:
+    host: 0.0.0.0
+    port: %(jobs_port)d
+    managed: true
 """
 
 	pacemaker_config = """
@@ -110,6 +114,7 @@ router:
 		self.params['master_port'] = port
 		self.params['router_table_port'] = allocator.free_in_range(42510, 42599)
 		self.params['router_stats_port'] = allocator.free_in_range(42510, 42599)
+		self.params['jobs_port'] = allocator.free_in_range(42510, 42599)
 
 		# Create the configuration file.
 		configuration = self.default_config % self.params

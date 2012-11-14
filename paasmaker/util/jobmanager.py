@@ -1,14 +1,20 @@
 
 import uuid
 import time
+import logging
+import json
+
 import paasmaker
+from plugin import MODE, Plugin
 from paasmaker.common.core import constants
+from ..common.testhelpers import TestHelpers
+
 from pubsub import pub
+
 import tornado
 import tornado.testing
-import logging
 
-from ..common.testhelpers import TestHelpers
+import colander
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -16,6 +22,427 @@ logger.addHandler(logging.NullHandler())
 # TODO: To the job manager, add the ability to add jobs but not allow them to execute just yet.
 # Almost like a transaction - this prevents us half adding a job tree and then having that kicked off
 # part way through.
+
+class BaseJobOptionsSchema(colander.MappingSchema):
+	# No options defined.
+	pass
+
+class BaseJobParametersSchema(colander.MappingSchema):
+	# No parameter schema defined. We just accept whatever we're supplied.
+	pass
+
+class BaseJob(Plugin):
+	MODES = [MODE.JOB]
+	OPTIONS_SCHEMA = BaseJobOptionsSchema()
+	PARAMETERS_SCHEMA = {MODE.JOB: BaseJobParametersSchema()}
+
+class JobBackend(object):
+	def __init__(self, configuration):
+		self.configuration = configuration
+
+	def setup(self, callback):
+		"""
+		Setup anything you need, and call the callback when ready.
+		"""
+		raise NotImplementedError("You must implement setup().")
+
+	def store_context(self, job_id, context, callback):
+		"""
+		Store the given context for the given job ID.
+		Context is a dict of values, but may only be a partial
+		update of values. job_id may not be the root job ID,
+		so you should resolve that first. Calls the callback once complete.
+		"""
+		raise NotImplementedError("You must implement update_context().")
+
+	def get_context(self, job_id, callback):
+		"""
+		Fetch all the context for the given job ID, and call
+		the callback with it as a dict. job_id is resolved to the root
+		first before querying the values.
+		"""
+		raise NotImplementedError("You must implement get_context().")
+
+	def get_parent(self, job_id, callback):
+		"""
+		Fetch the parent of the given job. If the job is a parent job,
+		return the same job ID. Calls the callback with the parent id.
+		"""
+		raise NotImplementedError("You must implement get_parent().")
+
+	def get_root(self, job_id, callback):
+		"""
+		Fetch the root of the given job. Call the callback with the root
+		job ID. If the called job_id is the root id, pass that to the
+		callback.
+		"""
+		raise NotImplementedError("You must implement get_root().")
+
+	def get_children(self, job_id, callback, state=None):
+		"""
+		Get all the direct children of the given job_id. Call the callback
+		with a set of job ids that are the children. The result should
+		be filtered by the state if supplied, which can be a single value
+		or a set of values.
+		"""
+		raise NotImplementedError("You must implement get_children().")
+
+	def add_job(self, job_id, parent_id, callback, **kwargs):
+		"""
+		Add a job with the given job_id, and the given parent_id. Parent
+		might be none, indicating that this is a top level job.
+		kwargs are parameters for this job, which should be stored as
+		appropriate for this job. Callback will be called once the job
+		is added.
+		"""
+		raise NotImplementedError("You must implement add_job().")
+
+	def set_attr(self, job_id, attr, value, callback):
+		"""
+		Set the supplied attribute to the supplied value on the given
+		job ID. Calls callback when complete.
+		"""
+		raise NotImplementedError("You must implement set_attr().")
+
+	def get_attr(self, job_id, attr, value, callback):
+		"""
+		Get the supplied attribute from the given job. Calls the callback
+		with the value of that attribute.
+		"""
+		raise NotImplementedError("You must implement get_attr().")
+
+	def get_job(self, job_id, callback):
+		"""
+		Gets all the values for the given job. Calls the callback with
+		a dict of values.
+		"""
+		raise NotImplementedError("You must implement get_job().")
+
+	def get_jobs(self, jobs, callback):
+		"""
+		Get the data for all the given jobs in one go, calling the callback
+		with a dict. The keys are the job ids and the values a map of data.
+		"""
+		raise NotImplementedError("You must implement get_jobs().")
+
+	def tag_job(self, job_id, tag, callback):
+		"""
+		Tag a job with the given tag. If the supplied job_id isn't a root
+		ID, find and tag that root ID instead.
+		"""
+		raise NotImplementedError("You must implement tag_job().")
+
+	def find_by_tag(self, tag, callback, state=None, limit=None):
+		"""
+		Return a set of parent jobs by the given tag. Filters by
+		state if provided, which might well be a list. Call the callback
+		with a list of job ids that match - which should only ever be
+		root jobs. If possible, sort the returned jobs by their time in
+		reverse, so most recent jobs first.
+		"""
+		raise NotImplementedError("You must implement find_by_tag().")
+
+class JobBackendRedis(JobBackend):
+
+	def setup(self, callback):
+		self.setup_callback = callback
+		# TODO: Pass a valid error callback here.
+		self.configuration.get_jobs_redis(self.redis_ready, None)
+
+	def redis_ready(self, client):
+		self.redis = client
+		self.setup_callback()
+
+	def _to_json(self, values):
+		out = {}
+		for key, value in values.iteritems():
+			out[key] = json.dumps(value)
+		return out
+
+	def _from_json(self, values):
+		result = {}
+		for key, value in values.iteritems():
+			if value:
+				result[key] = json.loads(value)
+			else:
+				result[key] = None
+		return result
+
+	def store_context(self, job_id, context, callback):
+		def on_stored(result):
+			callback()
+
+		def on_found_root(root_id):
+			self.redis.hmset("%s_context" % root_id, self._to_json(context), on_stored)
+
+		self.get_root(job_id, on_found_root)
+
+	def get_context(self, job_id, callback):
+		def on_hgetall(values):
+			callback(self._from_json(values))
+
+		def on_found_root(root_id):
+			self.redis.hgetall("%s_context" % root_id, on_hgetall)
+
+		self.get_root(job_id, on_found_root)
+
+	def get_parent(self, job_id, callback):
+		def on_get(value):
+			# If value is None, that means we have no parent.
+			if not value:
+				callback(job_id)
+			else:
+				callback(value)
+
+		self.redis.get("%s_parent" % job_id, on_get)
+
+	def get_root(self, job_id, callback):
+		def on_get(value):
+			callback(value)
+
+		self.redis.get("%s_root" % job_id, on_get)
+
+	def get_children(self, job_id, callback, state=None):
+		def on_hmgetset(jobstates):
+			# Filter the values supplied.
+			sfilter = state
+			if isinstance(state, basestring):
+				sfilter = set()
+				sfilter.add(state)
+			result = set()
+			for job in jobstates:
+				decoded = self._from_json(job)
+				if decoded['state'] in sfilter:
+					result.add(decoded['job_id'])
+			callback(result)
+
+		def on_smembers(jobs):
+			# Now that we have that, filter by state.
+			# Short circuit it though if the caller doesn't want
+			# to filter by state.
+			if not state:
+				callback(jobs)
+			else:
+				pipeline = self.redis.pipeline()
+				for job in jobs:
+					pipeline.hmget(job, ["job_id", "state"])
+				pipeline.execute(on_hmgetset)
+
+		self.redis.smembers("%s_children" % job_id, on_smembers)
+
+	def add_job(self, job_id, parent_id, callback, **kwargs):
+		def on_complete(result):
+			callback()
+
+		def on_found_root(root_id):
+			# Serialize all incoming values to JSON.
+			kwargs['job_id'] = job_id
+			kwargs['parent_id'] = parent_id
+			kwargs['time'] = time.time()
+			values = self._to_json(kwargs)
+
+			# Now set up the transaction to insert it all.
+			pipeline = self.redis.pipeline(True)
+			# The core job.
+			pipeline.hmset(job_id, values)
+			# Handle parent related activities.
+			if parent_id:
+				# Set the parent ID mapping.
+				pipeline.set("%s_parent" % job_id, parent_id)
+				# Update the parent to have this as a child.
+				pipeline.sadd("%s_children" % parent_id, job_id)
+				# And store the root ID.
+				pipeline.set("%s_root" % job_id, root_id)
+			else:
+				# Set the root for this job to be this job.
+				pipeline.set("%s_root" % job_id, job_id)
+
+			# Execute the pipeline.
+			pipeline.execute(on_complete)
+
+		# Find the root of this parent, or otherwise this job is root.
+		if parent_id:
+			self.get_root(parent_id, on_found_root)
+		else:
+			on_found_root(job_id)
+
+	def set_attr(self, job_id, attr, value, callback):
+		def on_complete(result):
+			callback()
+
+		encoded = self._to_json({attr: value})
+		self.redis.hmset(job_id, encoded, on_complete)
+
+	def get_attr(self, job_id, attr, value, callback):
+		def on_hmget(values):
+			decoded = self._from_json(values)
+			if decoded.has_key(attr):
+				callback(decoded[attr])
+			else:
+				callback(None)
+
+		self.redis.hmget(job_id, attr, on_complete)
+
+	def get_job(self, job_id, callback):
+		def on_hmget(values):
+			callback(self._from_json(values))
+
+		self.redis.hgetall(job_id, on_hmget)
+
+	def get_jobs(self, jobs, callback):
+		def on_bulk_hmget(values):
+			output = {}
+			for result in values:
+				decoded = self._from_json(result)
+				output[decoded['job_id']] = decoded
+			callback(output)
+
+		pipeline = self.redis.pipeline()
+		for job in jobs:
+			pipeline.hgetall(job)
+		pipeline.execute(on_bulk_hmget)
+
+	def tag_job(self, job_id, tag, callback):
+		def on_tagged(result):
+			callback()
+
+		def on_found_root(root_id):
+			# Tag the job in forward and reverse, in a pipeline.
+			# We do this in a transaction to make sure both sides
+			# are updated.
+			pipeline = self.redis.pipeline(True)
+			pipeline.zadd("tag_%s" % tag, time.time(), root_id)
+			pipeline.sadd("%s_tags" % root_id, tag)
+			pipeline.execute(on_tagged)
+
+		self.get_root(job_id, on_found_root)
+
+	def find_by_tag(self, tag, callback, state=None, limit=None):
+		def on_hmgetset(jobstates):
+			# Filter the values supplied.
+			sfilter = state
+			if isinstance(state, basestring):
+				sfilter = set()
+				sfilter.add(state)
+			result = set()
+			for job in jobstates:
+				if job['state'] in sfilter:
+					result.add(job['job_id'])
+			callback(result)
+
+		def on_zrevrangebyscore(jobs):
+			# Now that we have that, filter by state.
+			# Short circuit it though if the caller doesn't want
+			# to filter by state.
+			if not state:
+				callback(jobs)
+			else:
+				pipeline = self.redis.pipeline()
+				for job in jobs:
+					pipeline.hmget("%s", "job_id", "state")
+				pipeline.execute(on_hmgetset)
+
+		self.redis.zrevrangebyscore("tag_%s" % tag, "+inf", "-inf", limit=limit, callback=on_zrevrangebyscore)
+
+class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
+	def setUp(self):
+		super(JobManagerBackendTest, self).setUp()
+		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'], io_loop=self.io_loop)
+		self.backend = JobBackendRedis(self.configuration)
+		self.backend.setup(self.stop)
+		self.wait()
+
+	def tearDown(self):
+		self.configuration.cleanup()
+		super(JobManagerBackendTest, self).tearDown()
+
+	def test_simple(self):
+		self.backend.add_job('root', None, self.stop, state='WAITING')
+		self.wait()
+		self.backend.add_job('child1', 'root', self.stop, state='WAITING')
+		self.wait()
+		self.backend.add_job('child2', 'root', self.stop, state='RUNNING')
+		self.wait()
+		self.backend.add_job('child1_1', 'child1', self.stop, state='RUNNING')
+		self.wait()
+
+		# Fetch a single job.
+		self.backend.get_job('child1', self.stop)
+		job = self.wait()
+
+		self.assertEquals(job['job_id'], 'child1', "Return job was not as expected.")
+
+		# Fetch multiple jobs in a batch.
+		self.backend.get_jobs(['child1', 'child2'], self.stop)
+		jobs = self.wait()
+
+		self.assertEquals(len(jobs), 2, "Missing jobs.")
+		self.assertTrue(jobs.has_key('child1'), "Missing child1.")
+		self.assertEquals(jobs['child1']['job_id'], 'child1', "Child1 isn't child1.")
+		self.assertTrue(jobs.has_key('child2'), "Missing child2.")
+		self.assertEquals(jobs['child2']['job_id'], 'child2', "Child2 isn't child2.")
+
+		# Find the root job of child1 and child1_1.
+		self.backend.get_root('child1', self.stop)
+		root = self.wait()
+		self.assertEquals(root, 'root', 'Root is not root.')
+		self.backend.get_root('child1_1', self.stop)
+		root = self.wait()
+		self.assertEquals(root, 'root', 'Root is not root.')
+
+		# Check to see our children are valid.
+		self.backend.get_children('root', self.stop)
+		children = self.wait()
+
+		self.assertIn('child1', children, "Missing expected child.")
+		self.assertIn('child2', children, "Missing expected child.")
+		self.assertNotIn('child1_1', children, "Unexpected child.")
+
+		# Try again, but this time only get running/waiting children.
+		self.backend.get_children('root', self.stop, 'WAITING')
+		children = self.wait()
+		self.assertIn('child1', children, "Missing expected child.")
+		self.assertEquals(len(children), 1, "Not the right number of children.")
+		self.backend.get_children('root', self.stop, ['RUNNING'])
+		children = self.wait()
+		self.assertIn('child2', children, "Missing expected child.")
+		self.assertEquals(len(children), 1, "Not the right number of children.")
+
+		# Store context on child1, which should really store it against the root.
+		self.backend.store_context('child1', {'foo': 'bar'}, self.stop)
+		self.wait()
+		self.backend.get_context('root', self.stop)
+		context = self.wait()
+
+		self.assertTrue(context.has_key('foo'), "Missing context.")
+		self.assertEquals(context['foo'], 'bar', "Context is incorrect.")
+
+		# Fetch the context again, from child2. It should be identical.
+		self.backend.get_context('child2', self.stop)
+		context = self.wait()
+		self.assertTrue(context.has_key('foo'), "Missing context.")
+		self.assertEquals(context['foo'], 'bar', "Context is incorrect.")
+
+		# Now add to the context on child2. Both keys should now be present.
+		self.backend.store_context('child2', {'baz': 'foo'}, self.stop)
+		self.wait()
+		self.backend.get_context('root', self.stop)
+		context = self.wait()
+
+		self.assertTrue(context.has_key('foo'), "Missing context.")
+		self.assertEquals(context['foo'], 'bar', "Context is incorrect.")
+		self.assertTrue(context.has_key('baz'), "Missing context.")
+		self.assertEquals(context['baz'], 'foo', "Context is incorrect.")
+
+		# Now we're going to tag child1_1. When we query it, we should get
+		# the root job back.
+		self.backend.tag_job('child1_1', 'workspace:1', self.stop)
+		self.wait()
+		self.backend.find_by_tag('workspace:1', self.stop)
+		tagged_jobs = self.wait()
+
+		self.assertIn('root', tagged_jobs, "Missing root job.")
+		self.assertEquals(len(tagged_jobs), 1, "Too many jobs returned.")
 
 class JobRunner(object):
 	"""
