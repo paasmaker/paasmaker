@@ -25,13 +25,11 @@ class MessageExchange:
 
 	def setup(self, client,
 			job_status_ready_callback=None,
-			job_audit_ready_callback=None,
 			instance_status_ready_callback=None,
 			instance_audit_ready_callback=None):
 		logger.debug("Message Broker (1): Connected. Opening channels.")
 		self.client = client
 		self.job_status_ready_callback = job_status_ready_callback
-		self.job_audit_ready_callback = job_audit_ready_callback
 		self.instance_status_ready_callback = instance_status_ready_callback
 		self.instance_audit_ready_callback = instance_audit_ready_callback
 		self.client.channel(self.channel_open)
@@ -47,10 +45,6 @@ class MessageExchange:
 		self.channel.exchange_declare(exchange='instance.status', type='fanout', callback=self.on_instance_status_exchange_open)
 
 		if self.configuration.is_pacemaker():
-			logger.debug("Message Broker (2): Opening job audit queue, as I'm a pacemaker.")
-			# This one is for Job audit information. Only the pacemaker needs it. It is durable.
-			self.channel.queue_declare(queue='job.audit', durable=True, callback=self.on_job_audit_queue_declared)
-
 			logger.debug("Message Broker (2): Opening instance audit queue, as I'm a pacemaker.")
 			# This one is for Instance audit information. Only the pacemaker needs it. It is durable.
 			self.channel.queue_declare(queue='instance.audit', durable=True, callback=self.on_instance_audit_queue_declared)
@@ -70,14 +64,6 @@ class MessageExchange:
 	def on_instance_status_queue_declared(self, frame):
 		logger.debug("Message Broker (4): Instance status queue is declared.")
 		self.channel.queue_bind(exchange='instance.status', queue=self.instance_status_queue_name, routing_key='instance.status', callback=self.on_instance_status_queue_bound)
-
-	def on_job_audit_queue_declared(self, frame):
-		logger.debug("Message Broker (5): Job audit queue is declared, now consuming.")
-		self.channel.basic_consume(consumer_callback=self.on_job_audit_message, queue='job.audit')
-		if self.job_audit_ready_callback:
-			self.job_audit_ready_callback(self)
-		# Subscribe to job audit updates from internal.
-		pub.subscribe(self.send_job_status, 'job.audit')
 
 	def on_instance_audit_queue_declared(self, frame):
 		logger.debug("Message Broker (5): Instance audit queue is declared, now consuming.")
@@ -129,13 +115,6 @@ class MessageExchange:
 		else:
 			logger.debug("Dropping incoming instance status message, as it was from our node originally.")
 
-	def on_job_audit_message(self, channel, method, header, body):
-		logger.debug("Job audit incoming raw message: %s", body)
-		# Parse the message, and store in the database...
-		# TODO: Test and implement.
-		# TODO: Publish internally - another listener will accept and DB it.
-		channel.basic_ack(delivery_tag=method.delivery_tag)
-
 	def on_instance_audit_message(self, channel, method, header, body):
 		logger.debug("Instance audit incoming raw message: %s", body)
 		# Parse the message, and store in the database...
@@ -161,16 +140,6 @@ class MessageExchange:
 		self.channel.basic_publish(exchange='instance.status',
 				routing_key='instance.status',
 				body=encoded,
-				properties=properties)
-
-	def send_job_audit(self, message):
-		body = message.flatten()
-		encoded = json.dumps(body)
-		logger.debug("Sending job audit message: %s", encoded)
-		properties = pika.BasicProperties(content_type="application/json", delivery_mode=2)
-		self.channel.basic_publish(exchange='',
-				routing_key='job.audit',
-				body = encoded,
 				properties=properties)
 
 	def send_instance_audit(self, message):
@@ -206,12 +175,10 @@ class MessageExchangeTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# Set up our exchange.
 		self.configuration.setup_message_exchange(
 			job_status_ready_callback=self.stop,
-			job_audit_ready_callback=self.stop,
 			io_loop=self.io_loop
 		)
 
-		# Wait twice for the system to be ready.
-		self.wait()
+		# Wait for the system to be ready.
 		self.wait()
 
 		# Now send off a job update. This shouldn't actually touch the broker.

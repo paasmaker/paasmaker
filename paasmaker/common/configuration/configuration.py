@@ -177,7 +177,8 @@ class RedisSchema(colander.MappingSchema):
 		return {
 			'table': RedisConnectionSchema.default_router_table(),
 			'stats': RedisConnectionSchema.default_router_stats(),
-			'slaveof': RedisConnectionSlaveSchema.default()
+			'slaveof': RedisConnectionSlaveSchema.default(),
+			'jobs': RedisConnectionSchema.default_jobs()
 		}
 
 class MiscPortsSchema(colander.MappingSchema):
@@ -337,26 +338,6 @@ class JobStatusMessage(object):
 	def flatten(self):
 		return {'job_id': self.job_id, 'state': self.state, 'source': self.source}
 
-class JobAuditMessage(JobStatusMessage):
-	def __init__(self, job_id, state, source, title=None, summary=None, parent_id=None):
-		super(JobAuditMessage, self).__init__(job_id, state, source)
-
-		if state in constants.JOB_FINISHED_STATES and not summary:
-			raise ValueError('You must supply summary in state %s' % state)
-		if state == constants.JOB.NEW and not title:
-			raise ValueError('You must supply a title in state %s' % state)
-
-		self.title = title
-		self.summary = summary
-		self.parent_id = parent_id
-
-	def flatten(self):
-		flat = super(JobAuditMessage, self).flatten()
-		flat['title'] = self.title
-		flat['summary'] = self.summary
-		flat['parent_id'] = self.parent_id
-		return flat
-
 class InstanceStatusMessage(object):
 	def __init__(self, instance_id, state, source):
 		self.instance_id = instance_id
@@ -374,7 +355,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.uuid = None
 		self.exchange = None
 		self.job_watcher = None
-		self.job_manager = paasmaker.util.jobmanager.JobManager(self)
+		self.job_manager = paasmaker.common.job.manager.manager.JobManager(self)
 		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
 
 	def load_from_file(self, search_path):
@@ -555,7 +536,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def get_jobs_redis(self, callback, error_callback):
 		self._get_redis('jobs', self['redis']['jobs'], callback, error_callback)
 
-	def setup_message_exchange(self, status_ready_callback=None, audit_ready_callback=None, io_loop=None):
+	def setup_message_exchange(self, status_ready_callback=None, io_loop=None):
 		"""
 		Set up the message broker connection and appropriate exchange.
 		"""
@@ -587,12 +568,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	#
 	# JOB HELPERS
 	#
-	def make_job_id(self, title):
-		# All we need to do is allocate an ID and mark it as new.
-		# The messaging subsystem will handle persisting it to the DB.
-		job_id = str(uuid.uuid4())
-		self.send_job_status(job_id, constants.JOB.NEW, title=title)
-		return job_id
 	def start_jobs(self):
 		self.job_manager.evaluate()
 	def get_job_logger(self, job_id):
@@ -627,10 +602,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# Why add the 'j' to the job name? It seems a topic name
 		# can't start with a number.
 		return ('job', 'status', 'j' + job_id)
-	def get_job_audit_pub_topic(self, job_id):
-		# Why add the 'j' to the job name? It seems a topic name
-		# can't start with a number.
-		return ('job', 'audit', 'j' + job_id)
 	def job_exists_locally(self, job_id):
 		path = self.get_job_log_path(job_id)
 		return os.path.exists(path)
@@ -639,12 +610,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			self.job_watcher = paasmaker.util.joblogging.JobWatcher(self, io_loop)
 	def get_job_watcher(self):
 		return self.job_watcher
-	def send_job_status(self, job_id, state, title=None, source=None, summary=None, parent_id=None):
+	def send_job_status(self, job_id, state, source=None):
 		"""
 		Propagate the status of a job to listeners who care inside our
 		instance, and also likely down the Rabbit hole to other listeners.
 		(Rabbit hole means RabbitMQ... so there is no confusion.)
-		Sends both an audit and an update message, as appropriate.
 		"""
 		# If source is not supplied, send along our own UUID.
 		send_source = source
@@ -653,15 +623,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 		# Make the message objects.
 		status = JobStatusMessage(job_id, state, send_source)
-		audit = JobAuditMessage(job_id, state, send_source, title=title, summary=summary, parent_id=parent_id)
 
 		status_topic = self.get_job_status_pub_topic(job_id)
-		audit_topic = self.get_job_audit_pub_topic(job_id)
 
 		# Send the status message.
 		pub.sendMessage(status_topic, message=status)
-		# And then the audit message.
-		pub.sendMessage(audit_topic, message=audit)
 
 	#
 	# IDENTITY HELPERS

@@ -139,9 +139,6 @@ router:
 		# Replace the IO loop.
 		self.io_loop = io_loop
 
-		# Recreate the job manager with the IO loop.
-		self.job_manager = paasmaker.util.jobmanager.JobManager(self, io_loop=io_loop)
-
 		# And then load the config.
 		super(ConfigurationStub, self).load_from_file([self.configname])
 
@@ -157,6 +154,7 @@ router:
 		if hasattr(self, 'redis_meta'):
 			for key, meta in self.redis_meta.iteritems():
 				if meta['state'] == 'STARTED':
+					logger.info("Killing off test redis instance.")
 					meta['manager'].stop(signal.SIGKILL)
 
 		if self.message_broker_server:
@@ -176,7 +174,6 @@ router:
 
 	def setup_message_exchange(self,
 			job_status_ready_callback=None,
-			job_audit_ready_callback=None,
 			instance_status_ready_callback=None,
 			instance_audit_ready_callback=None,
 			io_loop=None):
@@ -190,7 +187,6 @@ router:
 				self.exchange.setup(
 					client,
 					job_status_ready_callback,
-					job_audit_ready_callback,
 					instance_status_ready_callback,
 					instance_audit_ready_callback
 				)
@@ -203,8 +199,6 @@ router:
 			# Already fired up. Just call the callbacks.
 			if job_status_ready_callback:
 				job_status_ready_callback()
-			if job_audit_ready_callback:
-				job_audit_ready_callback()
 			if instance_status_ready_callback:
 				instance_status_ready_callback()
 			if instance_audit_ready_callback:

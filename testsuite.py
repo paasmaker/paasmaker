@@ -26,7 +26,6 @@ test_sets = {
 	paasmaker.util.commandsupervisor: ['all', 'slow', 'util', 'process'],
 	paasmaker.util.temporaryrabbitmq: ['all', 'slow', 'util', 'messaging'],
 	paasmaker.util.popen: ['all', 'slow', 'util', 'process'],
-	paasmaker.util.jobmanager: ['all', 'util', 'job', 'jobmanager'],
 	paasmaker.util.streamingchecksum: ['all', 'util', 'checksum'],
 
 	paasmaker.router.router: ['all', 'slow', 'router'],
@@ -35,6 +34,8 @@ test_sets = {
 	paasmaker.common.configuration.configurationstub: ['all', 'quick', 'configuration'],
 	paasmaker.common.application.configuration: ['all', 'quick', 'configuration'],
 	paasmaker.common.core.messageexchange: ['all', 'slow', 'messaging', 'exchange', 'job'],
+	paasmaker.common.job.manager.backendredis: ['all', 'util', 'job', 'jobmanager', 'slow'],
+	paasmaker.common.job.manager.manager: ['all', 'util', 'job', 'jobmanager'],
 
 	paasmaker.model: ['all', 'slow', 'model'],
 
@@ -62,8 +63,8 @@ test_sets = {
 	paasmaker.pacemaker.auth.internal: ['all', 'auth'],
 	paasmaker.pacemaker.auth.allowany: ['all', 'auth'],
 
-	paasmaker.common.job.prepare.prepareroot: ['all', 'slow', 'application', 'prepare'],
-	paasmaker.common.job.coordinate.selectlocations: ['all', 'slow', 'application', 'coordinate'],
+	#paasmaker.common.job.prepare.prepareroot: ['all', 'slow', 'application', 'prepare'],
+	#paasmaker.common.job.coordinate.selectlocations: ['all', 'slow', 'application', 'coordinate'],
 
 	paasmaker.pacemaker.placement.default: ['all', 'slow', 'application', 'placement'],
 
