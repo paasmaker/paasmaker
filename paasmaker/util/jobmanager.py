@@ -87,7 +87,14 @@ class JobBackend(object):
 		"""
 		raise NotImplementedError("You must implement get_children().")
 
-	def add_job(self, job_id, parent_id, callback, **kwargs):
+	def exists(self, job_id, callback):
+		"""
+		Determine if a job exists. Call the callback with a boolean
+		value that indicates if it does or doesn't exist.
+		"""
+		raise NotImplementedError("You must implement exists().")
+
+	def add_job(self, node, job_id, parent_id, callback, **kwargs):
 		"""
 		Add a job with the given job_id, and the given parent_id. Parent
 		might be none, indicating that this is a top level job.
@@ -104,7 +111,7 @@ class JobBackend(object):
 		"""
 		raise NotImplementedError("You must implement set_attr().")
 
-	def get_attr(self, job_id, attr, value, callback):
+	def get_attr(self, job_id, attr, callback):
 		"""
 		Get the supplied attribute from the given job. Calls the callback
 		with the value of that attribute.
@@ -132,17 +139,55 @@ class JobBackend(object):
 		"""
 		raise NotImplementedError("You must implement tag_job().")
 
-	def find_by_tag(self, tag, callback, state=None, limit=None):
+	def find_by_tag(self, tag, callback, limit=None):
 		"""
-		Return a set of parent jobs by the given tag. Filters by
-		state if provided, which might well be a list. Call the callback
+		Return a set of parent jobs by the given tag. Call the callback
 		with a list of job ids that match - which should only ever be
 		root jobs. If possible, sort the returned jobs by their time in
-		reverse, so most recent jobs first.
+		reverse, so most recent jobs first. This is designed for the front
+		end to be able to list jobs to display to users, not for locating
+		jobs that are ready to run or other tasks.
 		"""
 		raise NotImplementedError("You must implement find_by_tag().")
 
+	def get_ready_to_run(self, node, waiting_state, success_state, callback):
+		"""
+		Return a set of jobs that are ready to run for the given node.
+		"Ready to run" is defined as jobs on the node who are currently in the
+		waiting state, and whose children are all in the supplied success state.
+		Call the callback with a set of jobs that match.
+		"""
+		raise NotImplementedError("You must implement get_jobs_in_state().")
+
 class JobBackendRedis(JobBackend):
+	"""
+	This is a job backend that stores job state in Redis. It's trying to
+	do some relational things with Redis. The model that it's using is described
+	below to explain how it store and accesses data.
+
+	The backend uses Redis's transactions, especially when updating related sets.
+	Redis guarantees that everything happens in that section, which should cover
+	off any consistency issues.
+
+	Uppercase values in key are application supplied values.
+	Key => Type - Description
+	JOBID => HASH - Hold the job information, such as state and attributes.
+	JOBID_context => HASH - Holds the job context (JOBID is always the root job.)
+	JOBID_parent => STRING - Quick way to locate the parent of a job. Can be None.
+	JOBID_root => STRING - Quick way to locate the root job for a parent. Will return
+	  the same value as the JOBID if the job is a root job.
+	JOBID_children => SET - Set of job IDs of children of that job.
+	JOBID_children_STATE => SET - Set of job IDs that are children in that state. This
+	  is a subset of JOBID_children.
+	node_NODE => SET - Set of job IDs that are assigned to the given node.
+	node_NODE_STATE => SET - Set of job IDs that are assigned to the given node,
+	  in the given state. This is a subset of node_NODE.
+	tag_TAG => ZSET - Set of job IDs that match the given tag. This is a sorted set so
+	  we can quickly return the most recent jobs first. Note that only root jobs are
+	  given tags.
+	JOBID_tags => SET - for the job ID, a set of tags that it has applied to it. Designed
+	  for future use to be able to remove tags when a job is removed.
+	"""
 
 	def setup(self, callback):
 		self.setup_callback = callback
@@ -203,34 +248,38 @@ class JobBackendRedis(JobBackend):
 		self.redis.get("%s_root" % job_id, on_get)
 
 	def get_children(self, job_id, callback, state=None):
-		def on_hmgetset(jobstates):
-			# Filter the values supplied.
+		if state:
+			# Use the JOB_children_STATE quick lookup.
 			sfilter = state
 			if isinstance(state, basestring):
 				sfilter = set()
 				sfilter.add(state)
-			result = set()
-			for job in jobstates:
-				decoded = self._from_json(job)
-				if decoded['state'] in sfilter:
-					result.add(decoded['job_id'])
+
+			def on_state_results(results):
+				output = set()
+				for result in results:
+					output.update(result)
+				callback(output)
+
+			pipeline = self.redis.pipeline()
+			for s in sfilter:
+				pipeline.smembers("%s_children_%s" % (job_id, s))
+			pipeline.execute(on_state_results)
+
+		else:
+			# Just fetch the children raw - so get all of them.
+			def on_smembers(jobs):
+				callback(jobs)
+
+			self.redis.smembers("%s_children" % job_id, on_smembers)
+
+	def exists(self, job_id, callback):
+		def on_exists(result):
 			callback(result)
 
-		def on_smembers(jobs):
-			# Now that we have that, filter by state.
-			# Short circuit it though if the caller doesn't want
-			# to filter by state.
-			if not state:
-				callback(jobs)
-			else:
-				pipeline = self.redis.pipeline()
-				for job in jobs:
-					pipeline.hmget(job, ["job_id", "state"])
-				pipeline.execute(on_hmgetset)
+		self.redis.exists(job_id, on_exists)
 
-		self.redis.smembers("%s_children" % job_id, on_smembers)
-
-	def add_job(self, job_id, parent_id, callback, **kwargs):
+	def add_job(self, node, job_id, parent_id, callback, state, **kwargs):
 		def on_complete(result):
 			callback()
 
@@ -239,18 +288,27 @@ class JobBackendRedis(JobBackend):
 			kwargs['job_id'] = job_id
 			kwargs['parent_id'] = parent_id
 			kwargs['time'] = time.time()
+			kwargs['node'] = node
+			kwargs['state'] = state
 			values = self._to_json(kwargs)
 
 			# Now set up the transaction to insert it all.
 			pipeline = self.redis.pipeline(True)
 			# The core job.
 			pipeline.hmset(job_id, values)
+			# Insert it into the node state list.
+			pipeline.sadd("node_%s" % node, job_id)
+			# TODO: This will cause issues if the job already exists.
+			pipeline.sadd("node_%s_%s" % (node, state), job_id)
 			# Handle parent related activities.
 			if parent_id:
 				# Set the parent ID mapping.
 				pipeline.set("%s_parent" % job_id, parent_id)
 				# Update the parent to have this as a child.
 				pipeline.sadd("%s_children" % parent_id, job_id)
+				# Update the parent's state map.
+				# TODO: This will cause issues if the job already exists.
+				pipeline.sadd("%s_children_%s" % (parent_id, state), job_id)
 				# And store the root ID.
 				pipeline.set("%s_root" % job_id, root_id)
 			else:
@@ -270,10 +328,28 @@ class JobBackendRedis(JobBackend):
 		def on_complete(result):
 			callback()
 
-		encoded = self._to_json({attr: value})
-		self.redis.hmset(job_id, encoded, on_complete)
+		def on_got_current_state(job):
+			new_state = value
+			# Now, start a transaction to update the appropriate maps.
+			pipeline = self.redis.pipeline(True)
+			# Remove from the old state sets and add to new ones.
+			pipeline.srem("%(node)s_%(state)s" % job, job_id)
+			pipeline.sadd("%s_%s" % (job['node'], new_state), job_id)
+			if job['parent_id']:
+				pipeline.srem("%(parent_id)s_children_%(state)s" % job, job_id)
+				pipeline.sadd("%s_children_%s" % (job['parent_id'], new_state), job_id)
+			pipeline.execute(on_complete)
 
-	def get_attr(self, job_id, attr, value, callback):
+		if attr == 'state':
+			# Update the state maps as well. To do this, we need to know
+			# what the current state is.
+			self.get_job(job_id, on_got_current_state)
+		else:
+			# Just go ahead and update it.
+			encoded = self._to_json({attr: value})
+			self.redis.hmset(job_id, encoded, on_complete)
+
+	def get_attr(self, job_id, attr, callback):
 		def on_hmget(values):
 			decoded = self._from_json(values)
 			if decoded.has_key(attr):
@@ -284,10 +360,10 @@ class JobBackendRedis(JobBackend):
 		self.redis.hmget(job_id, attr, on_complete)
 
 	def get_job(self, job_id, callback):
-		def on_hmget(values):
+		def on_hgetall(values):
 			callback(self._from_json(values))
 
-		self.redis.hgetall(job_id, on_hmget)
+		self.redis.hgetall(job_id, on_hgetall)
 
 	def get_jobs(self, jobs, callback):
 		def on_bulk_hmget(values):
@@ -317,32 +393,39 @@ class JobBackendRedis(JobBackend):
 
 		self.get_root(job_id, on_found_root)
 
-	def find_by_tag(self, tag, callback, state=None, limit=None):
-		def on_hmgetset(jobstates):
-			# Filter the values supplied.
-			sfilter = state
-			if isinstance(state, basestring):
-				sfilter = set()
-				sfilter.add(state)
-			result = set()
-			for job in jobstates:
-				if job['state'] in sfilter:
-					result.add(job['job_id'])
-			callback(result)
-
+	def find_by_tag(self, tag, callback, limit=None):
 		def on_zrevrangebyscore(jobs):
-			# Now that we have that, filter by state.
-			# Short circuit it though if the caller doesn't want
-			# to filter by state.
-			if not state:
-				callback(jobs)
-			else:
-				pipeline = self.redis.pipeline()
-				for job in jobs:
-					pipeline.hmget("%s", "job_id", "state")
-				pipeline.execute(on_hmgetset)
+			callback(jobs)
 
 		self.redis.zrevrangebyscore("tag_%s" % tag, "+inf", "-inf", limit=limit, callback=on_zrevrangebyscore)
+
+	def get_ready_to_run(self, node, waiting_state, success_state, callback):
+		def on_count_sets(sets):
+			# The passed result will have three values for each job.
+			# The first is the job id. The second is the number of children.
+			# And the third is the number of jobs in the given state.
+			output = set()
+			index = 0
+			while index < len(sets):
+				if sets[index + 1] == sets[index + 2]:
+					output.add(self._from_json(sets[index])['job_id'])
+				index += 3
+
+			callback(output)
+
+		def on_waiting_state(jobs):
+			# For each of the waiting jobs, check the length of the children
+			# jobs in the success state. If it matches the length of the children set,
+			# then this job is ready to run.
+			pipeline = self.redis.pipeline()
+			for job in jobs:
+				pipeline.hmget(job, ['job_id'])
+				pipeline.scard("%s_children" % job)
+				pipeline.scard("%s_children_%s" %(job, success_state))
+			pipeline.execute(on_count_sets)
+
+		# First step, get all the jobs on the node in the waiting state.
+		self.redis.smembers("node_%s_%s" % (node, waiting_state), on_waiting_state)
 
 class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
@@ -357,14 +440,18 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 		super(JobManagerBackendTest, self).tearDown()
 
 	def test_simple(self):
-		self.backend.add_job('root', None, self.stop, state='WAITING')
+		self.backend.add_job('here', 'root', None, self.stop, constants.JOB.WAITING)
 		self.wait()
-		self.backend.add_job('child1', 'root', self.stop, state='WAITING')
+		self.backend.add_job('here', 'child1', 'root', self.stop, constants.JOB.WAITING)
 		self.wait()
-		self.backend.add_job('child2', 'root', self.stop, state='RUNNING')
+		self.backend.add_job('here', 'child2', 'root', self.stop, constants.JOB.RUNNING)
 		self.wait()
-		self.backend.add_job('child1_1', 'child1', self.stop, state='RUNNING')
+		self.backend.add_job('here', 'child1_1', 'child1', self.stop, constants.JOB.RUNNING)
 		self.wait()
+
+		# Make sure a job exists.
+		self.backend.exists('root', self.stop)
+		status = self.wait()
 
 		# Fetch a single job.
 		self.backend.get_job('child1', self.stop)
@@ -399,11 +486,11 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertNotIn('child1_1', children, "Unexpected child.")
 
 		# Try again, but this time only get running/waiting children.
-		self.backend.get_children('root', self.stop, 'WAITING')
+		self.backend.get_children('root', self.stop, constants.JOB.WAITING)
 		children = self.wait()
 		self.assertIn('child1', children, "Missing expected child.")
 		self.assertEquals(len(children), 1, "Not the right number of children.")
-		self.backend.get_children('root', self.stop, ['RUNNING'])
+		self.backend.get_children('root', self.stop, [constants.JOB.RUNNING])
 		children = self.wait()
 		self.assertIn('child2', children, "Missing expected child.")
 		self.assertEquals(len(children), 1, "Not the right number of children.")
@@ -443,6 +530,39 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.assertIn('root', tagged_jobs, "Missing root job.")
 		self.assertEquals(len(tagged_jobs), 1, "Too many jobs returned.")
+
+		# Try querying child_1 again, but limit it to a given state.
+		self.backend.find_by_tag('workspace:1', self.stop)
+		tagged_jobs = self.wait()
+
+		self.assertIn('root', tagged_jobs, "Missing root job.")
+		self.assertEquals(len(tagged_jobs), 1, "Too many jobs returned.")
+
+		#### MODIFY JOBS
+		# Find jobs ready to run. Initially, this will be nothing.
+		self.backend.get_ready_to_run('here', constants.JOB.WAITING, constants.JOB.SUCCESS, self.stop)
+		jobs = self.wait()
+
+		self.assertEquals(len(jobs), 0, "Ready jobs when there should not have been.")
+
+		# Mark child1_1 as complete.
+		self.backend.set_attr('child1_1', 'state', constants.JOB.SUCCESS, self.stop)
+		self.wait()
+		# Make sure that it doesn't appear in RUNNING state in the children of child1.
+		# (This could be caused by an error updating everything in the backend)
+		self.backend.get_children('child1', self.stop, [constants.JOB.RUNNING])
+		children = self.wait()
+		self.assertEquals(len(children), 0, "Child1's children was not updated correctly.")
+		self.backend.get_children('child1', self.stop, [constants.JOB.SUCCESS])
+		children = self.wait()
+		self.assertEquals(len(children), 1, "Child1's children was not updated correctly.")
+		self.assertIn('child1_1', children, "Child1's children was not updated correctly.")
+
+		# Now, if we find all jobs ready to run on the node, child1 should pop out.
+		self.backend.get_ready_to_run('here', constants.JOB.WAITING, constants.JOB.SUCCESS, self.stop)
+		jobs = self.wait()
+		self.assertEquals(len(jobs), 1, "Not the right number of ready jobs.")
+		self.assertIn('child1', jobs, "Child1 isn't ready.")
 
 class JobRunner(object):
 	"""
