@@ -159,6 +159,22 @@ class JobBackend(object):
 		"""
 		raise NotImplementedError("You must implement get_jobs_in_state().")
 
+	def set_state_tree(self, job_id, from_state, to_state, callback):
+		"""
+		Set the entire tree that job_id is in to the supplied state. This is designed
+		to move a tree of jobs from 'NEW' to 'WAITING' state for execution. The backend should
+		do this blindly, so the caller must use with caution. The backend should also
+		locate the root job before starting this.
+		"""
+		raise NotImplementedError("You must implement set_state_tree().")
+
+	def get_tree(self, job_id, callback, state=None):
+		"""
+		Get the entire tree for job_id. The root job should be resolved internally.
+		If state is supplied, return all the jobs in those states.
+		"""
+		raise NotImplementedError("You must implement get_tree().")
+
 class JobBackendRedis(JobBackend):
 	"""
 	This is a job backend that stores job state in Redis. It's trying to
@@ -179,6 +195,8 @@ class JobBackendRedis(JobBackend):
 	JOBID_children => SET - Set of job IDs of children of that job.
 	JOBID_children_STATE => SET - Set of job IDs that are children in that state. This
 	  is a subset of JOBID_children.
+	ROOTID_tree => SET - Set of all jobs under the root job.
+	ROOTID_tree_STATE => SET - Set of all jobs under the root job in the given state.
 	node_NODE => SET - Set of job IDs that are assigned to the given node.
 	node_NODE_STATE => SET - Set of job IDs that are assigned to the given node,
 	  in the given state. This is a subset of node_NODE.
@@ -287,6 +305,7 @@ class JobBackendRedis(JobBackend):
 			# Serialize all incoming values to JSON.
 			kwargs['job_id'] = job_id
 			kwargs['parent_id'] = parent_id
+			kwargs['root_id'] = root_id
 			kwargs['time'] = time.time()
 			kwargs['node'] = node
 			kwargs['state'] = state
@@ -309,11 +328,13 @@ class JobBackendRedis(JobBackend):
 				# Update the parent's state map.
 				# TODO: This will cause issues if the job already exists.
 				pipeline.sadd("%s_children_%s" % (parent_id, state), job_id)
-				# And store the root ID.
-				pipeline.set("%s_root" % job_id, root_id)
-			else:
-				# Set the root for this job to be this job.
-				pipeline.set("%s_root" % job_id, job_id)
+
+			# And store the root ID.
+			pipeline.set("%s_root" % job_id, root_id)
+			# Store on the root job lists.
+			pipeline.sadd("%s_tree" % root_id, job_id)
+			# TODO: This will cause issues if the job already exists.
+			pipeline.sadd("%s_tree_%s" % (root_id, state), job_id)
 
 			# Execute the pipeline.
 			pipeline.execute(on_complete)
@@ -333,11 +354,15 @@ class JobBackendRedis(JobBackend):
 			# Now, start a transaction to update the appropriate maps.
 			pipeline = self.redis.pipeline(True)
 			# Remove from the old state sets and add to new ones.
-			pipeline.srem("%(node)s_%(state)s" % job, job_id)
-			pipeline.sadd("%s_%s" % (job['node'], new_state), job_id)
+			pipeline.srem("node_%(node)s_%(state)s" % job, job_id)
+			pipeline.sadd("node_%s_%s" % (job['node'], new_state), job_id)
 			if job['parent_id']:
 				pipeline.srem("%(parent_id)s_children_%(state)s" % job, job_id)
 				pipeline.sadd("%s_children_%s" % (job['parent_id'], new_state), job_id)
+			pipeline.srem("%(root_id)s_tree_%(state)s" % job, job_id)
+			pipeline.sadd("%s_tree_%s" % (job['root_id'], new_state), job_id)
+			encoded = self._to_json({attr: value})
+			pipeline.hmset(job_id, encoded)
 			pipeline.execute(on_complete)
 
 		if attr == 'state':
@@ -426,6 +451,57 @@ class JobBackendRedis(JobBackend):
 
 		# First step, get all the jobs on the node in the waiting state.
 		self.redis.smembers("node_%s_%s" % (node, waiting_state), on_waiting_state)
+
+	def set_state_tree(self, job_id, from_state, to_state, callback):
+		def on_found_tree(tree):
+			# We're going to do this the slow way, calling each one in turn.
+			# TODO: Think about the transactional issues surrounding this.
+			def process_job():
+				try:
+					job = tree.pop()
+					self.set_attr(job, 'state', to_state, process_job)
+				except KeyError, ex:
+					# No more elements.
+					# We're done.
+					callback()
+
+			# Kick off the process.
+			process_job()
+
+		def on_found_root(root_id):
+			# Get the whole root tree.
+			self.redis.smembers("%s_tree_%s" % (root_id, from_state), on_found_tree)
+
+		self.get_root(job_id, on_found_root)
+
+	def get_tree(self, job_id, callback, state=None):
+		def on_found_root(root_id):
+			if state:
+				# Use the JOB_tree_STATE quick lookup.
+				sfilter = state
+				if isinstance(state, basestring):
+					sfilter = set()
+					sfilter.add(state)
+
+				def on_state_results(results):
+					output = set()
+					for result in results:
+						output.update(result)
+					callback(output)
+
+				pipeline = self.redis.pipeline()
+				for s in sfilter:
+					pipeline.smembers("%s_tree_%s" % (root_id, s))
+				pipeline.execute(on_state_results)
+
+			else:
+				# Just fetch the tree raw - so get all of them.
+				def on_smembers(jobs):
+					callback(jobs)
+
+				self.redis.smembers("%s_tree" % root_id, on_smembers)
+
+		self.get_root(job_id, on_found_root)
 
 class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
@@ -563,6 +639,40 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 		jobs = self.wait()
 		self.assertEquals(len(jobs), 1, "Not the right number of ready jobs.")
 		self.assertIn('child1', jobs, "Child1 isn't ready.")
+
+	def test_tree_change(self):
+		self.backend.add_job('here', 'root', None, self.stop, constants.JOB.NEW)
+		self.wait()
+		self.backend.add_job('here', 'child1', 'root', self.stop, constants.JOB.NEW)
+		self.wait()
+		self.backend.add_job('here', 'child2', 'root', self.stop, constants.JOB.NEW)
+		self.wait()
+		self.backend.add_job('here', 'child1_1', 'child1', self.stop, constants.JOB.NEW)
+		self.wait()
+		self.backend.add_job('here', 'root2', None, self.stop, constants.JOB.WAITING)
+		self.wait()
+
+		# Look for ready to run jobs.
+		self.backend.get_ready_to_run('here', constants.JOB.WAITING, constants.JOB.SUCCESS, self.stop)
+		jobs = self.wait()
+		self.assertEquals(len(jobs), 1, "Not the right number of ready jobs.")
+		self.assertIn('root2', jobs, "Root2 wasn't ready to run.")
+
+		# Update the whole tree.
+		self.backend.set_state_tree('child1', constants.JOB.NEW, constants.JOB.WAITING, self.stop)
+		self.wait()
+
+		# Debug helper.
+		#self.dump_job_tree('root', self.backend)
+		#self.wait()
+
+		# So now find waiting jobs.
+		self.backend.get_ready_to_run('here', constants.JOB.WAITING, constants.JOB.SUCCESS, self.stop)
+		jobs = self.wait()
+		self.assertEquals(len(jobs), 3, "Not the right number of ready jobs.")
+		self.assertIn('root2', jobs, "Root2 wasn't ready to run.")
+		self.assertIn('child2', jobs, "Child2 wasn't ready to run.")
+		self.assertIn('child1_1', jobs, "Child1_1 wasn't ready to run.")
 
 class JobRunner(object):
 	"""
