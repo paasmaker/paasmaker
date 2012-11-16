@@ -57,3 +57,13 @@ class BaseJob(Plugin):
 		When you're done, call self.aborted() with a summary as appropriate.
 		"""
 		raise NotImplementedError("You must implement abort_job().")
+
+class ContainerJob(BaseJob):
+	"""
+	A job that can be simply used to contain other jobs.
+	"""
+	def start_job(self, context):
+		self.success({}, "All children jobs completed successfully.")
+
+	def abort_job(self):
+		self.aborted("Aborting this job due to request.")
