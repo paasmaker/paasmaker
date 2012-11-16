@@ -31,6 +31,14 @@ class JobManager(object):
 		"""
 		self.backend.setup(callback, error_callback)
 
+	def set_context(self, job_id, context, callback):
+		"""
+		Set the initial context for a job. If called after the job has
+		started, it will update the context, but you'll want to do this with
+		caution.
+		"""
+		self.backend.store_context(job_id, context, callback)
+
 	def add_job(self, plugin, parameters, title, callback, parent=None, node=None):
 		"""
 		Add the given job to the system, calling the callback with the
@@ -74,18 +82,22 @@ class JobManager(object):
 			title=title
 		)
 
-	def allow_execution(self, job_id, callback=None):
+	def allow_execution(self, job_id, notify_others=True, callback=None):
 		"""
 		Allow the entire job tree given by job_id (which can be anywhere on the tree)
 		to commence execution. Optionally call the callback when done. This does not
 		start evaluating jobs, but you can easily have it do that by setting
 		the callback to the job managers evaluate function.
 		"""
-		# TODO: Optionally broadcast a WAITING status to convince other nodes that
-		# they should look at their jobs. But make it optional.
 		def on_tree_updated(result):
+			if notify_others:
+				# Send a WAITING broadcast for the root job. This should trigger
+				# other nodes to look at their jobs and start evaluating them.
+				self.configuration.send_job_status(job_id, constants.JOB.WAITING)
+
 			if callback:
 				callback()
+
 		self.backend.set_state_tree(job_id, constants.JOB.NEW, constants.JOB.WAITING, on_tree_updated)
 
 	def _start_job(self, job_id):
@@ -212,7 +224,8 @@ class JobManager(object):
 
 	def job_status(self, message):
 		# No need to do anything if we're not in an interesting state.
-		if message.state in constants.JOB_SUCCESS_STATES:
+		if message.state in constants.JOB_SUCCESS_STATES \
+			or message.state == constants.JOB.WAITING:
 			# Something succeeded. Let's evaluate our jobs again.
 			self.configuration.io_loop.add_callback(self.evaluate)
 
@@ -302,9 +315,8 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.manager.add_job('paasmaker.job.success', {}, "Example job.", self.stop)
 		job_id = self.wait()
 
-		self.manager.allow_execution(job_id, self.stop)
+		self.manager.allow_execution(job_id, callback=self.stop)
 		self.wait()
-		self.manager.evaluate()
 
 		self.short_wait_hack()
 
@@ -319,9 +331,8 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.manager.add_job('paasmaker.job.failure', {}, "Example job.", self.stop)
 		job_id = self.wait()
 
-		self.manager.allow_execution(job_id, self.stop)
+		self.manager.allow_execution(job_id, callback=self.stop)
 		self.wait()
-		self.manager.evaluate()
 
 		self.short_wait_hack()
 
@@ -340,14 +351,13 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		subsub1_id = self.wait()
 
 		# Start processing them.
-		self.manager.allow_execution(root_id, self.stop)
+		self.manager.allow_execution(root_id, callback=self.stop)
 		self.wait()
 
 		#self.dump_job_tree(root_id, self.manager.backend)
 		#self.wait()
 
-		self.manager.evaluate()
-
+		# Wait for it to settle down.
 		self.short_wait_hack(length=0.2)
 
 		subsub1_status = self.get_state(subsub1_id)
@@ -372,13 +382,11 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		subsub1_id = self.wait()
 
 		# Start processing them.
-		self.manager.allow_execution(root_id, self.stop)
+		self.manager.allow_execution(root_id, callback=self.stop)
 		self.wait()
 
 		#self.dump_job_tree(root_id, self.manager.backend)
 		#self.wait()
-
-		self.manager.evaluate()
 
 		self.short_wait_hack(length=0.2)
 
@@ -404,13 +412,11 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		subsub1_id = self.wait()
 
 		# Start processing them.
-		self.manager.allow_execution(root_id, self.stop)
+		self.manager.allow_execution(root_id, callback=self.stop)
 		self.wait()
 
 		#self.dump_job_tree(root_id, self.manager.backend)
 		#self.wait()
-
-		self.manager.evaluate()
 
 		self.short_wait_hack(length=0.2)
 		self.manager.abort(sub2_id)
