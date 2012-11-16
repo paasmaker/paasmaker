@@ -4,9 +4,9 @@ import uuid
 
 import paasmaker
 from paasmaker.common.core import constants
-from base import BaseJob
 from backendredis import RedisJobBackend
 from ...testhelpers import TestHelpers
+from ..base import BaseJob
 
 import tornado
 from pubsub import pub
