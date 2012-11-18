@@ -3,43 +3,56 @@ import uuid
 
 import paasmaker
 from paasmaker.common.core import constants
+from ..base import BaseJob
+from paasmaker.util.plugin import MODE
 
 import tornado
 from pubsub import pub
 
-class SelectLocationsJob(paasmaker.util.jobmanager.JobRunner):
+import colander
 
-	def __init__(self, configuration, session, instance_type):
-		self.configuration = configuration
-		self.session = session
-		self.instance_type = instance_type
+class SelectLocationsJobParametersSchema(colander.MappingSchema):
+	application_instance_type_id = colander.SchemaNode(colander.Integer())
 
-	def get_job_title(self):
-		params = (self.instance_type.application_version.application.name,
-			self.instance_type.application_version.version,
-			self.instance_type.name)
-		return "Select run locations for %s (v%d, type %s)" % params
+class SelectLocationsJob(BaseJob):
+	PARAMETERS_SCHEMA = {MODE.JOB: SelectLocationsJobParametersSchema()}
 
-	def start_job(self):
-		logger = self.job_logger()
-		logger.info("Starting to select locations.")
+	def start_job(self, context):
+		self.logger.info("Starting to select locations.")
+
+		self.session = self.configuration.get_database_session()
+		self.instance_type = self.session.query(
+			paasmaker.model.ApplicationInstanceType
+		).get(self.parameters['application_instance_type_id'])
 
 		# Fire up the plugin for placement.
-		if not self.configuration.plugins.exists(self.instance_type.placement_provider, paasmaker.util.plugin.MODE.PLACEMENT):
-			self.finished_job(constants.JOB.FAILED, "No placement provider %s" % self.instance_type.placement_provider)
+		plugin_exists = self.configuration.plugins.exists(
+			self.instance_type.placement_provider,
+			paasmaker.util.plugin.MODE.PLACEMENT
+		)
+		if not plugin_exists:
+			error_message = "No placement provider %s" % self.instance_type.placement_provider
+			self.logger.error(error_message)
+			self.failed(error_message)
 		else:
 			placement = self.configuration.plugins.instantiate(
 				self.instance_type.placement_provider,
 				paasmaker.util.plugin.MODE.PLACEMENT,
 				self.instance_type.placement_parameters,
-				logger
+				self.logger
 			)
 
 			# Get it to choose the number of instances that we want.
 			# This will call us back when ready.
-			placement.choose(self.session, self.instance_type, self.instance_type.quantity, self.success, self.failure)
+			placement.choose(
+				self.session,
+				self.instance_type,
+				self.instance_type.quantity,
+				self.select_success,
+				self.select_failure
+			)
 
-	def success(self, nodes, message):
+	def select_success(self, nodes, message):
 		# Ok, now that we have a chosen set of nodes, create records for them in
 		# our database.
 		for node in nodes:
@@ -53,32 +66,27 @@ class SelectLocationsJob(paasmaker.util.jobmanager.JobRunner):
 
 		self.session.commit()
 
-		self.finished_job(constants.JOB.SUCCESS, "Successfully chosen nodes for this instance. " + message)
+		self.success({}, "Successfully chosen %d nodes for this instance." % len(nodes))
 
-	def failure(self, message):
-		self.finished_job(constants.JOB.FAILED, "Failed to find any nodes to run this instance: " + message)
+	def select_failure(self, message):
+		self.failed("Failed to find nodes for this instance: " + message)
 
 class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
 		super(SelectLocationsJobTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'], io_loop=self.io_loop)
+		# Fire up the job manager.
+		self.configuration.startup_job_manager(self.stop)
+		self.wait()
 
 	def tearDown(self):
 		self.configuration.cleanup()
 		super(SelectLocationsJobTest, self).tearDown()
 
-	def on_job_status(self, message):
-		self.stop(message)
-
 	def on_job_catchall(self, message):
 		# This is for debugging.
 		#print str(message.flatten())
-		pass
-
-	def on_audit_catchall(self, message):
-		# This is for debugging.
-		#print str(message.flatten())
-		pass
+		self.stop(message)
 
 	def create_sample_application(self, session, runtime_name, runtime_parameters, runtime_version):
 		workspace = paasmaker.model.Workspace()
@@ -140,21 +148,31 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
 		})
 
 		# Register the default placement provider.
-		self.configuration.plugins.register('paasmaker.placement.default', 'paasmaker.pacemaker.placement.default.DefaultPlacement', {})
-
-		select_job = SelectLocationsJob(self.configuration, s, instance_type)
-		self.configuration.job_manager.add_job(select_job)
-		select_job_id = select_job.job_id
+		self.configuration.plugins.register(
+			'paasmaker.placement.default',
+			'paasmaker.pacemaker.placement.default.DefaultPlacement',
+			{}
+		)
 
 		# Subscribe to updates to the root job.
-		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(select_job_id))
 		pub.subscribe(self.on_job_catchall, 'job.status')
-		pub.subscribe(self.on_audit_catchall, 'job.audit')
+
+		self.configuration.job_manager.add_job(
+			'paasmaker.job.coordinate.selectlocations',
+			{'application_instance_type_id': instance_type.id},
+			"Select locations for %s" % instance_type.name,
+			self.stop
+		)
+
+		job_id = self.wait()
 
 		# And make it work.
-		self.configuration.job_manager.evaluate()
+		self.configuration.job_manager.allow_execution(job_id, self.stop)
+		self.wait()
 
 		result = self.wait()
+		while result.state != constants.JOB.SUCCESS:
+			result = self.wait()
 
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
 
@@ -177,20 +195,32 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
 		})
 
 		# Register the default placement provider.
-		self.configuration.plugins.register('paasmaker.placement.default', 'paasmaker.pacemaker.placement.default.DefaultPlacement', {})
-
-		select_job = SelectLocationsJob(self.configuration, s, instance_type)
-		self.configuration.job_manager.add_job(select_job)
-		select_job_id = select_job.job_id
+		self.configuration.plugins.register(
+			'paasmaker.placement.default',
+			'paasmaker.pacemaker.placement.default.DefaultPlacement',
+			{}
+		)
 
 		# Subscribe to updates to the root job.
-		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(select_job_id))
 		pub.subscribe(self.on_job_catchall, 'job.status')
 
+		self.configuration.job_manager.add_job(
+			'paasmaker.job.coordinate.selectlocations',
+			{'application_instance_type_id': instance_type.id},
+			"Select locations for %s" % instance_type.name,
+			self.stop
+		)
+
 		# And make it work.
-		self.configuration.job_manager.evaluate()
+		job_id = self.wait()
+
+		# And make it work.
+		self.configuration.job_manager.allow_execution(job_id, self.stop)
+		self.wait()
 
 		result = self.wait()
+		while result.state != constants.JOB.FAILED:
+			result = self.wait()
 
 		self.assertEquals(result.state, constants.JOB.FAILED, "Should have failed.")
 		# TODO: Make sure it failed for the advertised reason.

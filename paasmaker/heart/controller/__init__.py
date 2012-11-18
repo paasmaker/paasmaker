@@ -1,2 +1,2 @@
 
-from instance import InstanceRegisterController, InstanceExitController
+from instance import InstanceExitController

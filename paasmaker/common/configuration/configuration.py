@@ -438,6 +438,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					'paasmaker.common.job.prepare.SourcePreparerJob',
 					{}
 				)
+				self.plugins.register(
+					'paasmaker.job.coordinate.selectlocations',
+					'paasmaker.common.job.coordinate.SelectLocationsJob',
+					{}
+				)
 
 		self.update_flat()
 
