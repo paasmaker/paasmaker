@@ -99,7 +99,8 @@ class JobBackend(object):
 	def tag_job(self, job_id, tag, callback):
 		"""
 		Tag a job with the given tag. If the supplied job_id isn't a root
-		ID, find and tag that root ID instead.
+		ID, find and tag that root ID instead. tag might be a list of tags
+		to add to the system.
 		"""
 		raise NotImplementedError("You must implement tag_job().")
 

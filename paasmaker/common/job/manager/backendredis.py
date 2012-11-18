@@ -240,7 +240,7 @@ class RedisJobBackend(JobBackend):
 			pipeline.hgetall(job)
 		pipeline.execute(on_bulk_hmget)
 
-	def tag_job(self, job_id, tag, callback):
+	def tag_job(self, job_id, incoming_tag, callback):
 		def on_tagged(result):
 			callback()
 
@@ -248,9 +248,15 @@ class RedisJobBackend(JobBackend):
 			# Tag the job in forward and reverse, in a pipeline.
 			# We do this in a transaction to make sure both sides
 			# are updated.
+			if isinstance(incoming_tag, basestring):
+				tags = [incoming_tag]
+			else:
+				tags = list(incoming_tag)
+
 			pipeline = self.redis.pipeline(True)
-			pipeline.zadd("tag_%s" % tag, time.time(), root_id)
-			pipeline.sadd("%s_tags" % root_id, tag)
+			for tag in tags:
+				pipeline.zadd("tag_%s" % tag, time.time(), root_id)
+				pipeline.sadd("%s_tags" % root_id, tag)
 			pipeline.execute(on_tagged)
 
 		self.get_root(job_id, on_found_root)
@@ -474,6 +480,15 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.backend.tag_job('child1_1', 'workspace:1', self.stop)
 		self.wait()
 		self.backend.find_by_tag('workspace:1', self.stop)
+		tagged_jobs = self.wait()
+
+		self.assertIn('root', tagged_jobs, "Missing root job.")
+		self.assertEquals(len(tagged_jobs), 1, "Too many jobs returned.")
+
+		# Add multiple tags at once.
+		self.backend.tag_job('child1_1', ['workspace:1', 'application:1'], self.stop)
+		self.wait()
+		self.backend.find_by_tag('application:1', self.stop)
 		tagged_jobs = self.wait()
 
 		self.assertIn('root', tagged_jobs, "Missing root job.")
