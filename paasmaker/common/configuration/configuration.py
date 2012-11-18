@@ -252,6 +252,12 @@ class ConfigurationSchema(colander.MappingSchema):
 
 	misc_ports = MiscPortsSchema(default=MiscPortsSchema.default(), missing=MiscPortsSchema.default())
 
+	default_plugins = colander.SchemaNode(colander.Boolean(),
+		title="Set up default plugins",
+		description="If true, sets up a set of internal plugins for job handling and other tasks. If you turn this off, you will have full control over all plugins - and will need to include job plugins.",
+		missing=True,
+		default=True)
+
 	my_name = colander.SchemaNode(colander.String(),
 		title="Node name",
 		description="Friendly node name, or if not supplied, will attempt to detect the hostname.",
@@ -394,6 +400,44 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# Pacemaker initialisation.
 		if self.is_pacemaker():
 			self.load_plugins(self.plugins, self['pacemaker']['plugins'])
+
+			if self.get_flat('default_plugins'):
+				# Register default plugins.
+				self.plugins.register(
+					'paasmaker.job.prepare.root',
+					'paasmaker.common.job.prepare.ApplicationPrepareRootJob',
+					{}
+				)
+				self.plugins.register(
+					'paasmaker.job.prepare.manifestreader',
+					'paasmaker.common.job.prepare.ManifestReaderJob',
+					{}
+				)
+				self.plugins.register(
+					'paasmaker.job.prepare.scm',
+					'paasmaker.common.job.prepare.SourceSCMJob',
+					{}
+				)
+				self.plugins.register(
+					'paasmaker.job.prepare.service',
+					'paasmaker.common.job.prepare.ServiceJob',
+					{}
+				)
+				self.plugins.register(
+					'paasmaker.job.prepare.servicecontainer',
+					'paasmaker.common.job.prepare.ServiceContainerJob',
+					{}
+				)
+				self.plugins.register(
+					'paasmaker.job.prepare.packer',
+					'paasmaker.common.job.prepare.SourcePackerJob',
+					{}
+				)
+				self.plugins.register(
+					'paasmaker.job.prepare.preparer',
+					'paasmaker.common.job.prepare.SourcePreparerJob',
+					{}
+				)
 
 		self.update_flat()
 
@@ -568,6 +612,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	#
 	# JOB HELPERS
 	#
+	def startup_job_manager(self, callback=None, error_callback=None):
+		self.job_manager.prepare(callback, error_callback)
+
 	def start_jobs(self):
 		self.job_manager.evaluate()
 	def get_job_logger(self, job_id):

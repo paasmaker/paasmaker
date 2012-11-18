@@ -3,42 +3,47 @@ import json
 
 import paasmaker
 from paasmaker.common.core import constants
+from paasmaker.common.application.environment import ApplicationEnvironment
+from ..base import BaseJob
+from paasmaker.util.plugin import MODE
 
-class ServiceContainerJob(paasmaker.util.jobmanager.ContainerJob):
-	def __init__(self, configuration):
-		self.configuration = configuration
+import colander
 
-	def get_job_title(self):
-		return "Service container"
+class ServiceJobParametersSchema(colander.MappingSchema):
+	service_id = colander.SchemaNode(colander.Integer())
 
-	def start_job(self):
+class ServiceContainerJob(BaseJob):
+	def start_job(self, context):
 		# Fetch all the relevant services and put them into the environment
 		# for the prepare tasks.
-		root = self.get_root_job()
+		session = self.configuration.get_database_session()
+		version = session.query(paasmaker.model.ApplicationVersion).get(context['application_version_id'])
 
 		# Build our environment for later.
-		root.environment = paasmaker.common.application.environment.ApplicationEnvironment.get_environment(self.configuration, root.version)
+		environment = ApplicationEnvironment.get_environment(self.configuration, version)
 
 		# And signal success so the prepare jobs can start.
-		self.finished_job(constants.JOB.SUCCESS, 'All services prepared.')
+		self.success({'environment': environment}, "All services created and updated.")
 
-class ServiceJob(paasmaker.util.jobmanager.JobRunner):
-	def __init__(self, configuration, service):
-		self.configuration = configuration
-		self.service = service
+class ServiceJob(BaseJob):
+	PARAMETERS_SCHEMA = {MODE.JOB: ServiceJobParametersSchema()}
 
-	def get_job_title(self):
-		return "Service create for %s (provider %s)" % (self.service.name, self.service.provider)
-
-	def start_job(self):
-		root = self.get_root_job()
+	def start_job(self, context):
+		self.session = self.configuration.get_database_session()
+		self.service = self.session.query(paasmaker.model.Service).get(self.parameters['service_id'])
 
 		try:
-			service_plugin = self.configuration.plugins.instantiate(self.service.provider, paasmaker.util.plugin.MODE.SERVICE_CREATE, self.service.parameters, self.job_logger())
+			service_plugin = self.configuration.plugins.instantiate(
+				self.service.provider,
+				paasmaker.util.plugin.MODE.SERVICE_CREATE,
+				self.service.parameters,
+				self.logger
+			)
 		except paasmaker.common.configuration.InvalidConfigurationException, ex:
-			logger.critical("Failed to start a service plugin for %s.", self.service.provider)
-			logger.critical(ex)
-			self.finished_job(constants.JOB.FAILED, "Failed to start a service plugin.")
+			error_message = "Failed to start a service plugin for %s." % self.service.provider
+			self.logger.critical(error_message)
+			self.logger.critical(ex)
+			self.failed(error_message)
 			return
 
 		# Get this service plugin to create it's service.
@@ -48,29 +53,24 @@ class ServiceJob(paasmaker.util.jobmanager.JobRunner):
 			service_plugin.update(self.service_success, self.service_failure)
 
 	def service_success(self, credentials, message):
-		root = self.get_root_job()
-
-		root.session.refresh(self.service)
+		self.session.refresh(self.service)
 
 		# Record the new state.
 		self.service.credentials = credentials
 		self.service.state = constants.SERVICE.AVAILABLE
-		root.session.add(self.service)
-		root.session.commit()
+		self.session.add(self.service)
+		self.session.commit()
 
 		# And signal completion.
-		self.finished_job(constants.JOB.SUCCESS, message)
+		self.success({}, "Successfully created service %s" % self.service.name)
 
 	def service_failure(self, message):
-		root = self.get_root_job()
-
-		root.session = self.configuration.get_database_session()
-
 		# Record the new state.
+		self.session.refresh(self.service)
 		self.service.credentials = credentials
 		self.service.state = constants.SERVICE.ERROR
-		root.session.add(self.service)
-		root.session.commit()
+		self.session.add(self.service)
+		self.session.commit()
 
 		# Signal failure.
-		self.finished_job(constants.JOB.FAILED, message)
+		self.failed(message)

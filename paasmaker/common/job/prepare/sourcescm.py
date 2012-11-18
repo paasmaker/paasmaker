@@ -1,38 +1,41 @@
 
 import paasmaker
-from paasmaker.common.core import constants
+from ..base import BaseJob
+from paasmaker.util.plugin import MODE
 
-class SourceSCMJob(paasmaker.util.jobmanager.JobRunner):
-	def __init__(self, configuration, parameters):
-		self.configuration = configuration
-		self.parameters = parameters
+import colander
 
-	def get_job_title(self):
-		return "Source code SCM handler - %s" % self.parameters['method']
+class SourceSCMJobParametersSchema(colander.MappingSchema):
+	scm = colander.SchemaNode(colander.Mapping(unknown='preserve'))
 
-	def start_job(self):
-		logger = self.job_logger()
+class SourceSCMJob(BaseJob):
+	PARAMETERS_SCHEMA = {MODE.JOB: SourceSCMJobParametersSchema()}
+
+	def start_job(self, context):
 		try:
-			scm_plugin = self.configuration.plugins.instantiate(self.parameters['method'], paasmaker.util.plugin.MODE.SCM_EXPORT, self.parameters['parameters'], logger)
+			scm_plugin = self.configuration.plugins.instantiate(
+				self.parameters['scm']['method'],
+				paasmaker.util.plugin.MODE.SCM_EXPORT,
+				self.parameters['scm']['parameters'],
+				self.logger
+			)
 		except paasmaker.common.configuration.InvalidConfigurationException, ex:
-			logger.critical("Failed to start a SCM plugin for %s.", self.parameters['method'])
+			error_message = "Failed to start a SCM plugin for %s.", self.parameters['method']
+			logger.critical(error_message)
 			logger.critical(ex)
-			self.finished_job(constants.JOB.FAILED, "Failed to start a SCM plugin.")
+			self.failed(error_message)
 			return
 
 		# Now that SCM plugin should create us a directory that we can work on.
 		# The success callback will emit a working directory.
-		# TODO: Cleanup on failure!
+		# TODO: Cleanup on failure/abort
 		scm_plugin.create_working_copy(self.scm_success, self.scm_failure)
 
 	def scm_success(self, path, message):
-		# Store the path on the root job.
-		root = self.get_root_job()
-		root.source_path = path
-
-		# And signal completion.
-		self.finished_job(constants.JOB.SUCCESS, message)
+		# Emit the path via the context.
+		self.success({'working_path': path}, message)
 
 	def scm_failure(self, message):
 		# Signal failure.
-		self.finished_job(constants.JOB.FAILED, message)
+		# TODO: Cleanup.
+		self.failed(message)

@@ -19,9 +19,10 @@ class BaseJob(Plugin):
 	OPTIONS_SCHEMA = BaseJobOptionsSchema()
 	PARAMETERS_SCHEMA = {MODE.JOB: BaseJobParametersSchema()}
 
-	def configure(self, manager, job_id):
+	def configure(self, manager, job_id, metadata):
 		self.job_manager = manager
 		self.job_id = job_id
+		self.job_metadata = metadata
 
 	# Helper signalling functions.
 	def success(self, context, summary):

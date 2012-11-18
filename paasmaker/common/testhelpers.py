@@ -17,26 +17,8 @@ class TestHelpers(object):
 	def noop(self, argument=None):
 		pass
 
-	def dump_job_tree(self, job_id, backend):
-		def on_job_full(jobs):
-			# Righto! Now we can sort and build this into a tree.
-			results = []
-			for job in jobs.values():
-				results.append("R:%(root_id)s P:%(parent_id)s J:%(job_id)s => S:%(state)s N:%(node)s" % job)
-			results.sort()
-			for result in results:
-				print result
-			self.stop()
-
-		def on_root_tree(tree):
-			# Now fetch the complete job data on all these elements.
-			backend.get_jobs(tree, on_job_full)
-
-		def on_found_root(root_id):
-			# Find the root's entire tree.
-			backend.get_tree(root_id, on_root_tree)
-
-		backend.get_root(job_id, on_found_root)
+	def dump_job_tree(self, job_id):
+		self.configuration.job_manager.debug_dump_job_tree(job_id, self.stop)
 
 	def pack_sample_application(self, application):
 		# Pack up the tornado simple test application.

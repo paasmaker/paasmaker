@@ -4,80 +4,96 @@ import subprocess
 
 import paasmaker
 from paasmaker.common.core import constants
-from manifestreader import ManifestReaderJob
+from ..base import BaseJob
+from ...testhelpers import TestHelpers
 
 import tornado
 from pubsub import pub
 
 # TODO: Implement abort features for all of these jobs.
 
-class ApplicationPrepareRootJob(paasmaker.util.jobmanager.ContainerJob):
-	def __init__(self, configuration, name, manifest, workspace_id, application_id=None, uploaded_file=None):
-		self.configuration = configuration
-		self.name = name
-		self.manifest = manifest
-		self.session = self.configuration.get_database_session()
-		self.uploaded_file = uploaded_file
+class ApplicationPrepareRootJob(BaseJob):
+	@staticmethod
+	def setup(configuration, name, manifest, workspace_id, callback, application_id=None, uploaded_file=None):
+		# Set up the context.
+		context = {}
+		context['manifest_file'] = manifest
+		context['application_name'] = name
+		context['workspace_id'] = workspace_id
+		context['application_id'] = application_id
+		context['uploaded_file'] = uploaded_file
+		context['environment'] = {}
 
-		# Load up the workspace and application, via our session, so we don't have
-		# detached session issues.
-		self.workspace = self.session.query(paasmaker.model.Workspace).get(workspace_id)
-		if application_id:
-			self.application = self.session.query(paasmaker.model.Application).get(application_id)
-		else:
-			self.application = None
+		def on_manifest_reader_added(root_job_id, manifest_reader_job_id):
+			# Ok, at this stage we're queued. The manifest reader will
+			# queue up more jobs for us as we go along.
+			callback(root_job_id)
 
-	def get_job_title(self):
-		return "Prepare container for %s" % self.name
+		def on_root_job_added(root_job_id):
+			def on_mini_manifest(manifest_reader_job_id):
+				on_manifest_reader_added(root_job_id, manifest_reader_job_id)
 
-	def start_job(self):
-		# We should now have a 'package' attribute on our object.
-		# Record that into the version.
+			# Make a manifest reader job as a child of this root job.
+			configuration.job_manager.add_job(
+				'paasmaker.job.prepare.manifestreader',
+				{},
+				"Manifest reader",
+				on_mini_manifest,
+				parent=root_job_id
+			)
 
-		logger = self.job_logger()
+		configuration.job_manager.add_job(
+			'paasmaker.job.prepare.root',
+			{},
+			"Prepare source for %s" % name,
+			on_root_job_added,
+			context=context
+		)
 
-		logger.info("Finalising package for %s" % self.name)
+	def start_job(self, context):
+		# In the context should be a 'package' attribute. Record and in future upload this.
+		self.logger.info("Finalising package for %s" % context['application_name'])
 
-		# TODO: Handle the ability to place packages in custom places (eg Amazon S3, shared filesystem, etc)
-		version = self.version
-		self.session.refresh(version)
-		version.source_path = "paasmaker://%s/%s" % (self.configuration.get_node_uuid(), self.package)
+		# TODO: Use subclasses of this to handle storage on S3, shared filesystems, etc.
+		# For now... store it in the path we've been supplied, and make the URL to it a Paasmaker URL.
+		session = self.configuration.get_database_session()
+		version = session.query(paasmaker.model.ApplicationVersion).get(context['application_version_id'])
+
+		# Set the source path.
+		# Only store the package name, not the leading path.
+		package_name = os.path.basename(context['package'])
+		version.source_path = "paasmaker://%s/%s" % (self.configuration.get_node_uuid(), package_name)
+
 		# Calculate the checksum of this source package.
-		checksum = paasmaker.util.streamingchecksum.StreamingChecksum(self.package, self.configuration.io_loop, logger)
+		checksum = paasmaker.util.streamingchecksum.StreamingChecksum(
+			context['package'],
+			self.configuration.io_loop,
+			self.logger
+		)
 
 		def checksum_complete(checksum):
 			version.source_checksum = checksum
-			self.session.add(version)
-			self.session.commit()
+			session.add(version)
+			session.commit()
 
-			self.finished_job(constants.JOB.SUCCESS, "Completed successfully.")
+			self.success({}, "Successfully prepared package for %s" % context['application_name'])
 
 		checksum.start(checksum_complete)
 
-	@staticmethod
-	def start(configuration, name, manifest, workspace_id, application_id=None, uploaded_file=None):
-		# The root job.
-		root = ApplicationPrepareRootJob(configuration, name, manifest, workspace_id, application_id=application_id, uploaded_file=uploaded_file)
-		configuration.job_manager.add_job(root)
-
-		# The manifest reader. This queues up more jobs on success.
-		manfiest_reader_job = ManifestReaderJob(configuration)
-		configuration.job_manager.add_job(manfiest_reader_job)
-		configuration.job_manager.add_child_job(root, manfiest_reader_job)
-
-		# Return the root job so we can track this.
-		return root
-
-class PrepareJobTest(tornado.testing.AsyncTestCase):
+class PrepareJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		super(PrepareJobTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'], io_loop=self.io_loop)
+		# Fire up the job manager.
+		self.configuration.startup_job_manager(self.stop)
+		self.wait()
 
 	def tearDown(self):
 		self.configuration.cleanup()
 		super(PrepareJobTest, self).tearDown()
 
 	def on_job_status(self, message):
+		#print str(message.flatten())
 		self.stop(message)
 
 	def on_job_catchall(self, message):
@@ -114,16 +130,24 @@ class PrepareJobTest(tornado.testing.AsyncTestCase):
 		s.add(workspace)
 		s.commit()
 
-		root_job = ApplicationPrepareRootJob.start(self.configuration, 'foo.com', manifest, workspace.id, uploaded_file=tempzip)
+		ApplicationPrepareRootJob.setup(
+			self.configuration,
+			'foo.com',
+			manifest,
+			workspace.id,
+			self.stop,
+			uploaded_file=tempzip
+		)
 
-		root_job_id = root_job.job_id
+		root_job_id = self.wait()
 
 		# Subscribe to updates to the root job.
 		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(root_job_id))
 		pub.subscribe(self.on_job_catchall, 'job.status')
 
 		# And make it work.
-		self.configuration.job_manager.evaluate()
+		self.configuration.job_manager.allow_execution(root_job_id, self.stop)
+		self.wait()
 
 		result = self.wait()
 		while result.state != constants.JOB.SUCCESS:
@@ -131,9 +155,16 @@ class PrepareJobTest(tornado.testing.AsyncTestCase):
 
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
 
+		#print
+		#self.dump_job_tree(root_job_id)
+		#self.wait()
+
+		self.configuration.job_manager.get_context(root_job_id, self.stop)
+		context = self.wait()
+
 		# Verify the package exists, and has the files we expect.
-		self.assertTrue(os.path.exists(root_job.package), "Packed file does not exist.")
-		files = subprocess.check_output(['tar', 'ztvf', root_job.package])
+		self.assertTrue(os.path.exists(context['package']), "Packed file does not exist.")
+		files = subprocess.check_output(['tar', 'ztvf', context['package']])
 		self.assertIn("app.py", files, "Can't find app.py.")
 		self.assertIn("manifest.yml", files, "Can't find manifest.")
 		self.assertIn("prepare.txt", files, "Can't find prepare.txt - prepare probably failed.")

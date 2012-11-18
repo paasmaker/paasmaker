@@ -20,6 +20,7 @@ class JobManager(object):
 		self.configuration = configuration
 		self.backend = RedisJobBackend(configuration)
 		self.runners = {}
+		self.in_startup = {}
 
 		logger.debug("Subscribing to job status updates.")
 		pub.subscribe(self.job_status, 'job.status')
@@ -39,7 +40,13 @@ class JobManager(object):
 		"""
 		self.backend.store_context(job_id, context, callback)
 
-	def add_job(self, plugin, parameters, title, callback, parent=None, node=None):
+	def get_context(self, job_id, callback):
+		"""
+		Get the context for a job. Intended for debugging and unit testing.
+		"""
+		self.backend.get_context(job_id, callback)
+
+	def add_job(self, plugin, parameters, title, callback, parent=None, node=None, context=None):
 		"""
 		Add the given job to the system, calling the callback with the
 		assigned job ID when it's inserted into the system. New jobs
@@ -63,12 +70,21 @@ class JobManager(object):
 		else:
 			resolved_node = self.configuration.get_node_uuid()
 
-		def on_job_added():
+		def on_context_stored():
 			# Send the NEW status around the cluster. In case something wants it.
 			self.configuration.send_job_status(job_id, constants.JOB.NEW)
 			# Ok, we added the job. Call the callback with the new job_id.
 			logger.debug("Completed adding new job %s.", job_id)
 			callback(job_id)
+
+		def on_job_added():
+			# Now, store the context for that job, if provided.
+			# If not provided, proceed to the next stage.
+			if context:
+				logger.debug("Storing context for job %s: %s", job_id, str(context))
+				self.backend.store_context(job_id, context, on_context_stored)
+			else:
+				on_context_stored()
 
 		# Ask the backend to add the job.
 		self.backend.add_job(
@@ -101,6 +117,15 @@ class JobManager(object):
 		self.backend.set_state_tree(job_id, constants.JOB.NEW, constants.JOB.WAITING, on_tree_updated)
 
 	def _start_job(self, job_id):
+		# Prevent trying to start the same job twice (race conditions around
+		# waiting for callbacks cause this - it can be kicked off twice until
+		# the state is marked as running, so this stops that from happening.)
+		# NOTE: This works also because only the node that is assigned the job
+		# can act on or mutate the job.
+		if self.in_startup.has_key(job_id):
+			return
+		self.in_startup[job_id] = True
+
 		def on_context(context):
 			def on_running(result):
 				# Finally kick it off...
@@ -110,6 +135,7 @@ class JobManager(object):
 			# Now that we have the context, we can start the job off.
 			# Mark it as running and then get started.
 			# TODO: There might be race conditions here...
+			# But we've alieviated them above.
 			logger.debug("Got context for job %s", job_id)
 			logger.debug("Context for job %s: %s", job_id, str(context))
 			self.backend.set_attrs(job_id, {'state': constants.JOB.RUNNING}, on_running)
@@ -124,7 +150,7 @@ class JobManager(object):
 				job['parameters'],
 				job_logger
 			)
-			plugin.configure(self, job_id)
+			plugin.configure(self, job_id, job)
 
 			self.runners[job_id] = plugin
 
@@ -246,6 +272,36 @@ class JobManager(object):
 		# Broadcast the abort request. Everything else will then
 		# sort itself out.
 		self.configuration.send_job_status(job_id, constants.JOB.ABORTED)
+
+	def debug_dump_job_tree(self, job_id, callback):
+		def on_job_full(jobs):
+			# Righto! Now we can sort and build this into a tree.
+			results = []
+			for job in jobs.values():
+				simple_job_values = {
+					'root_id': job['root_id'][0:8],
+					'parent_id': (str(job['parent_id']))[0:8],
+					'job_id': job['job_id'][0:8],
+					'state': job['state'],
+					'node': (str(job['node']))[0:8],
+					'title': job['title']
+				}
+				results.append("R:%(root_id)s P:%(parent_id)s J:%(job_id)s => S:%(state)s N:%(node)s T:%(title)s" % simple_job_values)
+			results.sort()
+			for result in results:
+				print result
+
+			callback()
+
+		def on_root_tree(tree):
+			# Now fetch the complete job data on all these elements.
+			self.backend.get_jobs(tree, on_job_full)
+
+		def on_found_root(root_id):
+			# Find the root's entire tree.
+			self.backend.get_tree(root_id, on_root_tree)
+
+		self.backend.get_root(job_id, on_found_root)
 
 class TestSuccessJobRunner(BaseJob):
 	def start_job(self, context):

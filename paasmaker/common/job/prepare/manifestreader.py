@@ -1,100 +1,179 @@
 
 import paasmaker
 from paasmaker.common.core import constants
-from packer import SourcePackerJob
-from service import ServiceJob, ServiceContainerJob
-from sourceprepare import SourcePreparerJob
-from sourcescm import SourceSCMJob
 from paasmaker.common.core import constants
+from ..base import BaseJob
 
-class ManifestReaderJob(paasmaker.util.jobmanager.JobRunner):
-	def __init__(self, configuration):
-		self.configuration = configuration
+class ManifestReaderJob(BaseJob):
 
-	def get_job_title(self):
-		return "Application manifest reader and unpacker"
-
-	def start_job(self):
-		# HACK: The root job contains all the context we need.
-		# For discussion: if this hack is bad or not.
-		root = self.get_root_job()
-
-		# Get a logger.
-		logger = self.job_logger()
-		logger.debug("About to start reading manifest from file %s", root.manifest)
+	def start_job(self, context):
+		self.output_context = {}
+		self.logger.debug("About to start reading manifest from file %s", context['manifest_file'])
 
 		# Load the manifest.
 		self.manifest = paasmaker.common.application.configuration.ApplicationConfiguration()
 		try:
-			self.manifest.load_from_file([root.manifest])
+			self.manifest.load_from_file([context['manifest_file']])
 		except paasmaker.common.configuration.InvalidConfigurationException, ex:
-			logger.critical("Failed to load configuration:")
-			logger.critical(ex)
-			self.finished_job(constants.JOB.FAILED, "Failed to load configuration.")
+			self.logger.critical("Failed to load configuration:")
+			self.logger.critical(ex)
+			self.failed("Failed to load configuration.")
 			return
 
 		# Check that the source SCM exists.
-		if not self.configuration.plugins.exists(self.manifest['application']['source']['method'], paasmaker.util.plugin.MODE.SCM_EXPORT):
-			logger.critical("SCM plugin %s does not exist.", self.manifest['application']['source']['method'])
-			self.finished_job(constants.JOB.FAILED, "SCM plugin %s does not exist." % self.manifest['application']['source']['method'])
+		scm_exists = self.configuration.plugins.exists(
+			self.manifest['application']['source']['method'],
+			paasmaker.util.plugin.MODE.SCM_EXPORT
+		)
+		if not scm_exists:
+			error_message = "SCM plugin %s does not exist." % self.manifest['application']['source']['method']
+			self.logger.critical(error_message)
+			self.failed(error_message)
+			return
 
 		# If the file is uploaded, inject it into the manifest.
-		if root.uploaded_file:
-			logger.debug("Setting uploaded file: %s", root.uploaded_file)
-			self.manifest.set_upload_location(root.uploaded_file)
+		if context['uploaded_file']:
+			self.logger.debug("Setting uploaded file: %s", context['uploaded_file'])
+			self.manifest.set_upload_location(context['uploaded_file'])
 
 		# Now based on that successul loading of the manifest, get started.
-		if not root.application:
+		session = self.configuration.get_database_session()
+		workspace = session.query(paasmaker.model.Workspace).get(context['workspace_id'])
+		if not context['application_id']:
 			# New application.
-			logger.debug("Creating new application for manifest.")
-			root.application = self.manifest.create_application(root.session, root.workspace)
+			self.logger.debug("Creating new application for manifest.")
+			application = self.manifest.create_application(session, workspace)
 		else:
-			logger.debug("Using existing application for manifest.")
+			self.logger.debug("Using existing application for manifest.")
+			application = session.query(paasmaker.model.Application).get(context['application_id'])
 
-		logger.debug("Unpacking manifest into database...")
-		root.version = self.manifest.unpack_into_database(root.session, root.application)
+		self.logger.debug("Unpacking manifest into database...")
+		application_version = self.manifest.unpack_into_database(session, application)
 
 		# Persist it all now so we have a record for later.
-		root.session.add(root.version)
-		root.session.commit()
+		session.add(application_version)
+		session.commit()
+
+		# Store the results in the context.
+		self.output_context['application_id'] = application.id
+		self.output_context['application_version_id'] = application_version.id
 
 		# Set up depending jobs for preparing sources.
-		logger.debug("Preparing jobs.")
-		source_preparer = SourcePreparerJob(self.configuration, self.manifest['application']['source']['prepare'])
-		source_scm = SourceSCMJob(self.configuration, self.manifest['application']['source'])
-		service_root = ServiceContainerJob(self.configuration)
-		packer = SourcePackerJob(self.configuration)
+		self.logger.info("Preparing jobs based on Manifest.")
 
-		# TODO: Add a configurable uploader job.
-
-		# Add base children jobs.
-		manager = self.configuration.job_manager
-		manager.add_job(source_preparer)
-		manager.add_job(source_scm)
-		# We always add a service root job, even if there are no services
-		# as it sets up the environment for prepare runs.
-		manager.add_job(service_root)
-		manager.add_job(packer)
-
-		manager.add_child_job(root, packer)
-		manager.add_child_job(packer, source_preparer)
-		manager.add_child_job(source_preparer, source_scm)
-		manager.add_child_job(source_preparer, service_root)
-
-		# For each service, check that it has a matching provider,
-		# and that the parameters passed are valid.
-		for service in root.version.services:
+		# Check all the services first to make sure they exist
+		# This allows us to fail earlier.
+		self.destroyable_service_list = []
+		for service in application_version.services:
 			if not self.configuration.plugins.exists(service.provider, paasmaker.util.plugin.MODE.SERVICE_CREATE):
-				logger.critical("No service provider %s found.", service.provider)
-				self.finished_job(constants.JOB.FAILED, "Bad service provider supplied.")
+				error_message = "No service provider %s found.", service.provider
+				self.logger.critical(error_message)
+				self.failed(error_message)
 				return
+			else:
+				self.destroyable_service_list.append(service)
 
-			# Create a job for it.
-			service_job = ServiceJob(self.configuration, service)
-			manager.add_job(service_job)
-			manager.add_child_job(service_root, service_job)
+		# Fetch out the root job ID for convenience.
+		self.root_job_id = self.job_metadata['root_id']
 
-		# So now we're all queued up.
-		# Mark this job as finished, which causes the other queued jobs to commence executing.
-		logger.debug("All jobs set up, signalling startup for those jobs.")
-		self.finished_job(constants.JOB.SUCCESS, 'Successfully queued up other tasks.')
+		# We're trying to end up with a job tree like below:
+		# Root job
+		# - Manifest reader
+		# - Packer
+		#   - Preparer
+		#     - SCM
+		#     - Service Container
+		#       - Service A
+		#       - Service B
+		# Because the jobs execute from the leaf first,
+		# the SCM will execute first, concurrently
+		# with the services, then the packer and preparer once
+		# both of those are complete.
+
+		# Add the packer job, which starts off the process.
+		self.configuration.job_manager.add_job(
+			'paasmaker.job.prepare.packer',
+			{},
+			'Package source code',
+			parent=self.root_job_id,
+			callback=self.on_packer_added
+		)
+
+		self.services_done = False
+		self.scm_done = False
+
+	def on_packer_added(self, packer_job_id):
+		# Add the preparer.
+		self.configuration.job_manager.add_job(
+			'paasmaker.job.prepare.preparer',
+			{'data': self.manifest['application']['source']['prepare']},
+			'Prepare source code',
+			parent=packer_job_id,
+			callback=self.on_preparer_added
+		)
+
+	def on_preparer_added(self, preparer_job_id):
+		# Add the SCM.
+		self.configuration.job_manager.add_job(
+			'paasmaker.job.prepare.scm',
+			{'scm': self.manifest['application']['source']},
+			'SCM export',
+			parent=preparer_job_id,
+			callback=self.on_scm_added
+		)
+
+		# Also add the service container, and then services themselves.
+		self.configuration.job_manager.add_job(
+			'paasmaker.job.prepare.servicecontainer',
+			{},
+			'Services',
+			parent=preparer_job_id,
+			callback=self.on_service_container_added
+		)
+
+	def on_scm_added(self, scm_job_id):
+		self.scm_done = True
+		# This will call complete if done.
+		self.on_prepare_complete()
+
+	def on_service_container_added(self, service_container_job_id):
+		# Queue up all the services.
+		def create_service(service):
+			def create_service_queued(queued_service_id):
+				try:
+					next_service = self.destroyable_service_list.pop()
+					create_service(next_service)
+				except IndexError, ex:
+					# No more services to create.
+					# So signal completion.
+					self.services_done = True
+					self.on_prepare_complete()
+				# end create_service_queued()
+
+			self.configuration.job_manager.add_job(
+				'paasmaker.job.prepare.service',
+				{'service_id': service.id},
+				"Create or update service '%s'" % service.name,
+				parent=service_container_job_id,
+				callback=create_service_queued
+			)
+			# end create_service()
+
+		if len(self.destroyable_service_list) == 0:
+			# No jobs. Proceed to prepare.
+			self.services_done = True
+			self.on_prepare_complete()
+		else:
+			# Kick off the service job add process.
+			create_service(self.destroyable_service_list.pop())
+
+	def on_prepare_complete(self):
+		if self.scm_done and self.services_done:
+			## KICKOFF
+			# At this stage, all the code following has executed it's callbacks to get to
+			# here. So now we can make our jobs executable and let them run wild.
+			self.configuration.job_manager.allow_execution(self.job_id, callback=self.on_execution_allowed)
+
+	def on_execution_allowed(self):
+		# Success! All queued up.
+		self.success(self.output_context, "Set up tasks all queued.")
