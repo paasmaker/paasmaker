@@ -481,27 +481,6 @@ class Service(OrmBase, Base):
 			service.state = constants.SERVICE.NEW
 			return service
 
-class Job(OrmBase, Base):
-	__tablename__ = 'job'
-
-	id = Column(Integer, primary_key=True)
-	unique = Column(String, nullable=False, index=True)
-	title = Column(String, nullable=False)
-	summary = Column(String, nullable=True)
-
-	# This can refer to itself. The parent job should theoretically only
-	# succeed when all the child jobs succeed.
-	parent_id = Column(Integer, ForeignKey('job.id'), nullable=True)
-	children = relationship("Job")
-
-	state = Column(Enum(*constants.JOB.ALL), nullable=False, index=True)
-
-	def __repr__(self):
-		return "<Job('%s':'%s')>" % (self.unique, self.title)
-
-	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['unique', 'title', 'summary', 'state'])
-
 def init_db(engine):
 	Base.metadata.create_all(bind=engine)
 
