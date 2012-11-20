@@ -2,68 +2,96 @@
 import os
 import urlparse
 
+from ..base import BaseJob
+from paasmaker.util.plugin import MODE
+
 import paasmaker
 from paasmaker.common.core import constants
 
-class RegisterJob(paasmaker.util.jobmanager.JobRunner):
+import colander
+
+class RegisterInstanceJobSchema(colander.MappingSchema):
+	# We don't validate the contents of below, but we do make sure
+	# that we're at least supplied them.
+	instance = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Instance data")
+	instance_type = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Instance data")
+	application_version = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Instance data")
+	application = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Instance data")
+	environment = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Instance data")
+
+class RegisterInstanceJob(BaseJob):
 	"""
 	A job to register the instance on the node.
 	This means downloading it, unpacking it.
 	Not starting though - we'll let the pacemaker advise us of that.
 	"""
-	def __init__(self, configuration, instance_id):
-		self.configuration = configuration
-		self.instance_id = instance_id
+	PARAMETERS_SCHEMA = {MODE.JOB: RegisterInstanceJobSchema()}
 
-	def get_job_title(self):
-		return "Register job for %s" % self.instance_id
+	def start_job(self, context):
+		self.output_context = {}
+		self.logger.info("Registration of instance. Unpacking source.")
 
-	def start_job(self):
-		logger = self.job_logger()
-		logger.info("Registration of instance. Unpacking source.")
+		self.instance_id = self.parameters['instance']['instance_id']
 
 		# Create a directory for the instance.
-		instance_path = self.configuration.get_instance_path(self.instance_id)
-
+		self.instance_path = self.configuration.get_instance_path(self.instance_id)
 		instance_package_container = self.configuration.get_instance_package_path()
+
+		if not self.parameters['instance_type']['standalone']:
+			# Select a port, which goes into the output context.
+			port = self.configuration.get_free_port()
+			self.parameters['instance']['port'] = port
+			self.configuration.port_allocator.add_allocated_port(port)
+			self.output_context[self.instance_id] = port
+
+		if not self.configuration.instances.has_instance(self.instance_id):
+			# Register the instance.
+			self.configuration.instances.add_instance(self.instance_id, self.parameters)
 
 		# Fetch the files, and unpack.
 		# If the file is stored on our node, skip directly to the unpack stage.
-		instance_data = self.configuration.instances.get_instance(self.instance_id)
-		raw_url = instance_data['application_version']['source_path']
-		logger.info("Fetching package from %s", raw_url)
+		self.instance_data = self.configuration.instances.get_instance(self.instance_id)
+		raw_url = self.instance_data['application_version']['source_path']
+		self.logger.info("Fetching package from %s", raw_url)
 		parsed = urlparse.urlparse(raw_url)
 
-		def begin_unpacking(package_path):
-			# CAUTION: This means the logger MUST be a job logger.
-			# TODO: Handle this nicer...
-			log_fp = logger.takeover_file()
-
-			def unpacking_complete(code):
-				logger.untakeover_file(log_fp)
-				logger.info("tar command returned code: %d", code)
-				#self.configuration.debug_cat_job_log(logger.job_id)
-				if code == 0:
-					instance_data['runtime']['path'] = instance_path
-					self.configuration.instances.save()
-					self.finished_job(constants.JOB.SUCCESS, "Completed successfully.")
-				else:
-					self.finished_job(constants.JOB.FAILURE, "Failed to extract files.")
-
-			# Begin unpacking.
-			command = ['tar', 'zxvf', package_path]
-
-			extractor = paasmaker.util.Popen(command,
-				stdout=log_fp,
-				stderr=log_fp,
-				on_exit=unpacking_complete,
-				io_loop=self.configuration.io_loop,
-				cwd=instance_path)
-
 		if parsed.scheme == 'paasmaker' and parsed.netloc == self.configuration.get_node_uuid():
-			begin_unpacking(parsed.path)
+			packed_path = os.path.join(
+				self.configuration.get_scratch_path_exists('packed'),
+				parsed.path.strip('/') # TODO: Prevent "../" in this path.
+			)
+			self.begin_unpacking(packed_path)
 		else:
 			# Download it first. TODO: Do this at some stage...
 			# Or check to see if we already have it cached locally,
 			# and it matches the appropriate checksum.
-			begin_unpacking(local_path)
+			self.begin_unpacking(local_path)
+
+	def begin_unpacking(self, package_path):
+		self.log_fp = self.logger.takeover_file()
+
+		# Begin unpacking.
+		command = ['tar', 'zxvf', package_path]
+
+		extractor = paasmaker.util.Popen(command,
+			stdout=self.log_fp,
+			stderr=self.log_fp,
+			on_exit=self.unpacking_complete,
+			io_loop=self.configuration.io_loop,
+			cwd=self.instance_path)
+
+	def unpacking_complete(self, code):
+		self.logger.untakeover_file(self.log_fp)
+		self.logger.info("tar command returned code: %d", code)
+		#self.configuration.debug_cat_job_log(logger.job_id)
+		if code == 0:
+			self.instance_data['runtime']['path'] = self.instance_path
+			self.configuration.instances.save()
+			self.success(self.output_context, "Completed successfully.")
+		else:
+			self.failed("Failed to extract files.")

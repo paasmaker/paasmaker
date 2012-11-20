@@ -53,7 +53,7 @@ class RedisJobBackend(JobBackend):
 	def _to_json(self, values):
 		out = {}
 		for key, value in values.iteritems():
-			out[key] = json.dumps(value)
+			out[key] = json.dumps(value, cls=paasmaker.util.jsonencoder.JsonEncoder)
 		return out
 
 	def _from_json(self, values):

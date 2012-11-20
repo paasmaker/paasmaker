@@ -5,17 +5,14 @@ import paasmaker
 from paasmaker.common.core import constants
 from ..base import BaseJob
 from paasmaker.util.plugin import MODE
+from ...testhelpers import TestHelpers
 
 import tornado
 from pubsub import pub
 
 import colander
 
-class SelectLocationsJobParametersSchema(colander.MappingSchema):
-	application_instance_type_id = colander.SchemaNode(colander.Integer())
-
 class SelectLocationsJob(BaseJob):
-	PARAMETERS_SCHEMA = {MODE.JOB: SelectLocationsJobParametersSchema()}
 
 	def start_job(self, context):
 		self.logger.info("Starting to select locations.")
@@ -23,7 +20,7 @@ class SelectLocationsJob(BaseJob):
 		self.session = self.configuration.get_database_session()
 		self.instance_type = self.session.query(
 			paasmaker.model.ApplicationInstanceType
-		).get(self.parameters['application_instance_type_id'])
+		).get(context['application_instance_type_id'])
 
 		# Fire up the plugin for placement.
 		plugin_exists = self.configuration.plugins.exists(
@@ -88,10 +85,11 @@ class SelectLocationsJob(BaseJob):
 	def select_failure(self, message):
 		self.failed("Failed to find nodes for this instance: " + message)
 
-class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
+class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		super(SelectLocationsJobTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'], io_loop=self.io_loop)
+		self.configuration.set_node_uuid(str(uuid.uuid4()))
 		# Fire up the job manager.
 		self.configuration.startup_job_manager(self.stop)
 		self.wait()
@@ -138,20 +136,6 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
 
 		return instance_type
 
-	def add_simple_node(self, session, tags):
-		ctr = 1
-		node = paasmaker.model.Node(name='test%d' % ctr,
-				route='%d.test.paasmaker.com' % ctr,
-				apiport=888,
-				uuid='%s-uuid' % ctr,
-				state=constants.NODE.ACTIVE)
-		node.heart = True
-		node.tags = tags
-		session.add(node)
-		session.commit()
-
-		return node
-
 	def test_simple_success(self):
 		# Set up the environment.
 		s = self.configuration.get_database_session()
@@ -162,7 +146,7 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
 			'runtimes': {
 				'paasmaker.runtime.php': ['5.3', '5.3.10']
 			}
-		})
+		}, self.configuration)
 
 		# Register the default placement provider.
 		self.configuration.plugins.register(
@@ -176,9 +160,10 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
 
 		self.configuration.job_manager.add_job(
 			'paasmaker.job.coordinate.selectlocations',
-			{'application_instance_type_id': instance_type.id},
+			{},
 			"Select locations for %s" % instance_type.name,
-			self.stop
+			self.stop,
+			context={'application_instance_type_id': instance_type.id}
 		)
 
 		job_id = self.wait()
@@ -209,7 +194,7 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
 			'runtimes': {
 				'paasmaker.runtime.shell': ['1']
 			}
-		})
+		}, self.configuration)
 
 		# Register the default placement provider.
 		self.configuration.plugins.register(
@@ -223,9 +208,10 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase):
 
 		self.configuration.job_manager.add_job(
 			'paasmaker.job.coordinate.selectlocations',
-			{'application_instance_type_id': instance_type.id},
+			{},
 			"Select locations for %s" % instance_type.name,
-			self.stop
+			self.stop,
+			context={'application_instance_type_id': instance_type.id}
 		)
 
 		# And make it work.

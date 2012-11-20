@@ -22,7 +22,7 @@ class TestHelpers(object):
 
 	def pack_sample_application(self, application):
 		# Pack up the tornado simple test application.
-		temptarball = os.path.join(self.configuration.get_flat('scratch_directory'), 'testapplication.tar.gz')
+		temptarball = os.path.join(self.configuration.get_scratch_path_exists('packed'), 'testapplication.tar.gz')
 		command_log = os.path.join(self.configuration.get_flat('scratch_directory'), 'testapplication.log')
 		command_log_fp = open(command_log, 'w')
 		workingdir = os.path.normpath(os.path.dirname(__file__) + '/../../misc/samples/%s' % application)
@@ -64,11 +64,11 @@ class TestHelpers(object):
 		session = configuration.get_database_session()
 
 		# Make a node (ie, us) to run on.
-		our_uuid = str(uuid.uuid4())
-		self.configuration.set_node_uuid(our_uuid)
-		node = paasmaker.model.Node('instance_register_test', 'localhost', self.get_http_port(), our_uuid, paasmaker.common.core.constants.NODE.ACTIVE)
-		session.add(node)
-		session.commit()
+		# our_uuid = str(uuid.uuid4())
+		# self.configuration.set_node_uuid(our_uuid)
+		# node = paasmaker.model.Node('instance_register_test', 'localhost', configuration.get_flat('http_port'), our_uuid, paasmaker.common.core.constants.NODE.ACTIVE)
+		# session.add(node)
+		# session.commit()
 
 		# And the remainder of the models to test with.
 		workspace = paasmaker.model.Workspace()
@@ -91,7 +91,7 @@ class TestHelpers(object):
 		application_version.version = 1
 		application_version.is_current = False
 		application_version.manifest = ''
-		application_version.source_path = "paasmaker://%s/%s" % (our_uuid, temptarball)
+		application_version.source_path = "paasmaker://%s/%s" % (self.configuration.get_node_uuid(), os.path.basename(temptarball))
 		application_version.source_checksum = 'dummychecksumhere'
 
 		application_version.services.append(service)
@@ -113,6 +113,20 @@ class TestHelpers(object):
 		session.add(instance_type)
 		session.commit()
 
+		return instance_type
+
+	def create_sample_application_instance(self, configuration, instance_type):
+		# If supplied a config object, use that to create the instance.
+		# Otherwise, do it in a new one - because we want to make sure
+		# hearts can work without being a pacemaker.
+		temp_configuration = False
+		if not configuration:
+			temp_configuration = True
+			configuration = paasmaker.common.configuration.ConfigurationStub(
+				port=self.get_http_port(),
+				modules=['pacemaker'],
+				io_loop=self.io_loop)
+
 		# And now, an instance on that node.
 		instance = paasmaker.model.ApplicationInstance()
 		instance.instance_id = str(uuid.uuid4())
@@ -127,6 +141,21 @@ class TestHelpers(object):
 			configuration.cleanup()
 
 		return instance
+
+	def add_simple_node(self, session, tags, configuration):
+		ctr = 1
+		node = paasmaker.model.Node(name='test%d' % ctr,
+				route='%d.test.paasmaker.com' % ctr,
+				apiport=configuration.get_flat('http_port'),
+				uuid=configuration.get_node_uuid(),
+				state=paasmaker.common.core.constants.NODE.ACTIVE)
+		node.heart = True
+		node.pacemaker = True
+		node.tags = tags
+		session.add(node)
+		session.commit()
+
+		return node
 
 	def create_sample_instance_data(self,
 			configuration,

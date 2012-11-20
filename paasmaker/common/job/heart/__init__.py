@@ -1,2 +1,2 @@
 
-from registerjob import RegisterJob
+from registerjob import RegisterInstanceJob

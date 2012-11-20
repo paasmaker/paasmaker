@@ -387,9 +387,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 		# Heart initialisation.
 		if self.is_heart():
-			# Plugins.
-			self.load_plugins(self.plugins, self['heart']['plugins'])
-
 			# Instance manager.
 			self.instances = paasmaker.heart.helper.instancemanager.InstanceManager(self)
 
@@ -397,12 +394,22 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			allocated_ports = self.instances.get_used_ports()
 			self.port_allocator.add_allocated_port(allocated_ports)
 
-		# Pacemaker initialisation.
-		if self.is_pacemaker():
-			self.load_plugins(self.plugins, self['pacemaker']['plugins'])
-
 			if self.get_flat('default_plugins'):
 				# Register default plugins.
+				self.plugins.register(
+					'paasmaker.job.heart.registerinstance',
+					'paasmaker.common.job.heart.RegisterInstanceJob',
+					{}
+				)
+
+			# Plugins.
+			self.load_plugins(self.plugins, self['heart']['plugins'])
+
+		# Pacemaker initialisation.
+		if self.is_pacemaker():
+			if self.get_flat('default_plugins'):
+				# Register default plugins.
+				# PREPARE JOBS
 				self.plugins.register(
 					'paasmaker.job.prepare.root',
 					'paasmaker.common.job.prepare.ApplicationPrepareRootJob',
@@ -438,11 +445,39 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					'paasmaker.common.job.prepare.SourcePreparerJob',
 					{}
 				)
+
+				# COORDINATE JOBS
 				self.plugins.register(
 					'paasmaker.job.coordinate.selectlocations',
 					'paasmaker.common.job.coordinate.SelectLocationsJob',
 					{}
 				)
+				self.plugins.register(
+					'paasmaker.job.coordinate.registerroot',
+					'paasmaker.common.job.coordinate.RegisterRootJob',
+					{}
+				)
+				self.plugins.register(
+					'paasmaker.job.coordinate.registerrequest',
+					'paasmaker.common.job.coordinate.RegisterRequestJob',
+					{}
+				)
+				self.plugins.register(
+					'paasmaker.job.coordinate.storeport',
+					'paasmaker.common.job.coordinate.StorePortJob',
+					{}
+				)
+
+				# PLACEMENT PLUGINS
+				self.plugins.register(
+					'paasmaker.placement.default',
+					'paasmaker.pacemaker.placement.default.DefaultPlacement',
+					{}
+				)
+
+			# Load plugins from the config now, so we can override the
+			# default plugins if we need to.
+			self.load_plugins(self.plugins, self['pacemaker']['plugins'])
 
 		self.update_flat()
 
