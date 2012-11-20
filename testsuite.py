@@ -66,6 +66,7 @@ test_sets = {
 	paasmaker.common.job.prepare.prepareroot: ['all', 'slow', 'application', 'prepare'],
 	paasmaker.common.job.coordinate.selectlocations: ['all', 'slow', 'application', 'coordinate'],
 	paasmaker.common.job.coordinate.registerroot: ['all', 'slow', 'application', 'coordinate'],
+	paasmaker.common.job.routing.routing: ['all', 'slow', 'application', 'coordinate', 'router'],
 
 	paasmaker.pacemaker.placement.default: ['all', 'slow', 'application', 'placement'],
 

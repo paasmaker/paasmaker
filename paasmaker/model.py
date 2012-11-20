@@ -316,6 +316,20 @@ class ApplicationVersion(OrmBase, Base):
 
 		return credentials
 
+	def make_current(self, session):
+		# Disable all versions.
+		session.query(ApplicationVersion).filter(
+			ApplicationVersion.application == self.application
+		).update(
+			{
+				'is_current': False
+			}
+		)
+		# And allow ours to be current. Commit it all in one transaction.
+		self.is_current = True
+		session.add(self)
+		session.commit()
+
 class ApplicationInstanceType(OrmBase, Base):
 	__tablename__ = 'application_instance_type'
 

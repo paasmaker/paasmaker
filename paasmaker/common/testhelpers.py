@@ -145,7 +145,7 @@ class TestHelpers(object):
 	def add_simple_node(self, session, tags, configuration):
 		ctr = 1
 		node = paasmaker.model.Node(name='test%d' % ctr,
-				route='%d.test.paasmaker.com' % ctr,
+				route='%d.local.paasmaker.net' % ctr,
 				apiport=configuration.get_flat('http_port'),
 				uuid=configuration.get_node_uuid(),
 				state=paasmaker.common.core.constants.NODE.ACTIVE)

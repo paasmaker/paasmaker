@@ -89,6 +89,10 @@ class PacemakerSchema(colander.MappingSchema):
 		missing=[],
 		default=[])
 
+	cluster_hostname = colander.SchemaNode(colander.String(),
+		title="Cluster Hostname",
+		description="The hostname postfix used to automatically generate hostnames when required. Eg, each application version gets a URL - N.<applicatio>.cluster_hostname.")
+
 	@staticmethod
 	def default():
 		return {'enabled': False, 'plugins': []}

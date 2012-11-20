@@ -53,6 +53,7 @@ redis:
 pacemaker:
   enabled: true
   dsn: "sqlite:///:memory:"
+  cluster_hostname: local.paasmaker.net
   plugins:
     - name: paasmaker.service.parameters
       class: paasmaker.pacemaker.service.parameters.ParametersService
