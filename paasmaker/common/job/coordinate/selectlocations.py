@@ -42,15 +42,32 @@ class SelectLocationsJob(BaseJob):
 				self.logger
 			)
 
-			# Get it to choose the number of instances that we want.
-			# This will call us back when ready.
-			placement.choose(
-				self.session,
-				self.instance_type,
-				self.instance_type.quantity,
-				self.select_success,
-				self.select_failure
-			)
+			quantity = self.instance_type.quantity
+
+			# Find out how many instances already exist, and subtract that
+			# quantity.
+			existing_quantity = self.session.query(
+				paasmaker.model.ApplicationInstance
+			).filter(
+				paasmaker.model.ApplicationInstance.application_instance_type == self.instance_type,
+				paasmaker.model.ApplicationInstance.state.in_(constants.INSTANCE_ALLOCATED_STATES)
+			).count()
+
+			quantity -= existing_quantity
+			if quantity <= 0:
+				finish_message = "No more instances required. No action taken."
+				self.logger.info(finish_message)
+				self.success({}, finish_message)
+			else:
+				# Get it to choose the number of instances that we want.
+				# This will call us back when ready.
+				placement.choose(
+					self.session,
+					self.instance_type,
+					self.instance_type.quantity,
+					self.select_success,
+					self.select_failure
+				)
 
 	def select_success(self, nodes, message):
 		# Ok, now that we have a chosen set of nodes, create records for them in
