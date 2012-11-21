@@ -416,6 +416,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					'paasmaker.common.job.heart.PreInstanceStartupJob',
 					{}
 				)
+				self.plugins.register(
+					'paasmaker.job.heart.shutdown',
+					'paasmaker.common.job.heart.InstanceShutdownJob',
+					{}
+				)
 
 				# STARTUP PLUGINS
 				self.plugins.register(
@@ -492,6 +497,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				self.plugins.register(
 					'paasmaker.job.coordinate.startuproot',
 					'paasmaker.common.job.coordinate.StartupRootJob',
+					{}
+				)
+				self.plugins.register(
+					'paasmaker.job.coordinate.shutdownroot',
+					'paasmaker.common.job.coordinate.ShutdownRootJob',
 					{}
 				)
 

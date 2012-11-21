@@ -4,3 +4,4 @@ from registerrequest import RegisterRequestJob
 from registerroot import RegisterRootJob
 from storeport import StorePortJob
 from startuproot import StartupRootJob
+from shutdownroot import ShutdownRootJob

@@ -9,6 +9,7 @@ from paasmaker.common.core import constants
 from ..base import BaseJob
 from ...testhelpers import TestHelpers
 from startuproot import StartupRootJob
+from shutdownroot import ShutdownRootJob
 
 import tornado
 from pubsub import pub
@@ -178,3 +179,42 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		routing_table = self.wait()
 
 		self.assertIn(version_instance, routing_table, "Missing entry from routing table.")
+
+		# HACK: Update the instances to RUNNING state, because the listener that updates
+		# the database isn't running at this stage.
+		instance = instances[0]
+		session.refresh(instance)
+		instance.state = constants.INSTANCE.RUNNING
+		session.add(instance)
+		session.commit()
+
+		# Now shut the instance down.
+		ShutdownRootJob.setup(
+			self.configuration,
+			instance_type.id,
+			self.stop
+		)
+		shutdown_root_id = self.wait()
+
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(shutdown_root_id))
+
+		# And make it work.
+		self.configuration.job_manager.allow_execution(shutdown_root_id, self.stop)
+		self.wait()
+
+		self.short_wait_hack()
+
+		result = self.wait()
+		while result is None or result.state != constants.JOB.SUCCESS:
+			result = self.wait()
+
+		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
+
+		# To check: that the instance is marked as STOPPED.
+		instance_data = self.configuration.instances.get_instance(instance.instance_id)
+		self.assertEquals(instance_data['instance']['state'], constants.INSTANCE.STOPPED, "Instance not in correct state.")
+
+		# That it's no longer in the routing table.
+		redis.smembers(set_key_version_1, self.stop)
+		routing_table = self.wait()
+		self.assertNotIn(version_instance, routing_table, "Additional entry from routing table.")
