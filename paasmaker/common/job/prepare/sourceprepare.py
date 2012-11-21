@@ -32,7 +32,7 @@ class SourcePreparerJob(BaseJob):
 			# and success when we have none left.
 			# CAUTION: The environment is not shared between commands.
 			if len(self.prepare_commands) == 0:
-				self.logger.info("No tasks to progress, so successfully completed.")
+				self.logger.info("No tasks to process, so successfully completed.")
 				self.done("No tasks to process.")
 			else:
 				self.logger.info("Running through %d tasks.", len(self.prepare_commands))

@@ -33,13 +33,13 @@ class ShellEnvironmentParametersSchema(colander.MappingSchema):
 
 class ShellRuntime(BaseRuntime):
 	MODES = [
-		paasmaker.util.plugin.MODE.RUNTIME_STARTUP,
 		paasmaker.util.plugin.MODE.RUNTIME_VERSIONS,
-		paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT
+		paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT,
+		paasmaker.util.plugin.MODE.RUNTIME_EXECUTE
 	]
 	OPTIONS_SCHEMA = ShellRuntimeOptionsSchema()
 	PARAMETERS_SCHEMA = {
-		paasmaker.util.plugin.MODE.RUNTIME_STARTUP: ShellRuntimeParametersSchema(),
+		paasmaker.util.plugin.MODE.RUNTIME_EXECUTE: ShellRuntimeParametersSchema(),
 		paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT: ShellEnvironmentParametersSchema()
 	}
 
@@ -126,7 +126,7 @@ class ShellRuntimeTest(BaseRuntimeTest):
 
 	def test_options(self):
 		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {})
-		instance = self.configuration.plugins.instantiate('paasmaker.runtime.shell', paasmaker.util.plugin.MODE.RUNTIME_STARTUP, {'launch_command': 'test.py'})
+		instance = self.configuration.plugins.instantiate('paasmaker.runtime.shell', paasmaker.util.plugin.MODE.RUNTIME_EXECUTE, {'launch_command': 'test.py'})
 		self.assertTrue(True, "Should have got here...")
 
 	def test_versions(self):
@@ -156,7 +156,7 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {})
 		runtime = self.configuration.plugins.instantiate(
 			'paasmaker.runtime.shell',
-			paasmaker.util.plugin.MODE.RUNTIME_STARTUP,
+			paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
 			{'launch_command': 'python app.py --port=%(port)d'}
 		)
 

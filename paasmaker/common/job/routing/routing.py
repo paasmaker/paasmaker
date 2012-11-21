@@ -25,13 +25,13 @@ class RoutingUpdateJob(BaseJob):
 	def start_job(self, context):
 		self.instance_id = self.parameters['instance_id']
 
-		self.logger.info("Routing table update for instance %s", instance_id)
+		self.logger.info("Routing table update for instance %s", self.instance_id)
 		if self.parameters['add']:
 			self.logger.info("Adding instance to routing table.")
 		else:
 			self.logger.info("Removing instance from the routing table.")
 
-		self.session = self.configuration.get_database_session()
+		session = self.configuration.get_database_session()
 		self.instance = session.query(
 			paasmaker.model.ApplicationInstance
 		).get(self.instance_id)

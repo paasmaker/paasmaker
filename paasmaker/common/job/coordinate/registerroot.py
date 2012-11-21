@@ -2,11 +2,13 @@
 import os
 import subprocess
 import uuid
+import socket
 
 import paasmaker
 from paasmaker.common.core import constants
 from ..base import BaseJob
 from ...testhelpers import TestHelpers
+from startuproot import StartupRootJob
 
 import tornado
 from pubsub import pub
@@ -82,7 +84,16 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		pass
 
 	def test_simple(self):
-		instance_type = self.create_sample_application(self.configuration, 'paasmaker.runtime.shell', {}, '1', 'tornado-simple')
+		runtime_parameters = {
+			'launch_command': "python app.py --port=%(port)d"
+		}
+		instance_type = self.create_sample_application(
+			self.configuration,
+			'paasmaker.runtime.shell',
+			runtime_parameters,
+			'1',
+			'tornado-simple'
+		)
 		node = self.add_simple_node(self.configuration.get_database_session(), {
 			'node': {},
 			'runtimes': {
@@ -129,3 +140,41 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# Verify the instance was set up.
 		self.assertEquals(instances.count(), 1, "Should have one registered instance.")
 		self.assertTrue(instances[0].port in range(42600, 42699), "Port not in expected range.")
+
+		# Now, hijack this test to test startup of instance. And other stuff.
+		StartupRootJob.setup(
+			self.configuration,
+			instance_type.id,
+			self.stop
+		)
+		startup_root_id = self.wait()
+
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(startup_root_id))
+
+		# And make it work.
+		self.configuration.job_manager.allow_execution(startup_root_id, self.stop)
+		self.wait()
+
+		self.short_wait_hack()
+
+		#print
+		#self.dump_job_tree(startup_root_id)
+		#self.wait()
+
+		result = self.wait()
+		while result is None or result.state != constants.JOB.SUCCESS:
+			result = self.wait()
+
+		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
+
+		# Confirm that the entry exists in the routing table.
+		self.configuration.get_router_table_redis(self.stop, None)
+		redis = self.wait()
+
+		set_key_version_1 = "instances_1.foo.com.%s" % self.configuration.get_flat('pacemaker.cluster_hostname')
+		version_instance = "%s:%d" % (socket.gethostbyname(instances[0].node.route), instances[0].port)
+
+		redis.smembers(set_key_version_1, self.stop)
+		routing_table = self.wait()
+
+		self.assertIn(version_instance, routing_table, "Missing entry from routing table.")

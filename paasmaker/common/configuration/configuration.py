@@ -400,9 +400,27 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 			if self.get_flat('default_plugins'):
 				# Register default plugins.
+				# HEART JOBS
 				self.plugins.register(
 					'paasmaker.job.heart.registerinstance',
 					'paasmaker.common.job.heart.RegisterInstanceJob',
+					{}
+				)
+				self.plugins.register(
+					'paasmaker.job.heart.startup',
+					'paasmaker.common.job.heart.InstanceStartupJob',
+					{}
+				)
+				self.plugins.register(
+					'paasmaker.job.heart.prestartup',
+					'paasmaker.common.job.heart.PreInstanceStartupJob',
+					{}
+				)
+
+				# STARTUP PLUGINS
+				self.plugins.register(
+					'paasmaker.startup.shell',
+					'paasmaker.pacemaker.prepare.shell.ShellPrepare',
 					{}
 				)
 
@@ -471,11 +489,30 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					'paasmaker.common.job.coordinate.StorePortJob',
 					{}
 				)
+				self.plugins.register(
+					'paasmaker.job.coordinate.startuproot',
+					'paasmaker.common.job.coordinate.StartupRootJob',
+					{}
+				)
+
+				# ROUTING
+				self.plugins.register(
+					'paasmaker.job.routing.update',
+					'paasmaker.common.job.routing.RoutingUpdateJob',
+					{}
+				)
 
 				# PLACEMENT PLUGINS
 				self.plugins.register(
 					'paasmaker.placement.default',
 					'paasmaker.pacemaker.placement.default.DefaultPlacement',
+					{}
+				)
+
+				# PREPARE PLUGINS
+				self.plugins.register(
+					'paasmaker.prepare.shell',
+					'paasmaker.pacemaker.prepare.shell.ShellPrepare',
 					{}
 				)
 
