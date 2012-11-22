@@ -2,6 +2,10 @@ import subprocess
 import unittest
 import platform
 import time
+import logging
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 class NoFreePortException(Exception):
 	pass
@@ -87,20 +91,23 @@ class FreePortFinder(object):
 		self.wait_until_port_state(io_loop, port, False, timeout, callback, timeout_callback)
 
 	def wait_until_port_state(self, io_loop, port, state, timeout, callback, timeout_callback):
-		# Wait until the port is no longer free.
+		# Wait until the port is in a different state.
 		end_timeout = time.time() + timeout
 
 		def wait_for_state():
 			if self.in_use(port) == state:
 				# And say that we're done.
+				logger.debug("Port %d is now in state %s.", port, str(state))
 				callback("In appropriate state.")
 			else:
+				logger.debug("Port %d not yet in state %s, waiting longer.", port, str(state))
 				if time.time() > end_timeout:
 					timeout_callback("Failed to end up in appropriate state in time.")
 				else:
 					# Wait a little bit longer.
 					io_loop.add_timeout(time.time() + 0.1, wait_for_state)
 
+		logger.debug("Adding timeout waiting for port %d to be %s.", port, str(state))
 		io_loop.add_timeout(time.time() + 0.1, wait_for_state)
 
 class FreePortFinderTest(unittest.TestCase):
