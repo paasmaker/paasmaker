@@ -67,6 +67,16 @@ class InstanceManager(object):
 		self.catalog[instance_id] = data
 		self.save()
 
+	def remove_instance(self, instance_id):
+		"""
+		Remove the instance from our catalog.
+		"""
+		if not self.catalog.has_key(instance_id):
+			raise KeyError("We do not have an instance for %s" % instance_id)
+
+		del self.catalog[instance_id]
+		self.save()
+
 	def get_state(self, instance_id):
 		if not self.catalog.has_key(instance_id):
 			raise KeyError("Unknown instance %s" % instance_id)

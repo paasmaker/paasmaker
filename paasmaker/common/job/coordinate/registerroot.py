@@ -10,6 +10,7 @@ from ..base import BaseJob
 from ...testhelpers import TestHelpers
 from startuproot import StartupRootJob
 from shutdownroot import ShutdownRootJob
+from deregisterroot import DeRegisterRootJob
 
 import tornado
 from pubsub import pub
@@ -228,3 +229,41 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		redis.smembers(set_key_version_1, self.stop)
 		routing_table = self.wait()
 		self.assertNotIn(version_instance, routing_table, "Additional entry from routing table.")
+
+		# Fetch the instance path here. Don't do it later because this will recreate it.
+		instance_path = self.configuration.get_instance_path(instance.instance_id)
+
+		# Deregister the whole lot.
+		DeRegisterRootJob.setup(
+			self.configuration,
+			instance_type.id,
+			self.stop
+		)
+		deregister_root_id = self.wait()
+
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(deregister_root_id))
+
+		# And make it work.
+		self.configuration.job_manager.allow_execution(deregister_root_id, self.stop)
+		self.wait()
+
+		#print
+		#self.dump_job_tree(deregister_root_id)
+		#self.wait()
+
+		result = self.wait()
+		while result is None or result.state != constants.JOB.SUCCESS:
+			result = self.wait()
+
+		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
+
+		# To check: the instance directory no longer exists.
+		self.assertFalse(os.path.exists(instance_path), "Instance path still exists.")
+
+		# Refresh the instance object that we have.
+		session.refresh(instance)
+
+		# To check: that the instance is marked as STOPPED.
+		has_instance = self.configuration.instances.has_instance(instance.instance_id)
+		self.assertFalse(has_instance, "Instance still exists.")
+		self.assertEquals(instance.state, constants.INSTANCE.DEREGISTERED, "Instance not in correct state.")

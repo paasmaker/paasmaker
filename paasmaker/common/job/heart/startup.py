@@ -11,8 +11,6 @@ from paasmaker.common.core import constants
 import colander
 
 class InstanceStartupJobSchema(colander.MappingSchema):
-	# We don't validate the contents of below, but we do make sure
-	# that we're at least supplied them.
 	instance_id = colander.SchemaNode(colander.String())
 
 class InstanceStartupJob(BaseJob):
