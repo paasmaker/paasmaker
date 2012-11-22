@@ -81,11 +81,6 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		#print str(message.flatten())
 		self.stop(message)
 
-	def on_job_catchall(self, message):
-		# This is for debugging.
-		#print str(message.flatten())
-		pass
-
 	def test_simple(self):
 		runtime_parameters = {
 			'launch_command': "python app.py --port=%(port)d"
@@ -114,7 +109,6 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		# Subscribe to updates to the root job.
 		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(root_job_id))
-		pub.subscribe(self.on_job_catchall, 'job.status')
 
 		# And make it work.
 		self.configuration.job_manager.allow_execution(root_job_id, self.stop)

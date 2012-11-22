@@ -98,8 +98,7 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.configuration.cleanup()
 		super(SelectLocationsJobTest, self).tearDown()
 
-	def on_job_catchall(self, message):
-		# This is for debugging.
+	def on_job_status(self, message):
 		#print str(message.flatten())
 		self.stop(message)
 
@@ -155,9 +154,6 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 			{}
 		)
 
-		# Subscribe to updates to the root job.
-		pub.subscribe(self.on_job_catchall, 'job.status')
-
 		self.configuration.job_manager.add_job(
 			'paasmaker.job.coordinate.selectlocations',
 			{},
@@ -167,6 +163,9 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		)
 
 		job_id = self.wait()
+
+		# Subscribe to updates to the root job.
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(job_id))
 
 		# And make it work.
 		self.configuration.job_manager.allow_execution(job_id, self.stop)
@@ -203,9 +202,6 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 			{}
 		)
 
-		# Subscribe to updates to the root job.
-		pub.subscribe(self.on_job_catchall, 'job.status')
-
 		self.configuration.job_manager.add_job(
 			'paasmaker.job.coordinate.selectlocations',
 			{},
@@ -214,8 +210,9 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 			context={'application_instance_type_id': instance_type.id}
 		)
 
-		# And make it work.
 		job_id = self.wait()
+		# Subscribe to updates to the root job.
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(job_id))
 
 		# And make it work.
 		self.configuration.job_manager.allow_execution(job_id, self.stop)
