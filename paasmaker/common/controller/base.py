@@ -122,7 +122,7 @@ class BaseController(tornado.web.RequestHandler):
 	def require_authentication(self, methods):
 		if len(methods) == 0:
 			# No methods provided.
-			raise tornado.web.HTTPError(403, 'Access is denied. No authentication methods supplied.')
+			raise tornado.web.HTTPError(403, 'Access is denied. No authentication methods supplied. This is a server side coding error.')
 
 		found_allowed_method = False
 
@@ -275,8 +275,17 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 	"""
 	Base class for WebsocketHandlers.
 	"""
+	# Allowed authentication methods.
+	ANONYMOUS = 0
+	NODE = 1
+	USER = 2
+
+	# You must override this in your subclass.
+	AUTH_METHODS = []
+
 	def initialize(self, configuration):
 		self.configuration = configuration
+		self.authenticated = False
 
 	def parse_message(self, message):
 		parsed = json.loads(message)
@@ -285,15 +294,45 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 			result = schema.deserialize(parsed)
 
 			# Validate their authentication details.
-			# Have to be authenticated for anything to work.
-			# TODO: Implement!
+			# Only required the first time - every subsequent message
+			# they'll be considered authenticated.
+			if self.authenticated:
+				return result
+			else:
+				self.check_authentication(result['auth'], result)
+				if self.authenticated:
+					return result
+				else:
+					return None
 		except colander.Invalid, ex:
 			if not parsed.has_key('sequence'):
 				parsed['sequence'] = -1
 			self.send_error(str(ex), parsed)
 			return None
 
-		return result
+	def check_authentication(self, auth, message):
+		if len(self.AUTH_METHODS) == 0:
+			# No methods provided.
+			self.send_error('Access is denied. No authentication methods supplied. This is a server side coding error.', message)
+			return
+
+		found_allowed_method = False
+
+		if self.ANONYMOUS in self.AUTH_METHODS:
+			# Anonymous is allowed. So let it go through...
+			found_allowed_method = True
+
+		if self.NODE in self.AUTH_METHODS:
+			# Check that a valid node authenticated.
+			if auth.has_key('method') and auth['method'] == 'node':
+				if auth.has_key('value') and auth['value'] == self.configuration.get_flat('auth_token'):
+					found_allowed_method = True
+
+		# TODO: Handle user token authentication.
+		if not found_allowed_method:
+			self.send_error('Access is denied. Authentication failed.', message)
+		else:
+			self.authenticated = True
 
 	def validate_data(self, message, schema):
 		try:
@@ -305,17 +344,19 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 		return result
 
 	def send_error(self, error, message):
-		self.write_message(self.encode_message(self.make_error(error, message)))
+		error_payload = self.make_error(error, message)
+		error_message = self.encode_message(error_payload)
+		self.write_message(error_message)
 
 	def send_success(self, typ, data):
 		self.write_message(self.encode_message(self.make_success(typ, data)))
 
 	def make_error(self, error, message):
-		message = {
+		result = {
 			'type': 'error',
 			'data': { 'error': error, 'sequence': message['sequence'] }
 		}
-		return message
+		return result
 
 	def make_success(self, typ, data):
 		message = {

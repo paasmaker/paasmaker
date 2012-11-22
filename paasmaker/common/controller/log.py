@@ -33,6 +33,8 @@ class LogUnSubscribeSchema(colander.MappingSchema):
 		description="The ID of the job to work on")
 
 class LogStreamHandler(BaseWebsocketHandler):
+	AUTH_METHODS = [BaseWebsocketHandler.NODE, BaseWebsocketHandler.USER]
+
 	last_positions = {}
 
 	def open(self):
