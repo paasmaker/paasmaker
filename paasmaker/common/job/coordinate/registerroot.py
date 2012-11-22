@@ -11,13 +11,14 @@ from ...testhelpers import TestHelpers
 from startuproot import StartupRootJob
 from shutdownroot import ShutdownRootJob
 from deregisterroot import DeRegisterRootJob
+from instancerootbase import InstanceRootBase
 
 import tornado
 from pubsub import pub
 
 # TODO: Implement abort features for all of these jobs.
 
-class RegisterRootJob(BaseJob):
+class RegisterRootJob(BaseJob, InstanceRootBase):
 	@staticmethod
 	def setup(configuration, application_instance_type_id, callback):
 		# Set up the context.

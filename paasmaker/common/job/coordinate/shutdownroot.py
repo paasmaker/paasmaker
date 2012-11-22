@@ -7,40 +7,22 @@ import paasmaker
 from paasmaker.common.core import constants
 from ..base import BaseJob
 from ...testhelpers import TestHelpers
+from instancerootbase import InstanceRootBase
 
 import tornado
 from pubsub import pub
 
 # TODO: Implement abort features for all of these jobs.
 
-class ShutdownRootJob(BaseJob):
+class ShutdownRootJob(BaseJob, InstanceRootBase):
 	@staticmethod
-	def setup(configuration, application_instance_type_id, callback):
-		# Set up the context.
-		context = {}
-		context['application_instance_type_id'] = application_instance_type_id
-
-		# Find the instances that are in the RUNNING state
-		# (ie, that need starting)
-		session = configuration.get_database_session()
-		instance_type = session.query(paasmaker.model.ApplicationInstanceType).get(application_instance_type_id)
-		instances = session.query(
-			paasmaker.model.ApplicationInstance
-		).filter(
-			paasmaker.model.ApplicationInstance.application_instance_type == instance_type,
-			paasmaker.model.ApplicationInstance.state == constants.INSTANCE.RUNNING
+	def setup(configuration, instance_type_id, callback, instances=[]):
+		instance_list = InstanceRootBase.get_instances_for(
+			configuration,
+			instance_type_id,
+			[constants.INSTANCE.RUNNING],
+			instances
 		)
-		instance_list = []
-		for instance in instances:
-			instance_list.append(
-				{
-					'id': instance.id,
-					'instance_id': instance.instance_id,
-					'node_name': instance.node.name,
-					'node_uuid': instance.node.uuid
-				}
-			)
-		instance_list.reverse()
 
 		# For each instance, we need a job tree like this:
 		# - Shutdown - Instance A (runtime startup) (on relevant node)
@@ -99,30 +81,11 @@ class ShutdownRootJob(BaseJob):
 			'paasmaker.job.coordinate.shutdownroot',
 			{},
 			"Shutdown up instances and alter routing",
-			on_root_job_added,
-			context=context
+			on_root_job_added
 		)
 
 	def start_job(self, context):
-		# In the context is a list of instances and their statuses.
-		# Update all those in the local database.
-		session = self.configuration.get_database_session()
-		for key, value in context.iteritems():
-			# TODO: This is a very poor method of figuring out if the
-			# key is an instance ID.
-			if key.find('-') != -1:
-				instance = session.query(
-					paasmaker.model.ApplicationInstance
-				).filter(
-					paasmaker.model.ApplicationInstance.instance_id == key
-				).first()
+		self.update_jobs_from_context(context)
 
-				if instance:
-					# Update the instance state.
-					self.logger.debug("Updating state for instance %s." % key)
-					instance.state = value
-					session.add(instance)
-
-		session.commit()
 		self.logger.info("Shutdown instances and alter routing.")
 		self.success({}, "Shut down instances and altered routing.")
