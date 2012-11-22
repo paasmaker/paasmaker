@@ -61,10 +61,10 @@ class InstanceStartupJob(BaseJob):
 		# Record the instance state.
 		self.instance_data['instance']['state'] = constants.INSTANCE.RUNNING
 		self.configuration.instances.save()
-		self.configuration.send_instance_status(self.instance_id, constants.INSTANCE.STARTING)
+		self.configuration.send_instance_status(self.instance_id, constants.INSTANCE.RUNNING)
 
 		self.logger.info("Instance started successfully.")
-		self.success({}, "Started instance successfully.")
+		self.success({self.instance_id: constants.INSTANCE.RUNNING}, "Started instance successfully.")
 
 	def failure_callback(self, message):
 		self.instance_data['instance']['state'] = constants.INSTANCE.ERROR

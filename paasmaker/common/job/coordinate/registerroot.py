@@ -138,9 +138,18 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 			paasmaker.model.ApplicationInstance.state == constants.INSTANCE.REGISTERED
 		)
 
-		# Verify the instance was set up.
 		self.assertEquals(instances.count(), 1, "Should have one registered instance.")
-		self.assertTrue(instances[0].port in range(42600, 42699), "Port not in expected range.")
+
+		instance = session.query(
+			paasmaker.model.ApplicationInstance
+		).filter(
+			paasmaker.model.ApplicationInstance.application_instance_type == instance_type,
+			paasmaker.model.ApplicationInstance.state == constants.INSTANCE.REGISTERED
+		).first()
+
+		# Verify the instance was set up.
+		self.assertTrue(instance is not None, "Should have one registered instance.")
+		self.assertTrue(instance.port in range(42600, 42699), "Port not in expected range.")
 
 		# Now, hijack this test to test startup of instance. And other stuff.
 		StartupRootJob.setup(
@@ -173,20 +182,17 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		redis = self.wait()
 
 		set_key_version_1 = "instances_1.foo.com.%s" % self.configuration.get_flat('pacemaker.cluster_hostname')
-		version_instance = "%s:%d" % (socket.gethostbyname(instances[0].node.route), instances[0].port)
+		version_instance = "%s:%d" % (socket.gethostbyname(instance.node.route), instance.port)
 
 		redis.smembers(set_key_version_1, self.stop)
 		routing_table = self.wait()
 
 		self.assertIn(version_instance, routing_table, "Missing entry from routing table.")
 
-		# HACK: Update the instances to RUNNING state, because the listener that updates
-		# the database isn't running at this stage.
-		instance = instances[0]
+		# Refresh the instance object that we have.
 		session.refresh(instance)
-		instance.state = constants.INSTANCE.RUNNING
-		session.add(instance)
-		session.commit()
+
+		self.assertEquals(instance.state, constants.INSTANCE.RUNNING, "Instance not in correct state.")
 
 		# Now shut the instance down.
 		ShutdownRootJob.setup(
@@ -210,9 +216,13 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
 
+		# Refresh the instance object that we have.
+		session.refresh(instance)
+
 		# To check: that the instance is marked as STOPPED.
 		instance_data = self.configuration.instances.get_instance(instance.instance_id)
 		self.assertEquals(instance_data['instance']['state'], constants.INSTANCE.STOPPED, "Instance not in correct state.")
+		self.assertEquals(instance.state, constants.INSTANCE.STOPPED, "Instance not in correct state.")
 
 		# That it's no longer in the routing table.
 		redis.smembers(set_key_version_1, self.stop)

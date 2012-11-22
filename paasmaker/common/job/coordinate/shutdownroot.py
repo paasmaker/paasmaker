@@ -104,5 +104,25 @@ class ShutdownRootJob(BaseJob):
 		)
 
 	def start_job(self, context):
+		# In the context is a list of instances and their statuses.
+		# Update all those in the local database.
+		session = self.configuration.get_database_session()
+		for key, value in context.iteritems():
+			# TODO: This is a very poor method of figuring out if the
+			# key is an instance ID.
+			if key.find('-') != -1:
+				instance = session.query(
+					paasmaker.model.ApplicationInstance
+				).filter(
+					paasmaker.model.ApplicationInstance.instance_id == key
+				).first()
+
+				if instance:
+					# Update the instance state.
+					self.logger.debug("Updating state for instance %s." % key)
+					instance.state = value
+					session.add(instance)
+
+		session.commit()
 		self.logger.info("Shutdown instances and alter routing.")
 		self.success({}, "Shut down instances and altered routing.")
