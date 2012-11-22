@@ -9,6 +9,7 @@ import os
 
 from paasmaker.common.controller import BaseController, BaseControllerTest
 from paasmaker.common.core import constants
+from paasmaker.common.testhelpers import TestHelpers
 
 import tornado
 import tornado.testing
@@ -16,20 +17,6 @@ from pubsub import pub
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
-
-class InstanceRegisterSchema(colander.MappingSchema):
-	# We don't validate the contents of below, but we do make sure
-	# that we're at least supplied them.
-	instance = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Instance data")
-	instance_type = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Instance data")
-	application_version = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Instance data")
-	application = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Instance data")
-	environment = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Instance data")
 
 class InstanceExitController(BaseController):
 	"""
@@ -80,39 +67,42 @@ class InstanceExitController(BaseController):
 		routes.append((r"/instance/exit/([-a-zA-Z0-9]+)/([-a-zA-Z0-9]+)/(\d+)", InstanceExitController, configuration))
 		return routes
 
+
+class InstanceRegisterControllerTest(BaseControllerTest, TestHelpers):
+	config_modules = ['pacemaker', 'heart']
+
+	def get_app(self):
+		self.late_init_configuration(self.io_loop)
+		routes = InstanceExitController.get_routes({'configuration': self.configuration})
+		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
+		return application
+
+	def on_job_status(self, message):
+		#print str(message.flatten())
+		self.stop(message)
+
+	def on_instance_status(self, message):
+		#print str(message.flatten())
+		self.stop(message)
+
 	def test_exit(self):
-		instance = self.create_sample_application(self.configuration, 'paasmaker.runtime.shell', {}, '1', 'tornado-simple')
+		instance_data = self.create_sample_instance_data(self.configuration, 'paasmaker.runtime.shell', {}, '1', 'tornado-simple')
 
-		request = paasmaker.common.api.instanceregister.InstanceRegisterAPIRequest(self.configuration)
-		request.set_instance(instance)
-		request.set_target(instance.node)
-		request.send(self.stop)
-		response = self.wait()
-
-		self.failIf(not response.success)
-
-		# Wait for the register job to complete.
-		job_id = response.data['job_id']
-		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(job_id))
-
-		result = self.wait()
-		while result.state != constants.JOB.SUCCESS:
-			result = self.wait()
-
-		self.assertEquals(result.state, constants.JOB.SUCCESS, "Job did not succeed.")
+		instance_id = instance_data['instance']['instance_id']
+		self.configuration.instances.add_instance(instance_id, instance_data)
 
 		# Now, listen for intance updates.
-		pub.subscribe(self.on_instance_status, self.configuration.get_instance_status_pub_topic(instance.instance_id))
+		pub.subscribe(self.on_instance_status, self.configuration.get_instance_status_pub_topic(instance_id))
 
 		# Set up the exit handler.
 		baseruntime = paasmaker.heart.runtime.BaseRuntime(
 			self.configuration,
 			paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT,
 			{}, {}, 'paasmaker.runtime.base')
-		baseruntime.generate_exit_report_command(instance.instance_id)
+		baseruntime.generate_exit_report_command(instance_id)
 
 		# From that exit report, hit up the supplied URL.
-		instance_data = self.configuration.instances.get_instance(instance.instance_id)
+		instance_data = self.configuration.instances.get_instance(instance_id)
 
 		self.http_client.fetch(self.get_url(instance_data['runtime']['exit']['url'] + '0'), self.noop)
 
@@ -126,9 +116,9 @@ class InstanceExitController(BaseController):
 		self.assertIn("credentials", response.body)
 
 		# Generate a new one, and exit with a non-zero response code.
-		baseruntime.generate_exit_report_command(instance.instance_id)
+		baseruntime.generate_exit_report_command(instance_id)
 
-		instance_data = self.configuration.instances.get_instance(instance.instance_id)
+		instance_data = self.configuration.instances.get_instance(instance_id)
 
 		self.http_client.fetch(self.get_url(instance_data['runtime']['exit']['url'] + '1'), self.noop)
 

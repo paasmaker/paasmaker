@@ -115,7 +115,7 @@ class TestHelpers(object):
 
 		return instance_type
 
-	def create_sample_application_instance(self, configuration, instance_type):
+	def create_sample_application_instance(self, configuration, session, instance_type, node):
 		# If supplied a config object, use that to create the instance.
 		# Otherwise, do it in a new one - because we want to make sure
 		# hearts can work without being a pacemaker.
@@ -144,6 +144,8 @@ class TestHelpers(object):
 
 	def add_simple_node(self, session, tags, configuration):
 		ctr = 1
+		if configuration.get_node_uuid() is None:
+			configuration.set_node_uuid(str(uuid.uuid4()))
 		node = paasmaker.model.Node(name='test%d' % ctr,
 				route='%d.local.paasmaker.net' % ctr,
 				apiport=configuration.get_flat('http_port'),
@@ -163,11 +165,29 @@ class TestHelpers(object):
 			runtime_parameters,
 			runtime_version,
 			application):
-		instance = self.create_sample_application(configuration,
+		instance_type = self.create_sample_application(configuration,
 			runtime_name,
 			runtime_parameters,
 			runtime_version,
 			application)
+		session = configuration.get_database_session()
+		instance_type = session.query(paasmaker.model.ApplicationInstanceType).get(instance_type.id)
+		node = self.add_simple_node(
+			session,
+			{
+				'node': {},
+				'runtimes': {
+					runtime_name: [runtime_version]
+				}
+			},
+			configuration
+		)
+		instance = self.create_sample_application_instance(
+			configuration,
+			session,
+			instance_type,
+			node
+		)
 
 		flat = instance.flatten_for_heart()
 
