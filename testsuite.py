@@ -24,7 +24,7 @@ test_sets = {
 	paasmaker.util.port: ['all', 'slow', 'util', 'network'],
 	paasmaker.util.plugin: ['all', 'quick', 'util', 'configuration', 'plugin'],
 	paasmaker.util.commandsupervisor: ['all', 'slow', 'util', 'process'],
-	paasmaker.util.temporaryrabbitmq: ['all', 'slow', 'util', 'messaging'],
+	paasmaker.util.temporaryrabbitmq: ['slow', 'util', 'messaging'],
 	paasmaker.util.popen: ['all', 'slow', 'util', 'process'],
 	paasmaker.util.streamingchecksum: ['all', 'util', 'checksum'],
 
@@ -33,9 +33,9 @@ test_sets = {
 	paasmaker.common.configuration.configuration: ['all', 'quick', 'configuration'],
 	paasmaker.common.configuration.configurationstub: ['all', 'quick', 'configuration'],
 	paasmaker.common.application.configuration: ['all', 'quick', 'configuration'],
-	paasmaker.common.core.messageexchange: ['all', 'slow', 'messaging', 'exchange', 'job'],
+	paasmaker.common.core.messageexchange: ['slow', 'messaging', 'exchange', 'job'],
 	paasmaker.common.job.manager.backendredis: ['all', 'util', 'job', 'jobmanager', 'slow'],
-	paasmaker.common.job.manager.manager: ['all', 'util', 'job', 'jobmanager'],
+	paasmaker.common.job.manager.manager: ['util', 'job', 'jobmanager'],
 
 	paasmaker.model: ['all', 'slow', 'model'],
 
