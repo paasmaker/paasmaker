@@ -49,7 +49,7 @@ class InstanceManager(object):
 		path = self.get_catalog_path()
 		path_temp = path + ".temp"
 		fp = open(path_temp, 'w')
-		fp.write(json.dumps(self.catalog))
+		fp.write(json.dumps(self.catalog, cls=paasmaker.util.jsonencoder.JsonEncoder))
 		fp.close()
 		os.rename(path_temp, path)
 		logger.debug("Wrote out new catalog.")
