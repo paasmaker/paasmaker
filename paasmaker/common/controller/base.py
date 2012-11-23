@@ -171,12 +171,20 @@ class BaseController(tornado.web.RequestHandler):
 			return None
 
 		# See if we're using token authentication.
-		if self.auth.has_key('method') and self.auth['method'] == 'token':
-			if self.auth.has_key('value'):
-				raw_token = self.auth['value']
+		test_token = None
+		auth_using_token = self.auth.has_key('method') and self.auth['method'] == 'token'
+		if auth_using_token and self.auth.has_key('value'):
+			test_token = self.auth['value']
+		# TODO: In tests, the headers dict below was case sensitive.
+		# Almost certainly a fail on my part...
+		auth_using_header = self.request.headers.has_key('User-Token')
+		if auth_using_header:
+			test_token = self.request.headers['user-token']
+		if auth_using_token or auth_using_header:
+			if test_token:
 				# Lookup the user object.
 				user = self.db().query(paasmaker.model.User) \
-					.filter(paasmaker.model.User.apikey==raw_token).first()
+					.filter(paasmaker.model.User.apikey==test_token).first()
 				# Make sure we have the user, and it's enabled and not deleted.
 				if user and user.enabled and not user.deleted:
 					self.user = user

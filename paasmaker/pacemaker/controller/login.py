@@ -178,6 +178,18 @@ class LoginControllerTest(BaseControllerTest):
 		self.failIf(response.error)
 		self.assertIn("machine readable", response.body)
 
+		# Try again with the HTTP header token.
+		request = tornado.httpclient.HTTPRequest(
+			"http://localhost:%d/information" % self.get_http_port(),
+			headers={'User-Token': u.apikey})
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, self.stop)
+		response = self.wait()
+
+		# Check that it returned the information page.
+		self.failIf(response.error)
+		self.assertIn("machine readable", response.body)
+
 	def test_login_apikey(self):
 		# Create a test user.
 		s = self.configuration.get_database_session()
