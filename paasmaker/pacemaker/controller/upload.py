@@ -56,11 +56,13 @@ class UploadController(BaseController):
 		# Test to see if a chunk exists. Return 200 if it does,
 		# or 404 otherwise.
 		if os.path.exists(self._chunk_path()):
-			self.add_data('exists', True)
+			self.add_data('success', True)
+			self.add_data('identifier', self._identifier())
 			self.render("api/apionly.html")
 		else:
 			self.add_error('No such chunk')
-			self.add_data('exists', False)
+			self.add_data('success', False)
+			self.add_data('identifier', self._identifier())
 			self.write_error(404)
 
 	def post(self):

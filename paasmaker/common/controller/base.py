@@ -261,6 +261,7 @@ class BaseController(tornado.web.RequestHandler):
 		self.root_data['error_code'] = status_code
 		if kwargs.has_key('exc_info'):
 			self.add_error('Exception: ' + str(kwargs['exc_info'][0]) + ': ' + str(kwargs['exc_info'][1]))
+		self.set_status(status_code)
 		self.render('error/error.html')
 
 	def on_finish(self):

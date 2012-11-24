@@ -2,6 +2,7 @@
 import logging
 import os
 import json
+import urllib
 
 import paasmaker
 
@@ -29,7 +30,7 @@ class UploadFileAPIRequest(paasmaker.util.APIRequest):
 
 		# Prepare internal variables.
 		self.variables = {
-			'resumableChunkNumber': 0, # We increment this to 1 on the first start.
+			'resumableChunkNumber': 1,
 			'resumableChunkSize': UPLOAD_CHUNK_SIZE,
 			'resumableTotalSize': os.path.getsize(filename),
 			'resumableIdentifier': filename,
@@ -40,10 +41,37 @@ class UploadFileAPIRequest(paasmaker.util.APIRequest):
 		# Open up the file and get started.
 		logger.info("Uploading from local file %s", filename)
 		self.fp = open(filename, 'r')
-		self._send_chunk_start()
+		self._check_exists()
 
-	def _send_chunk_start(self, last_response=None):
-		self.variables['resumableChunkNumber'] += 1
+	def _check_exists(self):
+		if not self.target:
+			self.target = self.get_master()
+
+		endpoint = self.target + self.get_endpoint()
+		endpoint += '?' + urllib.urlencode(self.variables)
+		kwargs = {}
+		kwargs['method'] = 'GET'
+		kwargs['headers'] = {'User-Token': self.authvalue}
+
+		request = tornado.httpclient.HTTPRequest(endpoint, **kwargs)
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, self._on_exists_result)
+
+	def _on_exists_result(self, response):
+		if response.error:
+			# No, chunk does not exist on the server.
+			logger.debug("Chunk doesn't exist on server (%s) so sending.", response.error)
+			self._send_chunk_start()
+		else:
+			# Yes, it does.
+			# Seek past it in the local file, and skip to the next chunk.
+			logger.debug("Chunk does exist on server, skipping.")
+			self.fp.seek(self.variables['resumableChunkSize'], 1)
+			self.variables['resumableChunkNumber'] += 1
+			self.last_response = response
+			self._check_exists()
+
+	def _send_chunk_start(self):
 		logger.debug("Reading %d bytes from file...", self.variables['resumableChunkSize'])
 		blob = self.fp.read(self.variables['resumableChunkSize'])
 
@@ -51,7 +79,7 @@ class UploadFileAPIRequest(paasmaker.util.APIRequest):
 			# End of file.
 			logger.info("Finished uploading file.")
 			self.fp.close()
-			self.finished_callback(json.loads(last_response.body))
+			self.finished_callback(json.loads(self.last_response.body))
 		else:
 			# Send it along.
 			file_body = self._pack_file_segment(self.variables, blob)
@@ -73,19 +101,21 @@ class UploadFileAPIRequest(paasmaker.util.APIRequest):
 			client.fetch(request, self._on_chunk_sent)
 
 	def _on_chunk_sent(self, response):
+		self.last_response = response
 		if response.error:
 			# Failure. Abort.
 			logger.error(response.error)
 			self.fp.close()
 			self.error_callback(json.loads(response.body))
 		else:
+			self.variables['resumableChunkNumber'] += 1
 			# Call the progress callback.
 			self.progress_callback(
 				self.fp.tell(),
 				self.variables['resumableTotalSize']
 			)
-			# Send the next one.
-			self._send_chunk_start(response)
+			# Check and possibly send the next one.
+			self._check_exists()
 
 	def _pack_file_segment(self, variables, filedata):
 		# Use the requests module to prepare the file data for us.
