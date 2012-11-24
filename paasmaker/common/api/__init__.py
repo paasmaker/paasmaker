@@ -6,3 +6,4 @@ from login import LoginAPIRequest
 from user import UserCreateAPIRequest, UserEditAPIRequest
 from workspace import WorkspaceCreateAPIRequest, WorkspaceEditAPIRequest
 from instanceregister import InstanceRegisterAPIRequest
+from upload import UploadFileAPIRequest

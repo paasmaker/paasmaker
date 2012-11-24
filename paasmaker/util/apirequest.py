@@ -62,6 +62,10 @@ class APIRequest(object):
 		self.authmethod = 'node'
 		self.authvalue = key
 
+	def set_header_auth(self, key):
+		self.authmethod = 'header'
+		self.authvalue = key
+
 	def build_payload(self):
 		# Override in your subclass.
 		return {}
@@ -100,6 +104,11 @@ class APIRequest(object):
 		kwargs['method'] = 'POST'
 		# Don't follow redirects - this is an API request.
 		kwargs['follow_redirects'] = False
+
+		if self.authmethod == 'header':
+			if not kwargs.has_key('headers'):
+				kwargs['headers'] = {}
+			kwargs['headers']['User-Token'] = self.authvalue
 
 		logger.debug("In send() of API request of type %s", type(self))
 		logger.debug("Payload sending to server: %s", encoded)

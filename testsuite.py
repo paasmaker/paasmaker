@@ -47,6 +47,7 @@ test_sets = {
 	paasmaker.pacemaker.controller.node: ['all', 'slow', 'controller', 'node'],
 	paasmaker.pacemaker.controller.profile: ['all', 'slow', 'controller', 'profile'],
 	paasmaker.pacemaker.controller.workspace: ['all', 'slow', 'controller', 'workspace'],
+	paasmaker.pacemaker.controller.upload: ['all', 'controller', 'files'],
 	paasmaker.heart.controller.instance: ['all', 'slow', 'controller', 'instance', 'heart'],
 
 	paasmaker.heart.runtime: ['all', 'slow', 'heart', 'runtime'],
