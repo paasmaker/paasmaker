@@ -637,6 +637,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				for queued in meta['queue']:
 					self._connect_redis(queued[0], queued[1], queued[2])
 
+			def on_redis_startup_failure(message):
+				# TODO: Handle this.
+				pass
+
 			# Change the action based on our state.
 			if meta['state'] == 'CREATE':
 				# This is the first attempt to access it.
@@ -654,16 +658,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					# Doesn't yet exist. Create it.
 					meta['manager'].configure(directory, credentials['port'], credentials['host'], credentials['password'])
 
-				meta['manager'].start_if_not_running()
-
-				# Wait for the port to be in use.
-				self.port_allocator.wait_until_port_used(
-					self.io_loop,
-					credentials['port'],
-					5,
-					on_redis_started,
-					None # TODO: This is the timeout callback.
-				)
+				meta['manager'].start_if_not_running(on_redis_started, on_redis_startup_failure)
 
 			elif meta['state'] == 'STARTING':
 				# Queue up our callbacks.

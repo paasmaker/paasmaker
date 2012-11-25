@@ -1,5 +1,4 @@
 
-import tornadoredis
 import os
 import signal
 import shutil
@@ -9,7 +8,12 @@ import subprocess
 import time
 import unittest
 
+import paasmaker
+from ..common.testhelpers import TestHelpers
 from manageddaemon import ManagedDaemon, ManagedDaemonError
+
+import tornado.testing
+import tornadoredis
 
 class ManagedRedisError(ManagedDaemonError):
 	pass
@@ -61,11 +65,9 @@ vm-enabled no
 	def get_pid_path(self):
 		return os.path.join(self.parameters['working_dir'], 'redis.pid')
 
-	def start(self):
+	def start(self, callback, error_callback):
 		"""
 		Start up the server for this instance.
-
-		Throws an exception if the redis server fails to start.
 		"""
 		# Write out the configuration.
 		configfile = self.get_configuration_path(self.parameters['working_dir'])
@@ -87,7 +89,16 @@ vm-enabled no
 			]
 		)
 
-	def get_client(self, io_loop=None):
+		# Wait for the port to come into use.
+		self.configuration.port_allocator.wait_until_port_used(
+			self.configuration.io_loop,
+			self.parameters['port'],
+			5,
+			callback,
+			error_callback
+		)
+
+	def get_client(self):
 		"""
 		Get a redis client object for this instance.
 		"""
@@ -96,7 +107,7 @@ vm-enabled no
 
 		# Create a client for it.
 		self.client = tornadoredis.Client(host=self.parameters['host'],
-			port=self.parameters['port'], io_loop=io_loop)
+			port=self.parameters['port'], io_loop=self.configuration.io_loop)
 		self.client.connect()
 
 		return self.client
@@ -122,4 +133,43 @@ vm-enabled no
 		self.stop(signal.SIGKILL)
 		shutil.rmtree(self.parameters['working_dir'])
 
-# TODO: Add unit tests for this.
+class ManagedRedisTest(tornado.testing.AsyncTestCase, TestHelpers):
+	def setUp(self):
+		super(ManagedRedisTest, self).setUp()
+		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [], io_loop=self.io_loop)
+
+	def tearDown(self):
+		if hasattr(self, 'server'):
+			self.server.destroy()
+		self.configuration.cleanup()
+		super(ManagedRedisTest, self).tearDown()
+
+	def callback(self, channel, method, header, body):
+		# Print out the message.
+		#print body
+		# Signal that we got it.
+		self.stop()
+
+	def test_basic(self):
+		self.server = ManagedRedis(self.configuration)
+		self.server.configure(
+			self.configuration.get_scratch_path_exists('redis'),
+			self.configuration.get_free_port(),
+			'127.0.0.1'
+		)
+		self.server.start(self.stop, self.stop)
+		result = self.wait()
+
+		self.assertIn("In appropriate state", result, "Failed to start RabbitMQ server.")
+
+		client = self.server.get_client()
+
+		client.set('test', 'foo', callback=self.stop)
+		self.wait()
+
+		client.get('test', callback=self.stop)
+		result = self.wait()
+
+		self.assertEquals('foo', result, "Result was not as expected.")
+
+		# TODO: Test stopping and resuming the service.

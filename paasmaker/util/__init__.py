@@ -7,6 +7,7 @@ from plugin import PluginRegistry, PluginExample, MODE
 from port import FreePortFinder, NoFreePortException
 from manageddaemon import ManagedDaemon, ManagedDaemonError
 from managedredis import ManagedRedis, ManagedRedisError
+from managedrabbitmq import ManagedRabbitMQ, ManagedRabbitMQError
 from memoryredis import MemoryRedis
 from temporaryrabbitmq import TemporaryRabbitMQ
 from commandsupervisor import CommandSupervisorLauncher

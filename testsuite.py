@@ -24,10 +24,12 @@ test_sets = {
 	paasmaker.util.port: ['all', 'slow', 'util', 'network'],
 	paasmaker.util.plugin: ['all', 'quick', 'util', 'configuration', 'plugin'],
 	paasmaker.util.commandsupervisor: ['all', 'slow', 'util', 'process'],
-	paasmaker.util.temporaryrabbitmq: ['slow', 'util', 'messaging'],
+	paasmaker.util.temporaryrabbitmq: ['slow', 'util', 'messaging', 'rabbitmq'],
 	paasmaker.util.popen: ['all', 'slow', 'util', 'process'],
 	paasmaker.util.streamingchecksum: ['all', 'util', 'checksum'],
 	paasmaker.util.processcheck: ['all', 'util', 'process'],
+	paasmaker.util.managedrabbitmq: ['slow', 'util', 'messaging', 'managedservice', 'rabbitmq'],
+	paasmaker.util.managedredis: ['slow', 'util', 'redis', 'managedservice'],
 
 	paasmaker.router.router: ['all', 'slow', 'router'],
 

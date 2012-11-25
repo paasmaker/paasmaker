@@ -17,6 +17,8 @@ class ManagedDaemon(object):
 		self.client = None
 
 	# Your subclass should supply a configure() method.
+	# And a few other things as well - a start() specifically.
+
 	def load_parameters(self, working_dir):
 		"""
 		Load the parameters from the working directory.
@@ -81,9 +83,11 @@ class ManagedDaemon(object):
 	def get_pid_path(self):
 		raise NotImplementedError("You must implement get_pid_path().")
 
-	def start_if_not_running(self):
+	def start_if_not_running(self, callback, error_callback):
 		if not self.is_running():
-			self.start()
+			self.start(callback, error_callback)
+		else:
+			callback("Already running.")
 
 	def destroy(self):
 		raise NotImplementedError("You must implement destroy()")
