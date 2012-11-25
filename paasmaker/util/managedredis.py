@@ -9,6 +9,8 @@ import subprocess
 import json
 import time
 
+from processcheck import ProcessCheck
+
 class ManagedRedisError(Exception):
 	pass
 
@@ -153,10 +155,12 @@ vm-enabled no
 		return self.client
 
 	def is_running(self):
-		# TODO: Make this more robust than checking if the PID file exists.
-		if self.get_pid():
-			return True
+		pid = self.get_pid()
+		if pid:
+			# Do an advanced check on pid.
+			return ProcessCheck.is_running(pid, 'redis-server')
 		else:
+			# No PID at all. Not running.
 			return False
 
 	def stop(self, sig=signal.SIGTERM):
