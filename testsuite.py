@@ -27,6 +27,7 @@ test_sets = {
 	paasmaker.util.temporaryrabbitmq: ['slow', 'util', 'messaging'],
 	paasmaker.util.popen: ['all', 'slow', 'util', 'process'],
 	paasmaker.util.streamingchecksum: ['all', 'util', 'checksum'],
+	paasmaker.util.processcheck: ['all', 'util', 'process'],
 
 	paasmaker.router.router: ['all', 'slow', 'router'],
 
