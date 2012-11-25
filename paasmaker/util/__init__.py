@@ -5,6 +5,7 @@ from configurationhelper import ConfigurationHelper
 from apirequest import APIRequest, APIResponse
 from plugin import PluginRegistry, PluginExample, MODE
 from port import FreePortFinder, NoFreePortException
+from manageddaemon import ManagedDaemon, ManagedDaemonError
 from managedredis import ManagedRedis, ManagedRedisError
 from memoryredis import MemoryRedis
 from temporaryrabbitmq import TemporaryRabbitMQ

@@ -6,16 +6,16 @@ import shutil
 import tempfile
 import logging
 import subprocess
-import json
 import time
+import unittest
 
-from processcheck import ProcessCheck
+from manageddaemon import ManagedDaemon, ManagedDaemonError
 
-class ManagedRedisError(Exception):
+class ManagedRedisError(ManagedDaemonError):
 	pass
 
-class ManagedRedis(object):
-	redis_server_config = """
+class ManagedRedis(ManagedDaemon):
+	REDIS_SERVER_CONFIG = """
 daemonize yes
 pidfile %(working_dir)s/redis.pid
 dir %(working_dir)s
@@ -41,11 +41,6 @@ appendonly no
 vm-enabled no
 """
 
-	def __init__(self, configuration):
-		self.configuration = configuration
-		self.parameters = {}
-		self.client = None
-
 	def configure(self, working_dir, port, bind_host, password=None):
 		"""
 		Configure this instance.
@@ -63,61 +58,8 @@ vm-enabled no
 
 		self.save_parameters()
 
-	def load_parameters(self, working_dir):
-		"""
-		Load the parameters from the working directory.
-
-		Throws an exception if that directory is not configured.
-		"""
-		parameters_path = self.get_parameters_path(working_dir)
-		config_path = self.get_configuration_path(working_dir)
-		if os.path.exists(config_path):
-			# TODO: Some more error checking.
-			fp = open(config_path, 'r')
-			self.parameters = json.loads(fp.read())
-			fp.close()
-		else:
-			raise ManagedRedisError('No configuration file found in the working directory. Looking for %s.' % config_path)
-
-	def save_parameters(self):
-		"""
-		Save the parameters file to disk.
-		"""
-		# TODO: More error checking.
-		fp = open(self.get_parameters_path(self.parameters['working_dir']), 'w')
-		fp.write(json.dumps(self.parameters))
-		fp.close()
-
-	def get_parameters_path(self, working_dir):
-		"""
-		Get the parameters configuration path.
-		"""
-		return os.path.join(working_dir, 'redis.json')
-
-	def get_configuration_path(self, working_dir):
-		"""
-		Get the redis server configuration path.
-		"""
-		return os.path.join(working_dir, 'redis.conf')
-
-	def get_pid(self):
-		"""
-		Gets the PID of the running instance. This just reads the on disk
-		PID file, and may not as such indicate that it's running. Returns
-		None if no pid file found.
-		"""
-		pidpath = os.path.join(self.parameters['working_dir'], 'redis.pid')
-		if os.path.exists(pidpath):
-			fp = open(pidpath, 'r')
-			pid = int(fp.read())
-			fp.close()
-			return pid
-		else:
-			return None
-
-	def start_if_not_running(self):
-		if not self.is_running():
-			self.start()
+	def get_pid_path(self):
+		return os.path.join(self.parameters['working_dir'], 'redis.pid')
 
 	def start(self):
 		"""
@@ -131,14 +73,19 @@ vm-enabled no
 			self.parameters['auth_line'] = "requirepass %s" % self.parameters['password']
 		else:
 			self.parameters['auth_line'] = ''
-		redisconfig = self.redis_server_config % self.parameters
+		redisconfig = self.REDIS_SERVER_CONFIG % self.parameters
 		fp = open(configfile, 'w')
 		fp.write(redisconfig)
 		fp.close()
 
 		# Fire up the server.
 		logging.info("Starting up redis server on port %d." % self.parameters['port'])
-		subprocess.check_call([self.configuration.get_flat('redis_binary'), self.get_configuration_path(self.parameters['working_dir'])])
+		subprocess.check_call(
+			[
+				self.configuration.get_flat('redis_binary'),
+				self.get_configuration_path(self.parameters['working_dir'])
+			]
+		)
 
 	def get_client(self, io_loop=None):
 		"""
@@ -154,14 +101,8 @@ vm-enabled no
 
 		return self.client
 
-	def is_running(self):
-		pid = self.get_pid()
-		if pid:
-			# Do an advanced check on pid.
-			return ProcessCheck.is_running(pid, 'redis-server')
-		else:
-			# No PID at all. Not running.
-			return False
+	def is_running(self, keyword=None):
+		return super(ManagedRedis, self).is_running('redis-server')
 
 	def stop(self, sig=signal.SIGTERM):
 		"""
@@ -171,16 +112,14 @@ vm-enabled no
 			self.client.disconnect()
 			self.client = None
 
-		pid = self.get_pid()
-		if pid:
-			os.kill(pid, sig)
+		super(ManagedRedis, self).stop(sig)
 
 	def destroy(self):
 		"""
 		Destroy this instance of redis, removing all assigned data.
 		"""
-		self.stop()
-		# TODO: This blocks the process. It's required because if we
-		# remove the dir too soon, it doesn't end up killing the redis process.
-		time.sleep(0.2)
+		# Hard shutdown - we're about to delete the data anyway.
+		self.stop(signal.SIGKILL)
 		shutil.rmtree(self.parameters['working_dir'])
+
+# TODO: Add unit tests for this.

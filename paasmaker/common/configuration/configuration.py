@@ -650,7 +650,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				meta['manager'] = paasmaker.util.managedredis.ManagedRedis(self)
 				try:
 					meta['manager'].load_parameters(directory)
-				except paasmaker.util.ManagedRedisError, ex:
+				except paasmaker.util.ManagedDaemonError, ex:
 					# Doesn't yet exist. Create it.
 					meta['manager'].configure(directory, credentials['port'], credentials['host'], credentials['password'])
 

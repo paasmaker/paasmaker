@@ -156,7 +156,7 @@ router:
 			for key, meta in self.redis_meta.iteritems():
 				if meta['state'] == 'STARTED':
 					logger.info("Killing off test redis instance.")
-					meta['manager'].stop(signal.SIGKILL)
+					meta['manager'].destroy()
 
 		if self.message_broker_server:
 			self.message_broker_server.stop()
