@@ -822,9 +822,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def job_exists_locally(self, job_id):
 		path = self.get_job_log_path(job_id)
 		return os.path.exists(path)
-	def setup_job_watcher(self, io_loop):
+	def setup_job_watcher(self):
 		if not self.job_watcher:
-			self.job_watcher = paasmaker.util.joblogging.JobWatcher(self, io_loop)
+			self.job_watcher = paasmaker.util.joblogging.JobWatcher(self)
 	def get_job_watcher(self):
 		return self.job_watcher
 	def send_job_status(self, job_id, state, source=None):

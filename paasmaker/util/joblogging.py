@@ -69,11 +69,11 @@ class JobLoggingFileHandler(logging.Handler):
 # And if there is a lot of log output, it would make sense to batch
 # it up in 200ms batches. I'm open to suggestions here.
 class JobWatcher(object):
-	def __init__(self, configuration, io_loop):
+	def __init__(self, configuration):
 		self.configuration = configuration
 		self.watches = {}
 		# TODO: Allow this interval to be adjusted?
-		self.periodic = tornado.ioloop.PeriodicCallback(self.check_log_files, 200, io_loop=io_loop)
+		self.periodic = tornado.ioloop.PeriodicCallback(self.check_log_files, 200, io_loop=configuration.io_loop)
 		self.active = False
 
 	def add_watch(self, job_id):
@@ -158,8 +158,8 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 class JobLoggingTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
 		super(JobLoggingTest, self).setUp()
-		self.configuration = paasmaker.common.configuration.ConfigurationStub()
-		self.configuration.setup_job_watcher(self.io_loop)
+		self.configuration = paasmaker.common.configuration.ConfigurationStub(io_loop=self.io_loop)
+		self.configuration.setup_job_watcher()
 		self.logger = logging.getLogger('job')
 		# Prevent propagation to the parent. This prevents extra messages
 		# during unit tests.
