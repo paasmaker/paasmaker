@@ -155,7 +155,7 @@ class MessageExchange:
 class MessageExchangeTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		super(MessageExchangeTest, self).setUp()
-		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'])
+		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'], io_loop=self.io_loop)
 
 	def tearDown(self):
 		self.configuration.cleanup()
@@ -173,13 +173,10 @@ class MessageExchangeTest(tornado.testing.AsyncTestCase, TestHelpers):
 		pub.subscribe(self.on_job_status_update, self.configuration.get_job_status_pub_topic(job_id))
 
 		# Set up our exchange.
-		self.configuration.setup_message_exchange(
-			job_status_ready_callback=self.stop,
-			io_loop=self.io_loop
-		)
+		self.configuration.setup_message_exchange(self.stop, self.stop)
 
 		# Wait for the system to be ready.
-		self.wait()
+		self.wait(timeout=10)
 
 		# Now send off a job update. This shouldn't actually touch the broker.
 		self.configuration.send_job_status(job_id, state='TEST')
@@ -201,15 +198,10 @@ class MessageExchangeTest(tornado.testing.AsyncTestCase, TestHelpers):
 		pub.subscribe(self.on_instance_status_update, self.configuration.get_instance_status_pub_topic(instance_id))
 
 		# Set up our exchange.
-		self.configuration.setup_message_exchange(
-			instance_status_ready_callback=self.stop,
-			instance_audit_ready_callback=self.stop,
-			io_loop=self.io_loop
-		)
+		self.configuration.setup_message_exchange(self.stop, self.stop)
 
-		# Wait twice for the system to be ready.
-		self.wait()
-		self.wait()
+		# Wait for the system to be ready.
+		self.wait(timeout=10)
 
 		# Now send off a job update. This shouldn't actually touch the broker.
 		self.configuration.send_instance_status(instance_id, state='TEST')

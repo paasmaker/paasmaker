@@ -29,6 +29,10 @@ master:
   host: localhost
   port: %(master_port)d
   isitme: true
+broker:
+  host: localhost
+  port: %(broker_port)d
+  managed: true
 
 redis:
   table:
@@ -116,6 +120,7 @@ router:
 		self.params['router_table_port'] = allocator.free_in_range(42510, 42599)
 		self.params['router_stats_port'] = allocator.free_in_range(42510, 42599)
 		self.params['jobs_port'] = allocator.free_in_range(42510, 42599)
+		self.params['broker_port'] = allocator.free_in_range(42510, 42599)
 
 		# Create the configuration file.
 		configuration = self.default_config % self.params
@@ -129,10 +134,6 @@ router:
 
 		self.configname = configfile[1]
 		open(self.configname, 'w').write(configuration)
-
-		self.router_redis = None
-		self.message_broker_server = None
-		self.message_broker_client = None
 
 		# Call parent constructor.
 		super(ConfigurationStub, self).__init__()
@@ -158,8 +159,8 @@ router:
 					logger.info("Killing off test redis instance.")
 					meta['manager'].destroy()
 
-		if self.message_broker_server:
-			self.message_broker_server.stop()
+		if hasattr(self, 'broker_server'):
+			self.broker_server.destroy()
 
 		# Remove files that we created.
 		shutil.rmtree(self.params['log_dir'])
@@ -172,38 +173,6 @@ router:
 		# Force debug mode on.
 		settings['debug'] = True
 		return settings
-
-	def setup_message_exchange(self,
-			job_status_ready_callback=None,
-			instance_status_ready_callback=None,
-			instance_audit_ready_callback=None,
-			io_loop=None):
-		self.exchange = paasmaker.common.core.MessageExchange(self)
-		if not self.message_broker_server:
-			logger.debug("Firing up temporary rabbitmq server... (this can take a few seconds)")
-
-			# A callback that finishes the setup.
-			def on_connection_ready(client):
-				logger.debug("Temporary rabbitmq server is running. Setting up exchange.")
-				self.exchange.setup(
-					client,
-					job_status_ready_callback,
-					instance_status_ready_callback,
-					instance_audit_ready_callback
-				)
-
-			# Start up a message broker.
-			self.message_broker_server = paasmaker.util.temporaryrabbitmq.TemporaryRabbitMQ(self)
-			self.message_broker_server.start()
-			self.message_broker_server.get_client(io_loop=io_loop, callback=on_connection_ready)
-		else:
-			# Already fired up. Just call the callbacks.
-			if job_status_ready_callback:
-				job_status_ready_callback()
-			if instance_status_ready_callback:
-				instance_status_ready_callback()
-			if instance_audit_ready_callback:
-				instance_audit_ready_callback()
 
 class TestConfigurationStub(unittest.TestCase):
 	def test_simple(self):
