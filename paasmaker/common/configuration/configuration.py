@@ -739,11 +739,15 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.message_exchange_ready_counter = 0
 		def something_ready(message):
 			self.message_exchange_ready_counter += 1
-			logger.debug("%d of %d things ready for the message broker.", self.message_exchange_ready_counter, 3)
+			logger.debug(
+				"%d of %d things ready for the message broker.",
+				self.message_exchange_ready_counter,
+				3
+			)
 			logger.debug(message)
 			if self.message_exchange_ready_counter == 3:
 				logger.debug("Message exchange is now ready.")
-				callback()
+				callback("Message exchange is now ready.")
 
 		# A callback that finishes the setup.
 		def on_connection_ready(client):

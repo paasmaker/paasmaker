@@ -48,7 +48,7 @@ class RedisJobBackend(JobBackend):
 
 	def redis_ready(self, client):
 		self.redis = client
-		self.setup_callback()
+		self.setup_callback("Jobs backend Redis ready.")
 
 	def _to_json(self, values):
 		out = {}

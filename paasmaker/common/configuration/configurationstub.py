@@ -29,6 +29,7 @@ master:
   host: localhost
   port: %(master_port)d
   isitme: true
+
 broker:
   host: localhost
   port: %(broker_port)d

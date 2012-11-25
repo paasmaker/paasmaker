@@ -3,8 +3,12 @@ import os
 import signal
 import shutil
 import json
+import logging
 
 from processcheck import ProcessCheck
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 class ManagedDaemonError(Exception):
 	pass
@@ -27,10 +31,11 @@ class ManagedDaemon(object):
 		"""
 		parameters_path = self.get_parameters_path(working_dir)
 		config_path = self.get_configuration_path(working_dir)
-		if os.path.exists(config_path):
+		if os.path.exists(parameters_path):
 			# TODO: Some more error checking.
-			fp = open(config_path, 'r')
-			self.parameters = json.loads(fp.read())
+			fp = open(parameters_path, 'r')
+			contents = fp.read()
+			self.parameters = json.loads(contents)
 			fp.close()
 		else:
 			raise ManagedDaemonError('No configuration file found in the working directory. Looking for %s.' % config_path)
@@ -85,8 +90,10 @@ class ManagedDaemon(object):
 
 	def start_if_not_running(self, callback, error_callback):
 		if not self.is_running():
+			logging.debug("Starting up managed daemon as it's not currently running.")
 			self.start(callback, error_callback)
 		else:
+			logging.debug("Managed daemon already running.")
 			callback("Already running.")
 
 	def destroy(self):

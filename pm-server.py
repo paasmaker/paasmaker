@@ -33,7 +33,7 @@ routes = []
 
 # Set up the job logger.
 paasmaker.util.joblogging.JobLoggerAdapter.setup_joblogger(configuration)
-configuration.setup_job_watcher(tornado.ioloop.IOLoop.instance())
+configuration.setup_job_watcher()
 
 if configuration.is_pacemaker():
 	# Pacemaker setup.
@@ -73,11 +73,48 @@ application_settings = configuration.get_tornado_configuration()
 #print str(application_settings)
 application = tornado.web.Application(routes, **application_settings)
 
+def on_completed_startup():
+	# TODO: Register the node.
+
+	# Start listening for HTTP requests, as everything is ready.
+	logging.info("Listening on port %d", configuration['http_port'])
+	application.listen(configuration['http_port'])
+
+def on_intermediary_started(message):
+	logger.debug(message)
+	on_intermediary_started.required -= 1
+	# See if everything is ready.
+	if on_intermediary_started.required == 0:
+		on_completed_startup()
+	else:
+		logger.debug("Still waiting on %d other things for startup.", on_intermediary_started.required)
+
+on_intermediary_started.required = 0
+
+def on_intermediary_failed(message, exception):
+	logger.error(message)
+	logger.error(exception)
+	logger.critical("Aborting startup due to failure.")
+	tornado.ioloop.IOLoop.instance().stop()
+
+def on_ioloop_started():
+	logger.debug("IO loop running. Launching other connections.")
+
+	# Job manager
+	# TODO: Only need one count if the message exchange is not required.
+	on_intermediary_started.required += 2
+	configuration.startup_job_manager(on_intermediary_started, on_intermediary_failed)
+
+	# Message exchange.
+	configuration.setup_message_exchange(on_intermediary_started, on_intermediary_failed)
+
+	logger.debug("Launched all startup jobs.")
+
 # Commence the application.
 if __name__ == "__main__":
-	# Set up the application...
-	application.listen(configuration['http_port'])
-	logging.info("Listening on port %d", configuration['http_port'])
-	# And start listening.
+	# Add a callback to get started once the IO loop is up and running.
+	tornado.ioloop.IOLoop.instance().add_callback(on_ioloop_started)
+
+	# Start up the IO loop.
 	tornado.ioloop.IOLoop.instance().start()
 	logging.info("Exiting.")
