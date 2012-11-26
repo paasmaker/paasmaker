@@ -551,6 +551,13 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					{}
 				)
 
+				# AUTHENTICATION PLUGINS
+				self.plugins.register(
+					'paasmaker.auth.internal',
+					'paasmaker.pacemaker.auth.internal.InternalAuth',
+					{}
+				)
+
 			# Load plugins from the config now, so we can override the
 			# default plugins if we need to.
 			self.load_plugins(self.plugins, self['pacemaker']['plugins'])
