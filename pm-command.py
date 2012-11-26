@@ -51,12 +51,14 @@ class RootAction(object):
 	def generic_api_response(self, response):
 		if response.success:
 			logging.info("Successfully executed request.")
+			# TODO: Handle warnings.
 			self.prettyprint(response.data)
 			sys.exit(0)
 		else:
 			logging.error("Request failed.")
 			for error in response.errors:
 				logging.error(error)
+			# TODO: Print errors in JSON format.
 			self.prettyprint(response.data)
 			self.exit(1)
 
