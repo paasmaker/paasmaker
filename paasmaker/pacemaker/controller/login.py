@@ -14,6 +14,9 @@ class LoginController(BaseController):
 
 	@tornado.web.asynchronous
 	def post(self):
+		# TODO: Sometimes this calls finish() twice, if the login fails.
+		# Figure out why this is.
+
 		# Check the username/password supplied.
 		username = self.param('username')
 		password = self.param('password')
