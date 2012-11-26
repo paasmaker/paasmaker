@@ -5,6 +5,7 @@ import tornado.ioloop
 import argparse
 
 import sys
+import json
 
 # Internal imports.
 import paasmaker
@@ -13,7 +14,10 @@ import paasmaker
 import logging
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
-# TODO: Write tests for all the actions in this file.
+# TODO: Write tests for all the actions in this file. Integration tests might cover this off
+# though? But need to make sure we have appropriate coverage.
+
+# TODO: When an error occurs, exit.
 
 class RootAction(object):
 	def options(self, parser):
@@ -25,6 +29,9 @@ class RootAction(object):
 
 	def describe(self):
 		raise NotImplementedError("Not implemented.")
+
+	def prettyprint(self, data):
+		print json.dumps(data, indent=4, sort_keys=True)
 
 	def exit(self, code):
 		tornado.ioloop.IOLoop.instance().stop()
@@ -44,12 +51,13 @@ class RootAction(object):
 	def generic_api_response(self, response):
 		if response.success:
 			logging.info("Successfully executed request.")
-			logging.debug("Server response: %s", str(response.data))
+			self.prettyprint(response.data)
 			sys.exit(0)
 		else:
 			logging.error("Request failed.")
 			for error in response.errors:
 				logging.error(error)
+			self.prettyprint(response.data)
 			self.exit(1)
 
 class UserCreateAction(RootAction):
@@ -66,6 +74,19 @@ class UserCreateAction(RootAction):
 		request = paasmaker.common.api.user.UserCreateAPIRequest(None)
 		request.set_user_params(args.name, args.login, args.email, True)
 		request.set_user_password(args.password)
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
+class UserGetAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("user_id", help="User ID to fetch")
+
+	def describe(self):
+		return "Get a user record."
+
+	def process(self, args):
+		request = paasmaker.common.api.user.UserGetAPIRequest(None)
+		request.set_user(int(args.user_id))
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
@@ -93,6 +114,7 @@ action = sys.argv[1]
 
 ACTION_MAP = {
 	'user-create': UserCreateAction(),
+	'user-get': UserGetAction(),
 	'help': HelpAction()
 }
 
@@ -107,10 +129,10 @@ parser.add_argument('action', help="The action to perform.")
 
 # Set up common command line options.
 parser.add_argument("-r", "--remote", default="localhost", help="The pacemaker host.")
-parser.add_argument("-p", "--port", type=int, default=8888, help="The pacemaker port.")
+parser.add_argument("-p", "--port", type=int, default=42500, help="The pacemaker port.")
 parser.add_argument("-k", "--apikey", help="User API key to authenticate with.")
 parser.add_argument("--ssl", default=False, help="Use SSL to connect to the node.", action="store_true")
-parser.add_argument("--nodekey", help="Node key to authenticate with.")
+parser.add_argument("--nodekey", default="", help="Node key to authenticate with.")
 parser.add_argument("--loglevel", default="INFO", help="Log level, one of DEBUG|INFO|WARNING|ERROR|CRITICAL.")
 
 # Now get our action to set up it's options.
