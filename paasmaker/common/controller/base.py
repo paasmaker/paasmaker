@@ -396,7 +396,7 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase, TestHelpers):
 	def setUp(self):
 		self.configuration = None
 		super(BaseControllerTest, self).setUp()
-		self.configuration.setup_job_watcher(self.io_loop)
+		self.configuration.setup_job_watcher()
 	def tearDown(self):
 		self.configuration.cleanup()
 		super(BaseControllerTest, self).tearDown()
