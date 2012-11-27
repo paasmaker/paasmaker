@@ -10,6 +10,7 @@ from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.orm.interfaces import MapperExtension
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func
+from sqlalchemy import or_
 import hashlib
 
 from paasmaker.common.core import constants
@@ -166,12 +167,29 @@ class Role(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String, nullable=False, unique=True)
+	permissions = relationship("RolePermission", backref="role", cascade="all, delete, delete-orphan")
 
-	def __init__(self, name):
-		self.name = name
+	def add_permission(self, name):
+		if name not in self.perm_list():
+			new = RolePermission()
+			new.role = self
+			new.permission = name
+			self.permissions.append(new)
+
+	def remove_permission(self, name):
+		# TODO: Is there a better way to do this?
+		index = 0
+		for perm in self.permissions:
+			if perm.permission == name:
+				del self.permissions[index]
+			index += 1
+
+	def perm_list(self):
+		result = map(lambda x: x.permission, self.permissions)
+		return result
 
 	def __repr__(self):
-		return "<Role('%s')>" % self.name
+		return "<Role('%s' -> '%s')>" % (self.name, ",".join(self.perm_list()))
 
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['name', 'permissions'])
@@ -181,21 +199,13 @@ class RolePermission(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	role_id = Column(Integer, ForeignKey('role.id'), nullable=False, index=True)
-	role = relationship("Role", backref=backref('permissions', order_by=id))
-	name = Column(String, nullable=False, index=True)
-	granted = Column(Boolean, nullable=False, index=True)
-
-	role = relationship("Role", backref=backref('permissions', order_by=id))
-
-	def __init__(self, name, granted):
-		self.name = name
-		self.granted = granted
+	permission = Column(Enum(*constants.PERMISSION.ALL), nullable=False, index=True)
 
 	def __repr__(self):
-		return "<RolePermission('%s' -> '%s')>" % (self.name, str(self.granted))
+		return "<RolePermission('%s':'%s')>" % (self.role, self.permission)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['name', 'role', 'granted'])
+		return super(Node, self).flatten(['permission', 'role'])
 
 class Workspace(OrmBase, Base):
 	__tablename__ = 'workspace'
@@ -203,9 +213,6 @@ class Workspace(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	name = Column(String, nullable=False, unique=True)
 	_tags = Column('tags', Text, nullable=True)
-
-	def __init__(self):
-		pass
 
 	def __repr__(self):
 		return "<Workspace('%s')>" % self.name
@@ -224,27 +231,100 @@ class Workspace(OrmBase, Base):
 	def tags(self, val):
 		self._tags = json.dumps(val)
 
-class WorkspaceUser(OrmBase, Base):
-	__tablename__ = 'workspace_user'
+class WorkspaceUserRole(OrmBase, Base):
+	__tablename__ = 'workspace_user_role'
 
 	id = Column(Integer, primary_key=True)
-	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False, index=True)
+	# workspace_id can be null, meaning it's global.
+	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=True, index=True)
 	workspace = relationship("Workspace", backref=backref('users', order_by=id))
 	role_id = Column(Integer, ForeignKey('role.id'), index=True)
 	role = relationship("Role", backref=backref('workspaces', order_by=id))
 	user_id = Column(Integer, ForeignKey('user.id'), index=True)
 	user = relationship("User", backref=backref('workspaces', order_by=id))
 
-	def __init__(self, workspace, role, user):
-		self.workspace = workspace
-		self.role = role
-		self.user = user
-
 	def __repr__(self):
-		return "<WorkspaceUser('%s'@'%s' -> '%s')>" % (self.user, self.workspace, self.role)
+		return "<WorkspaceUserRole('%s'@'%s' -> '%s')>" % (self.user, self.workspace, self.role)
 
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['workspace', 'user', 'role'])
+
+class WorkspaceUserRoleFlat(OrmBase, Base):
+	__tablename__ = 'workspace_user_role_flat'
+
+	# No backrefs here - this is primarily for lookup.
+	id = Column(Integer, primary_key=True)
+	# workspace_id can be null, meaning it's global.
+	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=True, index=True)
+	workspace = relationship("Workspace")
+	role_id = Column(Integer, ForeignKey('role.id'), index=True)
+	role = relationship("Role")
+	user_id = Column(Integer, ForeignKey('user.id'), index=True)
+	user = relationship("User")
+	permission = Column(Enum(*constants.PERMISSION.ALL), nullable=False, index=True)
+
+	def __repr__(self):
+		return "<WorkspaceUserRoleFlat('%s'@'%s' -> '%s')>" % (self.user, self.workspace, self.role)
+
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['workspace', 'user', 'role'])
+
+	@staticmethod
+	def build_flat_table(session):
+		session.query(WorkspaceUserRoleFlat).delete()
+		links = session.query(WorkspaceUserRole)
+
+		for link in links:
+			for permission in link.role.permissions:
+				# Create a new flat object for all of this data.
+				flat = WorkspaceUserRoleFlat()
+				# Workspace ID might be none.
+				flat.workspace_id = link.workspace_id
+				flat.user_id = link.user_id
+				flat.role_id = link.role_id
+				flat.permission = permission.permission
+				session.add(flat)
+
+		session.commit()
+
+	@staticmethod
+	def has_permission(session, user, permission, workspace=None):
+		# Figure out if the user has permission to do something.
+		# We can easily determine this via a count on the flat
+		# table, by matching a few parameters.
+
+		query = session.query(
+			WorkspaceUserRoleFlat
+		).filter(
+			WorkspaceUserRoleFlat.user_id == user.id
+		).filter(
+			WorkspaceUserRoleFlat.permission == permission
+		)
+
+		if workspace:
+			# Either we need this permission on the given workspace,
+			# or a global permission that says yes.
+			query = query.filter(
+				or_(
+					WorkspaceUserRoleFlat.workspace_id == workspace.id,
+					WorkspaceUserRoleFlat.workspace_id == None
+				)
+			)
+		else:
+			# Only a global permission will do.
+			query = query.filter(
+				WorkspaceUserRoleFlat.workspace_id == None
+			)
+
+		#print
+		#print
+		#print "Testing for %s for user %s on workspace %s" % (permission, user, workspace)
+		#for res in query.all():
+		#	print str(res)
+
+		count = query.count()
+
+		return count > 0
 
 class Application(OrmBase, Base):
 	__tablename__ = 'application'
@@ -501,34 +581,27 @@ def init_db(engine):
 # From http://stackoverflow.com/questions/6941368/sqlalchemy-session-voes-in-unittest
 # Thanks!
 class TestModel(unittest.TestCase):
-	is_setup = False
-	session = None
-	metadata = None
-
-	test_items = [
-		Node(name='test', route='1.test.com', apiport=8888, uuid='1', state=constants.NODE.ACTIVE),
-		Node(name='test2', route='2.test.com', apiport=8888, uuid='2', state=constants.NODE.ACTIVE)
-	]
-
 	def setUp(self):
-		if not self.__class__.is_setup:
-			engine = sqlalchemy.create_engine('sqlite:///:memory:', echo=False)
-			DBSession = sessionmaker(bind=engine)
-			self.__class__.session = DBSession()
-			self.metadata = Base.metadata
-			self.metadata.bind = engine
-			self.metadata.drop_all() # Drop table
-			self.metadata.create_all() # Create tables
-			self.__class__.session.add_all(self.test_items) # Add data
-			self.__class__.session.commit() # Commit
-			self.__class__.is_setup = True
+		test_items = [
+			Node(name='test', route='1.test.com', apiport=8888, uuid='1', state=constants.NODE.ACTIVE),
+			Node(name='test2', route='2.test.com', apiport=8888, uuid='2', state=constants.NODE.ACTIVE)
+		]
+
+		engine = sqlalchemy.create_engine('sqlite:///:memory:', echo=False)
+		DBSession = sessionmaker(bind=engine)
+		self.session = DBSession()
+		self.metadata = Base.metadata
+		self.metadata.bind = engine
+		self.metadata.drop_all() # Drop table
+		self.metadata.create_all() # Create tables
+		self.session.add_all(test_items) # Add data
+		self.session.commit() # Commit
 
 	def tearDown(self):
-		if self.__class__.is_setup:
-			self.__class__.session.close()
+		self.session.close()
 
 	def test_is_working(self):
-		s = self.__class__.session
+		s = self.session
 		item = s.query(Node).first()
 		self.assertEquals(item.name, 'test', "Item has incorrect name.")
 		self.assertIsNone(item.deleted, "Item does not have inherited attribute.")
@@ -537,7 +610,7 @@ class TestModel(unittest.TestCase):
 		self.assertEquals(item.id, 1, "Item is not id 1.")
 
 	def test_created_timestamps(self):
-		s = self.__class__.session
+		s = self.session
 		n = Node('foo', 'bar', 8888, 'baz1', constants.NODE.ACTIVE)
 		s.add(n)
 		s.commit()
@@ -547,7 +620,7 @@ class TestModel(unittest.TestCase):
 		self.assertTrue(n2.created > n.created, "Created timestamp is not greater.")
 
 	def test_updated_timestamp(self):
-		s = self.__class__.session
+		s = self.session
 		n = Node('foo', 'bar', 8888, 'baz3', constants.NODE.ACTIVE)
 		s.add(n)
 		s.commit()
@@ -559,19 +632,18 @@ class TestModel(unittest.TestCase):
 		self.assertEquals(cmp(ts1, ts2), -1, "Updated timestamp did not change.")
 
 	def test_user_workspace(self):
-		s = self.__class__.session
+		s = self.session
 
 		user = User()
 		user.login = 'username'
 		user.email = 'username@example.com'
 		user.password = 'test'
-		role = Role('Administrator')
-		role_permission = RolePermission('ADMIN', True)
-		role.permissions.append(role_permission)
+		role = Role()
+		role.name = 'Administrator'
+		role.add_permission(constants.PERMISSION.USER_CREATE)
 
 		s.add(user)
 		s.add(role)
-		s.add(role_permission)
 
 		s.commit()
 
@@ -586,7 +658,10 @@ class TestModel(unittest.TestCase):
 		s.add(workspace)
 		s.commit()
 
-		wu = WorkspaceUser(workspace, role, user)
+		wu = WorkspaceUserRole()
+		wu.workspace = workspace
+		wu.role = role
+		wu.user = user
 		s.add(wu)
 		s.commit()
 
@@ -596,7 +671,7 @@ class TestModel(unittest.TestCase):
 		self.assertEquals(len(role.permissions), 1, "Role does not have any permissions.")
 
 	def test_flatten(self):
-		s = self.__class__.session
+		s = self.session
 		item = s.query(Node).first()
 		flat = item.flatten()
 		self.assertEquals(len(flat.keys()), 14, "Item has incorrect number of keys.")
@@ -610,10 +685,146 @@ class TestModel(unittest.TestCase):
 
 		self.assertEquals(decoded['node']['id'], 1, "ID is not correct.")
 
-	@classmethod
-	def setUpClass(cls):
-		pass
+	def test_user_permissions(self):
+		s = self.session
 
-	@classmethod
-	def tearDownClass(cls):
-		pass
+		user = User()
+		user.login = 'username'
+		user.email = 'username@example.com'
+		user.password = 'test'
+		role = Role()
+		role.name = 'Workspace Level'
+		role.add_permission(constants.PERMISSION.WORKSPACE_VIEW)
+
+		s.add(user)
+		s.add(role)
+
+		s.commit()
+
+		workspace = Workspace()
+		workspace.name = 'Work Zone'
+		workspace.tags = {'test': 'tag'}
+		s.add(workspace)
+		s.commit()
+
+		wu = WorkspaceUserRole()
+		wu.workspace = workspace
+		wu.user = user
+		wu.role = role
+		s.add(wu)
+		s.commit()
+
+		# Rebuild the permissions table.
+		WorkspaceUserRoleFlat.build_flat_table(s)
+
+		# Do some basic tests.
+		has_permission = WorkspaceUserRoleFlat.has_permission(
+			s,
+			user,
+			constants.PERMISSION.WORKSPACE_VIEW,
+			workspace
+		)
+		self.assertTrue(has_permission, "Unable to view workspace.")
+		has_permission = WorkspaceUserRoleFlat.has_permission(
+			s,
+			user,
+			constants.PERMISSION.WORKSPACE_CREATE,
+			workspace
+		)
+		self.assertFalse(has_permission, "Can create workspace.")
+		has_permission = WorkspaceUserRoleFlat.has_permission(
+			s,
+			user,
+			constants.PERMISSION.WORKSPACE_VIEW,
+			None
+		)
+		self.assertFalse(has_permission, "Can view workspace on global level.")
+		has_permission = WorkspaceUserRoleFlat.has_permission(
+			s,
+			user,
+			constants.PERMISSION.WORKSPACE_CREATE,
+			None
+		)
+		self.assertFalse(has_permission, "Can create workspace.")
+
+		# Revoke permission, then try again.
+		role.remove_permission(constants.PERMISSION.WORKSPACE_VIEW)
+		s.add(role)
+		s.commit()
+		WorkspaceUserRoleFlat.build_flat_table(s)
+
+		has_permission = WorkspaceUserRoleFlat.has_permission(
+			s,
+			user,
+			constants.PERMISSION.WORKSPACE_VIEW,
+			workspace
+		)
+		self.assertFalse(has_permission, "Can view workspace.")
+		has_permission = WorkspaceUserRoleFlat.has_permission(
+			s,
+			user,
+			constants.PERMISSION.WORKSPACE_VIEW,
+			None
+		)
+		self.assertFalse(has_permission, "Can view workspace on global level.")
+
+		# Now assign a global permission.
+		role_global = Role()
+		role_global.name = 'Global Level'
+		role_global.add_permission(constants.PERMISSION.USER_CREATE)
+
+		s.add(role_global)
+
+		wuglobal = WorkspaceUserRole()
+		wuglobal.user = user
+		wuglobal.role = role_global
+		s.add(wuglobal)
+		s.commit()
+
+		# Rebuild the permissions table.
+		WorkspaceUserRoleFlat.build_flat_table(s)
+
+		has_permission = WorkspaceUserRoleFlat.has_permission(
+			s,
+			user,
+			constants.PERMISSION.USER_CREATE,
+			workspace
+		)
+		self.assertTrue(has_permission, "Can't create user.")
+		has_permission = WorkspaceUserRoleFlat.has_permission(
+			s,
+			user,
+			constants.PERMISSION.USER_CREATE,
+			None
+		)
+		self.assertTrue(has_permission, "Can't create user.")
+
+		user_two = User()
+		user_two.login = 'username_two'
+		user_two.email = 'username_two@example.com'
+		user_two.password = 'test'
+		s.add(user_two)
+		s.commit()
+
+		# Rebuild the permissions table.
+		WorkspaceUserRoleFlat.build_flat_table(s)
+
+		# And make sure that new user can't do anything.
+		has_permission = WorkspaceUserRoleFlat.has_permission(
+			s,
+			user_two,
+			constants.PERMISSION.USER_CREATE,
+			workspace
+		)
+		self.assertFalse(has_permission, "Can create user.")
+		has_permission = WorkspaceUserRoleFlat.has_permission(
+			s,
+			user_two,
+			constants.PERMISSION.USER_CREATE,
+			None
+		)
+		self.assertFalse(has_permission, "Can create user.")
+
+		# TODO: Think of more imaginitive ways that this
+		# very very simple permissions system can be broken,
+		# and test them.
