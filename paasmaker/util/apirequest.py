@@ -13,26 +13,26 @@ class APIResponse(object):
 		self.data = {}
 		self.success = False
 
+		logger.debug("Raw API response body: %s", response.body)
+		if response.body[0] == '{' and response.body[-1] == '}':
+			try:
+				parsed = json.loads(response.body)
+				self.errors.extend(parsed['errors'])
+				self.warnings.extend(parsed['warnings'])
+				self.data = parsed['data']
+				self.raw = response
+
+			except ValueError, ex:
+				self.errors.append("Unable to parse JSON: " + str(ex))
+				self.errors.append("Supplied JSON: " + response.body)
+			except KeyError, ex:
+				self.errors.append("Response was malformed: " + str(ex))
+		else:
+			self.errors.append("Returned response was not JSON.")
+
 		if response.error:
 			logger.error("API request failed with error: %s", response.error)
 			self.errors.append(str(response.error))
-		else:
-			logger.debug("Raw API response body: %s", response.body)
-			if response.body[0] == '{' and response.body[-1] == '}':
-				try:
-					parsed = json.loads(response.body)
-					self.errors.extend(parsed['errors'])
-					self.warnings.extend(parsed['warnings'])
-					self.data = parsed['data']
-					self.raw = response
-
-				except ValueError, ex:
-					self.errors.append("Unable to parse JSON: " + str(ex))
-					self.errors.append("Supplied JSON: " + response.body)
-				except KeyError, ex:
-					self.errors.append("Response was malformed: " + str(ex))
-			else:
-				self.errors.append("Returned response was not JSON.")
 
 		if len(self.errors) == 0:
 			self.success = True
@@ -45,6 +45,7 @@ class APIRequest(object):
 	def __init__(self, configuration):
 		self.configuration = configuration
 		self.target = None
+		self.method = 'POST'
 		if configuration:
 			self.authmethod = 'node'
 			self.authvalue = self.configuration.get_flat('node_token')
@@ -54,21 +55,28 @@ class APIRequest(object):
 			self.authvalue = None
 			self.io_loop = tornado.ioloop.IOLoop.instance()
 
+	def method_get(self):
+		self.method = 'GET'
+
+	def duplicate_auth(self, request):
+		self.authmethod = request.authmethod
+		self.authvalue = request.authvalue
+
 	def set_apikey_auth(self, key):
-		self.authmethod = 'token'
+		self.authmethod = 'tokenheader'
 		self.authvalue = key
 
 	def set_nodekey_auth(self, key):
 		self.authmethod = 'node'
 		self.authvalue = key
 
-	def set_superkey_auth(self, key):
-		self.authmethod = 'super'
-		self.authvalue = key
-
-	def set_header_auth(self, key):
-		self.authmethod = 'header'
-		self.authvalue = key
+	def set_superkey_auth(self, key=None):
+		self.authmethod = 'superheader'
+		if key:
+			self.authvalue = key
+		else:
+			# TODO: More error checking here.
+			self.authvalue = self.configuration.get_flat('pacemaker.super_token')
 
 	def build_payload(self):
 		# Override in your subclass.
@@ -96,26 +104,38 @@ class APIRequest(object):
 		pass
 
 	def send(self, callback=None, **kwargs):
-		# Build what we're sending.
-		data = {}
-		data['data'] = self.build_payload()
-		data['auth'] = { 'method': self.authmethod, 'value': self.authvalue }
+		if self.method == 'GET' and self.authmethod in ['node', 'super', 'token']:
+			raise ValueError("Can't do a GET request with node, super, or token authentication methods.")
 
-		encoded = json.dumps(data, cls=paasmaker.util.jsonencoder.JsonEncoder)
+		logger.debug("In send() of API request of type %s", type(self))
 
-		kwargs['body'] = encoded
-		# Always a POST, because we're sending a body.
-		kwargs['method'] = 'POST'
+		if self.method == 'POST':
+			# Build what we're sending.
+			data = {}
+			data['data'] = self.build_payload()
+			data['auth'] = { 'method': self.authmethod, 'value': self.authvalue }
+
+			encoded = json.dumps(data, cls=paasmaker.util.jsonencoder.JsonEncoder)
+
+			kwargs['body'] = encoded
+			# Always a POST, because we're sending a body.
+			kwargs['method'] = 'POST'
+
+			logger.debug("Payload sending to server: %s", encoded)
+		else:
+			kwargs['method'] = 'GET'
+
 		# Don't follow redirects - this is an API request.
 		kwargs['follow_redirects'] = False
 
-		if self.authmethod == 'header':
+		if self.authmethod == 'userheader':
 			if not kwargs.has_key('headers'):
 				kwargs['headers'] = {}
 			kwargs['headers']['User-Token'] = self.authvalue
-
-		logger.debug("In send() of API request of type %s", type(self))
-		logger.debug("Payload sending to server: %s", encoded)
+		if self.authmethod == 'superheader':
+			if not kwargs.has_key('headers'):
+				kwargs['headers'] = {}
+			kwargs['headers']['Super-Token'] = self.authvalue
 
 		# The function called when it returns.
 		# It's a closure to preserve the callback provided.

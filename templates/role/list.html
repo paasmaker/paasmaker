@@ -1,0 +1,15 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Role List
+{% end %}
+
+{% block body %}
+	<p><a href="/role/create">Create a new role</a></p>
+
+	<ul>
+		{% for role in roles %}
+			<li><a href="/role/edit/{{ role.id }}">{{ role.name }}</a></li>
+		{% end %}
+	</ul>
+{% end %}

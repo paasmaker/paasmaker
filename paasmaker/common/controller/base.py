@@ -99,11 +99,15 @@ class BaseController(tornado.web.RequestHandler):
 		"""
 		try:
 			result = schema.deserialize(self.params)
+			return True
 		except colander.Invalid, ex:
 			logger.error("Invalid data supplied to this controller.")
 			logger.error(self)
 			logger.error(ex)
-			self.send_error(400, exc_info=ex)
+			self.add_error('Invalid data supplied.')
+			self.add_error(str(ex))
+			self.write_error(400, exc_info=ex)
+			return False
 
 	def param(self, name, default=None):
 		if self.params.has_key(name):
@@ -135,23 +139,27 @@ class BaseController(tornado.web.RequestHandler):
 		if self.NODE in methods:
 			# Check that a valid node authenticated.
 			logger.debug("Checking node authentication.")
-			found_allowed_method = found_allowed_method or self.check_node_auth()
-			logger.debug("Node authentication: %s", str(found_allowed_method))
+			node_allowed = self.check_node_auth()
+			if node_allowed:
+				found_allowed_method = True
+			logger.debug("Node authentication: %s", str(node_allowed))
 
 		if self.SUPER in methods:
 			# Check that a valid super key was supplied.
 			logger.debug("Checking super authentication.")
-			found_allowed_method = found_allowed_method or self.check_super_auth()
-			if found_allowed_method:
+			super_allowed = self.check_super_auth()
+			if super_allowed:
+				found_allowed_method = True
 				self.super_auth = True
-			logger.debug("Super authentication: %s", str(found_allowed_method))
+			logger.debug("Super authentication: %s", str(super_allowed))
 
 		if self.USER in methods:
 			# Check that a valid user is authenticated.
 			logger.debug("Checking user authentication.")
-			if self.get_current_user():
+			user_allowed = self.get_current_user()
+			if user_allowed:
 				found_allowed_method = True
-			logger.debug("Super authentication: %s", str(found_allowed_method))
+			logger.debug("User authentication: %s", user_allowed)
 
 		if not found_allowed_method:
 			# YOU ... SHALL NOT ... PAAS!
@@ -179,6 +187,10 @@ class BaseController(tornado.web.RequestHandler):
 		if self.configuration.is_pacemaker() and self.configuration.get_flat('pacemaker.allow_supertoken'):
 			if self.auth.has_key('method') and self.auth['method'] == 'super':
 				if self.auth.has_key('value') and self.auth['value'] == self.configuration.get_flat('pacemaker.super_token'):
+					return True
+			auth_using_header = self.request.headers.has_key('Super-Token')
+			if auth_using_header:
+				if self.request.headers['super-token'] == self.configuration.get_flat('pacemaker.super_token'):
 					return True
 		return False
 

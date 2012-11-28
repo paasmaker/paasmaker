@@ -203,7 +203,7 @@ class Role(OrmBase, Base):
 		return "<Role('%s' -> '%s')>" % (self.name, ",".join(self.permissions))
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['name', 'permissions'])
+		return super(Role, self).flatten(['name', 'permissions'])
 
 class RolePermission(OrmBase, Base):
 	__tablename__ = 'role_permission'
