@@ -167,29 +167,40 @@ class Role(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String, nullable=False, unique=True)
-	permissions = relationship("RolePermission", backref="role", cascade="all, delete, delete-orphan")
+	_permissions = relationship("RolePermission", backref="role", cascade="all, delete, delete-orphan")
 
 	def add_permission(self, name):
-		if name not in self.perm_list():
+		if name not in self.permissions:
 			new = RolePermission()
 			new.role = self
 			new.permission = name
-			self.permissions.append(new)
+			self._permissions.append(new)
 
 	def remove_permission(self, name):
 		# TODO: Is there a better way to do this?
 		index = 0
 		for perm in self.permissions:
-			if perm.permission == name:
-				del self.permissions[index]
+			if perm == name:
+				del self._permissions[index]
 			index += 1
 
-	def perm_list(self):
-		result = map(lambda x: x.permission, self.permissions)
-		return result
+	def only_permissions(self, permissions):
+		self.permssions = []
+		for perm in permissions:
+			self.add_permission(perm)
+
+	@hybrid_property
+	def permissions(self):
+		return map(lambda x: x.permission, self._permissions)
+
+	@permissions.setter
+	def permissions(self, val):
+		if not isinstance(val, list):
+			raise ValueError("Permissions must be a list of permissions.")
+		self.only_permissions(val)
 
 	def __repr__(self):
-		return "<Role('%s' -> '%s')>" % (self.name, ",".join(self.perm_list()))
+		return "<Role('%s' -> '%s')>" % (self.name, ",".join(self.permissions))
 
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['name', 'permissions'])
@@ -282,7 +293,7 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 				flat.workspace_id = link.workspace_id
 				flat.user_id = link.user_id
 				flat.role_id = link.role_id
-				flat.permission = permission.permission
+				flat.permission = permission
 				session.add(flat)
 
 		session.commit()
@@ -767,6 +778,20 @@ class TestModel(unittest.TestCase):
 			None
 		)
 		self.assertFalse(has_permission, "Can view workspace on global level.")
+
+		# Now set the permissions using the array whole set method.
+		role.permissions = [constants.PERMISSION.WORKSPACE_VIEW]
+		s.add(role)
+		s.commit()
+		WorkspaceUserRoleFlat.build_flat_table(s)
+
+		has_permission = WorkspaceUserRoleFlat.has_permission(
+			s,
+			user,
+			constants.PERMISSION.WORKSPACE_VIEW,
+			workspace
+		)
+		self.assertTrue(has_permission, "Can't view workspace.")
 
 		# Now assign a global permission.
 		role_global = Role()
