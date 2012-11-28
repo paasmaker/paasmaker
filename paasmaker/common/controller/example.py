@@ -125,7 +125,7 @@ class ExampleControllerTest(BaseControllerTest):
 
 	def test_post_json(self):
 		more = 2
-		auth = {'method': 'node', 'value': self.configuration.get_flat('auth_token')}
+		auth = {'method': 'node', 'value': self.configuration.get_flat('node_token')}
 		data = {'test': 'bar', 'more': more}
 		body = json.dumps({'auth': auth, 'data': data})
 		request = tornado.httpclient.HTTPRequest(

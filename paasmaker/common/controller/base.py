@@ -358,7 +358,7 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 		if self.NODE in self.AUTH_METHODS:
 			# Check that a valid node authenticated.
 			if auth.has_key('method') and auth['method'] == 'node':
-				if auth.has_key('value') and auth['value'] == self.configuration.get_flat('auth_token'):
+				if auth.has_key('value') and auth['value'] == self.configuration.get_flat('node_token'):
 					found_allowed_method = True
 
 		# TODO: Handle user token authentication.

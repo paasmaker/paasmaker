@@ -124,13 +124,13 @@ class LogStreamHandlerTestClient(TornadoWebSocketClient):
 
 	def subscribe(self, job_id, position=0):
 		data = { 'job_id': job_id, 'position': position }
-		auth = { 'method': 'node', 'value': self.configuration.get_flat('auth_token') }
+		auth = { 'method': 'node', 'value': self.configuration.get_flat('node_token') }
 		message = { 'request': 'subscribe', 'data': data, 'auth': auth }
 		self.send(json.dumps(message))
 
 	def unsubscribe(self, job_id):
 		data = { 'job_id': job_id }
-		auth = { 'method': 'node', 'value': self.configuration.get_flat('auth_token') }
+		auth = { 'method': 'node', 'value': self.configuration.get_flat('node_token') }
 		message = { 'request': 'unsubscribe', 'data': data, 'auth': auth }
 		self.send(json.dumps(message))
 
