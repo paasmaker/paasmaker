@@ -62,6 +62,9 @@ class ManagedRabbitMQ(ManagedDaemon):
 	def get_pid_path(self):
 		return self.parameters['pidfile']
 
+	def is_running(self, keyword=None):
+		return super(ManagedRabbitMQ, self).is_running('rabbitmq')
+
 	def start(self, callback, error_callback):
 		"""
 		Start up the server for this instance.
