@@ -128,7 +128,7 @@ class APIRequest(object):
 		# Don't follow redirects - this is an API request.
 		kwargs['follow_redirects'] = False
 
-		if self.authmethod == 'userheader':
+		if self.authmethod == 'tokenheader':
 			if not kwargs.has_key('headers'):
 				kwargs['headers'] = {}
 			kwargs['headers']['User-Token'] = self.authvalue
