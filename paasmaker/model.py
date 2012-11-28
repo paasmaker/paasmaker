@@ -258,7 +258,7 @@ class WorkspaceUserRole(OrmBase, Base):
 		return "<WorkspaceUserRole('%s'@'%s' -> '%s')>" % (self.user, self.workspace, self.role)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['workspace', 'user', 'role'])
+		return super(WorkspaceUserRole, self).flatten(['workspace', 'user', 'role'])
 
 class WorkspaceUserRoleFlat(OrmBase, Base):
 	__tablename__ = 'workspace_user_role_flat'
@@ -278,7 +278,7 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 		return "<WorkspaceUserRoleFlat('%s'@'%s' -> '%s')>" % (self.user, self.workspace, self.role)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['workspace', 'user', 'role'])
+		return super(WorkspaceUserRoleFlat, self).flatten(['workspace', 'user', 'role'])
 
 	@staticmethod
 	def build_flat_table(session):

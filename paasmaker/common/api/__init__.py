@@ -7,4 +7,4 @@ from user import UserCreateAPIRequest, UserEditAPIRequest
 from workspace import WorkspaceCreateAPIRequest, WorkspaceEditAPIRequest
 from instanceregister import InstanceRegisterAPIRequest
 from upload import UploadFileAPIRequest
-from role import RoleCreateAPIRequest, RoleEditAPIRequest
+from role import RoleCreateAPIRequest, RoleEditAPIRequest, RoleListAPIRequest, RoleAllocationListAPIRequest, RoleAllocationAPIRequest
