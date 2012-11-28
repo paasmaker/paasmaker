@@ -97,6 +97,16 @@ class PacemakerSchema(colander.MappingSchema):
 		title="Cluster Hostname",
 		description="The hostname postfix used to automatically generate hostnames when required. Eg, each application version gets a URL - N.<applicatio>.cluster_hostname.")
 
+	# TODO: Consider the security implications of this more.
+	allow_supertoken = colander.SchemaNode(colander.Boolean(),
+		title="Allow Super Token authentication",
+		description="If true, enable super token authentication.",
+		default=False,
+		missing=False)
+	super_token = colander.SchemaNode(colander.String(),
+		title="Super authentication token",
+		description="An authentication token that can be used to do anything, specifically designed to bootstrap the system. Also used for encrypting cookies.")
+
 	@staticmethod
 	def default():
 		return {'enabled': False, 'plugins': []}
@@ -283,8 +293,8 @@ class ConfigurationSchema(colander.MappingSchema):
 		missing=None,
 		default=None)
 
-	auth_token = colander.SchemaNode(colander.String(),
-		title="Authentication Token",
+	node_token = colander.SchemaNode(colander.String(),
+		title="Node Authentication Token",
 		description="Token used by nodes to validate each other. All nodes should have the same token")
 
 	log_directory = colander.SchemaNode(colander.String(),
@@ -770,8 +780,14 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 	def get_tornado_configuration(self):
 		settings = {}
-		# TODO: Use a different value from the auth token?
-		settings['cookie_secret'] = self['auth_token']
+		# If we're a pacemaker, the cookie secret is the cluster name
+		# and the super token combined.
+		# Otherwise, it's the node token, although non-pacemaker nodes
+		# should not be assigning cookies.
+		if self.is_pacemaker():
+			settings['cookie_secret'] = "%s-%s" % (self.get_flat('pacemaker.cluster_hostname'), self.get_flat('pacemaker.super_token'))
+		else:
+			settings['cookie_secret'] = self['node_token']
 		settings['template_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../../templates')
 		settings['static_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../../static')
 		settings['debug'] = (options.debug == 1)
@@ -948,7 +964,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 class TestConfiguration(unittest.TestCase):
 	minimum_config = """
-auth_token: 5893b415-f166-41a8-b606-7bdb68b88f0b
+node_token: 5893b415-f166-41a8-b606-7bdb68b88f0b
 log_directory: /tmp
 scratch_directory: /tmp
 master_host: localhost

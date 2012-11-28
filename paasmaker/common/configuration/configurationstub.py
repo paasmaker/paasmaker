@@ -22,7 +22,7 @@ class ConfigurationStub(configuration.Configuration):
 	default_config = """
 # The port to this test instance is the master port, for testing purposes.
 http_port: %(master_port)d
-auth_token: %(auth_token)s
+node_token: %(node_token)s
 log_directory: %(log_dir)s
 scratch_directory: %(scratch_dir)s
 master:
@@ -57,6 +57,8 @@ redis:
 	pacemaker_config = """
 pacemaker:
   enabled: true
+  super_token: %(super_token)s
+  allow_supertoken: true
   dsn: "sqlite:///:memory:"
   cluster_hostname: local.paasmaker.net
   plugins:
@@ -114,7 +116,8 @@ router:
 		allocator = paasmaker.util.port.FreePortFinder()
 
 		self.params['log_dir'] = tempfile.mkdtemp()
-		self.params['auth_token'] = str(uuid.uuid4())
+		self.params['node_token'] = str(uuid.uuid4())
+		self.params['super_token'] = str(uuid.uuid4())
 		self.params['heart_working_dir'] = tempfile.mkdtemp()
 		self.params['scratch_dir'] = tempfile.mkdtemp()
 		self.params['master_port'] = port

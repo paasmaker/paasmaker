@@ -7,7 +7,7 @@ import tornado
 import tornado.testing
 
 class InformationController(BaseController):
-	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
+	AUTH_METHODS = [BaseController.NODE, BaseController.USER, BaseController.SUPER]
 
 	def get(self):
 		self.add_data('is_heart', self.configuration.is_heart())

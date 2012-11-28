@@ -42,6 +42,7 @@ class BaseController(tornado.web.RequestHandler):
 	ANONYMOUS = 0
 	NODE = 1
 	USER = 2
+	SUPER = 3
 
 	# You must override this in your subclass.
 	AUTH_METHODS = []
@@ -61,7 +62,7 @@ class BaseController(tornado.web.RequestHandler):
 		self.user = None
 		self.auth = {}
 		self.params = {}
-		self.allowed_authentication_methods = ['anonymous']
+		self.super_auth = False
 		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
 
 		self.add_data_template('format_form_error', self.format_form_error)
@@ -128,21 +129,34 @@ class BaseController(tornado.web.RequestHandler):
 
 		if self.ANONYMOUS in methods:
 			# Anonymous is allowed. So let it go through...
+			logger.debug("Anonymous method allowed. Allowing request.")
 			found_allowed_method = True
 
 		if self.NODE in methods:
 			# Check that a valid node authenticated.
-			found_allowed_method = self.check_node_auth()
+			logger.debug("Checking node authentication.")
+			found_allowed_method = found_allowed_method or self.check_node_auth()
+			logger.debug("Node authentication: %s", str(found_allowed_method))
 
-		# TODO: Handle user token authentication.
+		if self.SUPER in methods:
+			# Check that a valid super key was supplied.
+			logger.debug("Checking super authentication.")
+			found_allowed_method = found_allowed_method or self.check_super_auth()
+			if found_allowed_method:
+				self.super_auth = True
+			logger.debug("Super authentication: %s", str(found_allowed_method))
+
 		if self.USER in methods:
 			# Check that a valid user is authenticated.
+			logger.debug("Checking user authentication.")
 			if self.get_current_user():
 				found_allowed_method = True
+			logger.debug("Super authentication: %s", str(found_allowed_method))
 
 		if not found_allowed_method:
 			# YOU ... SHALL NOT ... PAAS!
 			# (But with less bridge breaking.)
+			logger.warning("Access denied for request.")
 			if self.format == 'json':
 				raise tornado.web.HTTPError(403, 'Access is denied')
 			else:
@@ -154,8 +168,18 @@ class BaseController(tornado.web.RequestHandler):
 		Check to see if the node authentication is valid.
 		"""
 		if self.auth.has_key('method') and self.auth['method'] == 'node':
-			if self.auth.has_key('value') and self.auth['value'] == self.configuration.get_flat('auth_token'):
+			if self.auth.has_key('value') and self.auth['value'] == self.configuration.get_flat('node_token'):
 				return True
+		return False
+
+	def check_super_auth(self):
+		"""
+		Check to see if the super authentication is valid.
+		"""
+		if self.configuration.is_pacemaker() and self.configuration.get_flat('pacemaker.allow_supertoken'):
+			if self.auth.has_key('method') and self.auth['method'] == 'super':
+				if self.auth.has_key('value') and self.auth['value'] == self.configuration.get_flat('pacemaker.super_token'):
+					return True
 		return False
 
 	def get_current_user(self):

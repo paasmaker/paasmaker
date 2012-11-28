@@ -79,7 +79,7 @@ class LoginController(BaseController):
 			try_plugin(plugins.pop())
 
 	def allow_user(self, user):
-		self.set_secure_cookie("user", unicode(user.id))
+		self.set_secure_cookie("user", unicode("%d" % user.id))
 		self.add_data('success', True)
 		# Token is not for use with the auth token authentication method - because
 		# it expires. Instead, it's supplied back as a cookie and in the data for
@@ -216,6 +216,24 @@ class LoginControllerTest(BaseControllerTest):
 		# Try it again with the key.
 		request = paasmaker.common.api.InformationAPIRequest(self.configuration)
 		request.set_apikey_auth(u.apikey)
+		request.send(self.stop)
+		response = self.wait()
+
+		# This should succeed.
+		self.failIf(not response.success)
+
+	def test_login_superkey(self):
+		request = paasmaker.common.api.InformationAPIRequest(self.configuration)
+		request.set_superkey_auth('bogus')
+		request.send(self.stop)
+		response = self.wait()
+
+		# This will fail.
+		self.failIf(response.success)
+
+		# Try it again with the key.
+		request = paasmaker.common.api.InformationAPIRequest(self.configuration)
+		request.set_superkey_auth(self.configuration.get_flat('pacemaker.super_token'))
 		request.send(self.stop)
 		response = self.wait()
 

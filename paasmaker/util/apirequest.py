@@ -47,7 +47,7 @@ class APIRequest(object):
 		self.target = None
 		if configuration:
 			self.authmethod = 'node'
-			self.authvalue = self.configuration.get_flat('auth_token')
+			self.authvalue = self.configuration.get_flat('node_token')
 			self.io_loop = configuration.io_loop
 		else:
 			self.authmethod = None
@@ -60,6 +60,10 @@ class APIRequest(object):
 
 	def set_nodekey_auth(self, key):
 		self.authmethod = 'node'
+		self.authvalue = key
+
+	def set_superkey_auth(self, key):
+		self.authmethod = 'super'
 		self.authvalue = key
 
 	def set_header_auth(self, key):
