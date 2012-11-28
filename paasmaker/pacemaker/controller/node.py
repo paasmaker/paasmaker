@@ -171,7 +171,7 @@ class NodeControllerTest(BaseControllerTest):
 		response = self.wait()
 
 		self.failIf(response.success)
-		self.assertEquals(len(response.errors), 1, "There were no errors.")
+		self.assertEquals(len(response.errors), 2, "There were no errors.")
 		self.assertEquals(len(response.warnings), 0, "There were warnings.")
 
 	def test_fail_update_no_exist(self):
@@ -190,7 +190,7 @@ class NodeControllerTest(BaseControllerTest):
 		response = self.wait()
 
 		self.failIf(response.success)
-		self.assertEquals(len(response.errors), 1, "There were no errors.")
+		self.assertEquals(len(response.errors), 2, "There were no errors.")
 		self.assertEquals(len(response.warnings), 0, "There were warnings.")
 
 class NodeRegisterAPIRequestLocalHost(paasmaker.common.api.NodeRegisterAPIRequest):
