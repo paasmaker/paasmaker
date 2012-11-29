@@ -85,13 +85,13 @@ class BaseController(tornado.web.RequestHandler):
 					return
 				self.auth = result['auth']
 				self.raw_params.update(result['data'])
-			else:
-				# Unpack the request arguments into raw params.
-				# This is so it behaves just like an API request as well.
-				# Later on, when it's validated, it gets deflattened according
-				# to the schema.
-				for k, v in self.request.arguments.iteritems():
-					self.raw_params[k] = v[-1]
+
+		# Unpack the request arguments into raw params.
+		# This is so it behaves just like an API request as well.
+		# Later on, when it's validated, it gets deflattened according
+		# to the schema.
+		for k, v in self.request.arguments.iteritems():
+			self.raw_params[k] = v[-1]
 
 		# Must be one of the supported auth methods.
 		self.require_authentication(self.AUTH_METHODS)

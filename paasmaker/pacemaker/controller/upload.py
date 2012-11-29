@@ -37,20 +37,21 @@ class UploadController(BaseController):
 		md5 = hashlib.md5()
 		user = self.get_current_user()
 		md5.update(user.apikey)
-		md5.update(self.param('resumableIdentifier'))
+		md5.update(self.params['resumableIdentifier'])
 		identifier = md5.hexdigest()
 
 		return identifier
 
 	def _chunk_path(self):
 		temp_path = self.configuration.get_scratch_path_exists('partialuploads')
-		temp_file = os.path.join(temp_path, "%s.%06d" % (self._identifier(), int(self.param('resumableChunkNumber'))))
+		temp_file = os.path.join(temp_path, "%s.%06d" % (self._identifier(), int(self.params['resumableChunkNumber'])))
 
 		return temp_file
 
 	def get(self):
 		# Force JSON response.
 		self._set_format('json')
+		valid_data = self.validate_data(UploadChunkSchema())
 
 		# Test to see if a chunk exists. Return 200 if it does,
 		# or 404 otherwise.
@@ -90,7 +91,7 @@ class UploadController(BaseController):
 			temp_path = self.configuration.get_scratch_path_exists('partialuploads')
 			parts = glob.glob(os.path.join(temp_path, "%s.*" % identifier))
 			parts.sort()
-			if len(parts) * int(self.param('resumableChunkSize')) >= int(self.param('resumableTotalSize')):
+			if len(parts) * int(self.params['resumableChunkSize']) >= int(self.params['resumableTotalSize']):
 				logger.info("Assembling file because we have all the parts.")
 				# Must have all the parts.
 				# TODO: Make async.
@@ -128,6 +129,7 @@ class UploadControllerTest(BaseControllerTest):
 	def test_simple(self):
 		# Create a user.
 		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
