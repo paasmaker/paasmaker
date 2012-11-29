@@ -110,7 +110,7 @@ class RoleEditController(BaseController):
 		if not role:
 			role = self._default_role()
 		self.add_data('role', role)
-		self.add_data('available_permissions', constants.PERMISSION.ALL)
+		self.add_data_template('available_permissions', constants.PERMISSION.ALL)
 
 		self.render("role/edit.html")
 
@@ -136,7 +136,7 @@ class RoleEditController(BaseController):
 			self.redirect('/role/list')
 		else:
 			self.add_data('role', role)
-			self.add_data('available_permissions', constants.PERMISSION.ALL)
+			self.add_data_template('available_permissions', constants.PERMISSION.ALL)
 			self.render("role/edit.html")
 
 	@staticmethod

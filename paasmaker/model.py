@@ -185,13 +185,17 @@ class Role(OrmBase, Base):
 			index += 1
 
 	def only_permissions(self, permissions):
-		self.permssions = []
+		# TODO: Is there a better way to do this?
+		for i in range(len(self._permissions) - 1, -1, -1):
+			del self._permissions[i]
 		for perm in permissions:
 			self.add_permission(perm)
 
 	@hybrid_property
 	def permissions(self):
-		return map(lambda x: x.permission, self._permissions)
+		perms = map(lambda x: x.permission, self._permissions)
+		perms.sort()
+		return perms
 
 	@permissions.setter
 	def permissions(self, val):

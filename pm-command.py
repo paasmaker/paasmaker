@@ -48,6 +48,12 @@ class RootAction(object):
 		elif args.superkey:
 			apirequest.set_superkey_auth(args.superkey)
 
+	def generic_request_failed(self, message, exception=None):
+		logging.error(message)
+		if exception:
+			logging.error(exception)
+		self.exit(1)
+
 	def generic_api_response_check_failed(self, response):
 		if not response.success:
 			self.generic_api_response(response)
@@ -96,6 +102,15 @@ class UserGetAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class UserListAction(RootAction):
+	def describe(self):
+		return "List users."
+
+	def process(self, args):
+		request = paasmaker.common.api.user.UserListAPIRequest(None)
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
 class UserEnableAction(RootAction):
 	ENABLE = True
 
@@ -120,6 +135,66 @@ class UserEnableAction(RootAction):
 
 class UserDisableAction(UserEnableAction):
 	ENABLE = False
+
+class RoleCreateAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("name", help="Role name")
+		parser.add_argument("permissions", help="Comma seperated list of permissions")
+
+	def describe(self):
+		return "Create a role."
+
+	def process(self, args):
+		permissions = args.permissions.replace(" ", "").split(",")
+
+		request = paasmaker.common.api.role.RoleCreateAPIRequest(None)
+		request.set_role_params(args.name, permissions)
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
+class RoleEditAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("role_id", help="Role ID to edit")
+		parser.add_argument("--name", type=str, default=None, help="The name of the role.")
+		parser.add_argument("--permissions", type=str, default=None, help="The permissions assigned to the role. Replaces all the permissions with the set provided.")
+
+	def describe(self):
+		return "Edit a role."
+
+	def process(self, args):
+		def role_loaded(roledata):
+			if args.name:
+				request.set_role_name(args.name)
+			if args.permissions:
+				permissions = args.permissions.replace(" ", "").split(",")
+				request.set_role_permissions(permissions)
+			request.send(self.generic_api_response)
+
+		request = paasmaker.common.api.role.RoleEditAPIRequest(None)
+		self.point_and_auth(args, request)
+		request.load(int(args.role_id), role_loaded, self.generic_request_failed)
+
+class RoleGetAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("role_id", help="Role ID to fetch")
+
+	def describe(self):
+		return "Get a role record."
+
+	def process(self, args):
+		request = paasmaker.common.api.role.RoleGetAPIRequest(None)
+		request.set_role(int(args.role_id))
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
+class RoleListAction(RootAction):
+	def describe(self):
+		return "List roles."
+
+	def process(self, args):
+		request = paasmaker.common.api.role.RoleListAPIRequest(None)
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
 
 class HelpAction(RootAction):
 	def options(self, parser):
@@ -146,8 +221,13 @@ action = sys.argv[1]
 ACTION_MAP = {
 	'user-create': UserCreateAction(),
 	'user-get': UserGetAction(),
+	'user-list': UserListAction(),
 	'user-enable': UserEnableAction(),
 	'user-disable': UserDisableAction(),
+	'role-create': RoleCreateAction(),
+	'role-edit': RoleEditAction(),
+	'role-get': RoleGetAction(),
+	'role-list': RoleListAction(),
 	'help': HelpAction()
 }
 
