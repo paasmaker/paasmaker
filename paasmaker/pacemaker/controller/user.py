@@ -14,6 +14,32 @@ import smallform
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+class Boolean(object):
+	def serialize(self, node, appstruct):
+		if appstruct is colander.null:
+			return colander.null
+		if not isinstance(appstruct, bool):
+		   raise Invalid(node, '%r is not a boolean')
+		return appstruct and 'true' or 'false'
+
+	def deserialize(self, node, cstruct):
+		if cstruct is colander.null:
+		   return colander.null
+		if isinstance(cstruct, bool):
+			return cstruct
+		if not isinstance(cstruct, basestring):
+			raise Invalid(node, '%r is not a string' % cstruct)
+		value = cstruct.lower()
+		if value in ('true', 'yes', 'y', 'on', 't', '1'):
+			return True
+		return False
+
+	def cstruct_children(self):
+		return []
+
+	def unflatten(self, subnode, subpaths, subfstruct):
+		return self.deserialize(subnode, subfstruct[subnode.name])
+
 class UserSchema(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="User name",
@@ -27,9 +53,11 @@ class UserSchema(colander.MappingSchema):
 		title="Email address",
 		description="The email address of this user.",
 		validator=colander.Email())
-	enabled = colander.SchemaNode(colander.Boolean(),
+	enabled = colander.SchemaNode(Boolean(),
 		title="Enabled",
-		description="If this user is enabled.")
+		description="If this user is enabled.",
+		missing=False,
+		default=False)
 	password = colander.SchemaNode(colander.String(),
 		title="Password",
 		description="The users password (blank to leave unchanged)",
@@ -38,103 +66,82 @@ class UserSchema(colander.MappingSchema):
 		# TODO: more complex password requirements.
 		validator=colander.Length(min=8))
 
-class UserController(BaseController):
-	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
-
-	def get(self, user_id):
-		# TODO: Permissions.
-		# Find and load the user.
-		user = self.db().query(paasmaker.model.User).get(int(user_id))
-		if not user:
-			self.write_error(404, "No such user.")
-		self.add_data('user', user)
-
-		self.render("api/apionly.html")
-
-	def post(self, user_id):
-		self.get(user_id)
-
-	@staticmethod
-	def get_routes(configuration):
-		routes = []
-		routes.append((r"/user/(\d+)", UserController, configuration))
-		return routes
-
 class UserEditController(BaseController):
-	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	def get_form(self, user=None):
-		schema = UserSchema()
-		if user:
-			form = smallform.Form(schema, defaults=user.flatten())
-		else:
-			form = smallform.Form(schema)
-		return form
-
-	def get(self, user_id=None):
-		# TODO: Permissions.
+	def _get_user(self, user_id=None):
 		user = None
 		if user_id:
 			# Find and load the user.
 			user = self.db().query(paasmaker.model.User).get(int(user_id))
 			if not user:
-				self.write_error(404, "No such user.")
+				raise HTTPError(404, "No such user.")
+
 			self.add_data('user', user)
 
-		form = self.get_form(user)
-		form.validate(self.params)
-		self.add_data_template('form', form)
+		return user
+
+	def _default_user(self):
+		user = paasmaker.model.User()
+		user.name = ''
+		user.login = ''
+		user.email = ''
+		return user
+
+	def get(self, user_id=None):
+		# TODO: Permissions.
+		user = self._get_user(user_id)
+		if not user:
+			user = self._default_user()
+			self.add_data('user', user)
 
 		self.render("user/edit.html")
 
 	def post(self, user_id=None):
 		# TODO: Permissions.
-		user = None
-		if user_id:
-			# Find and load the user.
-			user = self.db().query(paasmaker.model.User).get(int(user_id))
-			if not user:
-				self.write_error(404, "No such user.")
+		user = self._get_user(user_id)
 
-		form = self.get_form(user)
-		values = form.validate(self.params)
-		if not form.errors:
-			if not user_id:
-				user = paasmaker.model.User()
-				user.auth_method = "internal"
-			user = form.bind(user, exclude=('password',))
-			password_plain = self.param('password')
-			if password_plain and password_plain != '':
-				user.password = password_plain
-			if not user_id and (not password_plain or password_plain == ''):
-				self.add_error("No password supplied, and this is a new account.")
-			else:
-				session = self.db()
-				session.add(user)
-				session.commit()
-				session.refresh(user)
+		valid_data = self.validate_data(UserSchema())
 
-				self.add_data('user', user)
+		if not user:
+			user = self._default_user()
 
-				self.redirect('/user/list')
-				return
+		user.name = self.params['name']
+		user.login = self.params['login']
+		user.email = self.params['email']
+		user.enabled = self.params['enabled']
+
+		if valid_data and not user.id:
+			# Password must be supplied.
+			if self.params['password'] == '':
+				self.add_error("No password supplied.")
+				valid_data = False
+
+		if valid_data:
+			if self.params.has_key('password'):
+				user.password = self.params['password']
+
+			session = self.db()
+			session.add(user)
+			session.commit()
+			session.refresh(user)
+
+			self.add_data('user', user)
+
+			self.redirect('/user/list')
 		else:
-			for key, message in form.errors.iteritems():
-				self.add_error("%s: %s" % (key, ", ".join(message)))
-
-		self.add_data_template('form', form)
-
-		self.render("user/edit.html")
+			self.add_data('user', user)
+			self.render("user/edit.html")
 
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
 		routes.append((r"/user/create", UserEditController, configuration))
-		routes.append((r"/user/edit/(\d+)", UserEditController, configuration))
+		routes.append((r"/user/(\d+)", UserEditController, configuration))
 		return routes
 
 class UserListController(BaseController):
-	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def get(self):
 		# TODO: Permissions.
@@ -142,9 +149,6 @@ class UserListController(BaseController):
 		users = self.db().query(paasmaker.model.User)
 		self.add_data('users', users)
 		self.render("user/list.html")
-
-	def post(self):
-		self.get()
 
 	@staticmethod
 	def get_routes(configuration):
@@ -159,13 +163,13 @@ class UserEditControllerTest(BaseControllerTest):
 		self.late_init_configuration(self.io_loop)
 		routes = UserEditController.get_routes({'configuration': self.configuration})
 		routes.extend(UserListController.get_routes({'configuration': self.configuration}))
-		routes.extend(UserController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
 	def test_create(self):
 		# Create the user.
 		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
@@ -183,12 +187,16 @@ class UserEditControllerTest(BaseControllerTest):
 	def test_create_fail(self):
 		# Send through some bogus data.
 		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.set_user_params('', '', '', True)
 		request.send(self.stop)
 		response = self.wait()
 
 		self.failIf(response.success)
-		self.assertTrue("Required" in response.errors[0], "Missing message in error.")
+		input_errors = response.data['input_errors']
+		self.assertTrue(input_errors.has_key('login'), "Missing error on login attribute.")
+		self.assertTrue(input_errors.has_key('name'), "Missing error on login attribute.")
+		self.assertTrue(input_errors.has_key('email'), "Missing error on login attribute.")
 
 		# Now update the request somewhat, but fail to set a password.
 		request.set_user_params('User Name', 'username', 'username@example.com', True)
@@ -201,6 +209,7 @@ class UserEditControllerTest(BaseControllerTest):
 	def test_edit(self):
 		# Create the user.
 		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
@@ -212,6 +221,7 @@ class UserEditControllerTest(BaseControllerTest):
 
 		# Set up the request.
 		request = paasmaker.common.api.user.UserEditAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		# This loads the user data from the server.
 		request.load(user_id, self.stop)
 		load_response = self.wait()
@@ -233,6 +243,7 @@ class UserEditControllerTest(BaseControllerTest):
 	def test_edit_fail(self):
 		# Create the user.
 		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
@@ -244,6 +255,7 @@ class UserEditControllerTest(BaseControllerTest):
 
 		# Set up the request.
 		request = paasmaker.common.api.user.UserEditAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		# This loads the user data from the server.
 		request.load(user_id, self.stop)
 		load_response = self.wait()
@@ -257,11 +269,13 @@ class UserEditControllerTest(BaseControllerTest):
 		response = self.wait()
 
 		self.failIf(response.success)
-		self.assertTrue("email" in response.errors[0], "Missing message in error.")
+		input_errors = response.data['input_errors']
+		self.assertTrue(input_errors.has_key('email'), "Missing error on email attribute.")
 
 	def test_list(self):
 		# Create the user.
 		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.set_user_params('User Name', 'username', 'username@example.com', True)
 		request.set_user_password('testtest')
 		request.send(self.stop)
@@ -270,6 +284,7 @@ class UserEditControllerTest(BaseControllerTest):
 		self.failIf(not response.success)
 
 		request = paasmaker.common.api.user.UserListAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.send(self.stop)
 		response = self.wait()
 

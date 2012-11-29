@@ -9,7 +9,7 @@
 
 	<ul>
 		{% for user in users %}
-			<li><a href="/user/edit/{{ user.id }}">{{ user.name }}</a></li>
+			<li><a href="/user/{{ user.id }}">{{ user.name }}</a></li>
 		{% end %}
 	</ul>
 {% end %}

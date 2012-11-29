@@ -45,7 +45,6 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.index.IndexController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.login.LoginController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.login.LogoutController.get_routes(route_extras))
-	routes.extend(paasmaker.pacemaker.controller.user.UserController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.user.UserEditController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.user.UserListController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.profile.ProfileController.get_routes(route_extras))

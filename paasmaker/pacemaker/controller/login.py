@@ -1,10 +1,25 @@
 
+import unittest
+
 from paasmaker.common.controller import InformationController
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest
-import tornado
 
-import unittest
+import tornado
+import colander
+
+class LoginSchema(colander.MappingSchema):
+	username = colander.SchemaNode(colander.String(),
+		title="Login",
+		description="The handle that the user uses to login.")
+	password = colander.SchemaNode(colander.String(),
+		title="Password",
+		description="The users password.")
+	rt = colander.SchemaNode(colander.String(),
+		title="Return URL",
+		description="The URL that the user is redirected to after login.",
+		missing="/",
+		default="/")
 
 class LoginController(BaseController):
 	AUTH_METHODS = [BaseController.ANONYMOUS]
@@ -14,12 +29,11 @@ class LoginController(BaseController):
 
 	@tornado.web.asynchronous
 	def post(self):
-		# TODO: Sometimes this calls finish() twice, if the login fails.
-		# Figure out why this is.
+		valid_data = self.validate_data(LoginSchema())
 
 		# Check the username/password supplied.
-		username = self.param('username')
-		password = self.param('password')
+		username = self.params['username']
+		password = self.params['password']
 
 		# Find auth plugins.
 		plugins = self.configuration.plugins.plugins_for(paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN)
@@ -31,15 +45,10 @@ class LoginController(BaseController):
 		def complete_request(authenticated):
 			if authenticated:
 				# Note: redirect() calls finish().
-				ret = self.param('rt')
-				if ret:
-					self.redirect(ret)
-				else:
-					self.redirect('/')
+				self.redirect(self.params['rt'])
 			else:
 				self.add_error("Unable to authenticate you.")
 				self.render("login/login.html")
-				self.finish()
 
 		def try_plugin(plugin):
 			login_handler = self.configuration.plugins.instantiate(
@@ -54,7 +63,7 @@ class LoginController(BaseController):
 
 			def failed_login(reason, message):
 				# Add it as a warning.
-				self.add_warning("%s: %s", (plugin, message))
+				self.add_warning("%s: %s" % (plugin, message))
 
 				# And move onto the next plugin.
 				# Unless there are no more.
@@ -130,7 +139,20 @@ class LoginControllerTest(BaseControllerTest):
 		s.add(u)
 		s.commit()
 
-		# Ok, now that we've done that, try to log in.
+		# Try an invalid login.
+		body = "username=username&password=nope"
+		request = tornado.httpclient.HTTPRequest(
+			"http://localhost:%d/login" % self.get_http_port(),
+			method="POST",
+			body=body,
+			follow_redirects=False)
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, self.stop)
+		response = self.wait()
+		self.assertEquals(response.code, 200, "Should have 200'd.")
+		self.assertIn("Unable", response.body, "Missing error message.")
+
+		# Try a valid login.
 		body = "username=username&password=test"
 		request = tornado.httpclient.HTTPRequest(
 			"http://localhost:%d/login" % self.get_http_port(),

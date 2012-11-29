@@ -62,6 +62,7 @@ class BaseController(tornado.web.RequestHandler):
 		self.user = None
 		self.auth = {}
 		self.params = {}
+		self.raw_params = {}
 		self.super_auth = False
 		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
 
@@ -70,50 +71,106 @@ class BaseController(tornado.web.RequestHandler):
 	def prepare(self):
 		self._set_format(self.get_argument('format', 'html'))
 
-		# Unpack arguments into params.
-		# TODO: Document why we're doing this.
-		for k, v in self.request.arguments.iteritems():
-			self.params[k] = v[-1]
-
-		# If the post body is JSON, parse it and put it into the arguments.
-		# TODO: This JSON detection is lightweight, but there might be corner
-		# cases in it too...
-		if self.request.method == 'POST' and len(self.request.body) > 0 and self.request.body[0] == '{' and self.request.body[-1] == '}':
-			parsed = json.loads(self.request.body)
-			schema = APIRequestSchema()
-			try:
-				result = schema.deserialize(parsed)
-			except colander.Invalid, ex:
-				self.send_error(400, exc_info=ex)
-				return
-			self.auth = result['auth']
-			self.params.update(result['data'])
+		if self.request.method == 'POST':
+			# If the post body is JSON, parse it and put it into the arguments.
+			# TODO: This JSON detection is lightweight, but there might be corner
+			# cases in it too...
+			if len(self.request.body) > 0 and self.request.body[0] == '{' and self.request.body[-1] == '}':
+				parsed = json.loads(self.request.body)
+				schema = APIRequestSchema()
+				try:
+					result = schema.deserialize(parsed)
+				except colander.Invalid, ex:
+					self.send_error(400, exc_info=ex)
+					return
+				self.auth = result['auth']
+				self.raw_params.update(result['data'])
+			else:
+				# Unpack the request arguments into raw params.
+				# This is so it behaves just like an API request as well.
+				# Later on, when it's validated, it gets deflattened according
+				# to the schema.
+				for k, v in self.request.arguments.iteritems():
+					self.raw_params[k] = v[-1]
 
 		# Must be one of the supported auth methods.
 		self.require_authentication(self.AUTH_METHODS)
 
-	def validate_data(self, schema):
+	def validate_data(self, api_schema, html_schema=None):
 		"""
-		Validate the request data with the given schema, returning
-		an error if it doesn't match.
+		Validate the supplied POST data with the given schema.
+		In the case of JSON requests, terminate the request immediately
+		if the data is invalid. In the case of HTML requests,
+		return a validation failed error message, and then
+		proceed.
 		"""
+		# Select the real schema to use.
+		schema = api_schema
+		if self.format == 'html' and html_schema:
+			schema = html_schema
+
+		if self.format == 'html':
+			# Use the colander schema to unflatten the incoming
+			# raw_parameters data into a data structure.
+			# What are we trying to do here? Colander has the ability
+			# to unflatten this:
+			# foo: bar
+			# bar.baz: foo
+			# bar.foo: baz
+			# ... assuming that the schema knows about it. So
+			# we're extracting the keys that match the schema
+			# at the top level, then unflattening it, and then later
+			# validating it. This only applies for HTML form POSTS,
+			# to allow them to work without having to send back JSON.
+			# This is a little slow unfortunately, but this isn't
+			# a common use case for this system.
+			schema_keys = map(lambda x: x.name, schema.children)
+			input_keys = {}
+			for key, value in self.raw_params.iteritems():
+				if key in schema_keys:
+					input_keys[key] = value
+					continue # Short circuit this for loop.
+				for skey in schema_keys:
+					if key.startswith("%s." % skey):
+						input_keys[key] = value
+						break # Short circuit this for loop.
+			# Add in missing keys for this schema. This is because empty
+			# values don't make it in here (eg, blank strings).
+			# TODO: Investigate if this is Tornado not passing empty string
+			# values into self.request.arguments, or something else.
+			for child in schema.children:
+				if not input_keys.has_key(child.name):
+					if child.default == colander.null:
+						# Assume it's a string...
+						input_keys[child.name] = ''
+					else:
+						input_keys[child.name] = child.default
+
+			# Unflatten, ready for validation shortly.
+			self.raw_params = schema.unflatten(input_keys)
+
 		try:
-			result = schema.deserialize(self.params)
-			return True
+			self.params.update(schema.deserialize(self.raw_params))
 		except colander.Invalid, ex:
 			logger.error("Invalid data supplied to this controller.")
-			logger.error(self)
 			logger.error(ex)
-			self.add_error('Invalid data supplied.')
-			self.add_error(str(ex))
-			self.write_error(400, exc_info=ex)
-			return False
+			# Store and return the individual errors.
+			self.add_data('input_errors', ex.asdict())
+			if self.format == 'html':
+				self.add_error("There was an error with the input.")
+				# Now, copy in the data anyway - as this is the data
+				# used to rebuild the forms if needed. The caller MUST
+				# heed the fact that the data is invalid.
+				self.params = self.raw_params
+				return False
+			else:
+				self.add_error('Invalid data supplied.')
+				# This will terminate the request, and also
+				# in the returned body should be JSON with a
+				# description of the errors.
+				raise tornado.web.HTTPError(400, 'Invalid data supplied.')
 
-	def param(self, name, default=None):
-		if self.params.has_key(name):
-			return self.params[name]
-		else:
-			return default
+		return True
 
 	def redirect(self, target, **kwargs):
 		if self.format == 'html':
@@ -245,9 +302,9 @@ class BaseController(tornado.web.RequestHandler):
 	def add_data_template(self, key, name):
 		self.template[key] = name
 
-	def format_form_error(self, form, field):
-		if form.has_errors(field):
-			return '<ul class="error"><li>%s</li></ul>' % tornado.escape.xhtml_escape(form.get_first_error(field))
+	def format_form_error(self, field):
+		if self.data.has_key('input_errors') and self.data['input_errors'].has_key(field):
+			return '<ul class="error"><li>%s</li></ul>' % tornado.escape.xhtml_escape(self.data['input_errors'][field])
 		else:
 			return ''
 
@@ -293,7 +350,11 @@ class BaseController(tornado.web.RequestHandler):
 
 	def write_error(self, status_code, **kwargs):
 		# Reset the data queued up until now.
-		self.data = {}
+		# Except for input_errors.
+		if self.data.has_key('input_errors'):
+			self.data = {'input_errors': self.data['input_errors']}
+		else:
+			self.data = {}
 		self.root_data['error_code'] = status_code
 		if kwargs.has_key('exc_info'):
 			self.add_error('Exception: ' + str(kwargs['exc_info'][0]) + ': ' + str(kwargs['exc_info'][1]))

@@ -61,6 +61,7 @@ class APIRequest(object):
 	def duplicate_auth(self, request):
 		self.authmethod = request.authmethod
 		self.authvalue = request.authvalue
+		self.target = request.target
 
 	def set_apikey_auth(self, key):
 		self.authmethod = 'tokenheader'

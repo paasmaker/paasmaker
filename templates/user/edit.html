@@ -7,20 +7,23 @@
 {% block body %}
 	<form method="POST">
 		<label for="name">Name:</label>
-		<input name="name" id="name" type="text" value="{{ form.get('name') }}" />
-		{% raw format_form_error(form, 'name') %}
+		<input name="name" id="name" type="text" value="{{ user.name }}" />
+		{% raw format_form_error('name') %}
 
 		<label for="login">Login:</label>
-		<input name="login" id="login" type="text" value="{{ form.get('login') }}" />
-		{% raw format_form_error(form, 'login') %}
+		<input name="login" id="login" type="text" value="{{ user.login }}" />
+		{% raw format_form_error('login') %}
 
 		<label for="email">Email address:</label>
-		<input name="email" id="email" type="email" value="{{ form.get('email') }}" />
-		{% raw format_form_error(form, 'email') %}
+		<input name="email" id="email" type="email" value="{{ user.email }}" />
+		{% raw format_form_error('email') %}
 
 		<label for="password">Password:</label>
 		<input name="password" id="password" type="password" value="" />
-		{% raw format_form_error(form, 'password') %}
+		{% raw format_form_error('password') %}
+
+		<label for="enabled">Enabled:</label>
+		<input name="enabled" id="enabled" type="checkbox" {% if user.enabled %}checked="checked"{% end %} />
 
 		<br />
 		<button type="submit" class="btn">Submit</button>

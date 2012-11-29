@@ -9,6 +9,7 @@ class UserGetAPIRequest(paasmaker.util.APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(UserGetAPIRequest, self).__init__(*args, **kwargs)
 		self.user_id = None
+		self.method = 'GET'
 
 	def set_user(self, user_id):
 		self.user_id = user_id
@@ -62,6 +63,7 @@ class UserEditAPIRequest(UserCreateAPIRequest):
 
 	def load(self, user_id, callback):
 		request = UserGetAPIRequest(self.configuration)
+		request.duplicate_auth(self)
 		request.set_user(user_id)
 		def on_load_complete(response):
 			logger.debug("Loading complete.")
@@ -77,8 +79,12 @@ class UserEditAPIRequest(UserCreateAPIRequest):
 		logger.debug("Awaiting results of load from the server.")
 
 	def get_endpoint(self):
-		return "/user/edit/%d" % self.user_id
+		return "/user/%d" % self.user_id
 
 class UserListAPIRequest(paasmaker.util.APIRequest):
+	def __init__(self, *args, **kwargs):
+		super(UserListAPIRequest, self).__init__(*args, **kwargs)
+		self.method = 'GET'
+
 	def get_endpoint(self):
 		return '/user/list'

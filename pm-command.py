@@ -45,8 +45,12 @@ class RootAction(object):
 		apirequest.set_target(host)
 		if args.apikey:
 			apirequest.set_apikey_auth(args.apikey)
-		elif args.nodekey:
-			apirequest.set_nodekey_auth(args.nodekey)
+		elif args.superkey:
+			apirequest.set_superkey_auth(args.superkey)
+
+	def generic_api_response_check_failed(self, response):
+		if not response.success:
+			self.generic_api_response(response)
 
 	def generic_api_response(self, response):
 		if response.success:
@@ -92,6 +96,31 @@ class UserGetAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class UserEnableAction(RootAction):
+	ENABLE = True
+
+	def options(self, parser):
+		parser.add_argument("user_id", help="User ID to change.")
+
+	def describe(self):
+		if self.ENABLE:
+			return "Enable a user."
+		else:
+			return "Disable a user."
+
+	def process(self, args):
+		def user_loaded(response):
+			self.generic_api_response_check_failed(response)
+			request.set_user_enabled(self.ENABLE)
+			request.send(self.generic_api_response)
+
+		request = paasmaker.common.api.user.UserEditAPIRequest(None)
+		self.point_and_auth(args, request)
+		request.load(int(args.user_id), user_loaded)
+
+class UserDisableAction(UserEnableAction):
+	ENABLE = False
+
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
@@ -117,6 +146,8 @@ action = sys.argv[1]
 ACTION_MAP = {
 	'user-create': UserCreateAction(),
 	'user-get': UserGetAction(),
+	'user-enable': UserEnableAction(),
+	'user-disable': UserDisableAction(),
 	'help': HelpAction()
 }
 
@@ -134,7 +165,7 @@ parser.add_argument("-r", "--remote", default="localhost", help="The pacemaker h
 parser.add_argument("-p", "--port", type=int, default=42500, help="The pacemaker port.")
 parser.add_argument("-k", "--apikey", help="User API key to authenticate with.")
 parser.add_argument("--ssl", default=False, help="Use SSL to connect to the node.", action="store_true")
-parser.add_argument("--nodekey", default="", help="Node key to authenticate with.")
+parser.add_argument("--superkey", default="", help="Super key to authenticate with.")
 parser.add_argument("--loglevel", default="INFO", help="Log level, one of DEBUG|INFO|WARNING|ERROR|CRITICAL.")
 
 # Now get our action to set up it's options.
@@ -151,7 +182,7 @@ logger.setLevel(getattr(logging, args.loglevel))
 logger.debug("Parsed command line arguments: %s", str(args))
 
 # Make sure we have an auth source.
-if not args.nodekey and not args.apikey:
+if not args.superkey and not args.apikey:
 	logger.error("No API or node key passed.")
 	sys.exit(1)
 
