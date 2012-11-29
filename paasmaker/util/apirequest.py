@@ -14,7 +14,7 @@ class APIResponse(object):
 		self.success = False
 
 		logger.debug("Raw API response body: %s", response.body)
-		if response.body[0] == '{' and response.body[-1] == '}':
+		if response.body and response.body[0] == '{' and response.body[-1] == '}':
 			try:
 				parsed = json.loads(response.body)
 				self.errors.extend(parsed['errors'])
