@@ -1,13 +1,15 @@
 import unittest
-import paasmaker
 import uuid
 import logging
-import colander
 import json
+
+import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest
+from paasmaker.common.core import constants
 
 import tornado
 import tornado.testing
+import colander
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -19,7 +21,7 @@ class NodeRegisterSchema(colander.MappingSchema):
 	route = colander.SchemaNode(colander.String(),
 		title="Route to this node",
 		description="The route to access this node for future. Can be a DNS name of IP address.")
-	apiport = colander.SchemaNode(colander.String(),
+	apiport = colander.SchemaNode(colander.Integer(),
 		title="HTTP API port",
 		description="The HTTP port to use to interact with this node.")
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'),
@@ -52,34 +54,34 @@ class NodeController(BaseController):
 
 			# Look for nodes with the same route/API port.
 			duplicate_node = self.db().query(paasmaker.model.Node) \
-				.filter(paasmaker.model.Node.route==self.param('route')) \
-				.filter(paasmaker.model.Node.apiport==self.param('apiport')).first()
+				.filter(paasmaker.model.Node.route==self.params['route']) \
+				.filter(paasmaker.model.Node.apiport==self.params['apiport']).first()
 
 			if duplicate_node:
 				self.add_error("Node appears to already be registered - name %s, UUID %s." % (duplicate_node.name, duplicate_node.uuid))
 			else:
-				node = paasmaker.model.Node(self.param('name'), self.param('route'), self.param('apiport'), new_uuid, 'ACTIVE')
+				node = paasmaker.model.Node(self.params['name'], self.params['route'], self.params['apiport'], new_uuid, constants.NODE.ACTIVE)
 				logger.debug("New node %s(%s:%d), assigned UUID %s. Checking connectivity...", node.name, node.route, node.apiport, new_uuid)
 				do_connectivity_check = True
 
 		if action == 'update':
 			# Find the node.
 			node = self.db().query(paasmaker.model.Node) \
-				.filter(paasmaker.model.Node.uuid==self.param('uuid')).first()
+				.filter(paasmaker.model.Node.uuid==self.params['uuid']).first()
 
 			if not node:
 				self.add_error("Can't find your node record. Please register instead.")
 			else:
 				# Update the node.
-				node.name = self.param('name')
-				node.route = self.param('route')
-				node.apiport = self.param('apiport')
-				node.state = 'ACTIVE'
+				node.name = self.params['name']
+				node.route = self.params['route']
+				node.apiport = self.params['apiport']
+				node.state = constants.NODE.ACTIVE
 				do_connectivity_check = True
 
 		# If we're doing a connectivity check, also update the other attributes for the node.
 		if do_connectivity_check:
-			tags = self.param('tags')
+			tags = self.params['tags']
 			node.heart = tags['roles']['heart']
 			node.pacemaker = tags['roles']['pacemaker']
 			node.router = tags['roles']['router']
