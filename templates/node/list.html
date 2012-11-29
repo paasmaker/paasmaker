@@ -1,0 +1,34 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Nodes
+{% end %}
+
+{% block body %}
+	<table class="table">
+		<tr>
+			<th>Name</th>
+			<th>Route</th>
+			<th>Roles</th>
+			<th>State</th>
+		</tr>
+		{% for node in nodes %}
+			<tr>
+				<td>
+					{{ node.name }}
+				</td>
+				<td>
+					{{ node.route }}:{{ node.apiport }}
+				</td>
+				<td>
+					{% if node.pacemaker %}Pacemaker{% end %}
+					{% if node.heart %}Heart{% end %}
+					{% if node.router %}Router{% end %}
+				</td>
+				<td>
+					{{ node.state }}
+				</td>
+			</tr>
+		{% end %}
+	</table>
+{% end %}

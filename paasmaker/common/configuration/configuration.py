@@ -904,7 +904,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			self.uuid = uuid
 		else:
 			# Doesn't exist. Return None, callers should handle this.
-			pass
+			return None
 
 		return self.uuid
 

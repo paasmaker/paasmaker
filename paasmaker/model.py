@@ -86,8 +86,7 @@ class Node(OrmBase, Base):
 		return "<Node('%s','%s')>" % (self.name, self.route)
 
 	def flatten(self, field_list=None):
-		data = super(Node, self).flatten(['name', 'route', 'apiport', 'uuid', 'state', 'last_heard', 'heart', 'pacemaker', 'router', 'tags'])
-		return data
+		return super(Node, self).flatten(['name', 'route', 'apiport', 'uuid', 'state', 'last_heard', 'heart', 'pacemaker', 'router', 'tags'])
 
 	@hybrid_property
 	def tags(self):

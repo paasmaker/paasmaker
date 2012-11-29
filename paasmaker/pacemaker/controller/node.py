@@ -33,7 +33,7 @@ class NodeUpdateSchema(NodeRegisterSchema):
 		title="UUID",
 		description="The existing UUID of the node.")
 
-class NodeController(BaseController):
+class NodeRegisterController(BaseController):
 	AUTH_METHODS = [BaseController.NODE]
 
 	def get(self):
@@ -86,7 +86,7 @@ class NodeController(BaseController):
 			node.pacemaker = tags['roles']['pacemaker']
 			node.router = tags['roles']['router']
 
-			node.tags = json.dumps(tags, cls=paasmaker.util.jsonencoder.JsonEncoder)
+			node.tags = tags
 
 		if do_connectivity_check:
 			# Attempt to connect to the node...
@@ -116,7 +116,23 @@ class NodeController(BaseController):
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
-		routes.append((r"/node/(register|update)", NodeController, configuration))
+		routes.append((r"/node/(register|update)", NodeRegisterController, configuration))
+		return routes
+
+class NodeListController(BaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def get(self):
+		# TODO: Permissions.
+		# TODO: Paginate...
+		nodes = self.db().query(paasmaker.model.Node)
+		self.add_data('nodes', nodes)
+		self.render("node/list.html")
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/node/list", NodeListController, configuration))
 		return routes
 
 class NodeControllerTest(BaseControllerTest):
@@ -124,7 +140,8 @@ class NodeControllerTest(BaseControllerTest):
 
 	def get_app(self):
 		self.late_init_configuration(self.io_loop)
-		routes = NodeController.get_routes({'configuration': self.configuration})
+		routes = NodeRegisterController.get_routes({'configuration': self.configuration})
+		routes.extend(NodeListController.get_routes({'configuration': self.configuration}))
 		routes.extend(paasmaker.common.controller.InformationController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
@@ -165,6 +182,18 @@ class NodeControllerTest(BaseControllerTest):
 		self.assertTrue(response.data['node'].has_key('id'), "Missing ID in return data.")
 		self.assertTrue(response.data['node'].has_key('uuid'), "Missing UUID in return data.")
 		self.assertEquals(first_id, response.data['node']['id'], "Updated ID is different to original.")
+
+		# Test the listing of nodes here too.
+		request = paasmaker.common.api.nodelist.NodeListAPIRequest(self.configuration)
+		request.set_superkey_auth()
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertEquals(len(response.errors), 0, "There were errors.")
+		self.assertEquals(len(response.warnings), 0, "There were warnings.")
+		self.assertTrue(response.data.has_key('nodes'), "Missing nodes list.")
+		self.assertEquals(len(response.data['nodes']), 1, "Not the expected number of nodes.")
 
 	def test_fail_connect_port(self):
 		# Test when it can't connect.

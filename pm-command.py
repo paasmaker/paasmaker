@@ -284,6 +284,15 @@ class WorkspaceListAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class NodeListAction(RootAction):
+	def describe(self):
+		return "List nodes."
+
+	def process(self, args):
+		request = paasmaker.common.api.nodelist.NodeListAPIRequest(None)
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
@@ -321,6 +330,7 @@ ACTION_MAP = {
 	'workspace-edit': WorkspaceEditAction(),
 	'workspace-get': WorkspaceGetAction(),
 	'workspace-list': WorkspaceListAction(),
+	'node-list': NodeListAction(),
 	'help': HelpAction()
 }
 

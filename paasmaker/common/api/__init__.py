@@ -2,6 +2,7 @@
 from information import InformationAPIRequest
 from noderegister import NodeRegisterAPIRequest
 from nodeupdate import NodeUpdateAPIRequest
+from nodelist import NodeListAPIRequest
 from login import LoginAPIRequest
 from user import UserCreateAPIRequest, UserEditAPIRequest
 from workspace import WorkspaceCreateAPIRequest, WorkspaceEditAPIRequest

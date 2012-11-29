@@ -57,6 +57,9 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.role.RoleAllocationAssignController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.role.RoleAllocationUnAssignController.get_routes(route_extras))
 
+	routes.extend(paasmaker.pacemaker.controller.node.NodeRegisterController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.node.NodeListController.get_routes(route_extras))
+
 	# TODO: This might be disabled by the configuration.
 	routes.extend(paasmaker.pacemaker.controller.upload.UploadController.get_routes(route_extras))
 
@@ -79,12 +82,27 @@ application_settings = configuration.get_tornado_configuration()
 #print str(application_settings)
 application = tornado.web.Application(routes, **application_settings)
 
-def on_completed_startup():
-	# TODO: Register the node.
+def on_registration_complete(response):
+	if not response.success or len(response.errors) > 0:
+		logging.error("Unable to register with the master node.")
+		for error in response.errors:
+			logging.error(error)
+		# TODO: Do we now quit? Or retry in a little bit?
+	else:
+		logging.info("Successfully registered or updated with master.")
 
+def on_completed_startup():
 	# Start listening for HTTP requests, as everything is ready.
 	logging.info("Listening on port %d", configuration['http_port'])
 	application.listen(configuration['http_port'])
+
+	# Register the node with the server.
+	if configuration.get_node_uuid():
+		request = paasmaker.common.api.NodeUpdateAPIRequest(configuration)
+		request.send(on_registration_complete)
+	else:
+		request = paasmaker.common.api.NodeRegisterAPIRequest(configuration)
+		request.send(on_registration_complete)
 
 def on_intermediary_started(message):
 	logger.debug(message)
