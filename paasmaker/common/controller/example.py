@@ -1,12 +1,18 @@
-from base import BaseController
-from base import BaseControllerTest
-from base import BaseWebsocketHandler
 import unittest
 import json
 
+from base import BaseController
+from base import BaseControllerTest
+from base import BaseWebsocketHandler
+
+import colander
 import tornado
 import tornado.testing
 from ws4py.client.tornadoclient import TornadoWebSocketClient
+
+class ExampleDataSchema(colander.MappingSchema):
+	more = colander.SchemaNode(colander.String(),
+		title="Additional Data")
 
 class ExampleController(BaseController):
 	AUTH_METHODS = [BaseController.ANONYMOUS]
@@ -41,8 +47,11 @@ class ExamplePostController(BaseController):
 	AUTH_METHODS = [BaseController.ANONYMOUS]
 
 	def post(self):
+		if not self.validate_data(ExampleDataSchema()):
+			raise tornado.HTTPError(400, "Invalid request data.")
+
 		self.add_data("test", "Hello")
-		self.add_data("output", self.param("more"))
+		self.add_data("output", int(self.params["more"]))
 		self.add_data_template("template", "Template")
 		self.render("example/index.html")
 
