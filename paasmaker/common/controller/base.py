@@ -124,22 +124,38 @@ class BaseController(tornado.web.RequestHandler):
 			# to allow them to work without having to send back JSON.
 			# This is a little slow unfortunately, but this isn't
 			# a common use case for this system.
-			schema_keys = map(lambda x: x.name, schema.children)
+			# TODO: If you have a child mapping schema that is unknown=preserve,
+			# the unflatten won't recognize and import the keys. So this
+			# is done manually below, but will only work for the first
+			# level. Sigh. Think about how we're going to fix this.
+			schema_keys = {}
+			for child in schema.children:
+				schema_keys[child.name] = child
+			found_subkeys = set()
 			input_keys = {}
-			for key, value in self.raw_params.iteritems():
-				if key in schema_keys:
+			hacked_maps = {}
+			for key in self.raw_params.keys():
+				value = self.raw_params[key]
+				if schema_keys.has_key(key):
 					input_keys[key] = value
 					continue # Short circuit this for loop.
-				for skey in schema_keys:
+				for skey in schema_keys.keys():
 					if key.startswith("%s." % skey):
-						input_keys[key] = value
-						break # Short circuit this for loop.
+						if type(schema_keys[skey].typ) == colander.Mapping and schema_keys[skey].typ._unknown == 'preserve':
+							# Hack to undo mappings.
+							if not hacked_maps.has_key(skey):
+								hacked_maps[skey] = {}
+							hacked_maps[skey][key.split(".")[-1]] = value
+						else:
+							found_subkeys.add(skey)
+							input_keys[key] = value
+							break # Short circuit this for loop.
 			# Add in missing keys for this schema. This is because empty
 			# values don't make it in here (eg, blank strings).
 			# TODO: Investigate if this is Tornado not passing empty string
 			# values into self.request.arguments, or something else.
 			for child in schema.children:
-				if not input_keys.has_key(child.name):
+				if not input_keys.has_key(child.name) and child.name not in found_subkeys:
 					if child.default == colander.null:
 						# Assume it's a string...
 						input_keys[child.name] = ''
@@ -147,7 +163,8 @@ class BaseController(tornado.web.RequestHandler):
 						input_keys[child.name] = child.default
 
 			# Unflatten, ready for validation shortly.
-			self.raw_params = schema.unflatten(input_keys)
+			self.raw_params.update(schema.unflatten(input_keys))
+			self.raw_params.update(hacked_maps)
 
 		try:
 			self.params.update(schema.deserialize(self.raw_params))

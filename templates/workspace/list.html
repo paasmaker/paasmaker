@@ -9,7 +9,7 @@
 
 	<ul>
 		{% for workspace in workspaces %}
-			<li><a href="/workspace/edit/{{ workspace.id }}">{{ workspace.name }}</a></li>
+			<li><a href="/workspace/{{ workspace.id }}">{{ workspace.name }}</a></li>
 		{% end %}
 	</ul>
 {% end %}

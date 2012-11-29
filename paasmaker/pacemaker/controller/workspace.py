@@ -9,8 +9,6 @@ from paasmaker.common.controller import BaseController, BaseControllerTest
 import tornado
 import tornado.testing
 
-import smallform
-
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -25,76 +23,47 @@ class WorkspaceSchema(colander.MappingSchema):
 		missing={},
 		default={})
 
-class WorkspaceController(BaseController):
-	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
-
-	def get(self, workspace_id):
-		# TODO: Permissions.
-		# Find and load the workspace.
-		workspace = self.db().query(paasmaker.model.Workspace).get(int(workspace_id))
-		if not workspace:
-			self.write_error(404, "No such workspace.")
-		self.add_data('workspace', workspace)
-
-		self.render("api/apionly.html")
-
-	def post(self, workspace_id):
-		self.get(workspace_id)
-
-	@staticmethod
-	def get_routes(configuration):
-		routes = []
-		routes.append((r"/workspace/(\d+)", WorkspaceController, configuration))
-		return routes
-
 class WorkspaceEditController(BaseController):
-	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	def get_form(self, workspace=None):
-		schema = WorkspaceSchema()
-		if workspace:
-			# Special handling for tags.
-			defaults = workspace.flatten()
-			defaults['tags'] = json.dumps(workspace.tags)
-			form = smallform.Form(schema, defaults=defaults)
-		else:
-			form = smallform.Form(schema)
-		return form
+	def _get_workspace(self, workspace_id=None):
+		workspace = None
+		if workspace_id:
+			# Find and load the user.
+			workspace = self.db().query(paasmaker.model.Workspace).get(int(workspace_id))
+			if not workspace:
+				raise HTTPError(404, "No such workspace.")
+
+			self.add_data('workspace', workspace)
+
+		return workspace
+
+	def _default_workspace(self):
+		workspace = paasmaker.model.Workspace()
+		workspace.name = ''
+		return workspace
 
 	def get(self, workspace_id=None):
 		# TODO: Permissions.
-		workspace = None
-		if workspace_id:
-			# Find and load the workspace.
-			workspace = self.db().query(paasmaker.model.Workspace).get(int(workspace_id))
-			if not workspace:
-				self.write_error(404, "No such workspace.")
+		workspace = self._get_workspace(workspace_id)
+		if not workspace:
+			workspace = self._default_workspace()
 			self.add_data('workspace', workspace)
-
-		form = self.get_form(workspace)
-		form.validate(self.params)
-		self.add_data_template('form', form)
 
 		self.render("workspace/edit.html")
 
 	def post(self, workspace_id=None):
-		# TODO: Permissions.
-		workspace = None
-		if workspace_id:
-			# Find and load the workspace.
-			workspace = self.db().query(paasmaker.model.Workspace).get(int(workspace_id))
-			if not workspace:
-				self.write_error(404, "No such workspace.")
+		workspace = self._get_workspace(workspace_id)
 
-		form = self.get_form(workspace)
-		# Hack: if tags is a string, JSON decode it first.
-		if self.params.has_key('tags') and isinstance(self.params['tags'], basestring):
-			self.params['tags'] = json.loads(self.params['tags'])
-		values = form.validate(self.params)
-		if not form.errors:
-			if not workspace_id:
-				workspace = paasmaker.model.Workspace()
-			workspace = form.bind(workspace)
+		valid_data = self.validate_data(WorkspaceSchema())
+
+		if not workspace:
+			workspace = self._default_workspace()
+
+		workspace.name = self.params['name']
+		workspace.tags = self.params['tags']
+
+		if valid_data:
 			session = self.db()
 			session.add(workspace)
 			session.commit()
@@ -103,24 +72,19 @@ class WorkspaceEditController(BaseController):
 			self.add_data('workspace', workspace)
 
 			self.redirect('/workspace/list')
-			return
 		else:
-			for key, message in form.errors.iteritems():
-				self.add_error("%s: %s" % (key, ", ".join(message)))
-
-		self.add_data_template('form', form)
-
-		self.render("workspace/edit.html")
+			self.add_data('workspace', workspace)
+			self.render("workspace/edit.html")
 
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
 		routes.append((r"/workspace/create", WorkspaceEditController, configuration))
-		routes.append((r"/workspace/edit/(\d+)", WorkspaceEditController, configuration))
+		routes.append((r"/workspace/(\d+)", WorkspaceEditController, configuration))
 		return routes
 
 class WorkspaceListController(BaseController):
-	AUTH_METHODS = [BaseController.NODE, BaseController.USER]
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def get(self):
 		# TODO: Permissions.
@@ -145,13 +109,13 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		self.late_init_configuration(self.io_loop)
 		routes = WorkspaceEditController.get_routes({'configuration': self.configuration})
 		routes.extend(WorkspaceListController.get_routes({'configuration': self.configuration}))
-		routes.extend(WorkspaceController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
 	def test_create(self):
 		# Create the workspace.
 		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.set_workspace_name('Test workspace')
 		request.send(self.stop)
 		response = self.wait()
@@ -166,16 +130,19 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 	def test_create_fail(self):
 		# Send through some bogus data.
 		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.set_workspace_name('a')
 		request.send(self.stop)
 		response = self.wait()
 
 		self.failIf(response.success)
-		self.assertTrue("Shorter" in response.errors[0], "Missing message in error.")
+		input_errors = response.data['input_errors']
+		self.assertTrue(input_errors.has_key('name'), "Missing error on name attribute.")
 
 	def test_edit(self):
 		# Create the workspace.
 		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.set_workspace_name('Test workspace')
 		request.send(self.stop)
 		response = self.wait()
@@ -186,6 +153,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 
 		# Set up the request.
 		request = paasmaker.common.api.workspace.WorkspaceEditAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		# This loads the workspace data from the server.
 		request.load(workspace_id, self.stop)
 		load_response = self.wait()
@@ -207,6 +175,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 	def test_edit_fail(self):
 		# Create the workspace.
 		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.set_workspace_name('Test workspace')
 		request.send(self.stop)
 		response = self.wait()
@@ -217,6 +186,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 
 		# Set up the request.
 		request = paasmaker.common.api.workspace.WorkspaceEditAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		# This loads the workspace data from the server.
 		request.load(workspace_id, self.stop)
 		load_response = self.wait()
@@ -230,11 +200,13 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		response = self.wait()
 
 		self.failIf(response.success)
-		self.assertTrue("name" in response.errors[0], "Missing message in error.")
+		input_errors = response.data['input_errors']
+		self.assertTrue(input_errors.has_key('name'), "Missing error on name attribute.")
 
 	def test_list(self):
 		# Create the workspace.
 		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.set_workspace_name('Test workspace')
 		request.send(self.stop)
 		response = self.wait()
@@ -242,6 +214,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		self.failIf(not response.success)
 
 		request = paasmaker.common.api.workspace.WorkspaceListAPIRequest(self.configuration)
+		request.set_superkey_auth()
 		request.send(self.stop)
 		response = self.wait()
 

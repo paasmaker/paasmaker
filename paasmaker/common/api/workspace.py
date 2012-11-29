@@ -9,6 +9,7 @@ class WorkspaceGetAPIRequest(paasmaker.util.APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(WorkspaceGetAPIRequest, self).__init__(*args, **kwargs)
 		self.workspace_id = None
+		self.method = 'GET'
 
 	def set_workspace(self, workspace_id):
 		self.workspace_id = workspace_id
@@ -43,6 +44,7 @@ class WorkspaceEditAPIRequest(WorkspaceCreateAPIRequest):
 
 	def load(self, workspace_id, callback):
 		request = WorkspaceGetAPIRequest(self.configuration)
+		request.duplicate_auth(self)
 		request.set_workspace(workspace_id)
 		def on_load_complete(response):
 			logger.debug("Loading complete.")
@@ -58,7 +60,7 @@ class WorkspaceEditAPIRequest(WorkspaceCreateAPIRequest):
 		logger.debug("Awaiting results of load from the server.")
 
 	def get_endpoint(self):
-		return "/workspace/edit/%d" % self.workspace_id
+		return "/workspace/%d" % self.workspace_id
 
 class WorkspaceListAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):

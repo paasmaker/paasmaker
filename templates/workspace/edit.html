@@ -7,14 +7,28 @@
 {% block body %}
 	<form method="POST">
 		<label for="name">Name:</label>
-		<input name="name" id="name" type="text" value="{{ form.get('name') }}" />
-		{% raw format_form_error(form, 'name') %}
+		<input name="name" id="name" type="text" value="{{ workspace.name }}" />
+		{% raw format_form_error('name') %}
 
-		<label for="tags">Tags:</label>
-		<input name="tags" id="tags" type="text" value="{{ form.get('tags') }}" />
-		{% raw format_form_error(form, 'tags') %}
+		<label>Tags:</label>
+		<div class="workspace-tag-editor">
+			<div class="output">
+				{% for tag, value in workspace.tags.iteritems() %}
+					<input type="hidden" name="tags.{{ tag }}" value="{{ value }}" />
+				{% end %}
+			</div>
+			<div class="editor">
+				{% for tag, value in workspace.tags.iteritems() %}
+					<div class="pair">
+						<input type="text" class="tag" value="{{ tag }}" />
+						<input type="text" class="value" value="{{ value }}" />
+					</div>
+				{% end %}
+			</div>
+		</div>
+		{% raw format_form_error('tags') %}
 		<br />
 
-		<button type="submit" class="btn">Submit</button>
+		<input type="submit" class="btn" value="Submit" />
 	</form>
 {% end %}
