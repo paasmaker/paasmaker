@@ -57,6 +57,9 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.role.RoleAllocationAssignController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.role.RoleAllocationUnAssignController.get_routes(route_extras))
 
+	# TODO: This might be disabled by the configuration.
+	routes.extend(paasmaker.pacemaker.controller.upload.UploadController.get_routes(route_extras))
+
 if configuration.is_heart():
 	# Heart setup.
 	pass

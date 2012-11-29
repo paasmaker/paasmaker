@@ -91,7 +91,12 @@ class UploadController(BaseController):
 			temp_path = self.configuration.get_scratch_path_exists('partialuploads')
 			parts = glob.glob(os.path.join(temp_path, "%s.*" % identifier))
 			parts.sort()
-			if len(parts) * int(self.params['resumableChunkSize']) >= int(self.params['resumableTotalSize']):
+			# Rather than relying on the count of the chunks (because resumable.js will
+			# upload more on the last chunk) just total the size of each part and use that.
+			totalsize = 0
+			for part in parts:
+				totalsize += os.path.getsize(part)
+			if totalsize == int(self.params['resumableTotalSize']):
 				logger.info("Assembling file because we have all the parts.")
 				# Must have all the parts.
 				# TODO: Make async.
@@ -102,6 +107,7 @@ class UploadController(BaseController):
 					partfp = open(part, 'r')
 					fp.write(partfp.read())
 					partfp.close()
+					os.unlink(part)
 				fp.close()
 				logger.info("Finished assembling file.")
 

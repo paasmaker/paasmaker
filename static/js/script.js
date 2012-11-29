@@ -80,6 +80,51 @@ SimpleTagEditor.prototype.rebuildOutput = function()
 	);
 }
 
+var FileUploader = function(container)
+{
+	this.container = container;
+
+	this.upButton = $('<a href="#">Upload</a>');
+	this.dropContainer = $('<div class="drop"></div>');
+
+	this.dropContainer.append(this.upButton);
+	this.container.append(this.dropContainer);
+
+	this.statusArea = $('<div class="status"></div>');
+	this.container.append(this.statusArea);
+	this.progress = $('<progress value="0" max="100" />');
+	this.container.append(this.progress);
+
+	this.resumable = new Resumable(
+		{
+			target: '/files/upload',
+			fileParameterName: 'file.data'
+		}
+	);
+
+	this.resumable.assignBrowse(this.upButton);
+	this.resumable.assignDrop(this.dropContainer);
+
+	var _self = this;
+	this.resumable.on('fileAdded', function(file){
+		console.log(file);
+		_self.statusArea.html(file.fileName + ', ' + file.size + ' bytes');
+		_self.resumable.upload();
+	});
+	this.resumable.on('fileSuccess', function(file, message){
+		console.log(message);
+		_self.statusArea.html(message);
+	});
+	this.resumable.on('fileError', function(file, message){
+		console.log(message);
+		_self.statusArea.html(message);
+	});
+	this.resumable.on('progress', function(file){
+		//_self.statusArea.html(_self.resumable.progress());
+		_self.progress.val(_self.resumable.progress() * 100);
+	});
+}
+
 function testBrowserFeatures(resultContainer)
 {
 	resultContainer.empty();
@@ -93,6 +138,10 @@ function testBrowserFeatures(resultContainer)
 	}
 
 	reportResult("Websockets", Modernizr.websockets);
+
+	var r = new Resumable();
+
+	reportResult("HTML5 File uploads", r.support);
 
 	resultContainer.append(resultList);
 }
@@ -108,6 +157,16 @@ $(document).ready(
 		if( $('.test-browser-features').length > 0 )
 		{
 			testBrowserFeatures($('.test-browser-features'));
+		}
+
+		if( $('.file-uploader').length > 0 )
+		{
+			$('.file-uploader').each(
+				function(index, element)
+				{
+					var uploader = new FileUploader($(element));
+				}
+			);
 		}
 	}
 )
