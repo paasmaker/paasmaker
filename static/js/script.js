@@ -80,12 +80,34 @@ SimpleTagEditor.prototype.rebuildOutput = function()
 	);
 }
 
+function testBrowserFeatures(resultContainer)
+{
+	resultContainer.empty();
+
+	resultList = $('<ul></ul>');
+
+	var reportResult = function(name, result)
+	{
+		resultLabel = result ? 'Success' : 'Failure';
+		resultList.append($('<li>' + name + ': ' + resultLabel + '</li>'));
+	}
+
+	reportResult("Websockets", Modernizr.websockets);
+
+	resultContainer.append(resultList);
+}
+
 $(document).ready(
 	function()
 	{
 		if( $('.workspace-tag-editor').length > 0 )
 		{
 			var workspaceTagEditor = new SimpleTagEditor($('form'), $('.workspace-tag-editor'));
+		}
+
+		if( $('.test-browser-features').length > 0 )
+		{
+			testBrowserFeatures($('.test-browser-features'));
 		}
 	}
 )
