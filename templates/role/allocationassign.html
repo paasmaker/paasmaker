@@ -1,0 +1,34 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Assign role to user
+{% end %}
+
+{% block body %}
+	<form method="POST">
+		<label for="user_id">User:</label>
+		<select name="user_id" id="user_id">
+			{% for user in users %}
+				<option value="{{ user.id }}">{{ user.name }}</option>
+			{% end %}
+		</select>
+
+		<label for="role_id">Role:</label>
+		<select name="role_id" id="role_id">
+			{% for role in roles %}
+				<option value="{{ role.id }}">{{ role.name }}</option>
+			{% end %}
+		</select>
+
+		<label for="workspace_id">Workspace:</label>
+		<select name="workspace_id" id="workspace_id">
+			<option value="">-- Global</option>
+			{% for workspace in workspaces %}
+				<option value="{{ workspace.id }}">{{ workspace.name }}</option>
+			{% end %}
+		</select>
+
+		<br />
+		<button type="submit" class="btn">Submit</button>
+	</form>
+{% end %}

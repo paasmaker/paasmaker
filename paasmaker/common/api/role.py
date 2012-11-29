@@ -105,3 +105,20 @@ class RoleAllocationAPIRequest(paasmaker.util.APIRequest):
 
 	def get_endpoint(self):
 		return '/role/allocation/assign'
+
+class RoleUnAllocationAPIRequest(paasmaker.util.APIRequest):
+	def __init__(self, *args, **kwargs):
+		self.params = {}
+		super(RoleUnAllocationAPIRequest, self).__init__(*args, **kwargs)
+
+	def set_allocation_id(self, allocation_id):
+		self.params['allocation_id'] = allocation_id
+
+	def build_payload(self):
+		# Build our payload.
+		payload = {}
+		payload.update(self.params)
+		return payload
+
+	def get_endpoint(self):
+		return '/role/allocation/unassign'

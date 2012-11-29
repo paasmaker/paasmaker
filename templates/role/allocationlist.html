@@ -1,0 +1,47 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Role Allocation List
+{% end %}
+
+{% block body %}
+	<p><a href="/role/allocation/assign">Create a new allocation</a></p>
+
+	<table class="table">
+		<tr>
+			<th>User</th>
+			<th>Role</th>
+			<th>Workspace</th>
+			<th>Action</th>
+		</tr>
+		{% for allocation in allocations %}
+			<tr>
+				<td>
+					<a href="/user/{{ allocation.user.id }}">
+						{{ allocation.user.name }}
+					</a>
+				</td>
+				<td>
+					<a href="/role/{{ allocation.role.id }}">
+						{{ allocation.role.name }}
+					</a>
+				</td>
+				<td>
+					{% if allocation.workspace %}
+						<a href="/workspace/{{ allocation.workspace.id }}">
+							{{ allocation.workspace.name }}
+						</a>
+					{% else %}
+						Global
+					{% end %}
+				</td>
+				<td>
+					<form method="POST" action="/role/allocation/unassign">
+						<input type="hidden" name="allocation_id" value="{{ allocation.id }}" />
+						<input type="submit" class="btn" value="Remove" />
+					</form>
+				</td>
+			</tr>
+		{% end %}
+	</table>
+{% end %}

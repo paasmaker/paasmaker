@@ -39,6 +39,11 @@ class RoleAllocationAssignSchema(colander.MappingSchema):
 		default=None,
 		missing=None)
 
+class RoleAllocationUnAssignSchema(colander.MappingSchema):
+	allocation_id = colander.SchemaNode(colander.Integer(),
+		title="Allocation ID",
+		description="The allocation ID.")
+
 # GET /role/list - list roles
 # POST /role/create - create
 # GET /role/<id> - fetch role information.
@@ -146,6 +151,19 @@ class RoleAllocationAssignController(BaseController):
 
 	def get(self):
 		# TODO: Permissions.
+		# List available users, workspaces, and roles.
+		# TODO: This won't be efficient at large sets.
+		if self.format == 'html':
+			# We don't expose this here to the API - this is
+			# purely for the template to use.
+			users = self.db().query(paasmaker.model.User).all()
+			roles = self.db().query(paasmaker.model.Role).all()
+			workspaces = self.db().query(paasmaker.model.Workspace).all()
+
+			self.add_data_template('users', users)
+			self.add_data_template('roles', roles)
+			self.add_data_template('workspaces', workspaces)
+
 		self.render("role/allocationassign.html")
 
 	def post(self):
@@ -192,6 +210,33 @@ class RoleAllocationAssignController(BaseController):
 		routes.append((r"/role/allocation/assign", RoleAllocationAssignController, configuration))
 		return routes
 
+class RoleAllocationUnAssignController(BaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def post(self):
+		# TODO: Permissions.
+		valid_data = self.validate_data(RoleAllocationUnAssignSchema())
+
+		# Fetch this allocation.
+		allocation = self.db().query(paasmaker.model.WorkspaceUserRole).get(int(self.params['allocation_id']))
+
+		if not allocation:
+			raise tornado.HTTPError(404, "No such allocation.")
+
+		session = self.db()
+		session.delete(allocation)
+		paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
+
+		self.add_data('success', True)
+
+		self.redirect('/role/allocation/list')
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/role/allocation/unassign", RoleAllocationUnAssignController, configuration))
+		return routes
+
 class RoleEditControllerTest(BaseControllerTest):
 	config_modules = ['pacemaker']
 
@@ -201,6 +246,7 @@ class RoleEditControllerTest(BaseControllerTest):
 		routes.extend(RoleListController.get_routes({'configuration': self.configuration}))
 		routes.extend(RoleAllocationListController.get_routes({'configuration': self.configuration}))
 		routes.extend(RoleAllocationAssignController.get_routes({'configuration': self.configuration}))
+		routes.extend(RoleAllocationUnAssignController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
@@ -395,6 +441,8 @@ class RoleEditControllerTest(BaseControllerTest):
 		self.assertEquals(response.data['allocation']['role']['id'], role.id, "Role ID not as expected.")
 		self.assertEquals(response.data['allocation']['workspace'], None, "Workspace is not None.")
 
+		first_allocation_id = response.data['allocation']['id']
+
 		# Same again, but apply to a workspace.
 		request = paasmaker.common.api.role.RoleAllocationAPIRequest(self.configuration)
 		request.set_superkey_auth()
@@ -407,3 +455,46 @@ class RoleEditControllerTest(BaseControllerTest):
 		self.assertEquals(response.data['allocation']['user']['id'], user.id, "User ID not as expected.")
 		self.assertEquals(response.data['allocation']['role']['id'], role.id, "Role ID not as expected.")
 		self.assertEquals(response.data['allocation']['workspace']['id'], workspace.id, "Workspace is not None.")
+
+		second_allocation_id = response.data['allocation']['id']
+
+		# Remove the allocations.
+		request = paasmaker.common.api.role.RoleUnAllocationAPIRequest(self.configuration)
+		request.set_superkey_auth()
+		request.set_allocation_id(first_allocation_id)
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertTrue(response.data.has_key('success'), "Missing success flag.")
+
+		# List it.
+		request = paasmaker.common.api.role.RoleAllocationListAPIRequest(self.configuration)
+		request.set_superkey_auth()
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertTrue(response.data.has_key('allocations'), "Missing allocations list.")
+		self.assertEquals(len(response.data['allocations']), 1, "Not enough allocations returned.")
+		self.assertEquals(response.data['allocations'][0]['user']['login'], 'username', "Returned allocations is not as expected.")
+
+		# Remove the other allocation.
+		request = paasmaker.common.api.role.RoleUnAllocationAPIRequest(self.configuration)
+		request.set_superkey_auth()
+		request.set_allocation_id(second_allocation_id)
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertTrue(response.data.has_key('success'), "Missing success flag.")
+
+		# List it. Should now be none.
+		request = paasmaker.common.api.role.RoleAllocationListAPIRequest(self.configuration)
+		request.set_superkey_auth()
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertTrue(response.data.has_key('allocations'), "Missing allocations list.")
+		self.assertEquals(len(response.data['allocations']), 0, "Not the right number of allocations.")
