@@ -14,7 +14,6 @@ from user import UserEditController
 
 import tornado
 import tornado.testing
-import smallform
 import colander
 
 logger = logging.getLogger(__name__)
