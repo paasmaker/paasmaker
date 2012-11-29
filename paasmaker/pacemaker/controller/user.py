@@ -9,8 +9,6 @@ from paasmaker.common.controller import BaseController, BaseControllerTest
 import tornado
 import tornado.testing
 
-import smallform
-
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
