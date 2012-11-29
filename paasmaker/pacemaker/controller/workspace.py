@@ -48,7 +48,7 @@ class WorkspaceEditController(BaseController):
 		workspace = self._get_workspace(workspace_id)
 		if not workspace:
 			workspace = self._default_workspace()
-			self.add_data('workspace', workspace)
+		self.add_data('workspace', workspace)
 
 		self.render("workspace/edit.html")
 

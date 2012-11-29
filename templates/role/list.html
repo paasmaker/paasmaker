@@ -9,7 +9,7 @@
 
 	<ul>
 		{% for role in roles %}
-			<li><a href="/role/edit/{{ role.id }}">{{ role.name }}</a></li>
+			<li><a href="/role/{{ role.id }}">{{ role.name }}</a></li>
 		{% end %}
 	</ul>
 {% end %}

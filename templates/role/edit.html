@@ -1,0 +1,21 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Role Editor
+{% end %}
+
+{% block body %}
+	<form method="POST">
+		<label for="name">Name:</label>
+		<input name="name" id="name" type="text" value="{{ role.name }}" />
+		{% raw format_form_error('name') %}
+
+		<p>Permissions:</p>
+		{% for permission in available_permissions %}
+			<label><input type="checkbox" name="permissions.{{ permission }}" {% if permission in role.permissions %}checked="checked"{% end %} /> {{ permission }}</label>
+		{% end %}
+
+		<br />
+		<button type="submit" class="btn">Submit</button>
+	</form>
+{% end %}

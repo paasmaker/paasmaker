@@ -146,6 +146,11 @@ class BaseController(tornado.web.RequestHandler):
 							if not hacked_maps.has_key(skey):
 								hacked_maps[skey] = {}
 							hacked_maps[skey][key.split(".")[-1]] = value
+						elif type(schema_keys[skey].typ) == colander.Sequence:
+							# Hack to undo sequences.
+							if not hacked_maps.has_key(skey):
+								hacked_maps[skey] = []
+							hacked_maps[skey].append(key.split(".")[-1])
 						else:
 							found_subkeys.add(skey)
 							input_keys[key] = value

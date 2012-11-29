@@ -91,37 +91,48 @@ class RoleEditController(BaseController):
 			# Find and load the role.
 			role = self.db().query(paasmaker.model.Role).get(int(role_id))
 			if not role:
-				self.add_error("No such role.")
-				self.write_error(404)
+				raise HTTPError(404, "No such role.")
+		return role
+
+	def _default_role(self):
+		role = paasmaker.model.Role()
+		role.name = ''
 		return role
 
 	def get(self, role_id=None):
 		# TODO: Permissions.
 		role = self._get_role(role_id)
+		if not role:
+			role = self._default_role()
 		self.add_data('role', role)
+		self.add_data('available_permissions', constants.PERMISSION.ALL)
+
 		self.render("role/edit.html")
 
 	def post(self, role_id=None):
-		# TODO: Permissions.
 		role = self._get_role(role_id)
 
-		if not self.validate_data(RoleSchema()):
-			return
+		valid_data = self.validate_data(RoleSchema())
 
 		if not role:
-			role = paasmaker.model.Role()
+			role = self._default_role()
 
-		role.name = self.param('name')
-		role.permissions = self.param('permissions')
+		role.name = self.params['name']
+		role.permissions = self.params['permissions']
 
-		session = self.db()
-		session.add(role)
-		paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
-		session.refresh(role)
+		if valid_data:
+			session = self.db()
+			session.add(role)
+			paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
+			session.refresh(role)
 
-		self.add_data('role', role)
+			self.add_data('role', role)
 
-		self.render("role/edit.html")
+			self.redirect('/role/list')
+		else:
+			self.add_data('role', role)
+			self.add_data('available_permissions', constants.PERMISSION.ALL)
+			self.render("role/edit.html")
 
 	@staticmethod
 	def get_routes(configuration):
@@ -133,46 +144,33 @@ class RoleEditController(BaseController):
 class RoleAllocationAssignController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	def _get_role(self, role_id):
-		role = None
-		if role_id:
-			# Find and load the role.
-			role = self.db().query(paasmaker.model.Role).get(int(role_id))
-			if not role:
-				self.add_error("No such role.")
-				self.write_error(404)
-		return role
-
-	def get(self, role_id=None):
+	def get(self):
 		# TODO: Permissions.
-		role = self._get_role(role_id)
-		self.add_data('role', role)
 		self.render("role/allocationassign.html")
 
-	def post(self, role_id=None):
+	def post(self):
 		# TODO: Permissions.
-		if not self.validate_data(RoleAllocationAssignSchema()):
-			return
+		valid_data = self.validate_data(RoleAllocationAssignSchema())
 
 		# Fetch the role, user, and workspace.
-		role = self.db().query(paasmaker.model.Role).get(int(self.param('role_id')))
-		user = self.db().query(paasmaker.model.User).get(int(self.param('user_id')))
-		workspace_id = self.param('workspace_id')
+		role = self.db().query(paasmaker.model.Role).get(int(self.params['role_id']))
+		user = self.db().query(paasmaker.model.User).get(int(self.params['user_id']))
+		workspace_id = self.params['workspace_id']
 		workspace = None
 		if workspace_id:
-			workspace = self.db().query(paasmaker.model.Workspace).get(workspace_id)
+			workspace = self.db().query(paasmaker.model.Workspace).get(int(workspace_id))
 
 		if not role:
 			self.add_error("No such role.")
+			valid_data = False
 		if not user:
 			self.add_error("No such user.")
+			valid_data = False
 		if workspace_id and not workspace:
 			self.add_error("No such workspace.")
+			valid_data = False
 
-		if len(self.errors) > 0:
-			# TODO: A better error code...
-			self.write_error(404)
-		else:
+		if valid_data:
 			allocation = paasmaker.model.WorkspaceUserRole()
 			allocation.user = user
 			allocation.role = role
@@ -184,8 +182,9 @@ class RoleAllocationAssignController(BaseController):
 			session.refresh(allocation)
 
 			self.add_data('allocation', allocation)
-
-		self.render("role/allocationassign.html")
+			self.redirect('/role/allocation/list')
+		else:
+			self.render("role/allocationassign.html")
 
 	@staticmethod
 	def get_routes(configuration):
