@@ -155,9 +155,8 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		request = paasmaker.common.api.workspace.WorkspaceEditAPIRequest(self.configuration)
 		request.set_superkey_auth()
 		# This loads the workspace data from the server.
-		request.load(workspace_id, self.stop)
+		request.load(workspace_id, self.stop, self.stop)
 		load_response = self.wait()
-		self.failIf(not load_response.success)
 
 		# Now attempt to change the workspace.
 		request.set_workspace_name('Test Altered workspace')
@@ -188,9 +187,8 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		request = paasmaker.common.api.workspace.WorkspaceEditAPIRequest(self.configuration)
 		request.set_superkey_auth()
 		# This loads the workspace data from the server.
-		request.load(workspace_id, self.stop)
+		request.load(workspace_id, self.stop, self.stop)
 		load_response = self.wait()
-		self.failIf(not load_response.success)
 
 		# Now attempt to change the workspace.
 		request.set_workspace_name('a')

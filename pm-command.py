@@ -196,6 +196,67 @@ class RoleListAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class WorkspaceCreateAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("name", help="Workspace name")
+		parser.add_argument("tags", help="JSON formatted tags for this workspace.", default="{}")
+
+	def describe(self):
+		return "Create a workspace."
+
+	def process(self, args):
+		tags = json.loads(args.tags)
+
+		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(None)
+		request.set_workspace_name(args.name)
+		request.set_workspace_tags(tags)
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
+class WorkspaceEditAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("workspace_id", help="Workspace ID to edit")
+		parser.add_argument("--name", type=str, default=None, help="The name of the workspace.")
+		parser.add_argument("--tags", type=str, default=None, help="JSON formatted tags for this workspace.")
+
+	def describe(self):
+		return "Edit a workspace."
+
+	def process(self, args):
+		def workspace_loaded(roledata):
+			if args.name:
+				request.set_workspace_name(args.name)
+			if args.tags:
+				tags = json.loads(args.tags)
+				request.set_workspace_tags(tags)
+			request.send(self.generic_api_response)
+
+		request = paasmaker.common.api.workspace.WorkspaceEditAPIRequest(None)
+		self.point_and_auth(args, request)
+		request.load(int(args.workspace_id), workspace_loaded, self.generic_request_failed)
+
+class WorkspaceGetAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("workspace_id", help="Workspace ID to fetch")
+
+	def describe(self):
+		return "Get a workspace record."
+
+	def process(self, args):
+		request = paasmaker.common.api.workspace.WorkspaceGetAPIRequest(None)
+		request.set_workspace(int(args.workspace_id))
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
+class WorkspaceListAction(RootAction):
+	def describe(self):
+		return "List workspaces."
+
+	def process(self, args):
+		request = paasmaker.common.api.workspace.WorkspaceListAPIRequest(None)
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
@@ -228,6 +289,10 @@ ACTION_MAP = {
 	'role-edit': RoleEditAction(),
 	'role-get': RoleGetAction(),
 	'role-list': RoleListAction(),
+	'workspace-create': WorkspaceCreateAction(),
+	'workspace-edit': WorkspaceEditAction(),
+	'workspace-get': WorkspaceGetAction(),
+	'workspace-list': WorkspaceListAction(),
 	'help': HelpAction()
 }
 

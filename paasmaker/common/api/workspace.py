@@ -42,7 +42,7 @@ class WorkspaceEditAPIRequest(WorkspaceCreateAPIRequest):
 	def set_workspace(self, workspace_id):
 		self.workspace_id = workspace_id
 
-	def load(self, workspace_id, callback):
+	def load(self, workspace_id, callback, error_callback):
 		request = WorkspaceGetAPIRequest(self.configuration)
 		request.duplicate_auth(self)
 		request.set_workspace(workspace_id)
@@ -52,10 +52,10 @@ class WorkspaceEditAPIRequest(WorkspaceCreateAPIRequest):
 				self.params.update(response.data['workspace'])
 				self.workspace_id = self.params['id']
 				logger.debug("Loading complete for workspace %d", self.workspace_id)
-				callback(response)
+				callback(response.data['workspace'])
 			else:
 				logger.debug("Loading failed for workspace.")
-				callback(response)
+				error_callback(str(response.errors))
 		request.send(on_load_complete)
 		logger.debug("Awaiting results of load from the server.")
 
