@@ -89,6 +89,33 @@ class UserCreateAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class UserEditAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("user_id", help="User ID to edit")
+		parser.add_argument("--name", type=str, default=None, help="The name of the user.")
+		parser.add_argument("--email", type=str, default=None, help="The email of the user.")
+		parser.add_argument("--login", type=str, default=None, help="The login of the user.")
+		parser.add_argument("--password", type=str, default=None, help="The password of the user.")
+
+	def describe(self):
+		return "Edit a user."
+
+	def process(self, args):
+		def user_loaded(roledata):
+			if args.name:
+				request.set_user_name(args.name)
+			if args.login:
+				request.set_user_login(args.login)
+			if args.email:
+				request.set_user_email(args.email)
+			if args.password:
+				request.set_user_password(args.password)
+			request.send(self.generic_api_response)
+
+		request = paasmaker.common.api.user.UserEditAPIRequest(None)
+		self.point_and_auth(args, request)
+		request.load(int(args.user_id), user_loaded, self.generic_request_failed)
+
 class UserGetAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("user_id", help="User ID to fetch")
@@ -281,6 +308,7 @@ action = sys.argv[1]
 
 ACTION_MAP = {
 	'user-create': UserCreateAction(),
+	'user-edit': UserEditAction(),
 	'user-get': UserGetAction(),
 	'user-list': UserListAction(),
 	'user-enable': UserEnableAction(),

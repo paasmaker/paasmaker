@@ -61,7 +61,7 @@ class UserEditAPIRequest(UserCreateAPIRequest):
 	def set_user(self, user_id):
 		self.user_id = user_id
 
-	def load(self, user_id, callback):
+	def load(self, user_id, callback, error_callback):
 		request = UserGetAPIRequest(self.configuration)
 		request.duplicate_auth(self)
 		request.set_user(user_id)
@@ -71,10 +71,10 @@ class UserEditAPIRequest(UserCreateAPIRequest):
 				self.params.update(response.data['user'])
 				self.user_id = self.params['id']
 				logger.debug("Loading complete for user %d", self.user_id)
-				callback(response)
+				callback(response.data['user'])
 			else:
 				logger.debug("Loading failed for user.")
-				callback(response)
+				error_callback(str(response.errors))
 		request.send(on_load_complete)
 		logger.debug("Awaiting results of load from the server.")
 

@@ -221,9 +221,8 @@ class UserEditControllerTest(BaseControllerTest):
 		request = paasmaker.common.api.user.UserEditAPIRequest(self.configuration)
 		request.set_superkey_auth()
 		# This loads the user data from the server.
-		request.load(user_id, self.stop)
+		request.load(user_id, self.stop, self.stop)
 		load_response = self.wait()
-		self.failIf(not load_response.success)
 
 		# Now attempt to change the user.
 		request.set_user_name('Test Updated')
@@ -255,9 +254,8 @@ class UserEditControllerTest(BaseControllerTest):
 		request = paasmaker.common.api.user.UserEditAPIRequest(self.configuration)
 		request.set_superkey_auth()
 		# This loads the user data from the server.
-		request.load(user_id, self.stop)
+		request.load(user_id, self.stop, self.stop)
 		load_response = self.wait()
-		self.failIf(not load_response.success)
 
 		# Now attempt to change the user.
 		request.set_user_email('foo')
