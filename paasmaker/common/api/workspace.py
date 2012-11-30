@@ -63,5 +63,9 @@ class WorkspaceEditAPIRequest(WorkspaceCreateAPIRequest):
 		return "/workspace/%d" % self.workspace_id
 
 class WorkspaceListAPIRequest(paasmaker.util.APIRequest):
+	def __init__(self, *args, **kwargs):
+		super(WorkspaceListAPIRequest, self).__init__(*args, **kwargs)
+		self.method = 'GET'
+
 	def get_endpoint(self):
 		return '/workspace/list'

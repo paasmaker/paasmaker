@@ -11,6 +11,7 @@ import subprocess
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest
 from user import UserEditController
+from paasmaker.common.core import constants
 
 import tornado
 import tornado.testing
@@ -51,6 +52,9 @@ class UploadController(BaseController):
 	def get(self):
 		# Force JSON response.
 		self._set_format('json')
+
+		self.require_permission(constants.PERMISSION.FILE_UPLOAD)
+
 		valid_data = self.validate_data(UploadChunkSchema())
 
 		# Test to see if a chunk exists. Return 200 if it does,
@@ -66,12 +70,12 @@ class UploadController(BaseController):
 			self.write_error(404)
 
 	def post(self):
-		# TODO: Permissions.
-		# TODO: Prevent users from filling up the disk?
-		# LONG TERM TODO: This limits us to a single Pacemaker at the moment...
-
 		# Force JSON response.
 		self._set_format('json')
+
+		self.require_permission(constants.PERMISSION.FILE_UPLOAD)
+		# TODO: Prevent users from filling up the disk?
+		# LONG TERM TODO: This limits us to a single Pacemaker at the moment...
 
 		self.validate_data(UploadChunkSchema())
 
@@ -147,6 +151,18 @@ class UploadControllerTest(BaseControllerTest):
 		session = self.configuration.get_database_session()
 		user = session.query(paasmaker.model.User).get(response.data['user']['id'])
 		apikey = user.apikey
+
+		# And give them permission to upload a file.
+		# TODO: Check permissions work as well.
+		role = paasmaker.model.Role()
+		role.name = "Upload"
+		role.permissions = [constants.PERMISSION.FILE_UPLOAD]
+		session.add(role)
+		allocation = paasmaker.model.WorkspaceUserRole()
+		allocation.user = user
+		allocation.role = role
+		session.add(allocation)
+		paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
 
 		def progress_callback(position, total):
 			logger.info("Progress: %d of %d bytes uploaded.", position, total)

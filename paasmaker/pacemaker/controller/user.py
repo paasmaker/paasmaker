@@ -1,11 +1,13 @@
 import unittest
-import paasmaker
 import uuid
 import logging
-import colander
 import json
-from paasmaker.common.controller import BaseController, BaseControllerTest
 
+import paasmaker
+from paasmaker.common.controller import BaseController, BaseControllerTest
+from paasmaker.common.core import constants
+
+import colander
 import tornado
 import tornado.testing
 
@@ -87,7 +89,7 @@ class UserEditController(BaseController):
 		return user
 
 	def get(self, user_id=None):
-		# TODO: Permissions.
+		self.require_permission(constants.PERMISSION.USER_EDIT)
 		user = self._get_user(user_id)
 		if not user:
 			user = self._default_user()
@@ -96,7 +98,7 @@ class UserEditController(BaseController):
 		self.render("user/edit.html")
 
 	def post(self, user_id=None):
-		# TODO: Permissions.
+		self.require_permission(constants.PERMISSION.USER_EDIT)
 		user = self._get_user(user_id)
 
 		valid_data = self.validate_data(UserSchema())
@@ -142,7 +144,7 @@ class UserListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def get(self):
-		# TODO: Permissions.
+		self.require_permission(constants.PERMISSION.USER_LIST)
 		# TODO: Paginate...
 		users = self.db().query(paasmaker.model.User)
 		self.add_data('users', users)

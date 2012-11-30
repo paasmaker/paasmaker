@@ -57,7 +57,7 @@ class RoleListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def get(self):
-		# TODO: Permissions.
+		self.require_permission(constants.PERMISSION.ROLE_LIST)
 		# TODO: Pagination.
 		roles = self.db().query(paasmaker.model.Role).all()
 		self.add_data('roles', roles)
@@ -74,7 +74,7 @@ class RoleAllocationListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def get(self):
-		# TODO: Permissions.
+		self.require_permission(constants.PERMISSION.ROLE_ASSIGN)
 		# TODO: Pagination.
 		allocations = self.db().query(paasmaker.model.WorkspaceUserRole).all()
 		self.add_data('allocations', allocations)
@@ -105,7 +105,7 @@ class RoleEditController(BaseController):
 		return role
 
 	def get(self, role_id=None):
-		# TODO: Permissions.
+		self.require_permission(constants.PERMISSION.ROLE_EDIT)
 		role = self._get_role(role_id)
 		if not role:
 			role = self._default_role()
@@ -115,6 +115,7 @@ class RoleEditController(BaseController):
 		self.render("role/edit.html")
 
 	def post(self, role_id=None):
+		self.require_permission(constants.PERMISSION.ROLE_EDIT)
 		role = self._get_role(role_id)
 
 		valid_data = self.validate_data(RoleSchema())
@@ -150,7 +151,7 @@ class RoleAllocationAssignController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def get(self):
-		# TODO: Permissions.
+		self.require_permission(constants.PERMISSION.ROLE_ASSIGN)
 		# List available users, workspaces, and roles.
 		# TODO: This won't be efficient at large sets.
 		if self.format == 'html':
@@ -167,7 +168,7 @@ class RoleAllocationAssignController(BaseController):
 		self.render("role/allocationassign.html")
 
 	def post(self):
-		# TODO: Permissions.
+		self.require_permission(constants.PERMISSION.ROLE_ASSIGN)
 		valid_data = self.validate_data(RoleAllocationAssignSchema())
 
 		# Fetch the role, user, and workspace.
@@ -214,7 +215,7 @@ class RoleAllocationUnAssignController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def post(self):
-		# TODO: Permissions.
+		self.require_permission(constants.PERMISSION.ROLE_ASSIGN)
 		valid_data = self.validate_data(RoleAllocationUnAssignSchema())
 
 		# Fetch this allocation.
@@ -254,7 +255,7 @@ class RoleEditControllerTest(BaseControllerTest):
 		# Create the role.
 		request = paasmaker.common.api.role.RoleCreateAPIRequest(self.configuration)
 		request.set_superkey_auth()
-		request.set_role_params('Test Role', [constants.PERMISSION.USER_CREATE])
+		request.set_role_params('Test Role', [constants.PERMISSION.USER_EDIT])
 		request.send(self.stop)
 		response = self.wait()
 
@@ -264,7 +265,7 @@ class RoleEditControllerTest(BaseControllerTest):
 		self.assertTrue(response.data.has_key('role'), "Missing role object in return data.")
 		self.assertTrue(response.data['role'].has_key('id'), "Missing ID in return data.")
 		self.assertTrue(response.data['role'].has_key('permissions'), "Missing permissions in return data.")
-		self.assertIn(constants.PERMISSION.USER_CREATE, response.data['role']['permissions'])
+		self.assertIn(constants.PERMISSION.USER_EDIT, response.data['role']['permissions'])
 
 	def test_create_fail(self):
 		# Send through some bogus data.
@@ -281,7 +282,7 @@ class RoleEditControllerTest(BaseControllerTest):
 		# Create the role.
 		request = paasmaker.common.api.role.RoleCreateAPIRequest(self.configuration)
 		request.set_superkey_auth()
-		request.set_role_params('Test Role', [constants.PERMISSION.USER_CREATE])
+		request.set_role_params('Test Role', [constants.PERMISSION.USER_EDIT])
 		request.send(self.stop)
 		response = self.wait()
 
@@ -297,7 +298,7 @@ class RoleEditControllerTest(BaseControllerTest):
 		load_response = self.wait()
 
 		# Now attempt to change the role.
-		request.set_role_permissions(load_response['permissions'] + [constants.PERMISSION.WORKSPACE_CREATE])
+		request.set_role_permissions(load_response['permissions'] + [constants.PERMISSION.WORKSPACE_EDIT])
 
 		# Send it along!
 		request.send(self.stop)
@@ -305,19 +306,19 @@ class RoleEditControllerTest(BaseControllerTest):
 
 		self.failIf(not response.success)
 		self.assertEquals(len(response.data['role']['permissions']), 2, 'Not enough permissions.')
-		self.assertIn(constants.PERMISSION.USER_CREATE, response.data['role']['permissions'])
-		self.assertIn(constants.PERMISSION.WORKSPACE_CREATE, response.data['role']['permissions'])
+		self.assertIn(constants.PERMISSION.USER_EDIT, response.data['role']['permissions'])
+		self.assertIn(constants.PERMISSION.WORKSPACE_EDIT, response.data['role']['permissions'])
 
 		# Load up the role separately and confirm.
 		role = self.configuration.get_database_session().query(paasmaker.model.Role).get(role_id)
-		self.assertIn(constants.PERMISSION.USER_CREATE, role.permissions)
-		self.assertIn(constants.PERMISSION.WORKSPACE_CREATE, role.permissions)
+		self.assertIn(constants.PERMISSION.USER_EDIT, role.permissions)
+		self.assertIn(constants.PERMISSION.WORKSPACE_EDIT, role.permissions)
 
 	def test_edit_fail(self):
 		# Create the role.
 		request = paasmaker.common.api.role.RoleCreateAPIRequest(self.configuration)
 		request.set_superkey_auth()
-		request.set_role_params('Test Role', [constants.PERMISSION.USER_CREATE])
+		request.set_role_params('Test Role', [constants.PERMISSION.USER_EDIT])
 		request.send(self.stop)
 		response = self.wait()
 
@@ -346,7 +347,7 @@ class RoleEditControllerTest(BaseControllerTest):
 		# Create the role.
 		request = paasmaker.common.api.role.RoleCreateAPIRequest(self.configuration)
 		request.set_superkey_auth()
-		request.set_role_params('Test Role', [constants.PERMISSION.USER_CREATE])
+		request.set_role_params('Test Role', [constants.PERMISSION.USER_EDIT])
 		request.send(self.stop)
 		response = self.wait()
 

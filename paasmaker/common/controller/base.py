@@ -318,6 +318,42 @@ class BaseController(tornado.web.RequestHandler):
 		# Otherwise, return None.
 		return None
 
+	def has_permission(self, permission, workspace=None, user=None):
+		if not user and self.super_auth:
+			# If authenticated with the super token,
+			# you can do anything. With great power comes
+			# great responsiblity...
+			return True
+		if not user:
+			# No user supplied? Use the current user.
+			user = self.get_current_user()
+		if not user:
+			# Still no user? Not logged in.
+			# This situation should not occur, because the parent
+			# controller is protected.
+			raise tornado.web.HTTPError(403, "Not logged in.")
+
+		# NOTE: Nodes are not checked to see if they have permission,
+		# as they're only permitted to access a few controllers anyway.
+		# They're assigned permission by being able to authenticate
+		# to some controllers.
+
+		# TODO: Cache/speedup this result and lookup.
+		session = self.db()
+		allowed = paasmaker.model.WorkspaceUserRoleFlat.has_permission(
+			session,
+			user,
+			permission,
+			workspace
+		)
+		return allowed
+
+	def require_permission(self, permission, workspace=None, user=None):
+		allowed = self.has_permission(permission, workspace, user)
+		if not allowed:
+			self.add_error("You require permission %s to access." % permission)
+			raise tornado.web.HTTPError(403, "Access denied.")
+
 	def add_data(self, key, name):
 		self.data[key] = name
 

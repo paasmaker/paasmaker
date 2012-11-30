@@ -123,7 +123,8 @@ class NodeListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def get(self):
-		# TODO: Permissions.
+		self.require_permission(constants.PERMISSION.NODE_LIST)
+
 		# TODO: Paginate...
 		nodes = self.db().query(paasmaker.model.Node)
 		self.add_data('nodes', nodes)

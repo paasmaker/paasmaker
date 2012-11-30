@@ -1,11 +1,13 @@
 import unittest
-import paasmaker
 import uuid
 import logging
-import colander
 import json
-from paasmaker.common.controller import BaseController, BaseControllerTest
 
+import paasmaker
+from paasmaker.common.controller import BaseController, BaseControllerTest
+from paasmaker.common.core import constants
+
+import colander
 import tornado
 import tornado.testing
 
@@ -44,8 +46,8 @@ class WorkspaceEditController(BaseController):
 		return workspace
 
 	def get(self, workspace_id=None):
-		# TODO: Permissions.
 		workspace = self._get_workspace(workspace_id)
+		self.require_permission(constants.PERMISSION.WORKSPACE_EDIT, workspace=workspace)
 		if not workspace:
 			workspace = self._default_workspace()
 		self.add_data('workspace', workspace)
@@ -54,6 +56,7 @@ class WorkspaceEditController(BaseController):
 
 	def post(self, workspace_id=None):
 		workspace = self._get_workspace(workspace_id)
+		self.require_permission(constants.PERMISSION.WORKSPACE_EDIT, workspace=workspace)
 
 		valid_data = self.validate_data(WorkspaceSchema())
 
@@ -87,14 +90,11 @@ class WorkspaceListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def get(self):
-		# TODO: Permissions.
+		self.require_permission(constants.PERMISSION.WORKSPACE_LIST)
 		# TODO: Paginate...
 		workspaces = self.db().query(paasmaker.model.Workspace)
 		self.add_data('workspaces', workspaces)
 		self.render("workspace/list.html")
-
-	def post(self):
-		self.get()
 
 	@staticmethod
 	def get_routes(configuration):

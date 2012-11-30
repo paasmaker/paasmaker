@@ -8,7 +8,7 @@ class ProfileController(BaseController):
 	AUTH_METHODS = [BaseController.USER]
 
 	def get(self):
-		# TODO: Permissions.
+		# No permissions check - you can only fetch your API key.
 		# Note - we're allowing the API key here because only the logged in
 		# user can view their own API key. So not a security risk.
 		self.add_data('apikey', self.get_current_user().apikey)
