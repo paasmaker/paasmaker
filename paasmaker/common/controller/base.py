@@ -1,17 +1,17 @@
-import tornado.web
-import tornado.websocket
-import tornado.escape
 import logging
-import paasmaker
-import tornado.testing
 import warnings
 import os
 import json
 import time
 
-import colander
-
+import paasmaker
 from ..testhelpers import TestHelpers
+
+import tornado.testing
+import tornado.web
+import tornado.websocket
+import tornado.escape
+import colander
 
 # Types of API requests.
 # 1. Node->Node. (ie, nodes talking to each other)
