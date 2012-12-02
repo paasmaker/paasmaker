@@ -8,11 +8,14 @@ import shutil
 import hashlib
 import logging
 import subprocess
-import configuration
-import paasmaker
 
 import tornadoredis
 import tornado
+
+import configuration
+import paasmaker
+
+from pubsub import pub
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -156,6 +159,10 @@ router:
 			self.setup_database()
 
 	def cleanup(self):
+		# Unsubscribe any listeners, to prevent leaks between tests.
+		# This doesn't stop all leaks, but certainly helps.
+		pub.unsubAll()
+
 		# Shut down any services we used.
 		if hasattr(self, 'redis_meta'):
 			for key, meta in self.redis_meta.iteritems():
