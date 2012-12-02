@@ -44,15 +44,6 @@ class RoleAllocationUnAssignSchema(colander.MappingSchema):
 		title="Allocation ID",
 		description="The allocation ID.")
 
-# GET /role/list - list roles
-# POST /role/create - create
-# GET /role/<id> - fetch role information.
-# POST /role/<id> - change role.
-
-# GET /role/allocation/list - list assigned user roles.
-# POST /role/allocation/assign - assign.
-# POST /role/allocation/unassign - unassign.
-
 class RoleListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
