@@ -122,8 +122,8 @@ class Crons(colander.SequenceSchema):
 	crons = Cron()
 
 class Manifest(colander.MappingSchema):
-	version = colander.SchemaNode(colander.Integer(),
-		title="Manifest version",
+	format = colander.SchemaNode(colander.Integer(),
+		title="Manifest format",
 		description="The manifest format version number.")
 
 class Instance(colander.MappingSchema):
@@ -254,7 +254,7 @@ class TestApplicationConfiguration(BaseControllerTest):
 
 	test_config = """
 manifest:
-  version: 1
+  format: 1
 
 application:
   name: foo.com
@@ -334,7 +334,7 @@ services:
 	def test_loading(self):
 		config = ApplicationConfiguration()
 		config.load(self.test_config)
-		self.assertEquals(config.get_flat('manifest.version'), 1, "Manifest version is incorrect.")
+		self.assertEquals(config.get_flat('manifest.format'), 1, "Manifest version is incorrect.")
 		# Disabled until the schema can be sorted out.
 		#self.assertEquals(config.get_flat('instances.web.provider'), "paasmaker.runtime.php", "Runtime provider is not as expected.")
 		#self.assertEquals(config.get_flat('instances.web.version'), "5.4", "Runtime version is not as expected.")

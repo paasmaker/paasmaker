@@ -1,5 +1,5 @@
 manifest:
-  version: 1
+  format: 1
 
 application:
   name: tornado-simple
