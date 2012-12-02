@@ -1,19 +1,20 @@
 import unittest
 import json
-import sqlalchemy
 import datetime
 import uuid
+import hashlib
+
 import paasmaker
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum, Table
+from paasmaker.common.core import constants
+
+import sqlalchemy
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum, Table, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.orm.interfaces import MapperExtension
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func
 from sqlalchemy import or_
-import hashlib
-
-from paasmaker.common.core import constants
 
 Base = declarative_base()
 
@@ -342,12 +343,14 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 
 class Application(OrmBase, Base):
 	__tablename__ = 'application'
+	__table_args__ = (Index('unique_app_per_workspace', "workspace_id", "name", unique=True),)
 
 	id = Column(Integer, primary_key=True)
 	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False, index=True)
 	workspace = relationship("Workspace", backref=backref('applications', order_by=id))
-	# Application names are globally unique.
-	name = Column(String, unique=True)
+	# Names are unique per workspace. TODO: Figure out how to handle the hostname issue
+	# with this - as apps are assigned hostnames name.cluster, which won't work.
+	name = Column(String, index=True)
 	manifest_path = Column(String, nullable=True)
 
 	def __repr__(self):
@@ -426,6 +429,7 @@ class ApplicationVersion(OrmBase, Base):
 
 class ApplicationInstanceType(OrmBase, Base):
 	__tablename__ = 'application_instance_type'
+	__table_args__ = (Index('unique_instance_type_per_version', "application_version_id", "name", unique=True),)
 
 	id = Column(Integer, primary_key=True)
 	application_version_id = Column(Integer, ForeignKey('application_version.id'), nullable=False, index=True)
@@ -562,11 +566,12 @@ class ApplicationInstanceTypeCron(OrmBase, Base):
 
 class Service(OrmBase, Base):
 	__tablename__ = 'service'
+	__table_args__ = (Index('unique_service_per_workspace', "workspace_id", "name", unique=True),)
 
 	id = Column(Integer, primary_key=True)
 	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False, index=True)
 	workspace = relationship("Workspace", backref=backref('workspace', order_by=id))
-	name = Column(String, nullable=False, index=True, unique=True) # TODO: Unique per workspace.
+	name = Column(String, nullable=False, index=True)
 	provider = Column(String, nullable=False, index=True)
 	_parameters = Column('parameters', Text, nullable=False)
 	_credentials = Column('credentials', Text, nullable=True)
