@@ -1,6 +1,38 @@
-global:
-  http_port: 8888
-  my_route: None
+# Example configuration file.
+node_token: nodesecret
+server_log_level: DEBUG
+log_directory: /path/to/scratch/scratch-paasmaker/logs
+scratch_directory: /path/to/scratch/scratch-paasmaker/scratch
+master:
+  host: localhost
+  isitme: true
+
+broker:
+  host: localhost
+  port: 42520
+  managed: true
+
+redis:
+  table:
+    host: 127.0.0.1
+    port: 42510
+    managed: true
+  stats:
+    host: 127.0.0.1
+    port: 42512
+    managed: true
+  jobs:
+    host: 127.0.0.1
+    port: 42513
+    managed: true
+
+heart:
+  enabled: true
+  working_dir: /path/to/scratch/scratch-paasmaker/heart
+
 pacemaker:
   enabled: true
-  dsn: sqlite3:///tmp/paasmaker.db 
+  super_token: supersecrettoken
+  allow_supertoken: true
+  cluster_hostname: local.paasmaker.net
+  dsn: sqlite:///path/to/scratch/scratch-paasmaker/paasmaker.db
