@@ -10,6 +10,10 @@
 		<input name="name" id="name" type="text" value="{{ workspace.name }}" />
 		{% raw format_form_error('name') %}
 
+		<label for="stub">Stub:</label>
+		<input name="stub" id="stub" type="text" value="{{ workspace.stub }}" />
+		{% raw format_form_error('stub') %}
+
 		<label>Tags:</label>
 		<div class="workspace-tag-editor">
 			<div class="output">

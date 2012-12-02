@@ -73,6 +73,7 @@ class TestHelpers(object):
 		# And the remainder of the models to test with.
 		workspace = paasmaker.model.Workspace()
 		workspace.name = 'Test'
+		workspace.stub = 'test'
 
 		service = paasmaker.model.Service()
 		service.workspace = workspace

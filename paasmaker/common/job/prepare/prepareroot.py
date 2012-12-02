@@ -127,6 +127,7 @@ class PrepareJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		s = self.configuration.get_database_session()
 		workspace = paasmaker.model.Workspace()
 		workspace.name = 'Work Zone'
+		workspace.stub = 'work'
 		s.add(workspace)
 		s.commit()
 

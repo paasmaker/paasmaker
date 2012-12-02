@@ -115,7 +115,13 @@ class RoleEditController(BaseController):
 			role = self._default_role()
 
 		role.name = self.params['name']
-		role.permissions = self.params['permissions']
+
+		# And a special handler - if supplied with "ALL", replace with all
+		# possible permissions.
+		if 'ALL' in self.params['permissions']:
+			role.permissions = constants.PERMISSION.ALL
+		else:
+			role.permissions = self.params['permissions']
 
 		if valid_data:
 			session = self.db()
@@ -364,6 +370,7 @@ class RoleEditControllerTest(BaseControllerTest):
 
 		workspace = paasmaker.model.Workspace()
 		workspace.name = 'Test Zone'
+		workspace.stub = 'test'
 
 		role = paasmaker.model.Role()
 		role.name = "Test"
@@ -408,6 +415,7 @@ class RoleEditControllerTest(BaseControllerTest):
 
 		workspace = paasmaker.model.Workspace()
 		workspace.name = 'Test Zone'
+		workspace.stub = 'test'
 
 		role = paasmaker.model.Role()
 		role.name = "Test"

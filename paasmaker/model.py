@@ -227,13 +227,14 @@ class Workspace(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	name = Column(String, nullable=False, unique=True)
+	stub = Column(String, nullable=False, unique=True)
 	_tags = Column('tags', Text, nullable=True)
 
 	def __repr__(self):
 		return "<Workspace('%s')>" % self.name
 
 	def flatten(self, field_list=None):
-		return super(Workspace, self).flatten(['name', 'tags'])
+		return super(Workspace, self).flatten(['name', 'stub', 'tags'])
 
 	@hybrid_property
 	def tags(self):
@@ -691,6 +692,7 @@ class TestModel(unittest.TestCase):
 
 		workspace = Workspace()
 		workspace.name = 'Work Zone'
+		workspace.stub = 'work'
 		workspace.tags = {'test': 'tag'}
 		s.add(workspace)
 		s.commit()
@@ -741,6 +743,7 @@ class TestModel(unittest.TestCase):
 		workspace = Workspace()
 		workspace.name = 'Work Zone'
 		workspace.tags = {'test': 'tag'}
+		workspace.stub = 'work'
 		s.add(workspace)
 		s.commit()
 

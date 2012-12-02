@@ -360,6 +360,7 @@ services:
 
 		workspace = paasmaker.model.Workspace()
 		workspace.name = 'Test'
+		workspace.stub = 'test'
 		session.add(workspace)
 		session.commit()
 

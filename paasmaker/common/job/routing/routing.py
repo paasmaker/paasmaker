@@ -179,6 +179,7 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def create_sample_applications(self, session, runtime_name, runtime_parameters, runtime_version):
 		workspace = paasmaker.model.Workspace()
 		workspace.name = 'Test'
+		workspace.stub = 'test'
 
 		application = paasmaker.model.Application()
 		application.workspace = workspace

@@ -28,6 +28,9 @@ class WorkspaceCreateAPIRequest(paasmaker.util.APIRequest):
 	def set_workspace_tags(self, tags):
 		self.params['tags'] = tags
 
+	def set_workspace_stub(self, stub):
+		self.params['stub'] = stub
+
 	def build_payload(self):
 		return self.params
 

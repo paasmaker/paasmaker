@@ -19,6 +19,10 @@ class WorkspaceSchema(colander.MappingSchema):
 		title="Workspace Name",
 		description="The name of this workspace.",
 		validator=colander.Length(min=2))
+	# TODO: Put proper validation on this.
+	stub = colander.SchemaNode(colander.String(),
+		title="Workspace stub",
+		description="A short, URL friendly name for the workspace.")
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="Workspace Tags",
 		description="A set of tags for this workspace.",
@@ -65,6 +69,7 @@ class WorkspaceEditController(BaseController):
 
 		workspace.name = self.params['name']
 		workspace.tags = self.params['tags']
+		workspace.stub = self.params['stub']
 
 		if valid_data:
 			session = self.db()
@@ -117,6 +122,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
 		request.set_superkey_auth()
 		request.set_workspace_name('Test workspace')
+		request.set_workspace_stub('test')
 		request.send(self.stop)
 		response = self.wait()
 
@@ -144,6 +150,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
 		request.set_superkey_auth()
 		request.set_workspace_name('Test workspace')
+		request.set_workspace_stub('test')
 		request.send(self.stop)
 		response = self.wait()
 
@@ -176,6 +183,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
 		request.set_superkey_auth()
 		request.set_workspace_name('Test workspace')
+		request.set_workspace_stub('test')
 		request.send(self.stop)
 		response = self.wait()
 
@@ -206,6 +214,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
 		request.set_superkey_auth()
 		request.set_workspace_name('Test workspace')
+		request.set_workspace_stub('test')
 		request.send(self.stop)
 		response = self.wait()
 

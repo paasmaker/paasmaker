@@ -116,6 +116,7 @@ class BasePlacementTest(tornado.testing.AsyncTestCase):
 	def create_sample_application(self, session, runtime_name, runtime_parameters, runtime_version):
 		workspace = paasmaker.model.Workspace()
 		workspace.name = 'Test'
+		workspace.stub = 'test'
 
 		application = paasmaker.model.Application()
 		application.workspace = workspace

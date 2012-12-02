@@ -226,6 +226,7 @@ class RoleListAction(RootAction):
 class WorkspaceCreateAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("name", help="Workspace name")
+		parser.add_argument("stub", help="Workspace stub")
 		parser.add_argument("tags", help="JSON formatted tags for this workspace.", default="{}")
 
 	def describe(self):
@@ -236,6 +237,7 @@ class WorkspaceCreateAction(RootAction):
 
 		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(None)
 		request.set_workspace_name(args.name)
+		request.set_workspace_stub(args.stub)
 		request.set_workspace_tags(tags)
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
@@ -244,6 +246,7 @@ class WorkspaceEditAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("workspace_id", help="Workspace ID to edit")
 		parser.add_argument("--name", type=str, default=None, help="The name of the workspace.")
+		parser.add_argument("--stub", type=str, default=None, help="The stub of the workspace.")
 		parser.add_argument("--tags", type=str, default=None, help="JSON formatted tags for this workspace.")
 
 	def describe(self):
@@ -256,6 +259,8 @@ class WorkspaceEditAction(RootAction):
 			if args.tags:
 				tags = json.loads(args.tags)
 				request.set_workspace_tags(tags)
+			if args.stub:
+				request.set_workspace_stub(args.stub)
 			request.send(self.generic_api_response)
 
 		request = paasmaker.common.api.workspace.WorkspaceEditAPIRequest(None)
