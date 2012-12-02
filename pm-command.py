@@ -223,6 +223,46 @@ class RoleListAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class RoleAllocationListAction(RootAction):
+	def describe(self):
+		return "List role allocations."
+
+	def process(self, args):
+		request = paasmaker.common.api.role.RoleAllocationListAPIRequest(None)
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
+class RoleAllocationAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("role_id", type=int, help="Role ID to assign")
+		parser.add_argument("user_id", type=int, help="User ID to assign")
+		parser.add_argument("--workspace_id", type=int, help="Workspace ID to assign (optional)", default=None)
+
+	def describe(self):
+		return "Allocate a role to a user and workspace."
+
+	def process(self, args):
+		request = paasmaker.common.api.role.RoleAllocationAPIRequest(None)
+		workspace_id = None
+		if args.workspace_id:
+			workspace_id = int(args.workspace_id)
+		request.set_allocation_params(int(args.user_id), int(args.role_id), workspace_id)
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
+class RoleUnAllocateAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("allocation_id", help="Allocation to remove.")
+
+	def describe(self):
+		return "Remove a role allocation."
+
+	def process(self, args):
+		request = paasmaker.common.api.role.RoleUnAllocationAPIRequest(None)
+		request.set_role(int(args.allocation_id))
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
 class WorkspaceCreateAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("name", help="Workspace name")
@@ -303,8 +343,10 @@ class HelpAction(RootAction):
 		pass
 
 	def process(self, args):
-		for key, handler in ACTION_MAP.iteritems():
-			logging.info("%s: %s", key, handler.describe())
+		help_keys = ACTION_MAP.keys()
+		help_keys.sort()
+		for key in help_keys:
+			logging.info("%s: %s", key, ACTION_MAP[key].describe())
 
 		self.exit(0)
 
@@ -336,6 +378,9 @@ ACTION_MAP = {
 	'workspace-get': WorkspaceGetAction(),
 	'workspace-list': WorkspaceListAction(),
 	'node-list': NodeListAction(),
+	'role-allocation-list': RoleAllocationListAction(),
+	'role-allocate': RoleAllocationAction(),
+	'role-unallocate': RoleUnAllocateAction(),
 	'help': HelpAction()
 }
 
