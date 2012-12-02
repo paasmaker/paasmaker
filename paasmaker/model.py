@@ -542,6 +542,24 @@ class ApplicationInstanceTypeHostname(OrmBase, Base):
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['application_instance_type', 'hostname'])
 
+class ApplicationInstanceTypeCron(OrmBase, Base):
+	__tablename__ = 'application_instance_type_cron'
+
+	id = Column(Integer, primary_key=True)
+	application_instance_type_id = Column(Integer, ForeignKey('application_instance_type.id'), nullable=False, index=True)
+	application_instance_type = relationship("ApplicationInstanceType", backref=backref('crons', order_by=id))
+
+	runspec = Column(String, nullable=False)
+	uri = Column(Text, nullable=False)
+	username = Column(Text, nullable=True)
+	password = Column(Text, nullable=True)
+
+	def __repr__(self):
+		return "<ApplicationInstanceTypeCron('%s':'%s')>" % (self.runspec, self.uri)
+
+	def flatten(self, field_list=None):
+		return super(Node, self).flatten(['application_instance_type', 'runspec', 'uri'])
+
 class Service(OrmBase, Base):
 	__tablename__ = 'service'
 
@@ -654,7 +672,7 @@ class TestModel(unittest.TestCase):
 		user.password = 'test'
 		role = Role()
 		role.name = 'Administrator'
-		role.add_permission(constants.PERMISSION.USER_CREATE)
+		role.add_permission(constants.PERMISSION.USER_EDIT)
 
 		s.add(user)
 		s.add(role)
@@ -742,7 +760,7 @@ class TestModel(unittest.TestCase):
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
 			user,
-			constants.PERMISSION.WORKSPACE_CREATE,
+			constants.PERMISSION.WORKSPACE_EDIT,
 			workspace
 		)
 		self.assertFalse(has_permission, "Can create workspace.")
@@ -756,7 +774,7 @@ class TestModel(unittest.TestCase):
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
 			user,
-			constants.PERMISSION.WORKSPACE_CREATE,
+			constants.PERMISSION.WORKSPACE_EDIT,
 			None
 		)
 		self.assertFalse(has_permission, "Can create workspace.")
@@ -799,7 +817,7 @@ class TestModel(unittest.TestCase):
 		# Now assign a global permission.
 		role_global = Role()
 		role_global.name = 'Global Level'
-		role_global.add_permission(constants.PERMISSION.USER_CREATE)
+		role_global.add_permission(constants.PERMISSION.USER_EDIT)
 
 		s.add(role_global)
 
@@ -815,14 +833,14 @@ class TestModel(unittest.TestCase):
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
 			user,
-			constants.PERMISSION.USER_CREATE,
+			constants.PERMISSION.USER_EDIT,
 			workspace
 		)
 		self.assertTrue(has_permission, "Can't create user.")
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
 			user,
-			constants.PERMISSION.USER_CREATE,
+			constants.PERMISSION.USER_EDIT,
 			None
 		)
 		self.assertTrue(has_permission, "Can't create user.")
@@ -841,14 +859,14 @@ class TestModel(unittest.TestCase):
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
 			user_two,
-			constants.PERMISSION.USER_CREATE,
+			constants.PERMISSION.USER_EDIT,
 			workspace
 		)
 		self.assertFalse(has_permission, "Can create user.")
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
 			user_two,
-			constants.PERMISSION.USER_CREATE,
+			constants.PERMISSION.USER_EDIT,
 			None
 		)
 		self.assertFalse(has_permission, "Can create user.")

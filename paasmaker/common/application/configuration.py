@@ -99,6 +99,28 @@ class Application(colander.MappingSchema):
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
 	source = ApplicationSource()
 
+class Cron(colander.MappingSchema):
+	# TODO: Place an epic regex on this field to validate it.
+	runspec = colander.SchemaNode(colander.String(),
+		title="Run specification",
+		description="CRON-style time specification syntax.")
+	uri = colander.SchemaNode(colander.String(),
+		title="URI for script",
+		descripton="The URI for the appropriate cron script.")
+	username = colander.SchemaNode(colander.String(),
+		title="Authentication Username",
+		description="The HTTP basic authentication username, if the script requires it.",
+		default=None,
+		missing=None)
+	password = colander.SchemaNode(colander.String(),
+		title="Authentication Password",
+		description="The HTTP basic authentication password, if the script requires it.",
+		default=None,
+		missing=None)
+
+class Crons(colander.SequenceSchema):
+	crons = Cron()
+
 class Manifest(colander.MappingSchema):
 	version = colander.SchemaNode(colander.Integer(),
 		title="Manifest version",
@@ -124,6 +146,7 @@ class Instance(colander.MappingSchema):
 		description="If true, this instance doesn't require a TCP port. Affects the startup of the application.",
 		default=False,
 		missing=False)
+	crons = Crons(default=[], missing=[])
 
 class ConfigurationSchema(colander.MappingSchema):
 	application = Application()
@@ -204,6 +227,15 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 				hostname.hostname = hostname_raw
 				instance_type.hostnames.append(hostname)
 
+			# Import crons.
+			for cron_raw in imetadata['crons']:
+				cron = paasmaker.model.ApplicationInstanceTypeCron()
+				cron.application_instance_type = instance_type
+				cron.runspec = cron_raw['runspec']
+				cron.uri = cron_raw['uri']
+				cron.username = cron_raw['username']
+				cron.password = cron_raw['password']
+
 			version.instance_types.append(instance_type)
 
 		# Import and link services.
@@ -265,6 +297,13 @@ instances:
       - foo.com.au
       - www.foo.com.au
       - www.foo.com
+    crons:
+      - runspec: '* * * * *'
+        uri: /test
+      - runspec: '* * * * *'
+        uri: /test/bar
+        username: test
+        password: test
 
 services:
   - name: test
@@ -303,6 +342,7 @@ services:
 		self.assertIn("www.foo.com.au", config['instances']['web']['hostnames'], "Hostnames does not contain an expected item.")
 		self.assertEquals(len(config['services']), 2, "Services array does not contain the expected number of items.")
 		self.assertEquals(config.get_flat('application.name'), "foo.com", "Application name is not as expected.")
+		self.assertEquals(len(config['instances']['web']['crons']), 2, "Number of crons is not as expected.")
 
 	def test_bad_config(self):
 		try:
@@ -337,3 +377,4 @@ services:
 		self.assertEquals(len(version.instance_types[0].hostnames), 4, "Unexpected number of hostnames.")
 		self.assertEquals(len(version.services), 2, "Unexpected number of services.")
 		self.assertEquals(len(version.services[0].parameters), 1, "Unexpected number of keys in the services parameters.")
+		self.assertEquals(len(version.instance_types[0].crons), 2, "Unexpected number of crons.")
