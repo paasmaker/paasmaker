@@ -136,6 +136,7 @@ class JobBackend(object):
 	def get_tree(self, job_id, callback, state=None, node=None):
 		"""
 		Get the entire tree for job_id. The root job should be resolved internally.
-		If state is supplied, return all the jobs in those states.
+		If state is supplied, return all the jobs in those states. The result is
+		just a flat list of the jobs - you don't need to nest or order them.
 		"""
 		raise NotImplementedError("You must implement get_tree().")

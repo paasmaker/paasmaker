@@ -132,8 +132,21 @@ class RedisJobBackend(JobBackend):
 		self.redis.exists(job_id, on_exists)
 
 	def add_job(self, node, job_id, parent_id, callback, state, **kwargs):
-		def on_complete(result):
+		# Make a note of the tags.
+		tags = []
+		if kwargs.has_key('tags') and kwargs['tags']:
+			tags = kwargs['tags']
+			del kwargs['tags']
+
+		def on_really_complete(result=None):
 			callback()
+
+		def on_complete(result):
+			if len(tags) > 0:
+				# Add tags.
+				self.tag_job(job_id, tags, on_really_complete)
+			else:
+				on_really_complete()
 
 		def on_found_root(root_id):
 			# Serialize all incoming values to JSON.

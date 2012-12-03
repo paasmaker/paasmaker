@@ -46,7 +46,7 @@ class JobManager(object):
 		"""
 		self.backend.get_context(job_id, callback)
 
-	def add_job(self, plugin, parameters, title, callback, parent=None, node=None, context=None):
+	def add_job(self, plugin, parameters, title, callback, parent=None, node=None, context=None, tags=[]):
 		"""
 		Add the given job to the system, calling the callback with the
 		assigned job ID when it's inserted into the system. New jobs
@@ -95,7 +95,8 @@ class JobManager(object):
 			state=constants.JOB.NEW,
 			plugin=plugin,
 			parameters=parameters,
-			title=title
+			title=title,
+			tags=tags
 		)
 
 	def allow_execution(self, job_id, callback=None, notify_others=True):
@@ -303,6 +304,9 @@ class JobManager(object):
 
 		self.backend.get_root(job_id, on_found_root)
 
+	def find_by_tag(self, tag, callback, limit=None):
+		self.backend.find_by_tag(tag, callback, limit=limit)
+
 class TestSuccessJobRunner(BaseJob):
 	def start_job(self, context):
 		self.success({}, "Completed successfully.")
@@ -402,7 +406,7 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# Test that a subtree processes correctly.
 		self.manager.add_job('paasmaker.job.success', {}, "Example root job.", self.stop)
 		root_id = self.wait()
-		self.manager.add_job('paasmaker.job.success', {}, "Example sub1 job.", self.stop, parent=root_id)
+		self.manager.add_job('paasmaker.job.success', {}, "Example sub1 job.", self.stop, parent=root_id, tags=['test'])
 		sub1_id = self.wait()
 		self.manager.add_job('paasmaker.job.success', {}, "Example sub2 job.", self.stop, parent=root_id)
 		sub2_id = self.wait()
@@ -428,6 +432,13 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertEquals(sub1_status, constants.JOB.SUCCESS, "Sub 1 should have succeeded.")
 		self.assertEquals(sub2_status, constants.JOB.SUCCESS, "Sub 2 should have succeeded.")
 		self.assertEquals(root_status, constants.JOB.SUCCESS, "Root should have succeeded.")
+
+		# Fetch out the jobs by tag.
+		self.manager.find_by_tag('test', self.stop)
+		result = self.wait()
+
+		self.assertEquals(len(result), 1, "Returned incorrect number of tagged jobs.")
+		self.assertEquals(result[0], root_id, "Wrong tagged job returned.")
 
 	def test_manager_failed_subtree(self):
 		# Test that a subtree fails correctly.
