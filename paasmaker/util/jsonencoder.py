@@ -11,6 +11,8 @@ class JsonEncoder(json.JSONEncoder):
 			# Dates are returned in ISO 8601 format, always in UTC.
 			# TODO: Convert to UTC!
 			return obj.isoformat()
+		if isinstance(obj, set):
+			return list(obj)
 		if isinstance(obj, paasmaker.model.OrmBase):
 			# These classes know how to flatten themselves.
 			# TODO: Pass a possibly mutatable list of fields to return.
