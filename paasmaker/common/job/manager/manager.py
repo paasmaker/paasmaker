@@ -1,6 +1,7 @@
 
 import logging
 import uuid
+import json
 
 import paasmaker
 from paasmaker.common.core import constants
@@ -307,6 +308,47 @@ class JobManager(object):
 	def find_by_tag(self, tag, callback, limit=None):
 		self.backend.find_by_tag(tag, callback, limit=limit)
 
+	def get_pretty_tree(self, job_id, callback):
+		# Step 1: Fetch all the IDs in this tree.
+		# Step 2: Fetch full data on all those jobs.
+		# Step 3: Sort it into nested dicts.
+		def on_job_full(jobs):
+			# Righto! Now we can sort and build this into a tree.
+			roots = {}
+			for job_id, job_data in jobs.iteritems():
+				job_subset = {
+					'root_id': job_data['root_id'],
+					'parent_id': job_data['parent_id'],
+					'job_id': job_data['job_id'],
+					'state': job_data['state'],
+					'node': job_data['node'],
+					'title': job_data['title'],
+				}
+
+				if not roots.has_key(job_id):
+					roots[job_id] = {'children': []}
+				roots[job_id].update(job_subset)
+
+				parent_id = job_data['parent_id']
+				if parent_id:
+					if not roots.has_key(parent_id):
+						roots[parent_id] = {'children': []}
+
+					roots[parent_id]['children'].append(roots[job_id])
+
+			callback(roots[on_job_full.root_id])
+
+		def on_root_tree(tree):
+			# Now fetch the complete job data on all these elements.
+			self.backend.get_jobs(tree, on_job_full)
+
+		def on_found_root(root_id):
+			# Find the root's entire tree.
+			on_job_full.root_id = root_id
+			self.backend.get_tree(root_id, on_root_tree)
+
+		self.backend.get_root(job_id, on_found_root)
+
 class TestSuccessJobRunner(BaseJob):
 	def start_job(self, context):
 		self.success({}, "Completed successfully.")
@@ -455,10 +497,11 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.manager.allow_execution(root_id, callback=self.stop)
 		self.wait()
 
-		#self.dump_job_tree(root_id, self.manager.backend)
-		#self.wait()
-
 		self.short_wait_hack(length=0.2)
+
+		self.manager.get_pretty_tree(root_id, self.stop)
+		tree = self.wait()
+		#print json.dumps(tree, indent=4, sort_keys=True)
 
 		subsub1_status = self.get_state(subsub1_id)
 		sub1_status = self.get_state(sub1_id)
