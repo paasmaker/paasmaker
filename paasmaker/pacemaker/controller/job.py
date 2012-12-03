@@ -76,7 +76,6 @@ class JobStreamHandler(BaseWebsocketHandler):
 
 	def on_message(self, message):
 		# Message should be JSON.
-		print str(self.request)
 		parsed = self.parse_message(message)
 		if parsed:
 			if parsed['request'] == 'subscribe':
