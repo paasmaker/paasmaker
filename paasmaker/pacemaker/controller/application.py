@@ -164,7 +164,7 @@ class ApplicationNewController(ApplicationRootController):
 		)
 
 		def job_started():
-			self.render("application/new_working.html")
+			self.render("application/newversion.html")
 			self.finish()
 
 		def application_job_ready(job_id):
@@ -179,9 +179,13 @@ class ApplicationNewController(ApplicationRootController):
 			manifest_fp.write(manifest)
 			manifest_fp.close()
 
+			application_name = 'new application'
+			if application:
+				application_name = application.name
+
 			paasmaker.common.job.prepare.prepareroot.ApplicationPrepareRootJob.setup(
 				self.configuration,
-				'name_of_application',
+				application_name,
 				manifest_file_spec,
 				workspace.id,
 				application_job_ready,

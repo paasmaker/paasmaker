@@ -1,7 +1,7 @@
 {% extends "../layout/main.html" %}
 
 {% block pagetitle %}
-	New Application - {{ workspace.name }}
+	{% if new_application %}New Application{% else %}New Version{% end %} - {{ workspace.name }}
 {% end %}
 
 {% block body %}
