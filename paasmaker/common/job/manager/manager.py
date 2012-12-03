@@ -311,6 +311,9 @@ class JobManager(object):
 	def get_jobs(self, jobs, callback):
 		self.backend.get_jobs(jobs, callback)
 
+	def get_flat_tree(self, job_id, callback):
+		self.backend.get_tree(job_id, callback)
+
 	def get_pretty_tree(self, job_id, callback):
 		# Step 1: Fetch all the IDs in this tree.
 		# Step 2: Fetch full data on all those jobs.
