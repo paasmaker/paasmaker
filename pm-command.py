@@ -338,6 +338,41 @@ class NodeListAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class FileUploadAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("filename", help="The filename to upload.")
+
+	def describe(self):
+		return "Upload a file to the server. NOTE: Must use user authentication."
+
+	def _progress(self, position, total):
+		percent = (float(position) / float(total)) * 100;
+		logger.info("%d bytes of %d uploaded (%.2f%%).", position, total, percent)
+
+	def _finished(self, data):
+		self.prettyprint(data['data'])
+		self.exit(0)
+
+	def _error(self, message):
+		logger.error("Failed to upload: %s", message)
+		self.prettyprint(data)
+		self.exit(1)
+
+	def process(self, args):
+		# TODO: This times out on large files, waiting for the server to assemble them.
+		if not args.apikey:
+			logger.error("You must use an API key to authenticate to upload files.")
+			self.exit(1)
+		else:
+			request = paasmaker.common.api.upload.UploadFileAPIRequest(None)
+			self.point_and_auth(args, request)
+			request.send_file(
+				args.filename,
+				self._progress,
+				self._finished,
+				self._error
+			)
+
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
@@ -381,6 +416,7 @@ ACTION_MAP = {
 	'role-allocation-list': RoleAllocationListAction(),
 	'role-allocate': RoleAllocationAction(),
 	'role-unallocate': RoleUnAllocateAction(),
+	'file-upload': FileUploadAction(),
 	'help': HelpAction()
 }
 

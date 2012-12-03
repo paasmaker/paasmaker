@@ -12,7 +12,7 @@ import tornado
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-UPLOAD_CHUNK_SIZE = 1024 * 200 # 200kB at once.
+UPLOAD_CHUNK_SIZE = 1024 * 1024 # 1MB at once.
 
 class UploadFileAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):
@@ -33,7 +33,7 @@ class UploadFileAPIRequest(paasmaker.util.APIRequest):
 			'resumableChunkNumber': 1,
 			'resumableChunkSize': UPLOAD_CHUNK_SIZE,
 			'resumableTotalSize': os.path.getsize(filename),
-			'resumableIdentifier': filename,
+			'resumableIdentifier': "%d-%s" % (os.path.getsize(filename), os.path.basename(filename)),
 			'resumableFilename': filename,
 			'resumableRelativePath': filename
 		}
