@@ -73,7 +73,7 @@ class JobManager(object):
 
 		def on_context_stored():
 			# Send the NEW status around the cluster. In case something wants it.
-			self.configuration.send_job_status(job_id, constants.JOB.NEW)
+			self.configuration.send_job_status(job_id, constants.JOB.NEW, parent_id=parent)
 			# Ok, we added the job. Call the callback with the new job_id.
 			logger.debug("Completed adding new job %s.", job_id)
 			callback(job_id)
