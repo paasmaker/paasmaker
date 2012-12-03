@@ -60,6 +60,7 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.application.ApplicationListController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.application.ApplicationNewController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.application.ApplicationController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.job.JobController.get_routes(route_extras))
 
 	routes.extend(paasmaker.pacemaker.controller.node.NodeRegisterController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.node.NodeListController.get_routes(route_extras))

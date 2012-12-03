@@ -1,0 +1,17 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Job list - {{ workspace.name }}
+{% end %}
+
+{% block body %}
+	<div class="job-list">
+		{% for job_id, data in jobs.iteritems() %}
+			<div class="job-status" data-job="{{ job_id }}">
+				<span class="job_id">{{ job_id }}</span>
+				<span class="title">{{ data['title'] }}</span>
+				<span class="state {{ data['state'] }}">{{ data['state'] }}</span>
+			</div>
+		{% end %}
+	</div>
+{% end %}

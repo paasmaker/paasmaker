@@ -5,12 +5,15 @@
 {% end %}
 
 {% block body %}
-	<p><a href="/workspace/create">Create a new workspace</a></p>
+	<div class="button-box">
+		<a class="btn" href="/workspace/create">Create a new workspace</a>
+	</div>
 
 	<table class="table">
 		<tr>
 			<th>Workspace</th>
 			<th>Applications</th>
+			<th>Jobs</th>
 		</tr>
 		{% for workspace in workspaces %}
 			<tr>
@@ -19,6 +22,9 @@
 				</td>
 				<td>
 					<a href="/workspace/{{ workspace.id }}/applications">{{ len(workspace.applications) }} applications</a>
+				</td>
+				<td>
+					<a href="/job/{{ workspace.id }}/list">Jobs</a>
 				</td>
 			</tr>
 		{% end %}

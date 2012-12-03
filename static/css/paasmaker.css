@@ -11,3 +11,19 @@ div.button-box
 	padding-top: 5px;
 	padding-bottom: 5px;
 }
+
+/* JOB STATUSES */
+.job-status .SUCCESS
+{
+	color: green;
+}
+
+.job-status .FAILED
+{
+	color: red;
+}
+
+.job-status .ABORTED
+{
+	color: gray;
+}
