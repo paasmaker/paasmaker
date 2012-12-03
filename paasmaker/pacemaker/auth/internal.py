@@ -38,7 +38,8 @@ class InternalAuthTest(BaseAuthTest):
 		self.registry.register(
 			'paasmaker.auth.internal',
 			'paasmaker.pacemaker.auth.internal.InternalAuth',
-			{}
+			{},
+			'Internal Authentication'
 		)
 		auth = self.registry.instantiate(
 			'paasmaker.auth.internal',
@@ -62,7 +63,8 @@ class InternalAuthTest(BaseAuthTest):
 		self.registry.register(
 			'paasmaker.auth.internal',
 			'paasmaker.pacemaker.auth.internal.InternalAuth',
-			{}
+			{},
+			'Internal Authentication'
 		)
 		auth = self.registry.instantiate(
 			'paasmaker.auth.internal',
@@ -95,7 +97,8 @@ class InternalAuthTest(BaseAuthTest):
 		self.registry.register(
 			'paasmaker.auth.internal',
 			'paasmaker.pacemaker.auth.internal.InternalAuth',
-			{}
+			{},
+			'Internal Authentication'
 		)
 		auth = self.registry.instantiate(
 			'paasmaker.auth.internal',

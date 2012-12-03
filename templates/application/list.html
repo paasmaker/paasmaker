@@ -1,0 +1,28 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Application List - {{ workspace.name }}
+{% end %}
+
+{% block body %}
+	<div class="button-box">
+		<a class="btn" href="/workspace/{{ workspace.id }}/applications/new">Create a new application</a>
+	</div>
+
+	<table class="table">
+		<tr>
+			<th>Application</th>
+			<th>Versions</th>
+		</tr>
+		{% for application in applications %}
+			<tr>
+				<td>
+					{{ application.name }}
+				</td>
+				<td>
+					<a href="/application/{{ application.id }}">{{ len(application.versions) }} versions</a>
+				</td>
+			</tr>
+		{% end %}
+	</table>
+{% end %}

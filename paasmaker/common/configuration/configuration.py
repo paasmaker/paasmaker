@@ -429,34 +429,40 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				self.plugins.register(
 					'paasmaker.job.heart.registerinstance',
 					'paasmaker.common.job.heart.RegisterInstanceJob',
-					{}
+					{},
+					'Instance Registration Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.heart.startup',
 					'paasmaker.common.job.heart.InstanceStartupJob',
-					{}
+					{},
+					'Instance Startup Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.heart.prestartup',
 					'paasmaker.common.job.heart.PreInstanceStartupJob',
-					{}
+					{},
+					'Pre Instance Startup Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.heart.shutdown',
 					'paasmaker.common.job.heart.InstanceShutdownJob',
-					{}
+					{},
+					'Instance Shutdown Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.heart.deregisterinstance',
 					'paasmaker.common.job.heart.DeRegisterInstanceJob',
-					{}
+					{},
+					'De Register Instance Job'
 				)
 
 				# STARTUP PLUGINS
 				self.plugins.register(
 					'paasmaker.startup.shell',
 					'paasmaker.pacemaker.prepare.shell.ShellPrepare',
-					{}
+					{},
+					'Shell Prepare'
 				)
 
 			# Plugins.
@@ -470,102 +476,120 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				self.plugins.register(
 					'paasmaker.job.prepare.root',
 					'paasmaker.common.job.prepare.ApplicationPrepareRootJob',
-					{}
+					{},
+					'Application Prepare Root Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.prepare.manifestreader',
 					'paasmaker.common.job.prepare.ManifestReaderJob',
-					{}
+					{},
+					'Manifest Reader Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.prepare.scm',
 					'paasmaker.common.job.prepare.SourceSCMJob',
-					{}
+					{},
+					'Source SCM Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.prepare.service',
 					'paasmaker.common.job.prepare.ServiceJob',
-					{}
+					{},
+					'Service Management Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.prepare.servicecontainer',
 					'paasmaker.common.job.prepare.ServiceContainerJob',
-					{}
+					{},
+					'Service Container Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.prepare.packer',
 					'paasmaker.common.job.prepare.SourcePackerJob',
-					{}
+					{},
+					'Source Packer Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.prepare.preparer',
 					'paasmaker.common.job.prepare.SourcePreparerJob',
-					{}
+					{},
+					'Source Preparer Job'
 				)
 
 				# COORDINATE JOBS
 				self.plugins.register(
 					'paasmaker.job.coordinate.selectlocations',
 					'paasmaker.common.job.coordinate.SelectLocationsJob',
-					{}
+					{},
+					'Select Locations Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.coordinate.registerroot',
 					'paasmaker.common.job.coordinate.RegisterRootJob',
-					{}
+					{},
+					'Register Root Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.coordinate.registerrequest',
 					'paasmaker.common.job.coordinate.RegisterRequestJob',
-					{}
+					{},
+					'Register Request Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.coordinate.storeport',
 					'paasmaker.common.job.coordinate.StorePortJob',
-					{}
+					{},
+					'Store Port Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.coordinate.startuproot',
 					'paasmaker.common.job.coordinate.StartupRootJob',
-					{}
+					{},
+					'Startup Root Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.coordinate.shutdownroot',
 					'paasmaker.common.job.coordinate.ShutdownRootJob',
-					{}
+					{},
+					'Shutdown Root Job'
 				)
 				self.plugins.register(
 					'paasmaker.job.coordinate.deregisterroot',
 					'paasmaker.common.job.coordinate.DeRegisterRootJob',
-					{}
+					{},
+					'De Register Root Job'
 				)
 
 				# ROUTING
 				self.plugins.register(
 					'paasmaker.job.routing.update',
 					'paasmaker.common.job.routing.RoutingUpdateJob',
-					{}
+					{},
+					'Routing Update Job'
 				)
 
 				# PLACEMENT PLUGINS
 				self.plugins.register(
 					'paasmaker.placement.default',
 					'paasmaker.pacemaker.placement.default.DefaultPlacement',
-					{}
+					{},
+					'Default Placement'
 				)
 
 				# PREPARE PLUGINS
 				self.plugins.register(
 					'paasmaker.prepare.shell',
 					'paasmaker.pacemaker.prepare.shell.ShellPrepare',
-					{}
+					{},
+					'Shell Prepare'
 				)
 
 				# AUTHENTICATION PLUGINS
 				self.plugins.register(
 					'paasmaker.auth.internal',
 					'paasmaker.pacemaker.auth.internal.InternalAuth',
-					{}
+					{},
+					'Internal Authentication'
 				)
 
 			# Load plugins from the config now, so we can override the

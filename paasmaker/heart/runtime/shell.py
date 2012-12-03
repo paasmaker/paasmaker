@@ -125,12 +125,12 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		super(ShellRuntimeTest, self).tearDown()
 
 	def test_options(self):
-		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {})
+		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {}, 'Shell Runtime')
 		instance = self.configuration.plugins.instantiate('paasmaker.runtime.shell', paasmaker.util.plugin.MODE.RUNTIME_EXECUTE, {'launch_command': 'test.py'})
 		self.assertTrue(True, "Should have got here...")
 
 	def test_versions(self):
-		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {})
+		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {}, 'Shell Runtime')
 		instance = self.configuration.plugins.instantiate('paasmaker.runtime.shell', paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
 
 		versions = instance.get_versions()
@@ -153,7 +153,7 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		instance['runtime']['path'] = os.path.normpath(os.path.dirname(__file__) + '/../../../misc/samples/tornado-simple')
 
 		# Now add the plugin, and instantiate.
-		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {})
+		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {}, 'Shell Runtime')
 		runtime = self.configuration.plugins.instantiate(
 			'paasmaker.runtime.shell',
 			paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,

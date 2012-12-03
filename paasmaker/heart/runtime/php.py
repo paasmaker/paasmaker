@@ -58,12 +58,12 @@ class PHPRuntime(BaseRuntime):
 class PHPRuntimeTest(BaseRuntimeTest):
 
 	def test_options(self):
-		self.configuration.plugins.register('paasmaker.runtime.php', 'paasmaker.heart.runtime.PHPRuntime', {'apache_config_dir': 'value'})
+		self.configuration.plugins.register('paasmaker.runtime.php', 'paasmaker.heart.runtime.PHPRuntime', {'apache_config_dir': 'value'}, 'PHP Runtime')
 		instance = self.configuration.plugins.instantiate('paasmaker.runtime.php', paasmaker.util.plugin.MODE.RUNTIME_STARTUP, {'document_root': 'web/'})
 		self.assertTrue(True, "Should have got here...")
 
 	def test_versions(self):
-		self.configuration.plugins.register('paasmaker.runtime.php', 'paasmaker.heart.runtime.PHPRuntime', {'apache_config_dir': 'value'})
+		self.configuration.plugins.register('paasmaker.runtime.php', 'paasmaker.heart.runtime.PHPRuntime', {'apache_config_dir': 'value'}, 'PHP Runtime')
 		instance = self.configuration.plugins.instantiate('paasmaker.runtime.php', paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
 
 		versions = instance.get_versions()

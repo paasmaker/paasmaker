@@ -127,6 +127,7 @@ class BasePlacementTest(tornado.testing.AsyncTestCase):
 		application_version.version = 1
 		application_version.is_current = False
 		application_version.manifest = ''
+		application_version.state = constants.VERSION.PREPARED
 
 		instance_type = paasmaker.model.ApplicationInstanceType()
 		instance_type.application_version = application_version
@@ -140,7 +141,6 @@ class BasePlacementTest(tornado.testing.AsyncTestCase):
 		instance_type.placement_parameters = {}
 		instance_type.exclusive = False
 		instance_type.standalone = False
-		instance_type.state = constants.INSTANCE_TYPE.PREPARED
 
 		session.add(instance_type)
 		session.commit()

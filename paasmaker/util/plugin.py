@@ -25,6 +25,7 @@ MODE_REQUIRE_PARAMS = {
 	'RUNTIME_VERSIONS': False,
 	'RUNTIME_ENVIRONMENT': True,
 	'SCM_EXPORT': True,
+	'SCM_CHOOSER': False,
 	'SCM_LIST': False,
 	'PREPARE_COMMAND': True,
 	'PLACEMENT': True,
@@ -129,8 +130,10 @@ class PluginRegistry:
 		self.options_registry = {}
 		# Map mode to a list of plugins.
 		self.mode_registry = {}
+		# Map plugin name to it's title.
+		self.title_registry = {}
 
-	def register(self, plugin, klass, options):
+	def register(self, plugin, klass, options, title):
 		# Find the class object that matches the supplied string name.
 		former = get_class(klass)
 
@@ -159,6 +162,7 @@ class PluginRegistry:
 		# If we got here, all good!
 		self.class_registry[plugin] = klass
 		self.options_registry[plugin] = options
+		self.title_registry[plugin] = title
 
 		# Now go ahead and put it into the mode registry.
 		for mode in former.MODES:
@@ -176,6 +180,11 @@ class PluginRegistry:
 	def class_for(self, plugin):
 		klass = get_class(self.class_registry[plugin])
 		return klass
+
+	def title(self, plugin):
+		if not self.title_registry.has_key(plugin):
+			raise ValueError("No such plugin %s" % plugin)
+		return self.title_registry[plugin]
 
 	def instantiate(self, plugin, mode, parameters=None, logger=None):
 		klass = get_class(self.class_registry[plugin])
@@ -231,7 +240,7 @@ class TestExample(unittest.TestCase):
 
 		self.assertFalse(registry.exists('paasmaker.test', MODE.TEST_PARAM), "Plugin already exists?")
 
-		registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {'option1': 'test'})
+		registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {'option1': 'test'}, "Test Plugin")
 
 		self.assertTrue(registry.exists('paasmaker.test', MODE.TEST_PARAM), "Plugin doesn't exist.")
 
@@ -246,14 +255,14 @@ class TestExample(unittest.TestCase):
 	def test_plugin_bad_options(self):
 		registry = PluginRegistry(2)
 		try:
-			registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {})
+			registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {}, "Test Plugin")
 			self.assertTrue(False, "Should have thrown exception.")
 		except paasmaker.common.configuration.configuration.InvalidConfigurationException, ex:
 			self.assertTrue(True, "Didn't throw exception as expected.")
 
 	def test_plugin_bad_parameters(self):
 		registry = PluginRegistry(2)
-		registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {'option1': 'test'})
+		registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {'option1': 'test'}, "Test Plugin")
 		try:
 			instance = registry.instantiate('paasmaker.test', MODE.TEST_PARAM, {'foo': 'bar'})
 			self.assertTrue(False, "Should have thrown exception.")
@@ -262,7 +271,7 @@ class TestExample(unittest.TestCase):
 
 	def test_plugin_no_parameters(self):
 		registry = PluginRegistry(2)
-		registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {'option1': 'test'})
+		registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {'option1': 'test'}, "Test Plugin")
 		try:
 			instance = registry.instantiate('paasmaker.test', MODE.TEST_PARAM)
 			self.assertTrue(False, "Should have thrown exception.")

@@ -383,6 +383,8 @@ class ApplicationVersion(OrmBase, Base):
 	source_path = Column(String, nullable=True)
 	source_checksum = Column(String, nullable=True)
 
+	state = Column(Enum(*constants.VERSION.ALL), nullable=False, index=True)
+
 	services = relationship('Service', secondary=application_version_services, backref='application_versions')
 
 	def __init__(self):
@@ -445,8 +447,6 @@ class ApplicationInstanceType(OrmBase, Base):
 	_placement_parameters = Column("placement_parameters", Text, nullable=False)
 	exclusive = Column(Boolean, nullable=False)
 	standalone = Column(Boolean, nullable=False)
-
-	state = Column(Enum(*constants.INSTANCE_TYPE.ALL), nullable=False, index=True)
 
 	def __repr__(self):
 		return "<ApplicationInstanceType('%s'@'%s')>" % (self.name, self.runtime)

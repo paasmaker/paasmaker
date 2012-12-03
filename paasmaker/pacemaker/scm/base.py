@@ -51,6 +51,38 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 		name = name.replace("__", "_")
 		return self.get_this_scm_path(name)
 
+	def create_working_copy(self, callback, error_callback):
+		"""
+		From your input parameters, create a working copy that Paasmaker can
+		write to and mutate. If possible, cache whatever you can and just
+		make a copy of it for Paasmaker. Call the callback with
+		the new directory.
+		"""
+		raise NotImplementedError("You must implement create_working_copy().")
+
+	def extract_manifest(self, manifest_path, callback, error_callback):
+		"""
+		From your input parameters, extract the manifest file, and call the callback
+		with the contents of that file.
+		"""
+		raise NotImplementedError("You must implement extract_manifest().")
+
+	def create_form(self):
+		"""
+		Return some HTML that goes into the form to be inserted into the
+		web page, for users to interact with. TODO: Figure out how to add
+		appropriate JavaScript hooks for this.
+		"""
+		raise NotImplementedError("You must implement create_form().")
+
+	def create_summary(self):
+		"""
+		Return a dict, with the keys being required or optional parameters,
+		and the values being a short description of what should be returned
+		for that value.
+		"""
+		raise NotImplementedError("You must implement create_summary().")
+
 class BaseSCMTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
 		super(BaseSCMTest, self).setUp()

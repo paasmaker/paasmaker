@@ -107,20 +107,32 @@ var FileUploader = function(container)
 
 	var _self = this;
 	this.resumable.on('fileAdded', function(file){
-		console.log(file);
 		_self.statusArea.html(file.fileName + ', ' + file.size + ' bytes');
 		_self.resumable.upload();
 	});
 	this.resumable.on('fileSuccess', function(file, message){
-		console.log(message);
-		_self.statusArea.html(message);
+		// Parse the message.
+		var contents = $.parseJSON(message);
+		// Create a hidden form element with the uploaded identifier.
+		var hiddenEl = $('<input type="hidden" name="uploaded_file" />');
+		hiddenEl.attr('value', contents.data.identifier);
+		_self.container.append(hiddenEl);
+		_self.statusArea.html("Upload complete.");
+		// Hide the drop container.
+		_self.dropContainer.hide();
 	});
 	this.resumable.on('fileError', function(file, message){
-		console.log(message);
-		_self.statusArea.html(message);
+		var contents = $.parseJSON(message);
+		var errorList = $('<ul class="error"></ul>');
+		for(var i = 0; i < contents.errors.length; i++)
+		{
+			var error = $('<li></li>');
+			error.text(contents.errors[i]);
+			errorList.append(error);
+		}
+		_self.statusArea.html(errorList);
 	});
 	this.resumable.on('progress', function(file){
-		//_self.statusArea.html(_self.resumable.progress());
 		_self.progress.val(_self.resumable.progress() * 100);
 	});
 }
@@ -159,9 +171,9 @@ $(document).ready(
 			testBrowserFeatures($('.test-browser-features'));
 		}
 
-		if( $('.file-uploader').length > 0 )
+		if( $('.file-uploader-widget').length > 0 )
 		{
-			$('.file-uploader').each(
+			$('.file-uploader-widget').each(
 				function(index, element)
 				{
 					var uploader = new FileUploader($(element));

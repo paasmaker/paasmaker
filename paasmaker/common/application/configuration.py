@@ -196,6 +196,7 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 		version.manifest = self.raw
 		version.application = application
 		version.version = new_version_number
+		version.state = constants.VERSION.NEW
 
 		# Import instances.
 		for name, imetadata in self['instances'].iteritems():
@@ -204,7 +205,6 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 			# Basic information.
 			instance_type.name = name
 			instance_type.quantity = imetadata['quantity']
-			instance_type.state = constants.INSTANCE_TYPE.NEW
 			instance_type.exclusive = imetadata['exclusive']
 			instance_type.standalone = imetadata['standalone']
 

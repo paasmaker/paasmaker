@@ -73,12 +73,15 @@ class ApplicationPrepareRootJob(BaseJob):
 
 		def checksum_complete(checksum):
 			version.source_checksum = checksum
+			version.state = constants.VERSION.PREPARED
 			session.add(version)
 			session.commit()
 
 			self.success({}, "Successfully prepared package for %s" % context['application_name'])
 
 		checksum.start(checksum_complete)
+
+	# TODO: Can't place versions into ERROR state when they can't be prepared. Fix this!
 
 class PrepareJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):

@@ -68,7 +68,14 @@
 				{% if len(errors) > 0 %}
 					<ul class="errors">
 						{% for error in errors %}
-							<li>{{ escape(error) }}</li>
+							<li>{% raw error %}</li>
+						{% end %}
+						{% try %}
+							{% for key, error in input_errors.iteritems() %}
+								<li>{{ key }}: {{ error }}</li>
+							{% end %}
+						{% except NameError, ex %}
+							{# Does't have input errors. Ignore. #}
 						{% end %}
 					</ul>
 				{% end %}

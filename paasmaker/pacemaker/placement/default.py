@@ -95,7 +95,8 @@ class DefaultPlacementTest(BasePlacementTest):
 		self.registry.register(
 			'paasmaker.placement.default',
 			'paasmaker.pacemaker.placement.default.DefaultPlacement',
-			{}
+			{},
+			'Default Placement'
 		)
 		plugin = self.registry.instantiate(
 			'paasmaker.placement.default',
@@ -161,7 +162,8 @@ class DefaultPlacementTest(BasePlacementTest):
 		self.registry.register(
 			'paasmaker.placement.default',
 			'paasmaker.pacemaker.placement.default.DefaultPlacement',
-			{}
+			{},
+			'Default Placement'
 		)
 		plugin = self.registry.instantiate(
 			'paasmaker.placement.default',
@@ -186,7 +188,8 @@ class DefaultPlacementTest(BasePlacementTest):
 		self.registry.register(
 			'paasmaker.placement.default',
 			'paasmaker.pacemaker.placement.default.DefaultPlacement',
-			{}
+			{},
+			'Default Placement'
 		)
 		plugin = self.registry.instantiate(
 			'paasmaker.placement.default',
@@ -212,7 +215,8 @@ class DefaultPlacementTest(BasePlacementTest):
 		self.registry.register(
 			'paasmaker.placement.default',
 			'paasmaker.pacemaker.placement.default.DefaultPlacement',
-			{}
+			{},
+			'Default Placement'
 		)
 		plugin = self.registry.instantiate(
 			'paasmaker.placement.default',

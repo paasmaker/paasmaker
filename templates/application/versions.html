@@ -1,0 +1,40 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Application {{ application.name }}
+{% end %}
+
+{% block body %}
+	<div class="button-box">
+		<a class="btn" href="/application/{{ application.id }}/newversion">Create new version</a>
+	</div>
+
+	<table class="table">
+		<tr>
+			<th>Number</th>
+			<th>Current?</th>
+			<th>State</th>
+			<th>Instance Types</th>
+			<th>Instances</th>
+		</tr>
+		{% for version in application.versions %}
+			<tr>
+				<td>
+					<a href="/version/{{ version.id }}/">{{ version.version }}</a>
+				</td>
+				<td>
+					{% if version.is_current %}Current{% else %}&nbsp;{% end %}
+				</td>
+				<td>
+					{{ version.state }}
+				</td>
+				<td>
+					<a href="/version/{{ version.id }}/types">{{ len(version.instance_types) }}</a>
+				</td>
+				<td>
+					<a href="/version/{{ version.id }}/instances">Instances</a>
+				</td>
+			</tr>
+		{% end %}
+	</table>
+{% end %}

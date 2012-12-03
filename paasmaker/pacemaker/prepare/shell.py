@@ -83,7 +83,8 @@ class ShellPrepareTestTest(BasePrepareTest):
 		self.registry.register(
 			'paasmaker.prepare.shell',
 			'paasmaker.pacemaker.prepare.shell.ShellPrepare',
-			{}
+			{},
+			'Shell Prepare'
 		)
 		plugin = self.registry.instantiate(
 			'paasmaker.prepare.shell',

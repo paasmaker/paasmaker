@@ -176,7 +176,7 @@ class MessageExchangeTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.configuration.setup_message_exchange(self.stop, self.stop)
 
 		# Wait for the system to be ready.
-		self.wait(timeout=10)
+		result = self.wait(timeout=10)
 
 		# Now send off a job update. This shouldn't actually touch the broker.
 		self.configuration.send_job_status(job_id, state='TEST')

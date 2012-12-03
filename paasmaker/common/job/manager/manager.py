@@ -98,7 +98,7 @@ class JobManager(object):
 			title=title
 		)
 
-	def allow_execution(self, job_id, notify_others=True, callback=None):
+	def allow_execution(self, job_id, callback=None, notify_others=True):
 		"""
 		Allow the entire job tree given by job_id (which can be anywhere on the tree)
 		to commence execution. Optionally call the callback when done. This does not
@@ -336,17 +336,20 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.configuration.plugins.register(
 			'paasmaker.job.success',
 			'paasmaker.common.job.manager.manager.TestSuccessJobRunner',
-			{}
+			{},
+			'Test Success Job'
 		)
 		self.configuration.plugins.register(
 			'paasmaker.job.failure',
 			'paasmaker.common.job.manager.manager.TestFailJobRunner',
-			{}
+			{},
+			'Test Fail Job'
 		)
 		self.configuration.plugins.register(
 			'paasmaker.job.aborted',
 			'paasmaker.common.job.manager.manager.TestAbortJobRunner',
-			{}
+			{},
+			'Test Abort Job'
 		)
 
 		self.manager = self.configuration.job_manager

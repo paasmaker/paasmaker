@@ -90,8 +90,9 @@ class ConfigurationHelper(dict):
 			name = entry['name']
 			klass = entry['class']
 			params = entry['parameters']
+			title = entry['title']
 
-			registry.register(name, klass, params)
+			registry.register(name, klass, params, title)
 
 class TestConfigurationSchema(colander.MappingSchema):
 	str_item = colander.SchemaNode(colander.String())

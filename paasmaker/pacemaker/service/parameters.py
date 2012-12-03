@@ -50,7 +50,8 @@ class ParametersServiceTest(BaseServiceTest):
 		self.registry.register(
 			'paasmaker.service.parameters',
 			'paasmaker.pacemaker.service.parameters.ParametersService',
-			{}
+			{},
+			'Parameters Service'
 		)
 		service = self.registry.instantiate(
 			'paasmaker.service.parameters',

@@ -57,7 +57,8 @@ class AllowAnyAuthTest(BaseAuthTest):
 		self.registry.register(
 			'paasmaker.auth.allowany',
 			'paasmaker.pacemaker.auth.allowany.AllowAnyAuth',
-			{}
+			{},
+			'Allow Any Authentication'
 		)
 		auth = self.registry.instantiate(
 			'paasmaker.auth.allowany',
@@ -82,7 +83,8 @@ class AllowAnyAuthTest(BaseAuthTest):
 		self.registry.register(
 			'paasmaker.auth.allowany',
 			'paasmaker.pacemaker.auth.allowany.AllowAnyAuth',
-			{}
+			{},
+			'Allow Any Authentication'
 		)
 		auth = self.registry.instantiate(
 			'paasmaker.auth.allowany',
@@ -114,7 +116,8 @@ class AllowAnyAuthTest(BaseAuthTest):
 		self.registry.register(
 			'paasmaker.auth.allowany',
 			'paasmaker.pacemaker.auth.allowany.AllowAnyAuth',
-			{}
+			{},
+			'Allow Any Authentication'
 		)
 		auth = self.registry.instantiate(
 			'paasmaker.auth.allowany',

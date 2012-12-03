@@ -116,6 +116,7 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		application_version.version = 1
 		application_version.is_current = False
 		application_version.manifest = ''
+		application_version.state = constants.VERSION.PREPARED
 
 		instance_type = paasmaker.model.ApplicationInstanceType()
 		instance_type.application_version = application_version
@@ -129,7 +130,6 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		instance_type.placement_parameters = {}
 		instance_type.exclusive = False
 		instance_type.standalone = False
-		instance_type.state = constants.INSTANCE_TYPE.PREPARED
 
 		session.add(instance_type)
 		session.commit()
@@ -152,7 +152,8 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.configuration.plugins.register(
 			'paasmaker.placement.default',
 			'paasmaker.pacemaker.placement.default.DefaultPlacement',
-			{}
+			{},
+			'Default Placement'
 		)
 
 		self.configuration.job_manager.add_job(
@@ -200,7 +201,8 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.configuration.plugins.register(
 			'paasmaker.placement.default',
 			'paasmaker.pacemaker.placement.default.DefaultPlacement',
-			{}
+			{},
+			'Default Placement'
 		)
 
 		self.configuration.job_manager.add_job(

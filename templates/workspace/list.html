@@ -7,9 +7,20 @@
 {% block body %}
 	<p><a href="/workspace/create">Create a new workspace</a></p>
 
-	<ul>
+	<table class="table">
+		<tr>
+			<th>Workspace</th>
+			<th>Applications</th>
+		</tr>
 		{% for workspace in workspaces %}
-			<li><a href="/workspace/{{ workspace.id }}">{{ workspace.name }}</a></li>
+			<tr>
+				<td>
+					<a href="/workspace/{{ workspace.id }}">{{ workspace.name }}</a>
+				</td>
+				<td>
+					<a href="/workspace/{{ workspace.id }}/applications">{{ len(workspace.applications) }} applications</a>
+				</td>
+			</tr>
 		{% end %}
-	</ul>
+	</table>
 {% end %}

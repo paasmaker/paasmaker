@@ -94,6 +94,7 @@ class TestHelpers(object):
 		application_version.manifest = ''
 		application_version.source_path = "paasmaker://%s/%s" % (self.configuration.get_node_uuid(), os.path.basename(temptarball))
 		application_version.source_checksum = 'dummychecksumhere'
+		application_version.state = paasmaker.common.core.constants.VERSION.PREPARED
 
 		application_version.services.append(service)
 
@@ -109,7 +110,6 @@ class TestHelpers(object):
 		instance_type.placement_parameters = {}
 		instance_type.exclusive = False
 		instance_type.standalone = False
-		instance_type.state = paasmaker.common.core.constants.INSTANCE_TYPE.PREPARED
 
 		session.add(instance_type)
 		session.commit()

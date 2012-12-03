@@ -5,3 +5,9 @@ ul.error
 {
 	color: red;
 }
+
+div.button-box
+{
+	padding-top: 5px;
+	padding-bottom: 5px;
+}
