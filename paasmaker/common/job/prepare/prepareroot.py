@@ -24,6 +24,9 @@ class ApplicationPrepareRootJob(BaseJob):
 		context['uploaded_file'] = uploaded_file
 		context['environment'] = {}
 
+		tags = []
+		tags.append('workspace:%d' % workspace_id)
+
 		def on_manifest_reader_added(root_job_id, manifest_reader_job_id):
 			# Ok, at this stage we're queued. The manifest reader will
 			# queue up more jobs for us as we go along.
@@ -47,7 +50,8 @@ class ApplicationPrepareRootJob(BaseJob):
 			{},
 			"Prepare source for %s" % name,
 			on_root_job_added,
-			context=context
+			context=context,
+			tags=tags
 		)
 
 	def start_job(self, context):

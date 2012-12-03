@@ -90,13 +90,19 @@ class ManifestReaderJob(BaseJob):
 		# with the services, then the packer and preparer once
 		# both of those are complete.
 
+		# Add some extra tags to the root job.
+		tags = []
+		tags.append('application:%d' % application.id)
+		tags.append('application_version:%d' % application_version.id)
+
 		# Add the packer job, which starts off the process.
 		self.configuration.job_manager.add_job(
 			'paasmaker.job.prepare.packer',
 			{},
 			'Package source code',
 			parent=self.root_job_id,
-			callback=self.on_packer_added
+			callback=self.on_packer_added,
+			tags=tags
 		)
 
 		self.services_done = False
