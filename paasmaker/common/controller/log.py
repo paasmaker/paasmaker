@@ -35,9 +35,8 @@ class LogUnSubscribeSchema(colander.MappingSchema):
 class LogStreamHandler(BaseWebsocketHandler):
 	AUTH_METHODS = [BaseWebsocketHandler.NODE, BaseWebsocketHandler.USER]
 
-	last_positions = {}
-
 	def open(self):
+		self.last_positions = {}
 		#print "Server: opened"
 		pass
 

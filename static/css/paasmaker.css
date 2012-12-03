@@ -13,17 +13,52 @@ div.button-box
 }
 
 /* JOB STATUSES */
-.job-status .SUCCESS
+.job-root
+{
+	margin-bottom: 10px;
+	padding: 10px;
+
+	-webkit-border-radius: 12px;
+	border-radius: 12px;
+	-webkit-box-shadow: 0px 0px 10px 0px #c0c0c0;
+	box-shadow: 0px 0px 10px 0px #c0c0c0;
+}
+
+.job-status .state-SUCCESS
 {
 	color: green;
 }
 
-.job-status .FAILED
+.job-status .state-FAILED
 {
 	color: red;
 }
 
-.job-status .ABORTED
+.job-status .state-ABORTED
 {
 	color: gray;
+}
+
+.job-status .state-WAITING
+{
+	color: gray;
+}
+
+.job-status .state
+{
+	float: left;
+	padding-right: 10px;
+}
+
+.job-status
+{
+	padding-left: 20px;
+	padding-top: 2px;
+	padding-bottom: 2px;
+	position: relative;
+}
+
+.job-status.level0
+{
+	padding-left: 0px;
 }

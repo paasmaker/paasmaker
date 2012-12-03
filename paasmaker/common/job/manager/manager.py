@@ -329,6 +329,7 @@ class JobManager(object):
 					'state': job_data['state'],
 					'node': job_data['node'],
 					'title': job_data['title'],
+					'time': job_data['time']
 				}
 
 				if not roots.has_key(job_id):

@@ -5,5 +5,7 @@
 {% end %}
 
 {% block body %}
-	<p>Processing. Job ID {{ job_id }}.</p>
+	<div class="job-root" data-job="{{ job_id }}">
+		Loading...
+	</div>
 {% end %}

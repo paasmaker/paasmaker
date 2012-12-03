@@ -423,7 +423,7 @@ class BaseController(tornado.web.RequestHandler):
 		self.application.log_request(self)
 
 # A schema for websocket incoming messages, to keep them consistent.
-class WebsocketMessageSchema(colander.MappingSchema):
+class WebsocketMessageSchemaCookie(colander.MappingSchema):
 	request = colander.SchemaNode(colander.String(),
 		title="Request",
 		description="What is intended from this request")
@@ -433,6 +433,8 @@ class WebsocketMessageSchema(colander.MappingSchema):
 		default=0,
 		missing=0)
 	data = colander.SchemaNode(colander.Mapping(unknown='preserve'))
+
+class WebsocketMessageSchemaNormal(WebsocketMessageSchemaCookie):
 	auth = APIAuthRequestSchema()
 
 class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
@@ -453,7 +455,22 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 
 	def parse_message(self, message):
 		parsed = json.loads(message)
-		schema = WebsocketMessageSchema()
+		schema = WebsocketMessageSchemaNormal()
+
+		# See if there was a user cookie passed. If so, it's valid.
+		# TODO: Permissions.
+		# TODO: If this is not a pacemaker, handle that properly.
+		raw = self.get_secure_cookie('user', max_age_days=self.configuration.get_flat('pacemaker.login_age'))
+		if raw:
+			# Lookup the user object.
+			# TODO: This uses up a database session?
+			user = self.configuration.get_database_session().query(paasmaker.model.User).get(int(raw))
+			# Make sure we have the user, and it's enabled and not deleted.
+			if user and user.enabled and not user.deleted:
+				self.user = user
+				self.authenticated = True
+				schema = WebsocketMessageSchemaCookie()
+
 		try:
 			result = schema.deserialize(parsed)
 

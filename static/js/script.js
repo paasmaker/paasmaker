@@ -137,6 +137,92 @@ var FileUploader = function(container)
 	});
 }
 
+var JobRootStreamHandler = function(container)
+{
+	this.container = container;
+	this.job_id = container.attr('data-job');
+
+	var _self = this;
+	var ws = new WebSocket("ws://" + window.location.host + "/job/stream");
+	ws.onopen = function() {
+		ws.send($.toJSON({request: 'subscribe', data: {'job_id': _self.job_id}}));
+	};
+	ws.onmessage = function (evt) {
+		var message = $.parseJSON(evt.data);
+		console.log(message);
+		switch(message.type)
+		{
+			case 'tree':
+				_self.renderJobTree(_self.container, [message.data], 0);
+				break;
+			case 'subscribed':
+				break;
+			case 'status':
+				_self.updateStatus(message.data);
+				break;
+		}
+	};
+}
+
+JobRootStreamHandler.prototype.renderJobTree = function(container, tree, level)
+{
+	// Empty out the container.
+	container.empty();
+
+	// Sort my tree by time.
+	tree.sort(function(a, b) {
+		return a.time - b.time;
+	});
+
+	var _self = this;
+	$.each(tree, function(index, element)
+	{
+		var thisContainer = _self.createContainer(element.job_id, level);
+		container.append(thisContainer);
+		$('.title', thisContainer).text(element.title);
+		$('.state', thisContainer).text(element.state);
+		// TODO: Have to switch states...
+		// TODO: Fix this.
+		var stateContainer = $('.state', thisContainer);
+		stateContainer.removeClass('state-SUCCESS');
+		stateContainer.removeClass('state-FAILED');
+		stateContainer.removeClass('state-ABORTED');
+		stateContainer.removeClass('state-WAITING');
+		$('.state', thisContainer).addClass('state-' + element.state);
+
+		// Recurse into the children.
+		if( element.children )
+		{
+			var childContainer = $('.children', thisContainer);
+			_self.renderJobTree(childContainer, element.children, level + 1);
+		}
+	});
+}
+
+JobRootStreamHandler.prototype.createContainer = function(job_id, level)
+{
+	var thisJobContainer = $('<div class="job-status level' + level + '"></div>');
+	thisJobContainer.addClass(job_id);
+	thisJobContainer.append($('<span class="title"></span>'));
+	thisJobContainer.append($('<span class="state"></span>'));
+	thisJobContainer.append($('<span class="children"></span>'));
+
+	return thisJobContainer;
+}
+
+JobRootStreamHandler.prototype.updateStatus = function(status)
+{
+	// Find the appropriate status element.
+	var el = $('.' + status.job_id + ' .state', this.container);
+	el.text(status.state);
+	// TODO: Fix this.
+	el.removeClass('state-SUCCESS');
+	el.removeClass('state-FAILED');
+	el.removeClass('state-ABORTED');
+	el.removeClass('state-WAITING');
+	$('.state', this.container).addClass('state-' + status.state);
+}
+
 function testBrowserFeatures(resultContainer)
 {
 	resultContainer.empty();
@@ -177,6 +263,16 @@ $(document).ready(
 				function(index, element)
 				{
 					var uploader = new FileUploader($(element));
+				}
+			);
+		}
+
+		if( $('.job-root').length > 0 )
+		{
+			$('.job-root').each(
+				function(index, element)
+				{
+					var jobStream = new JobRootStreamHandler($(element));
 				}
 			);
 		}

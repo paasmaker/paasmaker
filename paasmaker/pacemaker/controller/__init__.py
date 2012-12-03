@@ -9,4 +9,4 @@ from profile import ProfileController, ProfileResetAPIKeyController
 from workspace import WorkspaceEditController, WorkspaceListController
 from upload import UploadController
 from application import ApplicationListController
-from job import JobController
+from job import JobController, JobStreamHandler
