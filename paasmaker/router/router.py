@@ -6,11 +6,15 @@ import shutil
 import signal
 
 import paasmaker
+
 import tornado.testing
+
+# The tests in this file are designed to test the LUA scripts used by the router
+# to make it's routing determinations.
 
 NGINX_CONFIG = """
 worker_processes  1;
-error_log  %(error_log)s debug;
+error_log %(error_log)s debug;
 pid %(temp_dir)s/nginx.pid;
 
 events {
@@ -41,7 +45,8 @@ http {
 			set $upstream "";
 			set $logkey "null";
 			rewrite_by_lua_file %(router_root)s/rewrite.lua;
-			proxy_set_header Host $host;
+
+			proxy_set_header            Host $host;
 			proxy_buffering             off;
 			proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
 			proxy_set_header            X-Forwarded-Port 80;
@@ -49,7 +54,7 @@ http {
 			proxy_connect_timeout       10;
 			proxy_send_timeout          60;
 			proxy_read_timeout          60;
-			proxy_pass http://$upstream;
+			proxy_pass                  http://$upstream;
 		}
 	}
 }
@@ -117,7 +122,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 	def get_redis_client(self):
 		# CAUTION: The second callback is the error callback,
-		# and this will break if it tries to call it.
+		# and this will break if it tries to call it. TODO: fix this.
 		self.configuration.get_router_table_redis(self.stop, None)
 		return self.wait()
 
