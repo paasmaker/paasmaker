@@ -168,7 +168,11 @@ class ApplicationNewController(ApplicationRootController):
 		)
 
 		def job_started():
-			self.render("application/newversion.html")
+			title = 'New Application - %s' % workspace.name
+			if application:
+				title = 'New Version - %s' % workspace.name
+			self.add_data_template('generic_title', title)
+			self.render("job/genericstart.html")
 			self.finish()
 
 		def application_job_ready(job_id):

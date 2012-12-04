@@ -51,3 +51,115 @@ class VersionInstancesController(VersionRootController):
 		routes = []
 		routes.append((r"/version/(\d+)/instances", VersionInstancesController, configuration))
 		return routes
+
+class VersionRegisterController(VersionRootController):
+
+	@tornado.web.asynchronous
+	def post(self, version_id):
+		version = self._get_version(version_id)
+		self.add_data('version', version)
+
+		def on_job_started():
+			self.add_data_template('generic_title', 'Registering instances')
+			self.render("job/genericstart.html")
+			self.finish()
+
+		def on_root_added(job_id):
+			self.add_data('job_id', job_id)
+			self.configuration.job_manager.allow_execution(job_id, callback=on_job_started)
+
+		paasmaker.common.job.coordinate.registerroot.RegisterRootJob.setup_version(
+			self.configuration,
+			version,
+			on_root_added
+		)
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/version/(\d+)/register", VersionRegisterController, configuration))
+		return routes
+
+class VersionStartupController(VersionRootController):
+
+	@tornado.web.asynchronous
+	def post(self, version_id):
+		version = self._get_version(version_id)
+		self.add_data('version', version)
+
+		def on_job_started():
+			self.add_data_template('generic_title', 'Starting instances')
+			self.render("job/genericstart.html")
+			self.finish()
+
+		def on_root_added(job_id):
+			self.add_data('job_id', job_id)
+			self.configuration.job_manager.allow_execution(job_id, callback=on_job_started)
+
+		paasmaker.common.job.coordinate.startuproot.StartupRootJob.setup_version(
+			self.configuration,
+			version,
+			on_root_added
+		)
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/version/(\d+)/start", VersionStartupController, configuration))
+		return routes
+
+class VersionShutdownController(VersionRootController):
+
+	@tornado.web.asynchronous
+	def post(self, version_id):
+		version = self._get_version(version_id)
+		self.add_data('version', version)
+
+		def on_job_started():
+			self.add_data_template('generic_title', 'Shutting down instances')
+			self.render("job/genericstart.html")
+			self.finish()
+
+		def on_root_added(job_id):
+			self.add_data('job_id', job_id)
+			self.configuration.job_manager.allow_execution(job_id, callback=on_job_started)
+
+		paasmaker.common.job.coordinate.shutdownroot.ShutdownRootJob.setup_version(
+			self.configuration,
+			version,
+			on_root_added
+		)
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/version/(\d+)/stop", VersionShutdownController, configuration))
+		return routes
+
+class VersionDeRegisterController(VersionRootController):
+
+	@tornado.web.asynchronous
+	def post(self, version_id):
+		version = self._get_version(version_id)
+		self.add_data('version', version)
+
+		def on_job_started():
+			self.add_data_template('generic_title', 'De registering instances')
+			self.render("job/genericstart.html")
+			self.finish()
+
+		def on_root_added(job_id):
+			self.add_data('job_id', job_id)
+			self.configuration.job_manager.allow_execution(job_id, callback=on_job_started)
+
+		paasmaker.common.job.coordinate.deregisterroot.DeRegisterRootJob.setup_version(
+			self.configuration,
+			version,
+			on_root_added
+		)
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/version/(\d+)/deregister", VersionDeRegisterController, configuration))
+		return routes

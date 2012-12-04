@@ -32,7 +32,21 @@
 					<a href="/version/{{ version.id }}">{{ len(version.instance_types) }}</a>
 				</td>
 				<td>
-					<a href="/version/{{ version.id }}/instances">Instances</a>
+					<div class="table-button-box">
+						<a class="btn btn-mini" href="/version/{{ version.id }}/instances">Instances</a>
+						<form method="POST" action="/version/{{ version.id }}/register">
+							<input type="submit" class="btn btn-mini" value="Register" />
+						</form>
+						<form method="POST" action="/version/{{ version.id }}/start">
+							<input type="submit" class="btn btn-mini" value="Start" />
+						</form>
+						<form method="POST" action="/version/{{ version.id }}/stop">
+							<input type="submit" class="btn btn-mini" value="Stop" />
+						</form>
+						<form method="POST" action="/version/{{ version.id }}/deregister">
+							<input type="submit" class="btn btn-mini" value="De Register" />
+						</form>
+					</div>
 				</td>
 			</tr>
 		{% end %}

@@ -12,6 +12,12 @@ div.button-box
 	padding-bottom: 5px;
 }
 
+div.table-button-box form
+{
+	display: inline;
+	margin: 0px;
+}
+
 /* JOB STATUSES */
 .job-root
 {

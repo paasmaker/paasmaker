@@ -9,14 +9,14 @@
 		<h2>Instance type: {{ instance_type.name }}</h2>
 		<table class="table">
 			<tr>
-				<th>UUID</th>
+				<th>ID</th>
 				<th>Node</th>
 				<th>State</th>
 			</tr>
 			{% for instance in instance_type.instances %}
 				<tr>
 					<td>
-						{{ instance.uuid }}
+						{{ instance.instance_id }}
 					</td>
 					<td>
 						{{ instance.node.name }}
