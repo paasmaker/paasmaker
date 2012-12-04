@@ -110,7 +110,7 @@ class JobWatcher(object):
 	def check_log_files(self):
 		for job_id, meta in self.watches.iteritems():
 			size = os.path.getsize(meta['filename'])
-			logger.debug("Checking file %s (old %d, new %d)", meta['filename'], meta['size'], size)
+			#logger.debug("Checking file %s (old %d, new %d)", meta['filename'], meta['size'], size)
 			if meta['size'] != size:
 				self.watches[job_id]['size'] = size
 				self.trigger_watch(job_id)
