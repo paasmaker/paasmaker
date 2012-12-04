@@ -12,10 +12,11 @@ import tornado.testing
 # The tests in this file are designed to test the LUA scripts used by the router
 # to make it's routing determinations.
 
-NGINX_CONFIG = """
-worker_processes  1;
-error_log %(error_log)s debug;
-pid %(temp_dir)s/nginx.pid;
+class NginxRouter(object):
+	NGINX_CONFIG = """
+worker_processes 1;
+error_log %(log_path)s/error.log %(log_level)s;
+pid %(pid_path)s/nginx.pid;
 
 events {
 	worker_connections  256;
@@ -26,17 +27,13 @@ http {
 		'"code":$status,"upstream_response_time":"$upstream_response_time",'
 		'"time":$msec,"nginx_response_time":$request_time}';
 
-	access_log %(access_log_stats)s paasmaker;
-	access_log %(access_log_combined)s combined;
+	access_log %(log_path)s/access.log.paasmaker paasmaker;
+	access_log %(log_path)s/access.log combined;
 
-	client_body_temp_path %(temp_dir)s/;
-	proxy_temp_path %(temp_dir)s/;
-	fastcgi_temp_path %(temp_dir)s/;
-	uwsgi_temp_path %(temp_dir)s/;
-	scgi_temp_path %(temp_dir)s/;
+	%(temp_paths)s
 
 	server {
-		listen       %(test_port)d;
+		listen       %(listen_port)d;
 		server_name  localhost;
 
 		location / {
@@ -60,6 +57,46 @@ http {
 }
 """
 
+	TEMP_PATHS = """
+	client_body_temp_path %(temp_dir)s/;
+	proxy_temp_path %(temp_dir)s/;
+	fastcgi_temp_path %(temp_dir)s/;
+	uwsgi_temp_path %(temp_dir)s/;
+	scgi_temp_path %(temp_dir)s/;
+	"""
+
+	@staticmethod
+	def get_nginx_config(configuration, unit_test=False):
+		parameters = {}
+
+		parameters['temp_dir'] = configuration.get_scratch_path_exists('nginx')
+
+		if unit_test:
+			parameters['listen_port'] = configuration.get_free_port()
+			parameters['log_path'] = tempfile.mkdtemp()
+			parameters['temp_paths'] = NginxRouter.TEMP_PATHS % parameters
+			parameters['pid_path'] = parameters['temp_dir']
+			parameters['log_level'] = 'debug'
+		else:
+			parameters['listen_port'] = 80
+			# TODO: This is Linux specific.
+			parameters['log_path'] = '/var/log/nginx'
+			parameters['pid_path'] = '/var/run/nginx.pid'
+			parameters['temp_paths'] = ""
+			parameters['log_level'] = 'info'
+
+		parameters['redis_host'] = configuration.get_flat('redis.table.host')
+		parameters['redis_port'] = configuration.get_flat('redis.table.port')
+
+		# This is where the LUA files are stored.
+		parameters['router_root'] = os.path.normpath(os.path.dirname(__file__))
+
+		configuration = NginxRouter.NGINX_CONFIG % parameters
+
+		parameters['configuration'] = configuration
+
+		return parameters
+
 class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 	def get_app(self):
 		self.late_init_configuration(self.io_loop)
@@ -73,33 +110,20 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 	def setUp(self):
 		super(RouterTest, self).setUp()
 
+		self.nginx = NginxRouter.get_nginx_config(self.configuration, unit_test=True)
+
 		# Fire up an nginx instance.
 		self.nginxconfig = tempfile.mkstemp()[1]
-		self.nginxtempdir = tempfile.mkdtemp()
-		self.nginxpidfile = os.path.join(self.nginxtempdir, 'nginx.pid')
-		self.nginxport = self.configuration.get_free_port()
+		self.nginxpidfile = os.path.join(self.nginx['pid_path'], 'nginx.pid')
+		self.nginxport = self.nginx['listen_port']
 
 		# For debugging... they are unlinked in tearDown()
 		# but you can inspect them in the meantime.
-		self.errorlog = tempfile.mkstemp()[1]
-		self.accesslog_stats = tempfile.mkstemp()[1]
-		self.accesslog_combined = tempfile.mkstemp()[1]
+		self.errorlog = os.path.join(self.nginx['log_path'], 'error.log')
+		self.accesslog_stats = os.path.join(self.nginx['log_path'], 'access.log.paasmaker')
+		self.accesslog_combined = os.path.join(self.nginx['log_path'], 'access.log')
 
-		nginxparams = {}
-		nginxparams['temp_dir'] = self.nginxtempdir
-		nginxparams['router_root'] = os.path.normpath(os.path.dirname(__file__))
-		nginxparams['test_port'] = self.nginxport
-		nginxparams['error_log'] = self.errorlog
-		nginxparams['access_log_stats'] = self.accesslog_stats
-		nginxparams['access_log_combined'] = self.accesslog_combined
-
-		# NOTE: The host might be 0.0.0.0, but this will still work
-		# on the managing host.
-		nginxparams['redis_host'] = self.configuration.get_flat('redis.table.host')
-		nginxparams['redis_port'] = self.configuration.get_flat('redis.table.port')
-
-		config = NGINX_CONFIG % nginxparams
-		open(self.nginxconfig, 'w').write(config)
+		open(self.nginxconfig, 'w').write(self.nginx['configuration'])
 
 		# Kick off the instance. It will fork in the background once it's
 		# successfully started.
@@ -107,18 +131,17 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		subprocess.check_call([self.configuration.get_flat('nginx_binary'), '-c', self.nginxconfig], stderr=subprocess.PIPE)
 
 	def tearDown(self):
-		super(RouterTest, self).tearDown()
-
 		# Kill off the nginx instance.
 		pid = int(open(self.nginxpidfile, 'r').read())
 		os.kill(pid, signal.SIGTERM)
 
 		# Remove all the temp files.
-		shutil.rmtree(self.nginxtempdir)
 		os.unlink(self.nginxconfig)
 		os.unlink(self.errorlog)
 		os.unlink(self.accesslog_stats)
 		os.unlink(self.accesslog_combined)
+
+		super(RouterTest, self).tearDown()
 
 	def get_redis_client(self):
 		# CAUTION: The second callback is the error callback,

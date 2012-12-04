@@ -66,6 +66,8 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.version.VersionController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.version.VersionInstancesController.get_routes(route_extras))
 
+	routes.extend(paasmaker.pacemaker.controller.nginx.NginxController.get_routes(route_extras))
+
 	routes.extend(paasmaker.pacemaker.controller.version.VersionRegisterController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.version.VersionStartupController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.version.VersionShutdownController.get_routes(route_extras))

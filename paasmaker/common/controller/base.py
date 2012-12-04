@@ -598,7 +598,19 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase, TestHelpers):
 			u.name = 'User Name'
 			u.password = 'testtest'
 			s.add(u)
-			s.commit()
+
+			# Allow them to do anything.
+			# TODO: This makes for a poor test.
+			r = paasmaker.model.Role()
+			r.name = 'Test'
+			r.permissions = paasmaker.common.core.constants.PERMISSION.ALL
+			s.add(r)
+
+			a = paasmaker.model.WorkspaceUserRole()
+			a.user = u
+			a.role = r
+
+			paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(s)
 			s.refresh(u)
 
 		# Ok, now that we've done that, try to log in.

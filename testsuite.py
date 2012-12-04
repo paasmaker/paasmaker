@@ -9,8 +9,8 @@ import sys
 # Turning this off temporarily can be helpful for debugging.
 #logging.basicConfig(level=logging.DEBUG)
 #logging.basicConfig(level=logging.INFO)
-#logging.basicConfig(level=logging.ERROR)
-logging.basicConfig(level=logging.CRITICAL)
+logging.basicConfig(level=logging.ERROR)
+#logging.basicConfig(level=logging.CRITICAL)
 
 # Define the tests to run. The keys are the modules to search
 # in for test cases, and the array is a set of tags that will
@@ -72,6 +72,8 @@ test_sets = {
 	paasmaker.common.job.coordinate.selectlocations: ['all', 'slow', 'application', 'coordinate'],
 	paasmaker.common.job.coordinate.registerroot: ['all', 'slow', 'application', 'coordinate'],
 	paasmaker.common.job.routing.routing: ['all', 'slow', 'application', 'coordinate', 'router'],
+
+	paasmaker.pacemaker.controller.nginx: ['all', 'slow', 'controller', 'router'],
 
 	paasmaker.pacemaker.placement.default: ['all', 'slow', 'application', 'placement'],
 
