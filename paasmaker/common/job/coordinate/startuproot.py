@@ -16,7 +16,7 @@ from pubsub import pub
 
 class StartupRootJob(BaseJob, InstanceRootBase):
 	@staticmethod
-	def setup(configuration, instance_type_id, callback, instances=[]):
+	def setup(configuration, instance_type_id, callback, instances=[], parent=None):
 		instance_list = InstanceRootBase.get_instances_for(
 			configuration,
 			instance_type_id,
@@ -95,7 +95,49 @@ class StartupRootJob(BaseJob, InstanceRootBase):
 		configuration.job_manager.add_job(
 			'paasmaker.job.coordinate.startuproot',
 			{},
+			# TODO: Make this title include the instance type name.
 			"Start up instances and alter routing",
+			on_root_job_added,
+			parent=parent
+		)
+
+	@staticmethod
+	def setup_version(configuration, application_version, callback):
+		# List all the instance types.
+		# Assume we have an open session on the application_version object.
+		destroyable_instance_type_list = []
+		for instance_type in application_version.instance_types:
+			destroyable_instance_type_list.append(instance_type)
+		destroyable_instance_type_list.reverse()
+
+		def on_root_job_added(root_job_id):
+			# Now go through the list and add sub jobs.
+			def add_job(instance_type):
+				def job_added(job_id):
+					# Try the next one.
+					try:
+						add_job(destroyable_instance_type_list.pop())
+					except IndexError, ex:
+						callback(root_job_id)
+
+				StartupRootJob.setup(
+					configuration,
+					instance_type.id,
+					job_added,
+					parent=root_job_id
+				)
+
+			if len(destroyable_instance_type_list) > 0:
+				add_job(destroyable_instance_type_list.pop())
+			else:
+				# This is a bit of a bizzare condition... an
+				# application with no instance types.
+				callback(root_job_id)
+
+		configuration.job_manager.add_job(
+			'paasmaker.job.coordinate.startuproot',
+			{},
+			"Start up instances and alter routing for %s version %d" % (application_version.application.name, application_version.version),
 			on_root_job_added
 		)
 

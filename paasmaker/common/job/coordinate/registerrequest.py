@@ -12,14 +12,19 @@ import sqlalchemy
 
 import colander
 
+class RegisterRequestJobParametersSchema(colander.MappingSchema):
+	application_instance_type_id = colander.SchemaNode(colander.Integer())
+
 class RegisterRequestJob(BaseJob):
+	PARAMETERS_SCHEMA = {MODE.JOB: RegisterRequestJobParametersSchema()}
+
 	def start_job(self, context):
 		self.logger.info("Creating node registration jobs.")
 
 		self.session = self.configuration.get_database_session()
 		self.instance_type = self.session.query(
 			paasmaker.model.ApplicationInstanceType
-		).get(context['application_instance_type_id'])
+		).get(self.parameters['application_instance_type_id'])
 
 		# Find all instances that need to be registered.
 		# Attempt to grab all the data at once that is required.

@@ -12,7 +12,11 @@ from pubsub import pub
 
 import colander
 
+class SelectLocationsJobParametersSchema(colander.MappingSchema):
+	application_instance_type_id = colander.SchemaNode(colander.Integer())
+
 class SelectLocationsJob(BaseJob):
+	PARAMETERS_SCHEMA = {MODE.JOB: SelectLocationsJobParametersSchema()}
 
 	def start_job(self, context):
 		self.logger.info("Starting to select locations.")
@@ -20,7 +24,7 @@ class SelectLocationsJob(BaseJob):
 		self.session = self.configuration.get_database_session()
 		self.instance_type = self.session.query(
 			paasmaker.model.ApplicationInstanceType
-		).get(context['application_instance_type_id'])
+		).get(self.parameters['application_instance_type_id'])
 
 		# Fire up the plugin for placement.
 		plugin_exists = self.configuration.plugins.exists(
@@ -158,10 +162,9 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.configuration.job_manager.add_job(
 			'paasmaker.job.coordinate.selectlocations',
-			{},
+			{'application_instance_type_id': instance_type.id},
 			"Select locations for %s" % instance_type.name,
-			self.stop,
-			context={'application_instance_type_id': instance_type.id}
+			self.stop
 		)
 
 		job_id = self.wait()
@@ -207,10 +210,9 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.configuration.job_manager.add_job(
 			'paasmaker.job.coordinate.selectlocations',
-			{},
+			{'application_instance_type_id': instance_type.id},
 			"Select locations for %s" % instance_type.name,
-			self.stop,
-			context={'application_instance_type_id': instance_type.id}
+			self.stop
 		)
 
 		job_id = self.wait()

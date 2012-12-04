@@ -20,10 +20,10 @@ from pubsub import pub
 
 class RegisterRootJob(BaseJob, InstanceRootBase):
 	@staticmethod
-	def setup(configuration, application_instance_type_id, callback):
-		# Set up the context.
-		context = {}
-		context['application_instance_type_id'] = application_instance_type_id
+	def setup(configuration, application_instance_type, callback, parent=None):
+		# Set up the parameters.
+		parameters = {}
+		parameters['application_instance_type_id'] = application_instance_type.id
 
 		def on_root_job_added(root_job_id):
 			def on_select_locations(select_locations_job_id):
@@ -35,7 +35,7 @@ class RegisterRootJob(BaseJob, InstanceRootBase):
 				# And select the locations for instance.
 				configuration.job_manager.add_job(
 					'paasmaker.job.coordinate.selectlocations',
-					{},
+					parameters,
 					"Select instance locations",
 					on_select_locations,
 					parent=registration_request_job_id
@@ -45,7 +45,7 @@ class RegisterRootJob(BaseJob, InstanceRootBase):
 			# And a job to send register requests to nodes.
 			configuration.job_manager.add_job(
 				'paasmaker.job.coordinate.registerrequest',
-				{},
+				parameters,
 				"Registration requests",
 				on_registration_requests,
 				parent=root_job_id
@@ -55,9 +55,49 @@ class RegisterRootJob(BaseJob, InstanceRootBase):
 		configuration.job_manager.add_job(
 			'paasmaker.job.coordinate.registerroot',
 			{},
-			"Select locations and register instances",
+			"Select locations and register instances for %s" % application_instance_type.name,
 			on_root_job_added,
-			context=context
+			parent=parent
+		)
+
+	@staticmethod
+	def setup_version(configuration, application_version, callback):
+		# List all the instance types.
+		# Assume we have an open session on the application_version object.
+		destroyable_instance_type_list = []
+		for instance_type in application_version.instance_types:
+			destroyable_instance_type_list.append(instance_type)
+		destroyable_instance_type_list.reverse()
+
+		def on_root_job_added(root_job_id):
+			# Now go through the list and add sub jobs.
+			def add_job(instance_type):
+				def job_added(job_id):
+					# Try the next one.
+					try:
+						add_job(destroyable_instance_type_list.pop())
+					except IndexError, ex:
+						callback(root_job_id)
+
+				RegisterRootJob.setup(
+					configuration,
+					instance_type,
+					job_added,
+					parent=root_job_id
+				)
+
+			if len(destroyable_instance_type_list) > 0:
+				add_job(destroyable_instance_type_list.pop())
+			else:
+				# This is a bit of a bizzare condition... an
+				# application with no instance types.
+				callback(root_job_id)
+
+		configuration.job_manager.add_job(
+			'paasmaker.job.coordinate.registerroot',
+			{},
+			"Select locations and register instances for %s version %d" % (application_version.application.name, application_version.version),
+			on_root_job_added
 		)
 
 	def start_job(self, context):
@@ -99,9 +139,9 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 			}
 		}, self.configuration)
 
-		RegisterRootJob.setup(
+		RegisterRootJob.setup_version(
 			self.configuration,
-			instance_type.id,
+			instance_type.application_version,
 			self.stop
 		)
 
@@ -148,9 +188,9 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(instance.port in range(42600, 42699), "Port not in expected range.")
 
 		# Now, hijack this test to test startup of instance. And other stuff.
-		StartupRootJob.setup(
+		StartupRootJob.setup_version(
 			self.configuration,
-			instance_type.id,
+			instance_type.application_version,
 			self.stop
 		)
 		startup_root_id = self.wait()
@@ -174,7 +214,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
 
 		# Confirm that the entry exists in the routing table.
-		self.configuration.get_router_table_redis(self.stop, None)
+		self.configuration.get_router_table_redis(self.stop, self.stop)
 		redis = self.wait()
 
 		set_key_version_1 = "instances_1.foo.com.%s" % self.configuration.get_flat('pacemaker.cluster_hostname')
@@ -191,9 +231,9 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertEquals(instance.state, constants.INSTANCE.RUNNING, "Instance not in correct state.")
 
 		# Now shut the instance down.
-		ShutdownRootJob.setup(
+		ShutdownRootJob.setup_version(
 			self.configuration,
-			instance_type.id,
+			instance_type.application_version,
 			self.stop
 		)
 		shutdown_root_id = self.wait()
@@ -229,9 +269,9 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		instance_path = self.configuration.get_instance_path(instance.instance_id)
 
 		# Deregister the whole lot.
-		DeRegisterRootJob.setup(
+		DeRegisterRootJob.setup_version(
 			self.configuration,
-			instance_type.id,
+			instance_type.application_version,
 			self.stop
 		)
 		deregister_root_id = self.wait()
