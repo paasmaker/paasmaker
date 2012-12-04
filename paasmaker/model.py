@@ -219,8 +219,9 @@ class RolePermission(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	role_id = Column(Integer, ForeignKey('role.id'), nullable=False, index=True)
-	# TODO: Make this not an ENUM - too hard to change/migrate when the permissions change.
-	permission = Column(Enum(*constants.PERMISSION.ALL), nullable=False, index=True)
+	# TODO: This is no longer an ENUM, meaning there is no database-level constraint
+	# on the data. This is because it was too hard to add new permissions in development.
+	permission = Column(String, nullable=False, index=True)
 
 	def __repr__(self):
 		return "<RolePermission('%s':'%s')>" % (self.role, self.permission)
@@ -283,7 +284,9 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 	role = relationship("Role")
 	user_id = Column(Integer, ForeignKey('user.id'), index=True)
 	user = relationship("User")
-	permission = Column(Enum(*constants.PERMISSION.ALL), nullable=False, index=True)
+	# TODO: This is no longer an ENUM, meaning there is no database-level constraint
+	# on the data. This is because it was too hard to add new permissions in development.
+	permission = Column(String, nullable=False, index=True)
 
 	def __repr__(self):
 		return "<WorkspaceUserRoleFlat('%s'@'%s' -> '%s')>" % (self.user, self.workspace, self.role)
