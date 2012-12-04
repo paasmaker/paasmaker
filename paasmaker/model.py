@@ -41,9 +41,14 @@ class OrmBase(object):
 			fields['id'] = self.__dict__['id']
 			fields['updated'] = self.__dict__['updated']
 			fields['created'] = self.__dict__['created']
+
+			# Calculate the age of the record.
+			now = datetime.datetime.utcnow()
+			fields['updated_age'] = (now - fields['updated']).total_seconds()
 		else:
 			fields['id'] = None
 			fields['updated'] = None
+			fields['updated_age'] = None
 			fields['created'] = None
 		fields['class'] = self.__class__.__name__
 		for field in field_list:
