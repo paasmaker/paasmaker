@@ -29,15 +29,11 @@ class JobController(BaseController):
 
 		# TODO: Paginate...
 		# TODO: Unit test.
-		def on_found_jobs_summary(jobs):
-			print str(jobs)
-			self.add_data('jobs', jobs)
+		def on_found_jobs(job_ids):
+			self.add_data('jobs', job_ids)
 			self.render("job/list.html")
 
-		def on_found_jobs(job_ids):
-			self.configuration.job_manager.get_jobs(job_ids, on_found_jobs_summary)
-
-		self.configuration.job_manager.find_by_tag('workspace:%d' % workspace.id, on_found_jobs)
+		self.configuration.job_manager.find_by_tag('workspace:%d' % workspace.id, on_found_jobs, limit=10)
 
 	@staticmethod
 	def get_routes(configuration):

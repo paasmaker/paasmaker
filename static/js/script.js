@@ -143,11 +143,11 @@ var JobRootStreamHandler = function(container)
 	this.job_id = container.attr('data-job');
 
 	var _self = this;
-	var ws = new WebSocket("ws://" + window.location.host + "/job/stream");
-	ws.onopen = function() {
-		ws.send($.toJSON({request: 'subscribe', data: {'job_id': _self.job_id}}));
+	this.jobStatusRemote = new WebSocket("ws://" + window.location.host + "/job/stream");
+	this.jobStatusRemote.onopen = function() {
+		_self.jobStatusRemote.send($.toJSON({request: 'subscribe', data: {'job_id': _self.job_id}}));
 	};
-	ws.onmessage = function (evt) {
+	this.jobStatusRemote.onmessage = function (evt) {
 		var message = $.parseJSON(evt.data);
 		console.log(message);
 		switch(message.type)
@@ -162,6 +162,55 @@ var JobRootStreamHandler = function(container)
 				break;
 		}
 	};
+
+	this.subscribedLogs = {};
+	this.logStreamRemote = new WebSocket("ws://" + window.location.host + "/log/stream");
+	this.logStreamRemote.onopen = function() {
+		console.log("Connected to remote for log streaming.");
+	};
+	this.logStreamRemote.onmessage = function (evt) {
+		var message = $.parseJSON(evt.data);
+		console.log(message);
+		switch(message.type)
+		{
+			case 'lines':
+				_self.handleNewLines(message.data);
+				break;
+		}
+	};
+}
+
+JobRootStreamHandler.prototype.toggleSubscribeLog = function(job_id, container)
+{
+	if( this.subscribedLogs[job_id] )
+	{
+		// Already subscribed.
+		var message = $.toJSON({request: 'unsubscribe', data: {'job_id': job_id}});
+		console.log(message);
+		this.logStreamRemote.send(message);
+		this.subscribedLogs[job_id] = false
+	}
+	else
+	{
+		var position = container.attr('data-position');
+		if( !position )
+		{
+			position = 0;
+		}
+
+		// Not subscribed. Subscribe.
+		var message = $.toJSON({request: 'subscribe', data: {'job_id': job_id, 'position': position}});
+		console.log(message);
+		this.logStreamRemote.send(message);
+		this.subscribedLogs[job_id] = true
+	}
+}
+
+JobRootStreamHandler.prototype.handleNewLines = function(message)
+{
+	var container = $('.' + message.job_id + ' .log');
+	container.append(message.lines.join(''));
+	container.attr('data-position', message.position);
 }
 
 JobRootStreamHandler.prototype.renderJobTree = function(container, tree, level)
@@ -181,6 +230,9 @@ JobRootStreamHandler.prototype.renderJobTree = function(container, tree, level)
 		container.append(thisContainer);
 		$('.title', thisContainer).text(element.title);
 		$('.state', thisContainer).text(element.state);
+		/*var thisTime = new Date();
+		thisTime.setTime(element.time * 1000);
+		$('.time', thisContainer).text(thisTime.toString());*/
 		// TODO: Have to switch states...
 		// TODO: Fix this.
 		var stateContainer = $('.state', thisContainer);
@@ -188,7 +240,26 @@ JobRootStreamHandler.prototype.renderJobTree = function(container, tree, level)
 		stateContainer.removeClass('state-FAILED');
 		stateContainer.removeClass('state-ABORTED');
 		stateContainer.removeClass('state-WAITING');
-		$('.state', thisContainer).addClass('state-' + element.state);
+		stateContainer.addClass('state-' + element.state);
+		var logContainer = $('.log', thisContainer);
+
+		var toolbox = $('.toolbox', thisContainer);
+		if( false == toolbox.hasClass('populated') )
+		{
+			// Populate and hook up the toolbox.
+			var logExpander = $('<a href="#"><i class="icon-list"></i></a>');
+			logExpander.click(
+				function(e)
+				{
+					logContainer.slideToggle();
+					_self.toggleSubscribeLog(element.job_id, logContainer);
+
+					e.preventDefault();
+				}
+			);
+			toolbox.append(logExpander);
+			toolbox.addClass('populated');
+		}
 
 		// Recurse into the children.
 		if( element.children )
@@ -202,10 +273,17 @@ JobRootStreamHandler.prototype.renderJobTree = function(container, tree, level)
 JobRootStreamHandler.prototype.createContainer = function(job_id, level)
 {
 	var thisJobContainer = $('<div class="job-status level' + level + '"></div>');
-	thisJobContainer.addClass(job_id);
-	thisJobContainer.append($('<span class="title"></span>'));
-	thisJobContainer.append($('<span class="state"></span>'));
-	thisJobContainer.append($('<span class="children"></span>'));
+
+	var details = $('<div class="details"></div>');
+	details.addClass(job_id);
+	details.append($('<span class="title"></span>'));
+	details.append($('<span class="toolbox"></span>'));
+	details.append($('<span class="state"></span>'));
+	details.append($('<span class="time"></span>'));
+	details.append($('<div class="log"></div>'));
+	thisJobContainer.append(details);
+
+	thisJobContainer.append($('<div class="children"></div>'));
 
 	return thisJobContainer;
 }

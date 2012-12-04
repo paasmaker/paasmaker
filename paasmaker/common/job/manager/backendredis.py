@@ -278,7 +278,7 @@ class RedisJobBackend(JobBackend):
 		def on_zrevrangebyscore(jobs):
 			callback(jobs)
 
-		self.redis.zrevrangebyscore("tag_%s" % tag, "+inf", "-inf", limit=limit, callback=on_zrevrangebyscore)
+		self.redis.zrevrangebyscore("tag_%s" % tag, "+inf", "-inf", offset=0, limit=limit, callback=on_zrevrangebyscore)
 
 	def get_ready_to_run(self, node, waiting_state, success_state, callback):
 		def on_count_sets(sets):

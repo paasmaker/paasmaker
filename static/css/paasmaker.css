@@ -62,3 +62,24 @@ div.button-box
 {
 	padding-left: 0px;
 }
+
+.job-status .toolbox
+{
+	margin-left: 5px;
+}
+
+.job-status .log
+{
+	display: none;
+	height: 200px;
+	overflow: auto;
+
+	white-space: pre;
+	font-family: monospace;
+
+	-webkit-box-shadow: 0px 0px 4px 0px #c0c0c0;
+	box-shadow: 0px 0px 4px 0px #c0c0c0;
+
+	color: white;
+	background-color: black;
+}

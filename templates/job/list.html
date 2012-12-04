@@ -5,7 +5,7 @@
 {% end %}
 
 {% block body %}
-	{% for job_id, data in jobs.iteritems() %}
+	{% for job_id in jobs %}
 		<div class="job-root" data-job="{{ job_id }}">
 			Loading...
 		</div>

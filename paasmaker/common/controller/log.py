@@ -37,8 +37,8 @@ class LogStreamHandler(BaseWebsocketHandler):
 
 	def open(self):
 		self.last_positions = {}
-		#print "Server: opened"
-		pass
+		self.subscribed = {}
+		self.job_watcher = self.configuration.get_job_watcher()
 
 	def job_message_update(self, job_id=None):
 		self.send_job_log(job_id, self.last_positions[job_id])
@@ -56,17 +56,20 @@ class LogStreamHandler(BaseWebsocketHandler):
 		# Must match the subscribe schema.
 		subscribe = self.validate_data(message, LogSubscribeSchema())
 		if subscribe:
-			if self.configuration.job_exists_locally(subscribe['job_id']):
+			job_id = subscribe['job_id']
+			if self.configuration.job_exists_locally(job_id):
 				# Step 1: Feed since when they last saw.
-				self.send_job_log(subscribe['job_id'], subscribe['position'])
+				self.send_job_log(job_id, subscribe['position'])
 				# Step 2: subscribe for future updates.
-				pub.subscribe(self.job_message_update, self.configuration.get_job_message_pub_topic(subscribe['job_id']))
-				self.configuration.get_job_watcher().add_watch(subscribe['job_id'])
+				pub.subscribe(self.job_message_update, self.configuration.get_job_message_pub_topic(job_id))
+				self.job_watcher.add_watch(job_id)
+				self.subscribed[job_id] = True
 
 			elif self.configuration.is_pacemaker():
 				# Find which node the job belongs to.
 				# And then get that to stream the logs to us.
 				# TODO: Implement!
+				self.subscribed[subscribe['job_id']] = True
 				pass
 			else:
 				# TODO: Test that the error is sent!
@@ -76,11 +79,16 @@ class LogStreamHandler(BaseWebsocketHandler):
 		# Must match the unsubscribe schema.
 		unsubscribe = self.validate_data(message, LogUnSubscribeSchema())
 		if unsubscribe:
-			self.configuration.get_job_watcher().remove_watch(unsubscribe['job_id'])
-			pub.unsubscribe(self.job_message_update, self.configuration.get_job_message_pub_topic(unsubscribe['job_id']))
+			job_id = unsubscribe['job_id']
+			if self.subscribed.has_key(job_id):
+				self.job_watcher.remove_watch(job_id)
+				pub.unsubscribe(self.job_message_update, self.configuration.get_job_message_pub_topic(job_id))
+				del self.subscribed[job_id]
 
 	def on_close(self):
-		pass
+		for job_id in self.subscribed:
+			self.job_watcher.remove_watch(job_id)
+			pub.unsubscribe(self.job_message_update, self.configuration.get_job_message_pub_topic(job_id))
 
 	def make_data(self, job_id, log_lines, position):
 		message = {
