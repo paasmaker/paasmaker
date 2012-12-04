@@ -31,6 +31,12 @@ class VersionController(VersionRootController):
 		version = self._get_version(version_id)
 		self.add_data('version', version)
 
+		# For the API, fetch a list of types as well.
+		types = {}
+		for instance_type in version.instance_types:
+			types[instance_type.name] = instance_type
+		self.add_data('types', types)
+
 		self.render("version/view.html")
 
 	@staticmethod
@@ -43,6 +49,16 @@ class VersionInstancesController(VersionRootController):
 	def get(self, version_id):
 		version = self._get_version(version_id)
 		self.add_data('version', version)
+
+		# For the API, fetch a list of types as well,
+		# and then instances per type for that.
+		instances = {}
+		for instance_type in version.instance_types:
+			data = {}
+			data['instance_type'] = instance_type
+			data['instances'] = instance_type.instances
+			instances[instance_type.name] = data
+		self.add_data('instances', instances)
 
 		self.render("version/instances.html")
 

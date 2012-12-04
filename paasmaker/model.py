@@ -453,7 +453,7 @@ class ApplicationInstanceType(OrmBase, Base):
 		return "<ApplicationInstanceType('%s'@'%s')>" % (self.name, self.runtime_name)
 
 	def flatten(self, field_list=None):
-		return super(ApplicationInstanceType, self).flatten(['name', 'application_version', 'quantity', 'provider'])
+		return super(ApplicationInstanceType, self).flatten(['name', 'application_version_id', 'quantity', 'runtime_name', 'runtime_version', 'placement_provider', 'exclusive', 'standalone'])
 
 	def flatten_for_heart(self):
 		fields = ['name', 'runtime_name', 'runtime_parameters', 'runtime_version', 'startup', 'exclusive', 'standalone']
@@ -509,7 +509,7 @@ class ApplicationInstance(OrmBase, Base):
 		return "<ApplicationInstance('%s'@'%s' - %s)>" % (self.application_instance_type, self.node, self.state)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['application_instance_type', 'node', 'state', 'port'])
+		return super(ApplicationInstance, self).flatten(['application_instance_type_id', 'node_id', 'state', 'port'])
 
 	def flatten_for_heart(self):
 		data = {}

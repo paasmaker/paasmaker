@@ -399,6 +399,32 @@ class ApplicationListAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class VersionGetAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("version_id", help="Version ID to fetch")
+
+	def describe(self):
+		return "Get a version record."
+
+	def process(self, args):
+		request = paasmaker.common.api.version.VersionGetAPIRequest(None)
+		request.set_version(int(args.version_id))
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
+class VersionInstancesAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("version_id", help="Version ID to fetch")
+
+	def describe(self):
+		return "Get a list of instances for the given version."
+
+	def process(self, args):
+		request = paasmaker.common.api.version.VersionInstancesAPIRequest(None)
+		request.set_version(int(args.version_id))
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
@@ -445,6 +471,8 @@ ACTION_MAP = {
 	'file-upload': FileUploadAction(),
 	'application-get': ApplicationGetAction(),
 	'application-list': ApplicationListAction(),
+	'version-get': VersionGetAction(),
+	'version-instances': VersionInstancesAction(),
 	'help': HelpAction()
 }
 
