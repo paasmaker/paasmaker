@@ -373,6 +373,32 @@ class FileUploadAction(RootAction):
 				self._error
 			)
 
+class ApplicationGetAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("application_id", help="Application ID to fetch")
+
+	def describe(self):
+		return "Get an application record."
+
+	def process(self, args):
+		request = paasmaker.common.api.application.ApplicationGetAPIRequest(None)
+		request.set_application(int(args.application_id))
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
+class ApplicationListAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("workspace_id", help="Workspace ID to list")
+
+	def describe(self):
+		return "List applications in the given workspace."
+
+	def process(self, args):
+		request = paasmaker.common.api.application.ApplicationListAPIRequest(None)
+		request.set_workspace(int(args.workspace_id))
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
@@ -417,6 +443,8 @@ ACTION_MAP = {
 	'role-allocate': RoleAllocationAction(),
 	'role-unallocate': RoleUnAllocateAction(),
 	'file-upload': FileUploadAction(),
+	'application-get': ApplicationGetAction(),
+	'application-list': ApplicationListAction(),
 	'help': HelpAction()
 }
 

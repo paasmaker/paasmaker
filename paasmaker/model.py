@@ -359,7 +359,7 @@ class Application(OrmBase, Base):
 		return "<Application('%s')>" % self.name
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['name', 'workspace'])
+		return super(Application, self).flatten(['name', 'workspace_id'])
 
 	def flatten_for_heart(self):
 		fields = ['name']
@@ -395,7 +395,7 @@ class ApplicationVersion(OrmBase, Base):
 		return "<ApplicationVersion('%s'@'%s' - active: %s)>" % (self.version, self.application, str(self.is_current))
 
 	def flatten(self, field_list=None):
-		return super(ApplicationVersion, self).flatten(['application', 'version', 'is_current'])
+		return super(ApplicationVersion, self).flatten(['application_id', 'version', 'is_current'])
 
 	def flatten_for_heart(self):
 		fields = ['version', 'source_path', 'source_checksum']

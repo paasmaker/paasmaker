@@ -224,6 +224,7 @@ class ApplicationController(ApplicationRootController):
 		# TODO: Paginate...
 		# TODO: Unit test.
 		self.add_data('application', application)
+		self.add_data('versions', application.versions)
 		self.render("application/versions.html")
 
 	@staticmethod
