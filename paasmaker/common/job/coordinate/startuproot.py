@@ -24,6 +24,8 @@ class StartupRootJob(BaseJob, InstanceRootBase):
 			instances
 		)
 
+		tags = InstanceRootBase.get_tags_for(configuration, instance_type_id)
+
 		# For each instance, we need a job tree like this:
 		# - Routing - Instance A (run locally)
 		#   - Startup - Instance A (runtime startup) (on relevant node)
@@ -95,10 +97,10 @@ class StartupRootJob(BaseJob, InstanceRootBase):
 		configuration.job_manager.add_job(
 			'paasmaker.job.coordinate.startuproot',
 			{},
-			# TODO: Make this title include the instance type name.
 			"Start up instances and alter routing",
 			on_root_job_added,
-			parent=parent
+			parent=parent,
+			tags=tags
 		)
 
 	@staticmethod

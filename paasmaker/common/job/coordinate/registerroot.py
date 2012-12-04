@@ -25,6 +25,12 @@ class RegisterRootJob(BaseJob, InstanceRootBase):
 		parameters = {}
 		parameters['application_instance_type_id'] = application_instance_type.id
 
+		tags = []
+		tags.append('workspace:%d' % application_instance_type.application_version.application.workspace.id)
+		tags.append('application:%d' % application_instance_type.application_version.application.id)
+		tags.append('application_version:%d' % application_instance_type.application_version.id)
+		tags.append('application_instance_type:%d' % application_instance_type.id)
+
 		def on_root_job_added(root_job_id):
 			def on_select_locations(select_locations_job_id):
 				# Done! Callback with the root ID.
@@ -57,7 +63,8 @@ class RegisterRootJob(BaseJob, InstanceRootBase):
 			{},
 			"Select locations and register instances for %s" % application_instance_type.name,
 			on_root_job_added,
-			parent=parent
+			parent=parent,
+			tags=tags
 		)
 
 	@staticmethod

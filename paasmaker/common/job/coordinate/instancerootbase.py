@@ -31,6 +31,22 @@ class InstanceRootBase(object):
 
 		return instance_list
 
+	@staticmethod
+	def get_tags_for(configuration, instance_type_id):
+		"""
+		Return a set of job tags for the given instance type ID.
+		"""
+		session = configuration.get_database_session()
+		instance_type = session.query(paasmaker.model.ApplicationInstanceType).get(instance_type_id)
+
+		tags = []
+		tags.append('workspace:%d' % instance_type.application_version.application.workspace.id)
+		tags.append('application:%d' % instance_type.application_version.application.id)
+		tags.append('application_version:%d' % instance_type.application_version.id)
+		tags.append('application_instance_type:%d' % instance_type.id)
+
+		return tags
+
 	def update_jobs_from_context(self, context):
 		"""
 		From the context, attempt to locate any keys that are instance ids,

@@ -24,6 +24,8 @@ class DeRegisterRootJob(BaseJob, InstanceRootBase):
 			instances
 		)
 
+		tags = InstanceRootBase.get_tags_for(configuration, instance_type_id)
+
 		# For each instance, we need a job tree like this:
 		# - Deregister - on relevant node.
 		def on_root_job_added(root_job_id):
@@ -67,7 +69,8 @@ class DeRegisterRootJob(BaseJob, InstanceRootBase):
 			{},
 			"Deregister instances on nodes",
 			on_root_job_added,
-			parent=parent
+			parent=parent,
+			tags=tags
 		)
 
 	@staticmethod
