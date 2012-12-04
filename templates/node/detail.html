@@ -9,13 +9,27 @@
 		<li>Name: {{ node.name }}</li>
 		<li>Route: {{ node.route }}:{{ node.apiport }}</li>
 		<li>State: {{ node.state }}</li>
-		<li>
+		<li>Last report: {{ str(node.last_heard) }} UTC</li>
+		<li>Roles:
 			{% if node.pacemaker %}Pacemaker{% end %}
 			{% if node.heart %}Heart{% end %}
 			{% if node.router %}Router{% end %}
 		</li>
-		<li>TODO: Runtimes</li>
 	</ul>
+
+	<h2>Runtimes</h2>
+	<table class="table">
+		<tr>
+			<th>Name</th>
+			<th>Versions</th>
+		</tr>
+		{% for runtime, versions in node.tags['runtimes'].iteritems() %}
+			<tr>
+				<td>{{ runtime }}</td>
+				<td>{{ ", ".join(versions) }}</td>
+			</tr>
+		{% end %}
+	</table>
 
 	<h2>Instances</h2>
 	<table class="table">
