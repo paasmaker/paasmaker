@@ -1,0 +1,43 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Node {{ node.name }}
+{% end %}
+
+{% block body %}
+	<ul>
+		<li>Name: {{ node.name }}</li>
+		<li>Route: {{ node.route }}:{{ node.apiport }}</li>
+		<li>State: {{ node.state }}</li>
+		<li>
+			{% if node.pacemaker %}Pacemaker{% end %}
+			{% if node.heart %}Heart{% end %}
+			{% if node.router %}Router{% end %}
+		</li>
+		<li>TODO: Runtimes</li>
+	</ul>
+
+	<h2>Instances</h2>
+	<table class="table">
+		<tr>
+			<th>Application</th>
+			<th>Version</th>
+			<th>State</th>
+		</tr>
+		{% for instance in node.instances %}
+			<tr>
+				<td>
+					<a href="/application/{{ instance.application_instance_type.application.id }}">
+						{{ instance.application_instance_type.application_version.application.name }}
+					</a>
+				</td>
+				<td>
+					{{ instance.application_instance_type.application_version.version }}
+				</td>
+				<td>
+					{{ instance.state }}
+				</td>
+			</tr>
+		{% end %}
+	</table>
+{% end %}

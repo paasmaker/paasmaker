@@ -136,6 +136,28 @@ class NodeListController(BaseController):
 		routes.append((r"/node/list", NodeListController, configuration))
 		return routes
 
+class NodeDetailController(BaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def _get_node(self, node_id):
+		node = self.db().query(paasmaker.model.Node).get(int(node_id))
+		if not node:
+			raise tornado.web.HTTPError(404, "No such node.")
+		self.require_permission(constants.PERMISSION.NODE_DETAIL_VIEW)
+		return node
+
+	def get(self, node_id):
+		node = self._get_node(node_id)
+
+		self.add_data('node', node)
+		self.render("node/detail.html")
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/node/(\d+)", NodeDetailController, configuration))
+		return routes
+
 class NodeControllerTest(BaseControllerTest):
 	config_modules = ['pacemaker', 'heart']
 

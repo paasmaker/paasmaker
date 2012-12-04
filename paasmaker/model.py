@@ -214,6 +214,7 @@ class RolePermission(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	role_id = Column(Integer, ForeignKey('role.id'), nullable=False, index=True)
+	# TODO: Make this not an ENUM - too hard to change/migrate when the permissions change.
 	permission = Column(Enum(*constants.PERMISSION.ALL), nullable=False, index=True)
 
 	def __repr__(self):
@@ -449,7 +450,7 @@ class ApplicationInstanceType(OrmBase, Base):
 	standalone = Column(Boolean, nullable=False)
 
 	def __repr__(self):
-		return "<ApplicationInstanceType('%s'@'%s')>" % (self.name, self.runtime)
+		return "<ApplicationInstanceType('%s'@'%s')>" % (self.name, self.runtime_name)
 
 	def flatten(self, field_list=None):
 		return super(ApplicationInstanceType, self).flatten(['name', 'application_version', 'quantity', 'provider'])
@@ -499,7 +500,7 @@ class ApplicationInstance(OrmBase, Base):
 	application_instance_type_id = Column(Integer, ForeignKey('application_instance_type.id'), nullable=False, index=True)
 	application_instance_type = relationship("ApplicationInstanceType", backref=backref('instances', order_by=id))
 	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
-	node = relationship("Node", backref=backref('nodes', order_by=id))
+	node = relationship("Node", backref=backref('instances', order_by=id))
 	port = Column(Integer, nullable=True, index=True)
 	state = Column(Enum(*constants.INSTANCE.ALL), nullable=False, index=True)
 	_statistics = Column("statistics", Text, nullable=True)
@@ -542,7 +543,7 @@ class ApplicationInstanceTypeHostname(OrmBase, Base):
 	statistics = Column(Text, nullable=True)
 
 	def __repr__(self):
-		return "<ApplicationInstanceTypeHostname('%s' -> '%s')>" % (self.hostname, self.application_version)
+		return "<ApplicationInstanceTypeHostname('%s' -> '%s')>" % (self.hostname, self.application_instance_type)
 
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['application_instance_type', 'hostname'])

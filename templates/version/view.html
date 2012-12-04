@@ -1,0 +1,73 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Version {{ version.version }} of {{ version.application.name }}
+{% end %}
+
+{% block body %}
+	<h2>Summary</h2>
+	<table class="table">
+		<tr>
+			<th>Current:</th>
+			<td>{{ version.is_current }}</td>
+		</tr>
+	</table>
+
+	<h2>Instance Types</h2>
+	<table class="table">
+		<tr>
+			<th>Name</th>
+			<th>Runtime</th>
+			<th>Quantity</th>
+			<th>Exclusive</th>
+			<th>Standalone</th>
+			<th>Hostnames</th>
+		</tr>
+		{% for instance_type in version.instance_types %}
+			<tr>
+				<td>
+					{{ instance_type.name }}
+				</td>
+				<td>
+					{{ instance_type.runtime_name }}
+				</td>
+				<td>
+					{{ instance_type.quantity }}
+				</td>
+				<td>
+					{{ instance_type.exclusive }}
+				</td>
+				<td>
+					{{ instance_type.standalone }}
+				</td>
+				<td>
+					{% for hostname in instance_type.hostnames %}
+						{{ hostname.hostname }}<br />
+					{% end %}
+				</td>
+			</tr>
+		{% end %}
+	</table>
+
+	<h2>Services</h2>
+	<table class="table">
+		<tr>
+			<th>Name</th>
+			<th>Provider</th>
+			<th>State</th>
+		</tr>
+		{% for service in version.services %}
+			<tr>
+				<td>
+					{{ service.name }}
+				</td>
+				<td>
+					{{ service.provider }}
+				</td>
+				<td>
+					{{ service.state }}
+				</td>
+			</tr>
+		{% end %}
+	</table>
+{% end %}

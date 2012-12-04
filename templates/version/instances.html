@@ -1,0 +1,31 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Instances for version {{ version.version }} of {{ version.application.name }}
+{% end %}
+
+{% block body %}
+	{% for instance_type in version.instance_types %}
+		<h2>Instance type: {{ instance_type.name }}</h2>
+		<table class="table">
+			<tr>
+				<th>UUID</th>
+				<th>Node</th>
+				<th>State</th>
+			</tr>
+			{% for instance in instance_type.instances %}
+				<tr>
+					<td>
+						{{ instance.uuid }}
+					</td>
+					<td>
+						{{ instance.node.name }}
+					</td>
+					<td>
+						{{ instance.state }}
+					</td>
+				</tr>
+			{% end %}
+		</table>
+	{% end %}
+{% end %}

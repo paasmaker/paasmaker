@@ -12,7 +12,7 @@
 	<table class="table">
 		<tr>
 			<th>Number</th>
-			<th>Current?</th>
+			<th>Current</th>
 			<th>State</th>
 			<th>Instance Types</th>
 			<th>Instances</th>
@@ -20,16 +20,16 @@
 		{% for version in application.versions %}
 			<tr>
 				<td>
-					<a href="/version/{{ version.id }}/">{{ version.version }}</a>
+					<a href="/version/{{ version.id }}">{{ version.version }}</a>
 				</td>
 				<td>
-					{% if version.is_current %}Current{% else %}&nbsp;{% end %}
+					{% if version.is_current %}Current{% else %}-{% end %}
 				</td>
 				<td>
 					{{ version.state }}
 				</td>
 				<td>
-					<a href="/version/{{ version.id }}/types">{{ len(version.instance_types) }}</a>
+					<a href="/version/{{ version.id }}">{{ len(version.instance_types) }}</a>
 				</td>
 				<td>
 					<a href="/version/{{ version.id }}/instances">Instances</a>

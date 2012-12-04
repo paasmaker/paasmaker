@@ -63,9 +63,12 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.job.JobController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.job.JobStreamHandler.get_routes(route_extras))
 	routes.extend(paasmaker.common.controller.log.LogStreamHandler.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.version.VersionController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.version.VersionInstancesController.get_routes(route_extras))
 
 	routes.extend(paasmaker.pacemaker.controller.node.NodeRegisterController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.node.NodeListController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.node.NodeDetailController.get_routes(route_extras))
 
 	# TODO: This might be disabled by the configuration.
 	routes.extend(paasmaker.pacemaker.controller.upload.UploadController.get_routes(route_extras))

@@ -10,3 +10,4 @@ from workspace import WorkspaceEditController, WorkspaceListController
 from upload import UploadController
 from application import ApplicationListController
 from job import JobController, JobStreamHandler
+from version import VersionController, VersionInstancesController

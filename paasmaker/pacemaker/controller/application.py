@@ -87,6 +87,8 @@ class ApplicationNewController(ApplicationRootController):
 			self.add_data('new_application', True)
 		self.add_data('workspace', workspace)
 
+		self.require_permission(constants.PERMISSION.APPLICATION_CREATE, workspace=workspace)
+
 		# TODO: Unit test.
 		# Return a list of available SCMs and stuff.
 		scm_plugins = self.configuration.plugins.plugins_for(paasmaker.util.plugin.MODE.SCM_CHOOSER)
@@ -133,6 +135,8 @@ class ApplicationNewController(ApplicationRootController):
 			self.add_data('new_application', True)
 
 		self.add_data('workspace', workspace)
+
+		self.require_permission(constants.PERMISSION.APPLICATION_CREATE, workspace=workspace)
 
 		# Check parameters.
 		valid_data = self.validate_data(ApplicationNewSchema())
