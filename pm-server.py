@@ -123,6 +123,9 @@ def on_completed_startup():
 		request = paasmaker.common.api.NodeRegisterAPIRequest(configuration)
 		request.send(on_registration_complete)
 
+	# TODO: Hearts - check all managed instances.
+	# TODO: Hearts - send active instance list to server, to check everything.
+
 def on_intermediary_started(message):
 	logger.debug(message)
 	on_intermediary_started.required -= 1
