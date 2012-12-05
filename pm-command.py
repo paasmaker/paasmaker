@@ -19,7 +19,15 @@ logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=loggin
 # TODO: Write tests for all the actions in this file. Integration tests might cover this off
 # though? But need to make sure we have appropriate coverage.
 
-# TODO: When an error occurs, exit.
+# This context wrapper handles exceptions that occur in callbacks, and
+# causes the process to exit.
+@tornado.stack_context.contextlib.contextmanager
+def die_on_error():
+	try:
+		yield
+	except Exception:
+		logging.error("exception in asynchronous operation", exc_info=True)
+		sys.exit(1)
 
 class RootAction(object):
 	def options(self, parser):
@@ -638,7 +646,9 @@ if not args.superkey and not args.apikey:
 
 # Now we wait for the IO loop to start before starting.
 def on_start():
-	ACTION_MAP[action].process(args)
+	# And wrap anything in a stack context to handle errors.
+	with tornado.stack_context.StackContext(die_on_error):
+		ACTION_MAP[action].process(args)
 
 # Commence the application.
 if __name__ == "__main__":
