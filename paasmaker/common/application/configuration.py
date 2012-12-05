@@ -165,6 +165,7 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 		# Because there doesn't seem to be a way to get colander to do so.
 		schema = Instance()
 		for instance in self['instances']:
+			# TODO: Validate that the "name" is suitable for use in urls (eg [-a-z0-9])
 			try:
 				# Validate.
 				valid = schema.deserialize(self['instances'][instance])

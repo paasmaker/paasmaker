@@ -86,13 +86,8 @@ class RouterTableUpdate(object):
 		self.logger.debug("Logging key: %d", log_key)
 		self.logger.debug("Is current version: %s", str(is_current))
 
-		# The instance should always have a hostname by it's version and name.
-		instance_version_hostname = "%d.%s.%s" % (
-			self.instance.application_instance_type.application_version.version,
-			self.instance.application_instance_type.application_version.application.name,
-			self.configuration.get_flat('pacemaker.cluster_hostname')
-		)
-		instance_version_hostname = instance_version_hostname.lower()
+		# The instance should always have a hostname by it's version, workspace, and name.
+		instance_version_hostname = self.instance.application_instance_type.version_hostname(self.configuration)
 		self.instance_sets_yes.append(instance_version_hostname)
 
 		self.logger.debug("Version hostname: %s", instance_version_hostname)
@@ -100,12 +95,8 @@ class RouterTableUpdate(object):
 		# And the log key to match that is the database instance type ID.
 		self.instance_log_keys[instance_version_hostname.lower()] = log_key
 
-		# If the version is current, it will also have a name by it's instance type.
-		current_instance_version_hostname = "%s.%s" % (
-			self.instance.application_instance_type.application_version.application.name,
-			self.configuration.get_flat('pacemaker.cluster_hostname')
-		)
-		current_instance_version_hostname = current_instance_version_hostname.lower()
+		# If the version is current, it will also have a name by it's instance type and workspace.
+		current_instance_version_hostname = self.instance.application_instance_type.type_hostname(self.configuration)
 		self.logger.debug("Instance version hostname: %s", current_instance_version_hostname)
 		if is_current:
 			self.instance_sets_yes.append(current_instance_version_hostname)
@@ -269,9 +260,9 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		redis = self.wait()
 
 		# A few variables for later.
-		set_key_name = "instances_foo.com.%s" % self.configuration.get_flat('pacemaker.cluster_hostname')
-		set_key_version_1 = "instances_1.foo.com.%s" % self.configuration.get_flat('pacemaker.cluster_hostname')
-		set_key_version_2 = "instances_2.foo.com.%s" % self.configuration.get_flat('pacemaker.cluster_hostname')
+		set_key_name = "instances_%s" % instances[0].application_instance_type.type_hostname(self.configuration)
+		set_key_version_1 = "instances_%s" % instances[0].application_instance_type.version_hostname(self.configuration)
+		set_key_version_2 = "instances_%s" % instances[1].application_instance_type.version_hostname(self.configuration)
 		set_key_hostname = "instances_test.paasmaker.com"
 		first_version_instance = "%s:%d" % (socket.gethostbyname(instances[0].node.route), instances[0].port)
 		second_version_instance = "%s:%d" % (socket.gethostbyname(instances[1].node.route), instances[1].port)

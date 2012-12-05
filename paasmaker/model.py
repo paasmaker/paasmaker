@@ -467,6 +467,29 @@ class ApplicationInstanceType(OrmBase, Base):
 		fields = ['name', 'runtime_name', 'runtime_parameters', 'runtime_version', 'startup', 'exclusive', 'standalone']
 		return super(ApplicationInstanceType, self).flatten(fields)
 
+	def version_hostname(self, configuration):
+		# Format: <version>.<type>.<application>.<workspace>.<cluster hostname>
+		# Eg: 1.web.tornado-simple.test.local.passmaker.net
+		type_hostname = self.type_hostname(configuration)
+		instance_version_hostname = "%d.%s" % (
+			self.application_version.version,
+			type_hostname
+		)
+		instance_version_hostname = instance_version_hostname.lower()
+		return instance_version_hostname
+
+	def type_hostname(self, configuration):
+		# Format: <type>.<application>.<workspace>.<cluster hostname>
+		# Eg: web.tornado-simple.test.local.paasmaker.net
+		type_hostname = "%s.%s.%s.%s" % (
+			self.name,
+			self.application_version.application.name,
+			self.application_version.application.workspace.stub,
+			configuration.get_flat('pacemaker.cluster_hostname')
+		)
+		type_hostname.lower()
+		return type_hostname
+
 	@hybrid_property
 	def placement_parameters(self):
 		if self._placement_parameters:
