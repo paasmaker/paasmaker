@@ -112,7 +112,7 @@ class RouterTableUpdate(object):
 		self.logger.debug("Instance hostnames:")
 		for hostname_orm in self.instance.application_instance_type.hostnames:
 			all_hostnames.append("%s" % hostname_orm.hostname.lower())
-			self.logger.debug("- %s", hostname_orm)
+			self.logger.debug("- %s", hostname_orm.hostname.lower())
 
 		# If it's current, they go on the yes list. Otherwise, they go on the
 		# no list.

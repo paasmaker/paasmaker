@@ -30,6 +30,7 @@ import tornado
 
 class CurrentVersionContainerJob(BaseJob):
 	def start_job(self, context):
+		self.logger.info("Sub tasks complete.")
 		self.success({}, "Sub tasks completed.")
 
 class CurrentVersionRootJob(BaseJob, InstanceRootBase):
@@ -52,17 +53,20 @@ class CurrentVersionRootJob(BaseJob, InstanceRootBase):
 		# List all the instance types - new version.
 		instance_types_new = []
 		for instance_type in new_version.instance_types:
-			instance_types_new.append(instance_type)
+			instance_types_new.append(instance_type.id)
 			tags = tags.union(set(InstanceRootBase.get_tags_for(configuration, instance_type.id)))
 		instance_types_new.reverse()
 
 		# List all the instance types - current version.
 		instance_types_current = []
-		if current_version:
+		if current_version and current_version.id != new_version.id:
 			for instance_type in new_version.instance_types:
-				instance_types_current.append(instance_type)
+				instance_types_current.append(instance_type.id)
 				tags = tags.union(set(InstanceRootBase.get_tags_for(configuration, instance_type.id)))
 			instance_types_current.reverse()
+
+		# This is where we need to set the current version.
+		new_version.make_current(session)
 
 		def on_root_job_added(root_job_id):
 			def on_remove_root_added(remove_root_id):
@@ -74,11 +78,11 @@ class CurrentVersionRootJob(BaseJob, InstanceRootBase):
 							# end on_add_instances_complete()
 
 						all_instances_new = []
-						for instance_type in instance_types_new:
+						for instance_type_id in instance_types_new:
 							all_instances_new.extend(
 								InstanceRootBase.get_instances_for(
 									configuration,
-									instance_type.id,
+									instance_type_id,
 									[constants.INSTANCE.RUNNING]
 								)
 							)
@@ -92,11 +96,11 @@ class CurrentVersionRootJob(BaseJob, InstanceRootBase):
 						# end on_remove_instances_complete
 
 					all_instances_current = []
-					for instance_type in instance_types_current:
+					for instance_type_id in instance_types_current:
 						all_instances_current.extend(
 							InstanceRootBase.get_instances_for(
 								configuration,
-								instance_type.id,
+								instance_type_id,
 								[constants.INSTANCE.RUNNING]
 							)
 						)
@@ -165,9 +169,5 @@ class CurrentVersionRootJob(BaseJob, InstanceRootBase):
 			callback()
 
 	def start_job(self, context):
-		session = self.configuration.get_database_session()
-		version = session.query(paasmaker.model.ApplicationVersion).get(context['application_version_id'])
-		version.make_current(session)
-
 		self.logger.info("Making version current.")
 		self.success({}, "Finished making version current.")

@@ -46,6 +46,10 @@
 						<form method="POST" action="/version/{{ version.id }}/deregister">
 							<input type="submit" class="btn btn-mini" value="De Register" />
 						</form>
+						<form method="POST" action="/application/{{ application.id }}/setcurrent">
+							<input type="hidden" name="version_id" value="{{ version.id }}" />
+							<input type="submit" class="btn btn-mini" value="Make Current" />
+						</form>
 					</div>
 				</td>
 			</tr>

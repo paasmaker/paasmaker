@@ -34,6 +34,11 @@ class ApplicationNewSchema(colander.MappingSchema):
 		missing={},
 		default={})
 
+class ApplicationCurrentVersionSchema(colander.MappingSchema):
+	version_id = colander.SchemaNode(colander.Integer(),
+		title="Version ID",
+		description="The application version ID to make current.")
+
 class ApplicationRootController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
@@ -231,4 +236,45 @@ class ApplicationController(ApplicationRootController):
 	def get_routes(configuration):
 		routes = []
 		routes.append((r"/application/(\d+)", ApplicationController, configuration))
+		return routes
+
+class ApplicationSetCurrentController(ApplicationRootController):
+
+	@tornado.web.asynchronous
+	def post(self, application_id):
+		application = self._get_application(application_id)
+
+		self.require_permission(constants.PERMISSION.APPLICATION_ROUTING, workspace=application.workspace)
+		valid_data = self.validate_data(ApplicationCurrentVersionSchema())
+
+		if not valid_data:
+			# Nope. No recourse here.
+			raise tornado.web.HTTPError(400, "Invalid data supplied.")
+
+		# Load up the version.
+		version = self.db().query(paasmaker.model.ApplicationVersion).get(int(self.params['version_id']))
+
+		# Check that the version is part of this application.
+		if version.application_id != application.id:
+			raise tornado.web.HTTPError(404, "Requested version is not part of the requested application.")
+
+		# TODO: Unit test.
+		def job_started():
+			self.add_data_template('generic_title', 'Select current version')
+			self.render("job/genericstart.html")
+
+		def current_job_ready(job_id):
+			self.add_data('job_id', job_id)
+			self.configuration.job_manager.allow_execution(job_id, callback=job_started)
+
+		paasmaker.common.job.coordinate.currentroot.CurrentVersionRootJob.setup_version(
+			self.configuration,
+			version.id,
+			current_job_ready
+		)
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/application/(\d+)/setcurrent", ApplicationSetCurrentController, configuration))
 		return routes

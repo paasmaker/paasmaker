@@ -251,6 +251,11 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(current_version_root_id))
 
+		# At this stage, it should be marked as current.
+		# TODO: Figure out how to handle this if the job tree fails somehow.
+		updated_application_version = session.query(paasmaker.model.ApplicationVersion).get(instance_type.application_version.id)
+		self.assertTrue(updated_application_version.is_current, "Version is not current.")
+
 		# And make it work.
 		self.configuration.job_manager.allow_execution(current_version_root_id, self.stop)
 		self.wait()
