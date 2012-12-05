@@ -128,6 +128,16 @@ class JobManager(object):
 			return
 		self.in_startup[job_id] = True
 
+		@tornado.stack_context.contextlib.contextmanager
+		def handle_exception_job():
+			try:
+				yield
+			except Exception, ex:
+				# Log what happened.
+				logging.error("Job %s failed with exception:", job_id, exc_info=True)
+				# Abort the job with an error.
+				self.completed(job_id, constants.JOB.FAILED, {}, "Exception thrown: " + str(ex))
+
 		def on_context(context):
 			def on_running(result):
 				# Finally kick it off...
@@ -161,7 +171,8 @@ class JobManager(object):
 
 		# Kick off the request to get the job data.
 		logger.debug("Fetching job data for %s to start it.", job_id)
-		self.backend.get_job(job_id, on_job_metadata)
+		with tornado.stack_context.StackContext(handle_exception_job):
+			self.backend.get_job(job_id, on_job_metadata)
 
 	def evaluate(self):
 		"""
@@ -378,6 +389,25 @@ class TestAbortJobRunner(BaseJob):
 	def abort_job(self):
 		self.aborted("Aborted.")
 
+class TestExceptionCallbackJobRunner(BaseJob):
+	def start_job(self, context):
+		# Add a callback to throw an exception.
+		# This thus occurs in a different context.
+		self.configuration.io_loop.add_callback(self._throw_exception)
+
+	def abort_job(self):
+		self.aborted("Aborted.")
+
+	def _throw_exception(self):
+		raise Exception("Oh hai!")
+
+class TestExceptionStartJobRunner(BaseJob):
+	def start_job(self, context):
+		raise Exception("Oh hai!")
+
+	def abort_job(self):
+		self.aborted("Aborted.")
+
 class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		super(JobManagerTest, self).setUp()
@@ -403,6 +433,18 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 			'paasmaker.common.job.manager.manager.TestAbortJobRunner',
 			{},
 			'Test Abort Job'
+		)
+		self.configuration.plugins.register(
+			'paasmaker.job.exceptioncallback',
+			'paasmaker.common.job.manager.manager.TestExceptionCallbackJobRunner',
+			{},
+			'Test Exception Job'
+		)
+		self.configuration.plugins.register(
+			'paasmaker.job.exceptionstart',
+			'paasmaker.common.job.manager.manager.TestExceptionStartJobRunner',
+			{},
+			'Test Exception Job'
 		)
 
 		self.manager = self.configuration.job_manager
@@ -551,3 +593,35 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertEquals(sub1_status, constants.JOB.SUCCESS, "Sub 1 should have succeeded.")
 		self.assertEquals(sub2_status, constants.JOB.ABORTED, "Sub 2 should have failed.")
 		self.assertEquals(root_status, constants.JOB.ABORTED, "Root should have been aborted.")
+
+	def test_manager_exception_callback(self):
+		# Set up a simple exception job.
+		self.manager.add_job('paasmaker.job.exceptioncallback', {}, "Example job.", self.stop)
+		job_id = self.wait()
+
+		self.manager.allow_execution(job_id, callback=self.stop)
+		self.wait()
+
+		self.short_wait_hack()
+
+		#self.dump_job_tree(job_id, self.manager.backend)
+		#self.wait()
+
+		result = self.get_state(job_id)
+		self.assertEquals(result, constants.JOB.FAILED, 'Test job did not fail.')
+
+	def test_manager_exception_start(self):
+		# Set up a simple exception job.
+		self.manager.add_job('paasmaker.job.exceptionstart', {}, "Example job.", self.stop)
+		job_id = self.wait()
+
+		self.manager.allow_execution(job_id, callback=self.stop)
+		self.wait()
+
+		self.short_wait_hack()
+
+		#self.dump_job_tree(job_id, self.manager.backend)
+		#self.wait()
+
+		result = self.get_state(job_id)
+		self.assertEquals(result, constants.JOB.FAILED, 'Test job did not fail.')
