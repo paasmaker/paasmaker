@@ -58,7 +58,7 @@
 								<input type="submit" class="btn btn-mini" value="De Register" />
 							</form>
 						{% end %}
-						{% if version.state == constants.VERSION.RUNNING %}
+						{% if version.state == constants.VERSION.RUNNING and not version.is_current %}
 							<form method="POST" action="/application/{{ application.id }}/setcurrent">
 								<input type="hidden" name="version_id" value="{{ version.id }}" />
 								<input type="submit" class="btn btn-mini" value="Make Current" />
