@@ -42,8 +42,18 @@
 				</td>
 				<td>
 					{% for hostname in instance_type.hostnames %}
-						{{ hostname.hostname }}<br />
+						{% if version.is_current %}
+							<a href="http://{{ hostname.hostname }}/" target="_blank">
+						{% end %}
+							{{ hostname.hostname }}
+						{% if version.is_current %}
+							</a>
+						{% end %}
+						<br />
 					{% end %}
+					<a href="http://{{ instance_type.version_hostname(configuration) }}" target="_blank">
+						{{ instance_type.version_hostname(configuration) }}
+					</a>
 				</td>
 			</tr>
 		{% end %}

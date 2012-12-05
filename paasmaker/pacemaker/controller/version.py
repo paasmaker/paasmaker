@@ -30,11 +30,13 @@ class VersionController(VersionRootController):
 	def get(self, version_id):
 		version = self._get_version(version_id)
 		self.add_data('version', version)
+		self.add_data_template('configuration', self.configuration)
 
 		# For the API, fetch a list of types as well.
 		types = {}
 		for instance_type in version.instance_types:
-			types[instance_type.name] = instance_type
+			types[instance_type.name] = instance_type.flatten()
+			types[instance_type.name]['version_url'] = instance_type.version_hostname(self.configuration)
 		self.add_data('types', types)
 
 		self.render("version/view.html")
