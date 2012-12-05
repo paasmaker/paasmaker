@@ -1,4 +1,5 @@
 import logging
+import json
 
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest, BaseWebsocketHandler
@@ -8,6 +9,7 @@ from pubsub import pub
 import tornado
 import tornado.testing
 import colander
+from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -67,7 +69,7 @@ class JobStreamHandler(BaseWebsocketHandler):
 		if parent_id and self.subscribed.has_key(parent_id):
 				# Send a new job.
 				def on_got_job(data):
-						self.send_success('new', data[0])
+					self.send_success('new', data[job_id])
 				self.configuration.job_manager.get_jobs([job_id], on_got_job)
 
 	def on_message(self, message):
@@ -118,3 +120,111 @@ class JobStreamHandler(BaseWebsocketHandler):
 		routes = []
 		routes.append((r"/job/stream", JobStreamHandler, configuration))
 		return routes
+
+class JobStreamHandlerTestClient(TornadoWebSocketClient):
+	def opened(self):
+		self.messages = []
+
+	def closed(self, code, reason=None):
+		#print "Client: closed"
+		pass
+
+	def subscribe(self, job_id):
+		data = {'job_id': job_id}
+		auth = {'method': 'node', 'value': self.configuration.get_flat('node_token')}
+		message = {'request': 'subscribe', 'data': data, 'auth': auth}
+		self.send(json.dumps(message))
+
+	def received_message(self, m):
+		#print "Client: got %s" % m
+		# Record the log lines.
+		# CAUTION: m is NOT A STRING.
+		parsed = json.loads(str(m))
+		self.messages.append(parsed)
+
+class JobStreamHandlerTest(BaseControllerTest):
+	def get_app(self):
+		self.late_init_configuration(self.io_loop)
+		routes = JobStreamHandler.get_routes({'configuration': self.configuration})
+		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
+		return application
+
+	def setUp(self):
+		# Call the parent setup...
+		super(JobStreamHandlerTest, self).setUp()
+
+		# Register sample jobs.
+		self.configuration.plugins.register(
+			'paasmaker.job.success',
+			'paasmaker.common.job.manager.manager.TestSuccessJobRunner',
+			{},
+			'Test Success Job'
+		)
+		self.configuration.plugins.register(
+			'paasmaker.job.failure',
+			'paasmaker.common.job.manager.manager.TestFailJobRunner',
+			{},
+			'Test Fail Job'
+		)
+		self.configuration.plugins.register(
+			'paasmaker.job.aborted',
+			'paasmaker.common.job.manager.manager.TestAbortJobRunner',
+			{},
+			'Test Abort Job'
+		)
+
+		self.manager = self.configuration.job_manager
+
+		# Wait for it to start up.
+		self.manager.prepare(self.stop, self.stop)
+		self.wait()
+
+	def tearDown(self):
+		self.configuration.cleanup()
+
+	def test_job_stream(self):
+		client = JobStreamHandlerTestClient("ws://localhost:%d/job/stream" % self.get_http_port(), io_loop=self.io_loop)
+		client.configuration = self.configuration
+		client.connect()
+		self.short_wait_hack()
+
+		self.manager.add_job('paasmaker.job.success', {}, "Example root job.", self.stop)
+		root_id = self.wait()
+
+		client.subscribe(root_id)
+
+		self.manager.add_job('paasmaker.job.success', {}, "Example sub1 job.", self.stop, parent=root_id, tags=['test'])
+		sub1_id = self.wait()
+		self.manager.add_job('paasmaker.job.success', {}, "Example sub2 job.", self.stop, parent=root_id)
+		sub2_id = self.wait()
+		self.manager.add_job('paasmaker.job.success', {}, "Example subsub1 job.", self.stop, parent=sub1_id)
+		subsub1_id = self.wait()
+
+		#print json.dumps(client.messages, indent=4, sort_keys=True)
+
+		# Start processing them.
+		self.manager.allow_execution(root_id, callback=self.stop)
+		self.wait()
+
+		# Wait for it all to complete.
+		self.short_wait_hack(length=0.2)
+
+		#print json.dumps(client.messages, indent=4, sort_keys=True)
+
+		# Now, analyze what happened.
+		# TODO: Make this clearer and more exhaustive.
+		expected_types = [
+			'subscribed',
+			'status',
+			'new',
+			'tree',
+			'new',
+			'new',
+			'status',
+			'status',
+			'status'
+		]
+
+		self.assertEquals(len(expected_types), len(client.messages), "Not the right number of messages.")
+		for i in range(len(expected_types)):
+			self.assertEquals(client.messages[i]['type'], expected_types[i], "Wrong type for message %d" % i)
