@@ -77,6 +77,9 @@ class RegisterRootJob(BaseJob, InstanceRootBase):
 			destroyable_instance_type_list.append(instance_type)
 		destroyable_instance_type_list.reverse()
 
+		context = {}
+		context['application_version_id'] = application_version.id
+
 		def on_root_job_added(root_job_id):
 			# Now go through the list and add sub jobs.
 			def add_job(instance_type):
@@ -105,10 +108,13 @@ class RegisterRootJob(BaseJob, InstanceRootBase):
 			'paasmaker.job.coordinate.registerroot',
 			{},
 			"Select locations and register instances for %s version %d" % (application_version.application.name, application_version.version),
-			on_root_job_added
+			on_root_job_added,
+			context=context
 		)
 
 	def start_job(self, context):
+		self.update_version_from_context(context, constants.VERSION.READY)
+
 		self.logger.info("Select locations and register instances.")
 		self.success({}, "Selected and registered instances.")
 
@@ -147,6 +153,11 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 			}
 		}, self.configuration)
 
+		# Check that the version is in the correct starting state.
+		session = self.configuration.get_database_session()
+		our_version = session.query(paasmaker.model.ApplicationVersion).get(instance_type.application_version.id)
+		self.assertEquals(our_version.state, constants.VERSION.PREPARED)
+
 		RegisterRootJob.setup_version(
 			self.configuration,
 			instance_type.application_version,
@@ -174,7 +185,11 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
 
-		session = self.configuration.get_database_session()
+		# Make sure the version is in the correct state.
+		session.refresh(our_version)
+		self.assertEquals(our_version.state, constants.VERSION.READY)
+
+		# Make sure the instances are as expected.
 		instances = session.query(
 			paasmaker.model.ApplicationInstance
 		).filter(
@@ -221,6 +236,10 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
 
+		# Make sure the version is in the correct state.
+		session.refresh(our_version)
+		self.assertEquals(our_version.state, constants.VERSION.RUNNING)
+
 		# Confirm that the entry exists in the routing table.
 		self.configuration.get_router_table_redis(self.stop, self.stop)
 		redis = self.wait()
@@ -253,8 +272,8 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		# At this stage, it should be marked as current.
 		# TODO: Figure out how to handle this if the job tree fails somehow.
-		updated_application_version = session.query(paasmaker.model.ApplicationVersion).get(instance_type.application_version.id)
-		self.assertTrue(updated_application_version.is_current, "Version is not current.")
+		session.refresh(our_version)
+		self.assertTrue(our_version.is_current, "Version is not current.")
 
 		# And make it work.
 		self.configuration.job_manager.allow_execution(current_version_root_id, self.stop)
@@ -268,6 +287,10 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		result = self.wait()
 		while result is None or result.state != constants.JOB.SUCCESS:
 			result = self.wait()
+
+		# Make sure the version is in the correct state.
+		session.refresh(our_version)
+		self.assertEquals(our_version.state, constants.VERSION.RUNNING)
 
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
 		updated_application_version = session.query(paasmaker.model.ApplicationVersion).get(instance_type.application_version.id)
@@ -297,6 +320,10 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		result = self.wait()
 		while result is None or result.state != constants.JOB.SUCCESS:
 			result = self.wait()
+
+		# Make sure the version is in the correct state.
+		session.refresh(our_version)
+		self.assertEquals(our_version.state, constants.VERSION.READY)
 
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
 
@@ -339,6 +366,10 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 			result = self.wait()
 
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
+
+		# Make sure the version is in the correct state.
+		session.refresh(our_version)
+		self.assertEquals(our_version.state, constants.VERSION.PREPARED)
 
 		# To check: the instance directory no longer exists.
 		self.assertFalse(os.path.exists(instance_path), "Instance path still exists.")

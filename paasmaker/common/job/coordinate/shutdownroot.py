@@ -97,6 +97,9 @@ class ShutdownRootJob(BaseJob, InstanceRootBase):
 			destroyable_instance_type_list.append(instance_type)
 		destroyable_instance_type_list.reverse()
 
+		context = {}
+		context['application_version_id'] = application_version.id
+
 		def on_root_job_added(root_job_id):
 			# Now go through the list and add sub jobs.
 			def add_job(instance_type):
@@ -125,11 +128,13 @@ class ShutdownRootJob(BaseJob, InstanceRootBase):
 			'paasmaker.job.coordinate.shutdownroot',
 			{},
 			"Shutdown up instances and alter routing for %s version %d" % (application_version.application.name, application_version.version),
-			on_root_job_added
+			on_root_job_added,
+			context=context
 		)
 
 	def start_job(self, context):
 		self.update_jobs_from_context(context)
+		self.update_version_from_context(context, constants.VERSION.READY)
 
 		self.logger.info("Shutdown instances and alter routing.")
 		self.success({}, "Shut down instances and altered routing.")

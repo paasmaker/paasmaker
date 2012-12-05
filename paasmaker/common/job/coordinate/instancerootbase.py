@@ -70,3 +70,17 @@ class InstanceRootBase(object):
 					instance.state = value
 					session.add(instance)
 		session.commit()
+
+	def update_version_from_context(self, context, state):
+		"""
+		From the context, if a version is specified, update that
+		version into the given state.
+		"""
+		if context.has_key('application_version_id'):
+			# Update that application version ID to the prepared state,
+			# because we've just applied this to the whole version.
+			session = self.configuration.get_database_session()
+			version = session.query(paasmaker.model.ApplicationVersion).get(context['application_version_id'])
+			version.state = state
+			session.add(version)
+			session.commit()
