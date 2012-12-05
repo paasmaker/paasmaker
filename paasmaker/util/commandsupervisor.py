@@ -8,6 +8,7 @@ import shlex
 
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest
+from processcheck import ProcessCheck
 
 import tornado
 
@@ -67,9 +68,14 @@ class CommandSupervisorLauncher(object):
 				os.kill(pid, signal.SIGHUP)
 
 	def is_running(self, instance_id):
-		# TODO: This is only a best effort guess.
 		pidfile = self.get_pid_path()
-		return os.path.exists(pidfile)
+		if os.path.exists(pidfile):
+			fp = open(pidfile, 'r')
+			pid = int(fp.read())
+			fp.close()
+			return ProcessCheck.is_running(pid, 'pm-supervisor')
+		else:
+			return False
 
 	def get_unreported_exit_code(self):
 		root = self.get_supervisor_dir()
@@ -149,11 +155,15 @@ class CommandSupervisorTest(BaseControllerTest):
 		# Give the process some time to start.
 		self.short_wait_hack(length=0.5)
 
+		self.assertTrue(launcher.is_running(instance_id), "Supervisor is not running.")
+
 		# Now kill it off.
 		launcher.kill()
 
 		# Wait for everything to settle down.
 		self.short_wait_hack(length=0.5)
+
+		self.assertFalse(launcher.is_running(instance_id), "Supervisor is still running.")
 
 		# Check that it output what we expected.
 		job_path = self.configuration.get_job_log_path(instance_id)
