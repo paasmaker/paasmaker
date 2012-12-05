@@ -11,6 +11,7 @@
 			<tr>
 				<th>ID</th>
 				<th>Node</th>
+				<th>Created</th>
 				<th>State</th>
 			</tr>
 			{% for instance in instance_type.instances %}
@@ -20,6 +21,9 @@
 					</td>
 					<td>
 						{{ instance.node.name }}
+					</td>
+					<td>
+						{{ instance.created.isoformat() }}
 					</td>
 					<td>
 						{{ instance.state }}

@@ -230,6 +230,7 @@ class ApplicationController(ApplicationRootController):
 		# TODO: Unit test.
 		self.add_data('application', application)
 		self.add_data('versions', application.versions)
+		self.add_data_template('constants', constants)
 		self.render("application/versions.html")
 
 	@staticmethod

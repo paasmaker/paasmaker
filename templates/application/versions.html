@@ -34,22 +34,32 @@
 				<td>
 					<div class="table-button-box">
 						<a class="btn btn-mini" href="/version/{{ version.id }}/instances">Instances</a>
-						<form method="POST" action="/version/{{ version.id }}/register">
-							<input type="submit" class="btn btn-mini" value="Register" />
-						</form>
-						<form method="POST" action="/version/{{ version.id }}/start">
-							<input type="submit" class="btn btn-mini" value="Start" />
-						</form>
-						<form method="POST" action="/version/{{ version.id }}/stop">
-							<input type="submit" class="btn btn-mini" value="Stop" />
-						</form>
-						<form method="POST" action="/version/{{ version.id }}/deregister">
-							<input type="submit" class="btn btn-mini" value="De Register" />
-						</form>
-						<form method="POST" action="/application/{{ application.id }}/setcurrent">
-							<input type="hidden" name="version_id" value="{{ version.id }}" />
-							<input type="submit" class="btn btn-mini" value="Make Current" />
-						</form>
+						{% if version.state == constants.VERSION.PREPARED %}
+							<form method="POST" action="/version/{{ version.id }}/register">
+								<input type="submit" class="btn btn-mini" value="Register" />
+							</form>
+						{% end %}
+						{% if version.state == constants.VERSION.READY %}
+							<form method="POST" action="/version/{{ version.id }}/start">
+								<input type="submit" class="btn btn-mini" value="Start" />
+							</form>
+						{% end %}
+						{% if version.state == constants.VERSION.RUNNING %}
+							<form method="POST" action="/version/{{ version.id }}/stop">
+								<input type="submit" class="btn btn-mini" value="Stop" />
+							</form>
+						{% end %}
+						{% if version.state == constants.VERSION.READY %}
+							<form method="POST" action="/version/{{ version.id }}/deregister">
+								<input type="submit" class="btn btn-mini" value="De Register" />
+							</form>
+						{% end %}
+						{% if version.state == constants.VERSION.RUNNING %}
+							<form method="POST" action="/application/{{ application.id }}/setcurrent">
+								<input type="hidden" name="version_id" value="{{ version.id }}" />
+								<input type="submit" class="btn btn-mini" value="Make Current" />
+							</form>
+						{% end %}
 					</div>
 				</td>
 			</tr>
