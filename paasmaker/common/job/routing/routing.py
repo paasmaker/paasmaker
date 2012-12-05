@@ -36,13 +36,16 @@ class RoutingUpdateJob(BaseJob):
 			paasmaker.model.ApplicationInstance
 		).get(self.instance_id)
 
-		self.updater = RouterTableUpdate(
-			self.configuration,
-			self.instance,
-			self.parameters['add'],
-			self.logger
-		)
-		self.updater.update(self.on_success, self.on_failure)
+		if self.instance.application_instance_type.standalone:
+			self.success({}, "Standalone instance - no routing required.")
+		else:
+			self.updater = RouterTableUpdate(
+				self.configuration,
+				self.instance,
+				self.parameters['add'],
+				self.logger
+			)
+			self.updater.update(self.on_success, self.on_failure)
 
 	def on_success(self):
 		self.logger.info("Successfully updated routing table.")

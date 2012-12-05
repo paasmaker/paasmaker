@@ -560,6 +560,18 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					{},
 					'De Register Root Job'
 				)
+				self.plugins.register(
+					'paasmaker.job.coordinate.currentroot',
+					'paasmaker.common.job.coordinate.CurrentVersionRootJob',
+					{},
+					'Update Current Version Root Job'
+				)
+				self.plugins.register(
+					'paasmaker.job.coordinate.currentcontainer',
+					'paasmaker.common.job.coordinate.CurrentVersionContainerJob',
+					{},
+					'Update Current Version Container Job'
+				)
 
 				# ROUTING
 				self.plugins.register(

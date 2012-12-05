@@ -12,6 +12,7 @@ from startuproot import StartupRootJob
 from shutdownroot import ShutdownRootJob
 from deregisterroot import DeRegisterRootJob
 from instancerootbase import InstanceRootBase
+from currentroot import CurrentVersionRootJob
 
 import tornado
 from pubsub import pub
@@ -224,7 +225,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.configuration.get_router_table_redis(self.stop, self.stop)
 		redis = self.wait()
 
-		set_key_version_1 = "instances_1.foo.com.%s" % self.configuration.get_flat('pacemaker.cluster_hostname')
+		set_key_version_1 = "instances_%s" % instance.application_instance_type.version_hostname(self.configuration)
 		version_instance = "%s:%d" % (socket.gethostbyname(instance.node.route), instance.port)
 
 		redis.smembers(set_key_version_1, self.stop)
@@ -236,6 +237,36 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		session.refresh(instance)
 
 		self.assertEquals(instance.state, constants.INSTANCE.RUNNING, "Instance not in correct state.")
+
+		# Make that version current.
+		# TODO: Test when it takes over another version - there is a large set of
+		# code paths here not tested.
+		CurrentVersionRootJob.setup_version(
+			self.configuration,
+			instance_type.application_version.id,
+			self.stop
+		)
+
+		current_version_root_id = self.wait()
+
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(current_version_root_id))
+
+		# And make it work.
+		self.configuration.job_manager.allow_execution(current_version_root_id, self.stop)
+		self.wait()
+
+		#print
+		#print current_version_root_id
+		#self.dump_job_tree(current_version_root_id)
+		#self.wait()
+
+		result = self.wait()
+		while result is None or result.state != constants.JOB.SUCCESS:
+			result = self.wait()
+
+		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
+		updated_application_version = session.query(paasmaker.model.ApplicationVersion).get(instance_type.application_version.id)
+		self.assertTrue(updated_application_version.is_current, "Version is not current.")
 
 		# Now shut the instance down.
 		ShutdownRootJob.setup_version(

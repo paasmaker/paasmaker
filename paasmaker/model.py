@@ -425,6 +425,17 @@ class ApplicationVersion(OrmBase, Base):
 
 		return credentials
 
+	def get_current(self, session):
+		"""
+		From any given version, get the current version.
+		"""
+		current = session.query(ApplicationVersion).filter(
+			ApplicationVersion.application == self.application,
+			ApplicationVersion.is_current == True
+		).first()
+
+		return current
+
 	def make_current(self, session):
 		# Disable all versions.
 		session.query(ApplicationVersion).filter(
@@ -458,7 +469,7 @@ class ApplicationInstanceType(OrmBase, Base):
 	standalone = Column(Boolean, nullable=False)
 
 	def __repr__(self):
-		return "<ApplicationInstanceType('%s'@'%s')>" % (self.name, self.runtime_name)
+		return "<ApplicationInstanceType('%s':'%s')>" % (self.name, self.runtime_name)
 
 	def flatten(self, field_list=None):
 		return super(ApplicationInstanceType, self).flatten(['name', 'application_version_id', 'quantity', 'runtime_name', 'runtime_version', 'placement_provider', 'exclusive', 'standalone'])
