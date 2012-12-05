@@ -903,7 +903,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			send_source = self.get_node_uuid()
 
 		# Make the message objects.
-		status = JobStatusMessage(job_id, state, send_source)
+		status = JobStatusMessage(job_id, state, send_source, parent_id=parent_id)
 
 		status_topic = self.get_job_status_pub_topic(job_id)
 
