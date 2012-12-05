@@ -90,7 +90,12 @@ class ShellRuntime(BaseRuntime):
 
 	def stop(self, instance_id, callback, error_callback):
 		# Issue the stop command.
-		self.supervise_stop(instance_id)
+		try:
+			self.supervise_stop(instance_id)
+		except OSError, ex:
+			# Probably no such PID. Failed!
+			error_callback(str(ex), ex)
+			return
 
 		# Wait for it to free up the port, if it's not standalone.
 		# If it's not standalone, wait for it to assume it's TCP port.
