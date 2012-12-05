@@ -20,7 +20,7 @@ class DeRegisterRootJob(BaseJob, InstanceRootBase):
 		instance_list = InstanceRootBase.get_instances_for(
 			configuration,
 			instance_type_id,
-			constants.INSTANCE_FINISHED_STATES,
+			[constants.INSTANCE.STOPPED],
 			instances
 		)
 

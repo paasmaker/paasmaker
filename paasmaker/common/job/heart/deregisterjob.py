@@ -30,7 +30,14 @@ class DeRegisterInstanceJob(BaseJob):
 
 		# Remove it from the instance manager. This is done regardless of success of
 		# removing the files.
-		self.configuration.instances.remove_instance(self.instance_id)
+		try:
+			self.configuration.instances.remove_instance(self.instance_id)
+		except KeyError, ex:
+			# Failed to find the instance. This means it's already deregistered,
+			# but the server doesn't think so. So we allow this to succeed right now,
+			# and the parent job will then update the database correctly.
+			# So we just ignore this error.
+			pass
 
 		# Get the instance path.
 		self.instance_path = self.configuration.get_instance_path(self.instance_id)
