@@ -15,21 +15,25 @@
 			<th>Current</th>
 			<th>State</th>
 			<th>Instance Types</th>
-			<th>Instances</th>
+			<th>Actions</th>
 		</tr>
 		{% for version in application.versions %}
 			<tr>
 				<td>
-					<a href="/version/{{ version.id }}">{{ version.version }}</a>
+					<a href="/version/{{ version.id }}">Version {{ version.version }}</a>
 				</td>
 				<td>
-					{% if version.is_current %}Current{% else %}-{% end %}
+					{% if version.is_current and version.state != constants.VERSION.RUNNING %}
+						DOWN
+					{% else %}
+						{% if version.is_current %}Current{% else %}-{% end %}
+					{% end %}
 				</td>
 				<td>
 					{{ version.state }}
 				</td>
 				<td>
-					<a href="/version/{{ version.id }}">{{ len(version.instance_types) }}</a>
+					<a href="/version/{{ version.id }}">{{ len(version.instance_types) }} type(s)</a>
 				</td>
 				<td>
 					<div class="table-button-box">
