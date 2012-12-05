@@ -5,11 +5,28 @@
 {% end %}
 
 {% block body %}
-	<p><a href="/user/create">Create a new user</a></p>
+	<div class="button-box">
+		<a class="btn" href="/user/create">Create a new user</a>
+	</div>
 
-	<ul>
+	<table class="table">
+		<tr>
+			<th>Name</th>
+			<th>Login</th>
+			<th>Created</th>
+		</tr>
 		{% for user in users %}
-			<li><a href="/user/{{ user.id }}">{{ user.name }}</a></li>
+			<tr>
+				<td>
+					<a href="/user/{{ user.id }}">{{ user.name }}</a>
+				</td>
+				<td>
+					{{ user.login }}
+				</td>
+				<td>
+					{{ str(user.created) }}
+				</td>
+			</tr>
 		{% end %}
-	</ul>
+	</table>
 {% end %}

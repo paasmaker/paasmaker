@@ -22,10 +22,11 @@
 		<input name="password" id="password" type="password" value="" />
 		{% raw format_form_error('password') %}
 
-		<label for="enabled">Enabled:</label>
-		<input name="enabled" id="enabled" type="checkbox" {% if user.enabled %}checked="checked"{% end %} />
+		<label for="enabled" class="checkbox">
+			<input name="enabled" id="enabled" type="checkbox" {% if user.enabled %}checked="checked"{% end %} />
+			Enabled
+		</label>
 
-		<br />
 		<button type="submit" class="btn">Submit</button>
 	</form>
 {% end %}

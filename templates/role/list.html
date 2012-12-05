@@ -5,11 +5,24 @@
 {% end %}
 
 {% block body %}
-	<p><a href="/role/create">Create a new role</a></p>
+	<div class="button-box">
+		<a class="btn" href="/role/create">Create a new role</a>
+	</div>
 
-	<ul>
+	<table class="table">
+		<tr>
+			<th>Name</th>
+			<th>Permissions</th>
+		</tr>
 		{% for role in roles %}
-			<li><a href="/role/{{ role.id }}">{{ role.name }}</a></li>
+			<tr>
+				<td>
+					<a href="/role/{{ role.id }}">{{ role.name }}</a>
+				</td>
+				<td>
+					{% raw "<br />".join(role.permissions) %}
+				</td>
+			</tr>
 		{% end %}
-	</ul>
+	</table>
 {% end %}
