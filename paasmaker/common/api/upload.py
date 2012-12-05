@@ -35,7 +35,8 @@ class UploadFileAPIRequest(paasmaker.util.APIRequest):
 			'resumableTotalSize': os.path.getsize(filename),
 			'resumableIdentifier': "%d-%s" % (os.path.getsize(filename), os.path.basename(filename)),
 			'resumableFilename': filename,
-			'resumableRelativePath': filename
+			'resumableRelativePath': filename,
+			'format': 'json'
 		}
 
 		# Open up the file and get started.
@@ -52,6 +53,7 @@ class UploadFileAPIRequest(paasmaker.util.APIRequest):
 		kwargs = {}
 		kwargs['method'] = 'GET'
 		kwargs['headers'] = {'User-Token': self.authvalue}
+		kwargs['follow_redirects'] = False
 
 		request = tornado.httpclient.HTTPRequest(endpoint, **kwargs)
 		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)

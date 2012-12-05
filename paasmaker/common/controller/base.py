@@ -445,6 +445,7 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 	ANONYMOUS = 0
 	NODE = 1
 	USER = 2
+	SUPER = 3
 
 	# You must override this in your subclass.
 	AUTH_METHODS = []
@@ -504,9 +505,27 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 			found_allowed_method = True
 
 		if self.NODE in self.AUTH_METHODS:
-			# Check that a valid node authenticated.
+			# Check that a valid node authentication.
 			if auth.has_key('method') and auth['method'] == 'node':
 				if auth.has_key('value') and auth['value'] == self.configuration.get_flat('node_token'):
+					found_allowed_method = True
+
+		if self.SUPER in self.AUTH_METHODS:
+			# Check that a valid super authentication.
+			if auth.has_key('method') and auth['method'] == 'super' and self.configuration.get_flat('pacemaker.allow_supertoken'):
+				if auth.has_key('value') and auth['value'] == self.configuration.get_flat('pacemaker.super_token'):
+					found_allowed_method = True
+
+		if self.USER in self.AUTH_METHODS:
+			test_token = None
+			if auth.has_key('method') and auth['method'] == 'token':
+				test_token = auth['value']
+			if test_token:
+				# Lookup the user object.
+				user = self.configuration.get_database_session().query(paasmaker.model.User) \
+					.filter(paasmaker.model.User.apikey==test_token).first()
+				# Make sure we have the user, and it's enabled and not deleted.
+				if user and user.enabled and not user.deleted:
 					found_allowed_method = True
 
 		# TODO: Handle user token authentication.

@@ -53,7 +53,7 @@ class JobUnSubscribeSchema(colander.MappingSchema):
 		description="The ID of the job to stop monitoring.")
 
 class JobStreamHandler(BaseWebsocketHandler):
-	AUTH_METHODS = [BaseWebsocketHandler.NODE, BaseWebsocketHandler.USER]
+	AUTH_METHODS = [BaseWebsocketHandler.NODE, BaseWebsocketHandler.USER, BaseWebsocketHandler.SUPER]
 
 	def open(self):
 		self.subscribed = {}

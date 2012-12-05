@@ -3,12 +3,14 @@
 # External library imports.
 import tornado.ioloop
 import argparse
+from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 import sys
 import json
 
 # Internal imports.
 import paasmaker
+from paasmaker.common.core import constants
 
 # Logging setup.
 import logging
@@ -354,8 +356,7 @@ class FileUploadAction(RootAction):
 		self.exit(0)
 
 	def _error(self, message):
-		logger.error("Failed to upload: %s", message)
-		self.prettyprint(data)
+		self.prettyprint(message)
 		self.exit(1)
 
 	def process(self, args):
@@ -398,6 +399,128 @@ class ApplicationListAction(RootAction):
 		request.set_workspace(int(args.workspace_id))
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
+
+class CrudeJobStatusClient(TornadoWebSocketClient):
+	def opened(self):
+		# TODO: Errors here don't print out exceptions.
+		self.subscribe(self.job_id)
+
+	def closed(self, code, reason=None):
+		pass
+
+	def subscribe(self, job_id):
+		data = {'job_id': job_id}
+		auth = self.auth
+		message = {'request': 'subscribe', 'data': data, 'auth': auth}
+		self.send(json.dumps(message))
+
+	def received_message(self, m):
+		# TODO: Exceptions here don't cause errors to be displayed on screen.
+		parsed = json.loads(str(m))
+		self.action.prettyprint(parsed)
+		self.action.on_message(parsed)
+
+	@staticmethod
+	def setup(action, args, job_id):
+		client = CrudeJobStatusClient("ws://%s:%d/job/stream" % (args.remote, args.port))
+		if args.apikey:
+			auth = {'method': 'token', 'value': args.apikey}
+		elif args.superkey:
+			auth = {'method': 'super', 'value': args.superkey}
+		client.auth = auth
+		client.action = action
+		client.job_id = job_id
+		client.connect()
+
+		return client
+
+class ApplicationVersionRootAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("scm", help="The SCM plugin to handle this application.")
+		parser.add_argument("--uploadedfile", help="The uploaded file.", default=None)
+		parser.add_argument("--parameters", help="Other parameters for the SCM. Expects a JSON formatted string.", default={})
+		parser.add_argument("--manifestpath", help="The path to the manifest file inside the SCM. Optional.", default=None)
+		parser.add_argument("--follow", default=False, help="Follow the progress of this job.", action="store_true")
+
+	def _set_common(self, request, args):
+		request.set_scm(args.scm)
+		if args.uploadedfile:
+			request.set_uploaded_file(args.uploadedfile)
+		if args.parameters:
+			params = json.loads(args.parameters)
+			request.set_parameters(params)
+		if args.manifestpath:
+			request.set_manifest_path(args.manifestpath)
+		self.point_and_auth(args, request)
+		self.args = args
+
+	def _follow(self, request):
+		request.send(self._submit_complete)
+
+	def _submit_complete(self, response):
+		if response.success:
+			logging.info("Successfully executed request.")
+			# TODO: Handle warnings.
+			self.prettyprint(response.data)
+			# Now follow the submitted job.
+			self._follow_job(response.data['job_id'])
+		else:
+			logging.error("Request failed.")
+			for error in response.errors:
+				logging.error(error)
+			# TODO: Print errors in JSON format.
+			self.prettyprint(response.data)
+			self.exit(1)
+
+	def on_message(self, message):
+		# TODO: If any of this code fails, it doesn't print any errors to screen.
+		if message['type'] == 'status':
+			if message['data']['job_id'] == self.job_id and message['data']['state'] in constants.JOB_FINISHED_STATES:
+				if message['data']['state'] == constants.JOB.SUCCESS:
+					logging.info("Completed successfully.")
+					self.exit(0)
+				else:
+					logging.error("Failed to complete job.")
+					self.exit(1)
+
+	def _follow_job(self, job_id):
+		# Follow the rabbit hole...
+		self.client = CrudeJobStatusClient.setup(self, self.args, job_id)
+		self.job_id = job_id
+
+class ApplicationNewAction(ApplicationVersionRootAction):
+	def options(self, parser):
+		parser.add_argument("workspace_id", help="The workspace to place this application in.")
+		super(ApplicationNewAction, self).options(parser)
+
+	def describe(self):
+		return "Create a new application."
+
+	def process(self, args):
+		request = paasmaker.common.api.application.ApplicationNewAPIRequest(None)
+		request.set_workspace(int(args.workspace_id))
+		self._set_common(request, args)
+		if args.follow:
+			self._follow(request)
+		else:
+			request.send(self.generic_api_response)
+
+class ApplicationNewVersionAction(ApplicationVersionRootAction):
+	def options(self, parser):
+		parser.add_argument("application_id", help="The application_id to create the new version for.")
+		super(ApplicationNewVersionAction, self).options(parser)
+
+	def describe(self):
+		return "Create a new application version."
+
+	def process(self, args):
+		request = paasmaker.common.api.application.ApplicationNewVersionAPIRequest(None)
+		request.set_application(int(args.application_id))
+		self._set_common(request, args)
+		if args.follow:
+			self._follow(request)
+		else:
+			request.send(self.generic_api_response)
 
 class VersionGetAction(RootAction):
 	def options(self, parser):
@@ -471,6 +594,8 @@ ACTION_MAP = {
 	'file-upload': FileUploadAction(),
 	'application-get': ApplicationGetAction(),
 	'application-list': ApplicationListAction(),
+	'application-new': ApplicationNewAction(),
+	'application-newversion': ApplicationNewVersionAction(),
 	'version-get': VersionGetAction(),
 	'version-instances': VersionInstancesAction(),
 	'help': HelpAction()
