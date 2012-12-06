@@ -15,7 +15,6 @@ import tornado
 class CommandSupervisorLauncher(object):
 	def __init__(self, configuration, instance_id):
 		self.configuration = configuration
-		self.process = None
 		self.instance_id = instance_id
 
 	def launch(self, command, cwd, environment, exit_key, port):
@@ -38,9 +37,11 @@ class CommandSupervisorLauncher(object):
 
 		# Launch it.
 		supervisor = self.configuration.get_supervisor_path()
-		startup_fp = open(payload['log_file'], 'a')
-		# TODO: Detect and handle failures with the supervisor itself properly.
-		self.process = subprocess.Popen([supervisor, payload_path], stdout=startup_fp, stderr=startup_fp)
+		# TODO: Make sure this command line is secure and stuff.
+		# Why are we doing it this way? We want the process to fork into the background,
+		# so if the parent process dies, it doesn't take down any running supervisors.
+		command_line = "%s %s > %s 2>&1 &" % (supervisor, payload_path, payload['log_file'])
+		subprocess.check_call(command_line, shell=True)
 
 	def get_supervisor_dir(self):
 		path = self.configuration.get_scratch_path("supervisor")
@@ -57,17 +58,14 @@ class CommandSupervisorLauncher(object):
 		return os.path.join(root, "%s.json" % self.instance_id)
 
 	def kill(self):
-		if self.process:
-			os.kill(self.process.pid, signal.SIGHUP)
-		else:
-			pidfile = self.get_pid_path()
-			if os.path.exists(pidfile):
-				fp = open(pidfile, 'r')
-				pid = int(fp.read())
-				fp.close()
-				os.kill(pid, signal.SIGHUP)
+		pidfile = self.get_pid_path()
+		if os.path.exists(pidfile):
+			fp = open(pidfile, 'r')
+			pid = int(fp.read())
+			fp.close()
+			os.kill(pid, signal.SIGHUP)
 
-	def is_running(self, instance_id):
+	def is_running(self):
 		pidfile = self.get_pid_path()
 		if os.path.exists(pidfile):
 			fp = open(pidfile, 'r')
@@ -124,11 +122,7 @@ class CommandSupervisorTest(BaseControllerTest):
 		)
 
 		# Wait for the subprocess to finish.
-		finished = None
-		while finished is None:
-			self.short_wait_hack()
-			launcher.process.poll()
-			finished = launcher.process.returncode
+		self.short_wait_hack(length=0.5)
 
 		# Check that it output what we expected.
 		job_path = self.configuration.get_job_log_path(instance_id)
@@ -155,7 +149,7 @@ class CommandSupervisorTest(BaseControllerTest):
 		# Give the process some time to start.
 		self.short_wait_hack(length=0.5)
 
-		self.assertTrue(launcher.is_running(instance_id), "Supervisor is not running.")
+		self.assertTrue(launcher.is_running(), "Supervisor is not running.")
 
 		# Now kill it off.
 		launcher.kill()
@@ -163,7 +157,7 @@ class CommandSupervisorTest(BaseControllerTest):
 		# Wait for everything to settle down.
 		self.short_wait_hack(length=0.5)
 
-		self.assertFalse(launcher.is_running(instance_id), "Supervisor is still running.")
+		self.assertFalse(launcher.is_running(), "Supervisor is still running.")
 
 		# Check that it output what we expected.
 		job_path = self.configuration.get_job_log_path(instance_id)
@@ -224,11 +218,7 @@ class CommandSupervisorTest(BaseControllerTest):
 		)
 
 		# Wait for the subprocess to finish.
-		finished = None
-		while finished is None:
-			self.short_wait_hack()
-			launcher.process.poll()
-			finished = launcher.process.returncode
+		self.short_wait_hack(length=0.5)
 
 		# Check that it output what we expected.
 		# TODO: Check that it got the correct pubsub broadcast instead.
