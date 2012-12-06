@@ -242,27 +242,37 @@ class ApplicationController(ApplicationRootController):
 class ApplicationSetCurrentController(ApplicationRootController):
 
 	@tornado.web.asynchronous
-	def post(self, application_id):
-		application = self._get_application(application_id)
+	def post(self, input_id):
+		if self.request.uri.startswith('/application'):
+			application = self._get_application(input_id)
+			valid_data = self.validate_data(ApplicationCurrentVersionSchema())
+			if not valid_data:
+				# Nope. No recourse here.
+				raise tornado.web.HTTPError(400, "Invalid data supplied.")
+			# Load up the version.
+			version = self.db().query(paasmaker.model.ApplicationVersion).get(int(self.params['version_id']))
+		else:
+			version = self.db().query(paasmaker.model.ApplicationVersion).get(int(input_id))
+			if not version:
+				raise tornado.web.HTTPError(404, "No such version.")
+			application = version.application
 
+		# Check permissions.
 		self.require_permission(constants.PERMISSION.APPLICATION_ROUTING, workspace=application.workspace)
-		valid_data = self.validate_data(ApplicationCurrentVersionSchema())
-
-		if not valid_data:
-			# Nope. No recourse here.
-			raise tornado.web.HTTPError(400, "Invalid data supplied.")
-
-		# Load up the version.
-		version = self.db().query(paasmaker.model.ApplicationVersion).get(int(self.params['version_id']))
 
 		# Check that the version is part of this application.
 		if version.application_id != application.id:
 			raise tornado.web.HTTPError(404, "Requested version is not part of the requested application.")
 
+		if version.state != constants.VERSION.RUNNING:
+			self.add_error("Version must be in state RUNNING to be current.")
+			raise tornado.web.HTTPError(400, "Incorrect state.")
+
 		# TODO: Unit test.
 		def job_started():
 			self.add_data_template('generic_title', 'Select current version')
 			self.render("job/genericstart.html")
+			self.finish()
 
 		def current_job_ready(job_id):
 			self.add_data('job_id', job_id)
@@ -278,4 +288,5 @@ class ApplicationSetCurrentController(ApplicationRootController):
 	def get_routes(configuration):
 		routes = []
 		routes.append((r"/application/(\d+)/setcurrent", ApplicationSetCurrentController, configuration))
+		routes.append((r"/version/(\d+)/setcurrent", ApplicationSetCurrentController, configuration))
 		return routes

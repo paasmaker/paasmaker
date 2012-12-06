@@ -82,7 +82,7 @@ class ShutdownRootJob(BaseJob, InstanceRootBase):
 		configuration.job_manager.add_job(
 			'paasmaker.job.coordinate.shutdownroot',
 			{},
-			"Shutdown up instances and alter routing",
+			"Shutdown instances and alter routing",
 			on_root_job_added,
 			parent=parent,
 			tags=tags

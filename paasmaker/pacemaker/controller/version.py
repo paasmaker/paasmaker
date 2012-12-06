@@ -75,6 +75,11 @@ class VersionRegisterController(VersionRootController):
 	@tornado.web.asynchronous
 	def post(self, version_id):
 		version = self._get_version(version_id)
+
+		if version.state != constants.VERSION.PREPARED:
+			self.add_error("Version must be in state PREPARED to be registered.")
+			raise tornado.web.HTTPError(400, "Incorrect state.")
+
 		self.add_data('version', version)
 
 		def on_job_started():
@@ -105,6 +110,10 @@ class VersionStartupController(VersionRootController):
 		version = self._get_version(version_id)
 		self.add_data('version', version)
 
+		if version.state != constants.VERSION.READY:
+			self.add_error("Version must be in state READY to be started.")
+			raise tornado.web.HTTPError(400, "Incorrect state.")
+
 		def on_job_started():
 			self.add_data_template('generic_title', 'Starting instances')
 			self.render("job/genericstart.html")
@@ -133,6 +142,10 @@ class VersionShutdownController(VersionRootController):
 		version = self._get_version(version_id)
 		self.add_data('version', version)
 
+		if version.state != constants.VERSION.RUNNING:
+			self.add_error("Version must be in state RUNNING to be stopped.")
+			raise tornado.web.HTTPError(400, "Incorrect state.")
+
 		def on_job_started():
 			self.add_data_template('generic_title', 'Shutting down instances')
 			self.render("job/genericstart.html")
@@ -160,6 +173,10 @@ class VersionDeRegisterController(VersionRootController):
 	def post(self, version_id):
 		version = self._get_version(version_id)
 		self.add_data('version', version)
+
+		if version.state != constants.VERSION.READY:
+			self.add_error("Version must be in state READY to be de-registered.")
+			raise tornado.web.HTTPError(400, "Incorrect state.")
 
 		def on_job_started():
 			self.add_data_template('generic_title', 'De registering instances')
