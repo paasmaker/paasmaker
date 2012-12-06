@@ -140,6 +140,8 @@ class JobManager(object):
 			except Exception, ex:
 				# Log what happened.
 				logging.error("Job %s failed with exception:", job_id, exc_info=True)
+				job_logger = self.configuration.get_job_logger(job_id)
+				job_logger.error("Job failed with exception:", exc_info=True)
 				# Abort the job with an error.
 				self.completed(job_id, constants.JOB.FAILED, None, "Exception thrown: " + str(ex))
 
