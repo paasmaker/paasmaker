@@ -30,6 +30,7 @@ test_sets = {
 	paasmaker.util.processcheck: ['all', 'util', 'process'],
 	paasmaker.util.managedrabbitmq: ['slow', 'util', 'messaging', 'managedservice', 'rabbitmq'],
 	paasmaker.util.managedredis: ['slow', 'util', 'redis', 'managedservice'],
+	paasmaker.util.asyncdns: ['all', 'slow', 'util', 'network'],
 
 	paasmaker.router.router: ['all', 'slow', 'router'],
 
