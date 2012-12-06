@@ -234,6 +234,8 @@ class JobStreamHandlerTest(BaseControllerTest):
 			'new',
 			'status',
 			'status',
+			'status',
+			'status',
 			'status'
 		]
 
