@@ -59,6 +59,18 @@ class BaseJob(Plugin):
 		"""
 		raise NotImplementedError("You must implement abort_job().")
 
+	def abort_handler(self, context):
+		"""
+		If implemented, and added to the manager as an abort handler,
+		if the tree fails, this function is called with the jobs context.
+		The order of abort handlers is not guaranteed at all, nor is the
+		state of the context. Failures and exceptions here don't further
+		alter the job tree, as it's already failed. You should also not
+		call success(), failed(), or aborted(). Basically, do what you
+		need to do and then finish up.
+		"""
+		pass
+
 class ContainerJob(BaseJob):
 	"""
 	A job that can be simply used to contain other jobs.

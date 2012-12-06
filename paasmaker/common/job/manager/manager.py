@@ -22,6 +22,7 @@ class JobManager(object):
 		self.backend = RedisJobBackend(configuration)
 		self.runners = {}
 		self.in_startup = {}
+		self.abort_handlers = {}
 
 		logger.debug("Subscribing to job status updates.")
 		pub.subscribe(self.job_status, 'job.status')
@@ -47,7 +48,7 @@ class JobManager(object):
 		"""
 		self.backend.get_context(job_id, callback)
 
-	def add_job(self, plugin, parameters, title, callback, parent=None, node=None, context=None, tags=[]):
+	def add_job(self, plugin, parameters, title, callback, parent=None, node=None, context=None, tags=[], abort_handler=False):
 		"""
 		Add the given job to the system, calling the callback with the
 		assigned job ID when it's inserted into the system. New jobs
@@ -100,6 +101,10 @@ class JobManager(object):
 			tags=tags
 		)
 
+		# Make a note of this being an abort handler.
+		if abort_handler:
+			self.abort_handlers[job_id] = True
+
 	def allow_execution(self, job_id, callback=None, notify_others=True):
 		"""
 		Allow the entire job tree given by job_id (which can be anywhere on the tree)
@@ -136,7 +141,7 @@ class JobManager(object):
 				# Log what happened.
 				logging.error("Job %s failed with exception:", job_id, exc_info=True)
 				# Abort the job with an error.
-				self.completed(job_id, constants.JOB.FAILED, {}, "Exception thrown: " + str(ex))
+				self.completed(job_id, constants.JOB.FAILED, None, "Exception thrown: " + str(ex))
 
 		def on_context(context):
 			def on_running(result):
@@ -198,6 +203,10 @@ class JobManager(object):
 			# Remove the runner instance.
 			if self.runners.has_key(job_id):
 				del self.runners[job_id]
+			# Remove from abort handlers, if present (save the memory)
+			# TODO: Figure out the right place to do this - this isn't it.
+			#if self.abort_handlers.has_key(job_id):
+			#	del self.abort_handlers[job_id]
 			# Now publish the fact that the job has reached the given state.
 			self.configuration.send_job_status(job_id, state)
 
@@ -243,6 +252,41 @@ class JobManager(object):
 				else:
 					logger.warn("Unable to find job %s that's supposed to be running. Ignoring.", job)
 
+		# ABORT HANDLER HANDLING
+		def on_complete_tree(tree):
+			def on_job_metadata(job):
+				# Now that we have the job metadata, we can try to instantiate the plugin.
+				job_id = job['job_id']
+				logger.debug("ABORT HANDLER: Got metadata for job %s", job_id)
+				job_logger = self.configuration.get_job_logger(job_id)
+				plugin = self.configuration.plugins.instantiate(
+					job['plugin'],
+					paasmaker.util.plugin.MODE.JOB,
+					job['parameters'],
+					job_logger
+				)
+				plugin.configure(self, job_id, job)
+
+				def on_context(context):
+					# Just start the job immediately. If it throws an exception, we
+					# don't cancel it or change anything else. At this stage, it's
+					# cleaning up after another failure and as such we're not making
+					# any guarantees about it.
+					logger.debug("ABORT HANDLER: Got context for job %s", job_id)
+					logger.debug("ABORT HANDLER: Context for job %s: %s", job_id, str(context))
+					plugin.abort_handler(context)
+
+				# Now we need to fetch the context to start the job off.
+				self.backend.get_context(job_id, on_context)
+
+			logger.info("Found %d jobs in the tree for abort handlers.", len(tree))
+			for job in tree:
+				if self.abort_handlers.has_key(job):
+					# This is an abort handler.
+					del self.abort_handlers[job]
+					# Fetch the job metadata.
+					self.backend.get_job(job, on_job_metadata)
+
 		logger.debug("Searching for WAITING jobs, and adjusting to aborted for tree %s.", message.job_id)
 		self.backend.set_state_tree(
 			message.job_id,
@@ -258,6 +302,14 @@ class JobManager(object):
 			message.job_id,
 			on_running,
 			state=constants.JOB.RUNNING,
+			node=self.configuration.get_node_uuid()
+		)
+
+		# Also, get the entire tree as well, to search for any abort handlers.
+		logger.debug("Searching for entire tree to find abort handlers for %s.", message.job_id)
+		self.backend.get_tree(
+			message.job_id,
+			on_complete_tree,
 			node=self.configuration.get_node_uuid()
 		)
 
@@ -408,6 +460,15 @@ class TestExceptionStartJobRunner(BaseJob):
 	def abort_job(self):
 		self.aborted("Aborted.")
 
+ABORT_HANDLER_RESPONSE = None
+class TestAbortHandlerJobRunner(BaseJob):
+	def start_job(self, context):
+		self.failed("Test failure")
+
+	def abort_handler(self, context):
+		global ABORT_HANDLER_RESPONSE
+		ABORT_HANDLER_RESPONSE = "I'm in the abort handler."
+
 class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		super(JobManagerTest, self).setUp()
@@ -445,6 +506,12 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 			'paasmaker.common.job.manager.manager.TestExceptionStartJobRunner',
 			{},
 			'Test Exception Job'
+		)
+		self.configuration.plugins.register(
+			'paasmaker.job.aborthandler',
+			'paasmaker.common.job.manager.manager.TestAbortHandlerJobRunner',
+			{},
+			'Test Abort Handler Job'
 		)
 
 		self.manager = self.configuration.job_manager
@@ -625,3 +692,20 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		result = self.get_state(job_id)
 		self.assertEquals(result, constants.JOB.FAILED, 'Test job did not fail.')
+
+	def test_manager_abort_handler(self):
+		# Set up a simple abort handler job.
+		self.manager.add_job('paasmaker.job.aborthandler', {}, "Example job.", self.stop, abort_handler=True)
+		job_id = self.wait()
+
+		self.manager.allow_execution(job_id, callback=self.stop)
+		self.wait()
+
+		self.short_wait_hack()
+
+		#self.dump_job_tree(job_id, self.manager.backend)
+		#self.wait()
+
+		result = self.get_state(job_id)
+		self.assertEquals(result, constants.JOB.FAILED, 'Test job did not fail.')
+		self.assertNotEquals(ABORT_HANDLER_RESPONSE, None, 'Abort handler did not run.')
