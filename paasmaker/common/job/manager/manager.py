@@ -133,6 +133,10 @@ class JobManager(object):
 			return
 		self.in_startup[job_id] = True
 
+		# TODO: When using the command line API, this doesn't catch the
+		# SQLAlchemy IntegrityError if you upload a second application
+		# with the same name. Works fine via the HTML interface though.
+		# This will be a sublety with Stack Context, and we should find it.
 		@tornado.stack_context.contextlib.contextmanager
 		def handle_exception_job():
 			try:

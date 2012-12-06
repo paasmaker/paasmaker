@@ -4,6 +4,8 @@ from paasmaker.common.core import constants
 from paasmaker.common.core import constants
 from ..base import BaseJob
 
+import sqlalchemy
+
 class ManifestReaderJob(BaseJob):
 
 	def start_job(self, context):
@@ -48,7 +50,12 @@ class ManifestReaderJob(BaseJob):
 			application = session.query(paasmaker.model.Application).get(context['application_id'])
 
 		self.logger.debug("Unpacking manifest into database...")
-		application_version = self.manifest.unpack_into_database(session, application)
+		try:
+			application_version = self.manifest.unpack_into_database(session, application)
+		except sqlalchemy.exc.IntegrityError, ex:
+			self.logger.error("Failed to unpack into database.", exc_info=True)
+			self.failed("Failed to unpack into database.")
+			return
 
 		# Persist it all now so we have a record for later.
 		session.add(application_version)
