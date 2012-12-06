@@ -160,6 +160,9 @@ var JobRootStreamHandler = function(container)
 			case 'status':
 				_self.updateStatus(message.data);
 				break;
+			case 'new':
+				_self.newJob(_self.container, message.data);
+				break;
 		}
 	};
 
@@ -179,6 +182,12 @@ var JobRootStreamHandler = function(container)
 		}
 	};
 }
+
+/*JobRootStreamHandler.prototype.refreshTree = function(job_id)
+{
+	var message = $.toJSON({request: 'tree', data: {'job_id': job_id}});
+	this.jobStatusRemote.send(message);
+}*/
 
 JobRootStreamHandler.prototype.toggleSubscribeLog = function(job_id, container)
 {
@@ -226,53 +235,25 @@ JobRootStreamHandler.prototype.renderJobTree = function(container, tree, level)
 	var _self = this;
 	$.each(tree, function(index, element)
 	{
-		var thisContainer = _self.createContainer(element.job_id, level);
+		var thisContainer = _self.createContainer(element.job_id, level, element);
 		container.append(thisContainer);
-		$('.title', thisContainer).text(element.title);
-		$('.state', thisContainer).text(element.state);
-		/*var thisTime = new Date();
-		thisTime.setTime(element.time * 1000);
-		$('.time', thisContainer).text(thisTime.toString());*/
-		// TODO: Have to switch states...
-		// TODO: Fix this.
-		var stateContainer = $('.state', thisContainer);
-		stateContainer.removeClass('state-SUCCESS');
-		stateContainer.removeClass('state-FAILED');
-		stateContainer.removeClass('state-ABORTED');
-		stateContainer.removeClass('state-WAITING');
-		stateContainer.addClass('state-' + element.state);
-		var logContainer = $('.log', thisContainer);
-
-		var toolbox = $('.toolbox', thisContainer);
-		if( false == toolbox.hasClass('populated') )
-		{
-			// Populate and hook up the toolbox.
-			var logExpander = $('<a href="#"><i class="icon-list"></i></a>');
-			logExpander.click(
-				function(e)
-				{
-					logContainer.slideToggle();
-					_self.toggleSubscribeLog(element.job_id, logContainer);
-
-					e.preventDefault();
-				}
-			);
-			toolbox.append(logExpander);
-			toolbox.addClass('populated');
-		}
-
-		// Recurse into the children.
-		if( element.children )
-		{
-			var childContainer = $('.children', thisContainer);
-			_self.renderJobTree(childContainer, element.children, level + 1);
-		}
 	});
 }
 
-JobRootStreamHandler.prototype.createContainer = function(job_id, level)
+JobRootStreamHandler.prototype.newJob = function(container, data)
+{
+	// Find the parent container.
+	var parentId = data['parent_id'];
+	var parentChildContainer = $('.children-' + parentId);
+	var levelParent = parseInt(parentChildContainer.parent().attr('data-level'), 10) + 1;
+	var newJobContainer = this.createContainer(data.job_id, levelParent, data);
+	parentChildContainer.append(newJobContainer);
+}
+
+JobRootStreamHandler.prototype.createContainer = function(job_id, level, data)
 {
 	var thisJobContainer = $('<div class="job-status level' + level + '"></div>');
+	thisJobContainer.attr('data-level', level);
 
 	var details = $('<div class="details"></div>');
 	details.addClass(job_id);
@@ -283,7 +264,50 @@ JobRootStreamHandler.prototype.createContainer = function(job_id, level)
 	details.append($('<div class="log"></div>'));
 	thisJobContainer.append(details);
 
-	thisJobContainer.append($('<div class="children"></div>'));
+	var childrenContainer = $('<div class="children"></div>');
+	childrenContainer.addClass('children-' + job_id);
+	thisJobContainer.append(childrenContainer);
+
+	$('.title', thisJobContainer).text(data.title);
+	$('.state', thisJobContainer).text(data.state);
+	/*var thisTime = new Date();
+	thisTime.setTime(data.time * 1000);
+	$('.time', thisJobContainer).text(thisTime.toString());*/
+	// TODO: Have to switch states...
+	// TODO: Fix this.
+	var stateContainer = $('.state', thisJobContainer);
+	stateContainer.removeClass('state-SUCCESS');
+	stateContainer.removeClass('state-FAILED');
+	stateContainer.removeClass('state-ABORTED');
+	stateContainer.removeClass('state-WAITING');
+	stateContainer.addClass('state-' + data.state);
+	var logContainer = $('.log', thisJobContainer);
+
+	var toolbox = $('.toolbox', thisJobContainer);
+	var _self = this;
+	if( false == toolbox.hasClass('populated') )
+	{
+		// Populate and hook up the toolbox.
+		var logExpander = $('<a href="#"><i class="icon-list"></i></a>');
+		logExpander.click(
+			function(e)
+			{
+				logContainer.slideToggle();
+				_self.toggleSubscribeLog(data.job_id, logContainer);
+
+				e.preventDefault();
+			}
+		);
+		toolbox.append(logExpander);
+		toolbox.addClass('populated');
+	}
+
+	// Recurse into the children.
+	if( data.children )
+	{
+		var childContainer = $('.children', thisJobContainer);
+		_self.renderJobTree(childContainer, data.children, level + 1);
+	}
 
 	return thisJobContainer;
 }

@@ -51,6 +51,8 @@ class JobUnSubscribeSchema(colander.MappingSchema):
 	job_id = colander.SchemaNode(colander.String(),
 		title="Job ID",
 		description="The ID of the job to stop monitoring.")
+class JobTreeSchema(JobSubscribeSchema):
+	pass
 
 class JobStreamHandler(BaseWebsocketHandler):
 	AUTH_METHODS = [BaseWebsocketHandler.NODE, BaseWebsocketHandler.USER, BaseWebsocketHandler.SUPER]
@@ -71,6 +73,7 @@ class JobStreamHandler(BaseWebsocketHandler):
 				def on_got_job(data):
 					self.send_success('new', data[job_id])
 				self.configuration.job_manager.get_jobs([job_id], on_got_job)
+				self.subscribed[message.job_id] = True
 
 	def on_message(self, message):
 		# Message should be JSON.
@@ -80,6 +83,8 @@ class JobStreamHandler(BaseWebsocketHandler):
 				self.handle_subscribe(parsed)
 			if parsed['request'] == 'unsubscribe':
 				self.handle_unsubscribe(parsed)
+			if parsed['request'] == 'tree':
+				self.handle_tree(parsed)
 
 	def handle_subscribe(self, message):
 		# Must match the subscribe schema.
@@ -88,6 +93,13 @@ class JobStreamHandler(BaseWebsocketHandler):
 			# Subscribe to everything in the tree.
 			self.configuration.job_manager.get_pretty_tree(subscribe['job_id'], self.got_pretty_tree)
 			self.configuration.job_manager.get_flat_tree(subscribe['job_id'], self.got_flat_tree_subscribe)
+
+	def handle_tree(self, message):
+		# Must match the subscribe schema.
+		tree = self.validate_data(message, JobTreeSchema())
+		if subscribe:
+			# Subscribe to everything in the tree.
+			self.configuration.job_manager.get_pretty_tree(tree['job_id'], self.got_pretty_tree)
 
 	def got_pretty_tree(self, tree):
 		# Send back the pretty tree to the client.
