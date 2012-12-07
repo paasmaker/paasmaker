@@ -75,6 +75,7 @@ class RouterTableUpdate(object):
 			socket.gethostbyname(self.instance.node.route),
 			self.instance.port
 		)
+		self.instance_id = self.instance.instance_id
 
 		self.logger.debug("Resolved instance address: %s", self.instance_address)
 
@@ -142,14 +143,17 @@ class RouterTableUpdate(object):
 			self.logger.info("Adding to %d sets, and removing from %d.", len(self.instance_sets_yes), len(self.instance_sets_no))
 			for key in self.instance_sets_yes:
 				pipeline.sadd("instances_" + key, self.instance_address)
+				pipeline.sadd("instance_ids_" + key, self.instance_id)
 			for key in self.instance_sets_no:
 				pipeline.srem("instances_" + key, self.instance_address)
+				pipeline.srem("instance_ids_" + key, self.instance_id)
 			for key, value in self.instance_log_keys.iteritems():
 				pipeline.set("logkey_" + key, value)
 		else:
 			self.logger.info("Removing from %d sets.", len(self.instance_sets_yes))
 			for key in self.instance_sets_yes:
 				pipeline.srem("instances_" + key, self.instance_address)
+				pipeline.srem("instance_ids_" + key, self.instance_id)
 
 		pipeline.execute(callback=self.redis_complete)
 
@@ -264,11 +268,17 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		# A few variables for later.
 		set_key_name = "instances_%s" % instances[0].application_instance_type.type_hostname(self.configuration)
+		set_key_name_id = "instance_ids_%s" % instances[0].application_instance_type.type_hostname(self.configuration)
 		set_key_version_1 = "instances_%s" % instances[0].application_instance_type.version_hostname(self.configuration)
+		set_key_version_1_id = "instance_ids_%s" % instances[0].application_instance_type.version_hostname(self.configuration)
 		set_key_version_2 = "instances_%s" % instances[1].application_instance_type.version_hostname(self.configuration)
+		set_key_version_2_id = "instance_ids_%s" % instances[1].application_instance_type.version_hostname(self.configuration)
 		set_key_hostname = "instances_test.paasmaker.com"
+		set_key_hostname_id = "instance_ids_test.paasmaker.com"
 		first_version_instance = "%s:%d" % (socket.gethostbyname(instances[0].node.route), instances[0].port)
+		first_version_instance_id = instances[0].instance_id
 		second_version_instance = "%s:%d" % (socket.gethostbyname(instances[1].node.route), instances[1].port)
+		second_version_instance_id = instances[1].instance_id
 
 		# Check that nothing is currently setup.
 		redis.smembers(set_key_name, self.stop)
@@ -284,9 +294,13 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# Now check to see we have what we expected in Redis.
 		# NOTE: No instance will appear in set_key_name yet, because none of them are active.
 		self.assertTrue(self.not_in_redis(redis, set_key_name, first_version_instance), "First version version name found in app name set.")
+		self.assertTrue(self.not_in_redis(redis, set_key_name_id, first_version_instance_id), "First version version name found in app name set.")
 		self.assertTrue(self.in_redis(redis, set_key_version_1, first_version_instance), "First version version name not found.")
+		self.assertTrue(self.in_redis(redis, set_key_version_1_id, first_version_instance_id), "First version version name not found.")
 		self.assertTrue(self.not_in_redis(redis, set_key_version_2, first_version_instance), "First version version name found in second.")
+		self.assertTrue(self.not_in_redis(redis, set_key_version_2_id, first_version_instance_id), "First version version name found in second.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname, first_version_instance), "First version in hostname set.")
+		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version in hostname set.")
 
 		# Add the second instance to the routing table. And make sure they're not
 		# overwriting each other.
@@ -295,9 +309,13 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.wait()
 
 		self.assertTrue(self.not_in_redis(redis, set_key_name, second_version_instance), "Second version version name found in app name set.")
+		self.assertTrue(self.not_in_redis(redis, set_key_name_id, second_version_instance_id), "Second version version name found in app name set.")
 		self.assertTrue(self.in_redis(redis, set_key_version_2, second_version_instance), "Second version version name not found.")
+		self.assertTrue(self.in_redis(redis, set_key_version_2_id, second_version_instance_id), "Second version version name not found.")
 		self.assertTrue(self.not_in_redis(redis, set_key_version_1, second_version_instance), "Second version version name found in first.")
+		self.assertTrue(self.not_in_redis(redis, set_key_version_1_id, second_version_instance_id), "Second version version name found in first.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname, second_version_instance), "Second version in hostname set.")
+		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, second_version_instance_id), "Second version in hostname set.")
 
 		# Now make the first version the current version. And check the keys again.
 		instances[0].application_instance_type.application_version.make_current(s)
@@ -306,9 +324,13 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.wait()
 
 		self.assertTrue(self.in_redis(redis, set_key_name, first_version_instance), "First version version name found in app name set.")
+		self.assertTrue(self.in_redis(redis, set_key_name_id, first_version_instance_id), "First version version name found in app name set.")
 		self.assertTrue(self.in_redis(redis, set_key_version_1, first_version_instance), "First version version name not found.")
+		self.assertTrue(self.in_redis(redis, set_key_version_1_id, first_version_instance_id), "First version version name not found.")
 		self.assertTrue(self.not_in_redis(redis, set_key_version_2, first_version_instance), "First version version name found in second.")
+		self.assertTrue(self.not_in_redis(redis, set_key_version_2_id, first_version_instance_id), "First version version name found in second.")
 		self.assertTrue(self.in_redis(redis, set_key_hostname, first_version_instance), "First version version name not found in hostname set.")
+		self.assertTrue(self.in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version version name not found in hostname set.")
 
 		# Now update the second instance again. Nothing should have changed.
 		table_updater = RouterTableUpdate(self.configuration, instances[1], True, logging)
@@ -316,9 +338,13 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.wait()
 
 		self.assertTrue(self.not_in_redis(redis, set_key_name, second_version_instance), "Second version version name found in app name set.")
+		self.assertTrue(self.not_in_redis(redis, set_key_name_id, second_version_instance_id), "Second version version name found in app name set.")
 		self.assertTrue(self.in_redis(redis, set_key_version_2, second_version_instance), "Second version version name not found.")
+		self.assertTrue(self.in_redis(redis, set_key_version_2_id, second_version_instance_id), "Second version version name not found.")
 		self.assertTrue(self.not_in_redis(redis, set_key_version_1, second_version_instance), "Second version version name found in first.")
+		self.assertTrue(self.not_in_redis(redis, set_key_version_1_id, second_version_instance_id), "Second version version name found in first.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname, second_version_instance), "Second version in hostname set.")
+		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, second_version_instance_id), "Second version in hostname set.")
 
 		# Now switch the second version to be current. Update the new current instance first.
 		# So both instances should exist right now... this is correct, because otherwise
@@ -329,9 +355,13 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.wait()
 
 		self.assertTrue(self.in_redis(redis, set_key_name, first_version_instance), "First version version name not found in app name set.")
+		self.assertTrue(self.in_redis(redis, set_key_name_id, first_version_instance_id), "First version version name not found in app name set.")
 		self.assertTrue(self.in_redis(redis, set_key_name, second_version_instance), "Second version version name found in app name set.")
+		self.assertTrue(self.in_redis(redis, set_key_name_id, second_version_instance_id), "Second version version name found in app name set.")
 		self.assertTrue(self.in_redis(redis, set_key_hostname, first_version_instance), "First version not in hostname set.")
+		self.assertTrue(self.in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version not in hostname set.")
 		self.assertTrue(self.in_redis(redis, set_key_hostname, second_version_instance), "Second version not in hostname set.")
+		self.assertTrue(self.in_redis(redis, set_key_hostname_id, second_version_instance_id), "Second version not in hostname set.")
 
 		# Now update the first instance.
 		table_updater = RouterTableUpdate(self.configuration, instances[0], True, logging)
@@ -339,9 +369,13 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.wait()
 
 		self.assertTrue(self.not_in_redis(redis, set_key_name, first_version_instance), "First version version name found in app name set.")
+		self.assertTrue(self.not_in_redis(redis, set_key_name_id, first_version_instance_id), "First version version name found in app name set.")
 		self.assertTrue(self.in_redis(redis, set_key_name, second_version_instance), "Second version version name found in app name set.")
+		self.assertTrue(self.in_redis(redis, set_key_name_id, second_version_instance_id), "Second version version name found in app name set.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname, first_version_instance), "First version in hostname set.")
+		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version in hostname set.")
 		self.assertTrue(self.in_redis(redis, set_key_hostname, second_version_instance), "Second version not in hostname set.")
+		self.assertTrue(self.in_redis(redis, set_key_hostname_id, second_version_instance_id), "Second version not in hostname set.")
 
 		# Now that the first instance is out, remove it from the system.
 		table_updater = RouterTableUpdate(self.configuration, instances[0], False, logging)
@@ -349,6 +383,10 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.wait()
 
 		self.assertTrue(self.not_in_redis(redis, set_key_name, first_version_instance), "First version version name found in app name set.")
+		self.assertTrue(self.not_in_redis(redis, set_key_name_id, first_version_instance_id), "First version version name found in app name set.")
 		self.assertTrue(self.not_in_redis(redis, set_key_version_1, first_version_instance), "First version version name found.")
+		self.assertTrue(self.not_in_redis(redis, set_key_version_1_id, first_version_instance_id), "First version version name found.")
 		self.assertTrue(self.not_in_redis(redis, set_key_version_2, first_version_instance), "First version version name found in second.")
+		self.assertTrue(self.not_in_redis(redis, set_key_version_2_id, first_version_instance_id), "First version version name found in second.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname, first_version_instance), "First version in hostname set.")
+		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version in hostname set.")
