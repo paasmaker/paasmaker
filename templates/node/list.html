@@ -26,7 +26,7 @@
 					{% if node.router %}Router{% end %}
 				</td>
 				<td>
-					{{ node.state }}
+					<span class="node-{{ node.state }}">{{ nice_state(node.state) }}</span>
 				</td>
 			</tr>
 		{% end %}

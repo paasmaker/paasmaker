@@ -30,7 +30,7 @@
 						{{ instance.created.isoformat() }}
 					</td>
 					<td>
-						{{ instance.state }}
+						<span class="instance-{{ instance.state }}">{{ nice_state(instance.state) }}</span>
 					</td>
 				</tr>
 			{% end %}

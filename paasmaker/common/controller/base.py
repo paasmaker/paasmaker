@@ -67,6 +67,7 @@ class BaseController(tornado.web.RequestHandler):
 		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
 
 		self.add_data_template('format_form_error', self.format_form_error)
+		self.add_data_template('nice_state', self.nice_state)
 
 	def prepare(self):
 		self._set_format(self.get_argument('format', 'html'))
@@ -365,6 +366,9 @@ class BaseController(tornado.web.RequestHandler):
 			return '<ul class="error"><li>%s</li></ul>' % tornado.escape.xhtml_escape(self.data['input_errors'][field])
 		else:
 			return ''
+
+	def nice_state(self, state):
+		return state[0] + state[1:].lower()
 
 	def add_error(self, error):
 		self.errors.append(error)

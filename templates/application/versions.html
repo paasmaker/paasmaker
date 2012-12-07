@@ -30,7 +30,7 @@
 					{% end %}
 				</td>
 				<td>
-					{{ version.state }}
+					<span class="version-{{ version.state }}">{{ nice_state(version.state) }}</span>
 				</td>
 				<td>
 					<a href="/version/{{ version.id }}">{{ len(version.instance_types) }} type(s)</a>
