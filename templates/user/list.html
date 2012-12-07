@@ -14,6 +14,7 @@
 			<th>Name</th>
 			<th>Login</th>
 			<th>Created</th>
+			<th>Enabled</th>
 		</tr>
 		{% for user in users %}
 			<tr>
@@ -25,6 +26,13 @@
 				</td>
 				<td>
 					{{ str(user.created) }}
+				</td>
+				<td>
+					{% if user.enabled %}
+						Enabled
+					{% else %}
+						Disabled
+					{% end %}
 				</td>
 			</tr>
 		{% end %}
