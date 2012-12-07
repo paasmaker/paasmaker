@@ -12,6 +12,7 @@
 	<table class="table">
 		<tr>
 			<th>Application</th>
+			<th>Health</th>
 			<th>Versions</th>
 		</tr>
 		{% for application in applications %}
@@ -20,7 +21,10 @@
 					{{ application.name }}
 				</td>
 				<td>
-					<a href="/application/{{ application.id }}">{{ len(application.versions) }} versions</a>
+					{{ application.health }}
+				</td>
+				<td>
+					<a href="/application/{{ application.id }}">{{ application.versions.count() }} versions</a>
 				</td>
 			</tr>
 		{% end %}

@@ -14,6 +14,7 @@
 			<th>Number</th>
 			<th>Current</th>
 			<th>State</th>
+			<th>Health</th>
 			<th>Instance Types</th>
 			<th>Actions</th>
 		</tr>
@@ -26,11 +27,21 @@
 					{% if version.is_current and version.state != constants.VERSION.RUNNING %}
 						DOWN
 					{% else %}
-						{% if version.is_current %}Current{% else %}-{% end %}
+						{% if version.is_current %}Current{% else %}No{% end %}
 					{% end %}
 				</td>
 				<td>
 					<span class="version-{{ version.state }}">{{ nice_state(version.state) }}</span>
+				</td>
+				<td>
+					{% set health_data = version.health %}
+					{% if health_data['overall'] == constants.HEALTH.OK %}
+						{{ health_data['overall'] }}
+					{% else %}
+						{% for itype in health_data['types'] %}
+							{{ itype }}: {{ health_data['types'][itype]['state'] }} - {{ health_data['types'][itype]['message'] }}<br />
+						{% end %}
+					{% end %}
 				</td>
 				<td>
 					<a href="/version/{{ version.id }}">{{ len(version.instance_types) }} type(s)</a>

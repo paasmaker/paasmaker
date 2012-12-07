@@ -371,11 +371,21 @@ class Application(OrmBase, Base):
 		return "<Application('%s')>" % self.name
 
 	def flatten(self, field_list=None):
-		return super(Application, self).flatten(['name', 'workspace_id'])
+		return super(Application, self).flatten(['name', 'workspace_id', 'health'])
 
 	def flatten_for_heart(self):
 		fields = ['name']
 		return super(Application, self).flatten(fields)
+
+	@property
+	def health(self):
+		current_version = self.versions.filter(ApplicationVersion.is_current == True).first()
+		if current_version:
+			status = current_version.health
+			return status['overall']
+		else:
+			# It's warning, because no versions are current.
+			return constants.HEALTH.WARNING
 
 # Joining table between Application Version and services.
 application_version_services = Table('application_version_service', Base.metadata,
@@ -388,7 +398,7 @@ class ApplicationVersion(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	application_id = Column(Integer, ForeignKey('application.id'), nullable=False, index=True)
-	application = relationship("Application", backref=backref('versions', order_by=id))
+	application = relationship("Application", backref=backref('versions', order_by=id, lazy="dynamic"))
 	version = Column(Integer, nullable=False)
 	is_current = Column(Boolean, nullable=False)
 	statistics = Column(Text, nullable=True)
@@ -407,7 +417,7 @@ class ApplicationVersion(OrmBase, Base):
 		return "<ApplicationVersion('%s'@'%s' - active: %s)>" % (self.version, self.application, str(self.is_current))
 
 	def flatten(self, field_list=None):
-		return super(ApplicationVersion, self).flatten(['application_id', 'version', 'is_current'])
+		return super(ApplicationVersion, self).flatten(['application_id', 'version', 'is_current', 'health'])
 
 	def flatten_for_heart(self):
 		fields = ['version', 'source_path', 'source_checksum']
@@ -453,6 +463,58 @@ class ApplicationVersion(OrmBase, Base):
 		self.is_current = True
 		session.add(self)
 		session.commit()
+
+	@property
+	def health(self):
+		health = {'types': {}, 'overall': constants.HEALTH.OK}
+		seen_statuses = set(constants.HEALTH.OK)
+		# So, to be healthy, we need to have the right number of
+		# instances of each type. If we have some running but not enough,
+		# then we're warning. Otherwise, we're unhealthy.
+		# However, if the version isn't running, then we're not interested.
+		if self.is_current and self.state != constants.VERSION.RUNNING:
+			for instance_type in self.instance_types:
+				health['types'][instance_type.name] = {
+					'state': constants.HEALTH.ERROR,
+					'message': 'Should be running as this version is current'
+				}
+			seen_statuses.add(constants.HEALTH.ERROR)
+		elif self.state != constants.VERSION.RUNNING:
+			for instance_type in self.instance_types:
+				health['types'][instance_type.name] = {
+					'state': constants.HEALTH.OK,
+					'message': ''
+				}
+		else:
+			# For each instance type...
+			for instance_type in self.instance_types:
+				# Find the instances.
+				instances = instance_type.instances.filter(ApplicationInstance.state == constants.INSTANCE.RUNNING)
+				qty = instances.count()
+				if qty == 0:
+					health['types'][instance_type.name] = {
+						'state': constants.HEALTH.ERROR,
+						'message': 'No running instances'
+					}
+					seen_statuses.add(constants.HEALTH.ERROR)
+				elif qty < instance_type.quantity:
+					health['types'][instance_type.name] = {
+						'state': constants.HEALTH.WARNING,
+						'message': 'Not enough running instances - only %d of %d' % (qty, instance_type.quantity)
+					}
+					seen_statuses.add(constants.HEALTH.WARNING)
+				else:
+					health['types'][instance_type.name] = {
+						'state': constants.HEALTH.OK,
+						'message': '%d instances running' % qty
+					}
+
+		if constants.HEALTH.ERROR in seen_statuses:
+			health['overall'] = constants.HEALTH.ERROR
+		elif constants.HEALTH.WARNING in seen_statuses:
+			health['overall'] = constants.HEALTH.WARNING
+
+		return health
 
 class ApplicationInstanceType(OrmBase, Base):
 	__tablename__ = 'application_instance_type'
@@ -544,7 +606,7 @@ class ApplicationInstance(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	instance_id = Column(String, nullable=False, index=True)
 	application_instance_type_id = Column(Integer, ForeignKey('application_instance_type.id'), nullable=False, index=True)
-	application_instance_type = relationship("ApplicationInstanceType", backref=backref('instances', order_by=id))
+	application_instance_type = relationship("ApplicationInstanceType", backref=backref('instances', order_by=id, lazy="dynamic"))
 	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
 	node = relationship("Node", backref=backref('instances', order_by=id))
 	port = Column(Integer, nullable=True, index=True)
