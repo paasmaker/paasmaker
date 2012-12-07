@@ -232,17 +232,10 @@ class ApplicationController(ApplicationRootController):
 	def get(self, application_id):
 		application = self._get_application(application_id)
 
-		versions = self.db().query(
-			paasmaker.model.ApplicationVersion
-		).filter(
-			paasmaker.model.ApplicationVersion.application == application
-		).filter(
-			paasmaker.model.ApplicationVersion.deleted == None
-		)
-
 		# TODO: Paginate...
 		# TODO: Unit test.
 		self.add_data('application', application)
+		versions = application.versions.filter(paasmaker.model.ApplicationVersion.deleted == None)
 		self.add_data('versions', versions)
 		self.add_data_template('constants', constants)
 		self.render("application/versions.html")
