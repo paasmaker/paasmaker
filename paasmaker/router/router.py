@@ -23,9 +23,9 @@ events {
 }
 
 http {
-	log_format paasmaker '{"key":$logkey,"bytes":$bytes_sent,'
+	log_format paasmaker '{"key":"$logkey","bytes":$bytes_sent,'
 		'"code":$status,"upstream_response_time":"$upstream_response_time",'
-		'"time":$msec,"nginx_response_time":$request_time}';
+		'"time":"$time_iso8601","timemsec":$msec,"nginx_response_time":$request_time}';
 
 	access_log %(log_path)s/access.log.paasmaker paasmaker;
 	access_log %(log_path)s/access.log combined;
@@ -224,5 +224,6 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		response = self.wait()
 
 		#print open(self.errorlog, 'r').read()
+		#print open(self.accesslog_stats, 'r').read()
 
 		self.assertEquals(response.code, 200, "Response is not 200.")
