@@ -297,7 +297,11 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 	@staticmethod
 	def build_flat_table(session):
 		session.query(WorkspaceUserRoleFlat).delete()
-		links = session.query(WorkspaceUserRole)
+		links = session.query(
+			WorkspaceUserRole
+		).filter(
+			WorkspaceUserRole.deleted == None
+		)
 
 		for link in links:
 			for permission in link.role.permissions:

@@ -67,7 +67,11 @@ class RoleAllocationListController(BaseController):
 	def get(self):
 		self.require_permission(constants.PERMISSION.ROLE_ASSIGN)
 		# TODO: Pagination.
-		allocations = self.db().query(paasmaker.model.WorkspaceUserRole).all()
+		allocations = self.db().query(
+			paasmaker.model.WorkspaceUserRole
+		).filter(
+			paasmaker.model.WorkspaceUserRole.deleted == None
+		)
 		self.add_data('allocations', allocations)
 
 		self.render("role/allocationlist.html")
@@ -222,7 +226,8 @@ class RoleAllocationUnAssignController(BaseController):
 			raise tornado.HTTPError(404, "No such allocation.")
 
 		session = self.db()
-		session.delete(allocation)
+		allocation.delete()
+		session.add(allocation)
 		paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
 
 		self.add_data('success', True)
