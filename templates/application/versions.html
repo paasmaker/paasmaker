@@ -63,6 +63,11 @@
 								<input type="submit" class="btn btn-mini" value="Make Current" />
 							</form>
 						{% end %}
+						{% if version.state == constants.VERSION.PREPARED %}
+							<form method="POST" action="/version/{{ version.id }}/delete">
+								<input type="submit" class="btn btn-mini" value="Delete" />
+							</form>
+						{% end %}
 					</div>
 				</td>
 			</tr>

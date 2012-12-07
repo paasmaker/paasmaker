@@ -200,3 +200,28 @@ class VersionDeRegisterController(VersionRootController):
 		routes = []
 		routes.append((r"/version/(\d+)/deregister", VersionDeRegisterController, configuration))
 		return routes
+
+class VersionDeleteController(VersionRootController):
+
+	@tornado.web.asynchronous
+	def post(self, version_id):
+		version = self._get_version(version_id)
+		self.add_data('version', version)
+
+		if version.state != constants.VERSION.PREPARED:
+			self.add_error("Version must be in state PREPARED to be deleted.")
+			raise tornado.web.HTTPError(400, "Incorrect state.")
+
+		# TODO: Remove files off disk or other systems.
+
+		version.delete()
+		self.db().add(version)
+		self.db().commit()
+
+		self.redirect("/application/%d" % version.application.id)
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/version/(\d+)/delete", VersionDeleteController, configuration))
+		return routes

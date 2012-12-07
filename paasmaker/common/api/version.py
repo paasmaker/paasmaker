@@ -56,3 +56,7 @@ class VersionDeRegisterAPIRequest(VersionActionRootAPIRequest):
 class VersionSetCurrentAPIRequest(VersionActionRootAPIRequest):
 	def get_endpoint(self):
 		return '/version/%d/setcurrent' % self.version_id
+
+class VersionDeleteAPIRequest(VersionActionRootAPIRequest):
+	def get_endpoint(self):
+		return '/version/%d/delete' % self.version_id

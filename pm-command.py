@@ -610,6 +610,19 @@ class VersionSetCurrentAction(VersionRootAction):
 		request = paasmaker.common.api.version.VersionSetCurrentAPIRequest(None)
 		self._process(args, request)
 
+class VersionDeleteAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("version_id", help="Version ID to delete")
+
+	def describe(self):
+		return "Delete the given version."
+
+	def process(self, args):
+		request = paasmaker.common.api.version.VersionDeleteAPIRequest(None)
+		request.set_version(int(args.version_id))
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
@@ -665,6 +678,7 @@ ACTION_MAP = {
 	'version-stop': VersionStopAction(),
 	'version-deregister': VersionDeRegisterAction(),
 	'version-setcurrent': VersionSetCurrentAction(),
+	'version-delete': VersionDeleteAction(),
 	'help': HelpAction()
 }
 
