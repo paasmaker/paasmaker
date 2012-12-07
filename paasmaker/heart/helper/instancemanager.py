@@ -122,6 +122,73 @@ class InstanceManager(object):
 
 		return ports
 
+	def check_instances(self, callback):
+		# TODO: Add unit tests for this.
+		instances = self.catalog.keys()
+		altered_instances = []
+		logger.info("Checking %d instances.", len(instances))
+
+		def next_instance():
+			if len(instances) > 0:
+				check_instance(instances.pop())
+			else:
+				callback(altered_instances)
+
+		def check_instance(instance_id):
+			def on_success_instance(message):
+				# All good. No action to take.
+				logger.info("Instance %s is still running.", instance_id)
+				next_instance()
+				# end of on_success_instance()
+
+			def on_error_instance(message, exception=None):
+				# It's no longer running. Fail.
+				logger.error("Instance %s is no longer running!", instance_id)
+				logger.error(message)
+				data = self.get_instance(instance_id)
+				data['instance']['state'] == constants.INSTANCE.ERROR
+				self.save()
+				altered_instances.append(instance_id)
+				next_instance()
+				# end of on_error_instance()
+
+			data = self.get_instance(instance_id)
+			logger.info("Instance %s in state %s", instance_id, data['instance']['state'])
+			if data['instance']['state'] == constants.INSTANCE.RUNNING:
+				# It's supposed to be running. Check that it is...
+				# TODO: This suddenly ties the instance manager to the
+				# plugins system. This is probably ok, but consider this further.
+				plugin_exists = self.configuration.plugins.exists(
+					data['instance_type']['runtime_name'],
+					paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
+				)
+
+				if not plugin_exists:
+					# Well, that's an error.
+					data['instance']['state'] == constants.INSTANCE.ERROR
+					self.save()
+					altered_instances.append(instance_id)
+					logger.error("Instance %s has a non existent runtime %s.", instance_id, data['instance_type']['runtime_name'])
+					next_instance()
+				else:
+					runtime = self.configuration.plugins.instantiate(
+						data['instance_type']['runtime_name'],
+						paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
+						data['instance_type']['runtime_parameters'],
+						logger # CAUTION: TODO: Not a job logger!
+					)
+
+					runtime.status(
+						instance_id,
+						on_success_instance,
+						on_error_instance
+					)
+			else:
+				next_instance()
+			# end of check_instance()
+
+		next_instance()
+
 class InstanceManagerTest(unittest.TestCase):
 	def setUp(self):
 		super(InstanceManagerTest, self).setUp()

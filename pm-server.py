@@ -143,16 +143,33 @@ def on_intermediary_failed(message, exception):
 	logger.critical("Aborting startup due to failure.")
 	tornado.ioloop.IOLoop.instance().stop()
 
+def on_check_instances_complete(altered_instances):
+	if len(altered_instances) > 0:
+		# There were instances with errors.
+		on_intermediary_started("Instance checking complete, error found.")
+	else:
+		on_intermediary_started("Instance checking complete, no changes.")
+
 def on_ioloop_started():
 	logger.debug("IO loop running. Launching other connections.")
 
+	# For the job manager startup.
+	on_intermediary_started.required += 1
+	# For the message exchange startup.
+	on_intermediary_started.required += 1
+
+	if configuration.is_heart():
+		# For checking instances.
+		on_intermediary_started.required += 1
+
 	# Job manager
-	# TODO: Only need one count if the message exchange is not required.
-	on_intermediary_started.required += 2
 	configuration.startup_job_manager(on_intermediary_started, on_intermediary_failed)
 
 	# Message exchange.
 	configuration.setup_message_exchange(on_intermediary_started, on_intermediary_failed)
+
+	# Check instances.
+	configuration.instances.check_instances(on_check_instances_complete)
 
 	logger.debug("Launched all startup jobs.")
 

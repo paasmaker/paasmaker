@@ -27,6 +27,11 @@ class NodeRegisterSchema(colander.MappingSchema):
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="User tags",
 		description="A generic set of tags or information stored for the node. Can be used to write custom placement filters, or find nodes.")
+	instances = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Instance status",
+		description="A map of instance statuses on the node.",
+		default={},
+		missing={})
 
 class NodeUpdateSchema(NodeRegisterSchema):
 	uuid = colander.SchemaNode(colander.String(),
@@ -103,6 +108,10 @@ class NodeRegisterController(BaseController):
 				# Send back the appropriate data.
 				self.add_data('node', node)
 				logger.info("Successfully %s node %s(%s:%d) UUID %s", action, node.name, node.route, node.apiport, node.uuid)
+
+				# Write the instance statuses.
+				if node.heart:
+					self._write_instance_statuses(self.params['instances'])
 			else:
 				self.add_errors(response.errors)
 				logger.error("Failed to connect to node %s(%s:%d) UUID %s", node.name, node.route, node.apiport, node.uuid)
@@ -112,6 +121,26 @@ class NodeRegisterController(BaseController):
 		# Return the response.
 		self.render("api/apionly.html")
 		self.finish()
+
+	def _write_instance_statuses(self, statuses):
+		# Fetch all the instances from the database.
+		if len(statuses.keys()) > 0:
+			session = self.db()
+			instances = session.query(
+				paasmaker.model.ApplicationInstance
+			).filter(
+				paasmaker.model.ApplicationInstance.instance_id.in_(statuses.keys())
+			)
+
+			# Now, for each instance...
+			for instance in instances:
+				if instance.state != statuses[instance.instance_id]:
+					logger.info("Updating state for %s: %s -> %s", instance.instance_id, instance.state, statuses[instance.instance_id])
+					instance.state = statuses[instance.instance_id]
+					session.add(instance)
+
+			# And save to the DB.
+			session.commit()
 
 	@staticmethod
 	def get_routes(configuration):
@@ -217,6 +246,101 @@ class NodeControllerTest(BaseControllerTest):
 		self.assertEquals(len(response.warnings), 0, "There were warnings.")
 		self.assertTrue(response.data.has_key('nodes'), "Missing nodes list.")
 		self.assertEquals(len(response.data['nodes']), 1, "Not the expected number of nodes.")
+
+	def test_update_instances(self):
+		# Register the node.
+		request = NodeRegisterAPIRequestLocalHost(self.configuration)
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertEquals(len(response.errors), 0, "There were errors.")
+		self.assertEquals(len(response.warnings), 0, "There were warnings.")
+		self.assertTrue(response.data.has_key('node'), "Missing node object in return data.")
+		self.assertTrue(response.data['node'].has_key('id'), "Missing ID in return data.")
+		self.assertTrue(response.data['node'].has_key('uuid'), "Missing UUID in return data.")
+
+		self.assertEquals(self.configuration.get_node_uuid(), response.data['node']['uuid'], "Returned UUID doesn't match our UUID.")
+
+		first_id = response.data['node']['id']
+
+		# Create a few instances.
+		session = self.configuration.get_database_session()
+		node = session.query(paasmaker.model.Node).get(first_id)
+
+		workspace = paasmaker.model.Workspace()
+		workspace.name = 'Test'
+		workspace.stub = 'test'
+
+		application = paasmaker.model.Application()
+		application.workspace = workspace
+		application.name = 'foo.com'
+
+		application_version = paasmaker.model.ApplicationVersion()
+		application_version.application = application
+		application_version.version = 1
+		application_version.is_current = False
+		application_version.manifest = ''
+		application_version.source_path = "paasmaker://%s/%s" % (self.configuration.get_node_uuid(), "none.tar.gz")
+		application_version.source_checksum = 'dummychecksumhere'
+		application_version.state = paasmaker.common.core.constants.VERSION.PREPARED
+
+		instance_type = paasmaker.model.ApplicationInstanceType()
+		instance_type.application_version = application_version
+		instance_type.name = 'web'
+		instance_type.quantity = 1
+		instance_type.runtime_name = 'paasmaker.runtime.shell'
+		instance_type.runtime_parameters = {}
+		instance_type.runtime_version = '1'
+		instance_type.startup = {}
+		instance_type.placement_provider = 'paasmaker.placement.default'
+		instance_type.placement_parameters = {}
+		instance_type.exclusive = False
+		instance_type.standalone = False
+
+		instance = paasmaker.model.ApplicationInstance()
+		instance.instance_id = str(uuid.uuid4())
+		instance.application_instance_type = instance_type
+		instance.node = node
+		instance.state = paasmaker.common.core.constants.INSTANCE.RUNNING
+
+		session.add(instance)
+		session.commit()
+		session.refresh(instance)
+
+		instance_data = instance.flatten_for_heart()
+		self.configuration.instances.add_instance(instance.instance_id, instance_data)
+
+		# Now update our node.
+		request = NodeUpdateAPIRequestLocalHost(self.configuration)
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertEquals(len(response.errors), 0, "There were errors.")
+		self.assertEquals(len(response.warnings), 0, "There were warnings.")
+		self.assertTrue(response.data.has_key('node'), "Missing node object in return data.")
+		self.assertTrue(response.data['node'].has_key('id'), "Missing ID in return data.")
+		self.assertTrue(response.data['node'].has_key('uuid'), "Missing UUID in return data.")
+		# TODO: Figure out why we're getting a new ORM object back... but only here...
+		#self.assertEquals(first_id, response.data['node']['id'], "Updated ID is different to original.")
+
+		# Change the instance status in the local store, and then update again.
+		instance_data['instance']['state'] = constants.INSTANCE.ERROR
+		session.refresh(instance)
+		self.assertEquals(instance.state, constants.INSTANCE.RUNNING, "Instance was not in expected state.")
+
+		request = NodeUpdateAPIRequestLocalHost(self.configuration)
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertEquals(len(response.errors), 0, "There were errors.")
+		self.assertEquals(len(response.warnings), 0, "There were warnings.")
+
+		# And refresh and check the database version changed.
+		session.refresh(instance)
+		self.assertEquals(instance.state, constants.INSTANCE.ERROR, "Instance was not updated.")
 
 	def test_fail_connect_port(self):
 		# Test when it can't connect.

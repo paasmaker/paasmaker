@@ -40,7 +40,9 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 
 	def status(self, instance_id, callback, error_callback):
 		"""
-		Determine the status of this instance.
+		Determine the status of this instance. Call the callback
+		with a message if it's ok, or the error_callback with
+		(message, exception) if not.
 		"""
 		raise NotImplementedError("You must implement status().")
 

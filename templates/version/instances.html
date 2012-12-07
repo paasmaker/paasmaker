@@ -11,6 +11,7 @@
 			<tr>
 				<th>ID</th>
 				<th>Node</th>
+				<th>Port</th>
 				<th>Created</th>
 				<th>State</th>
 			</tr>
@@ -21,6 +22,9 @@
 					</td>
 					<td>
 						{{ instance.node.name }}
+					</td>
+					<td>
+						{{ instance.port }}
 					</td>
 					<td>
 						{{ instance.created.isoformat() }}

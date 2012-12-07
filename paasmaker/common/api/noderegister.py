@@ -39,6 +39,13 @@ class NodeRegisterAPIRequest(paasmaker.util.APIRequest):
 
 		logger.debug("Sending node tags: %s", str(tags))
 
+		# For hearts, send along instance statuses.
+		if self.configuration.is_heart():
+			statuses = self.configuration.instances.get_instance_list()
+			payload['instances'] = statuses
+
+			logger.debug("Sending instance states: %s", str(statuses))
+
 		return payload
 
 	def get_endpoint(self):
