@@ -14,7 +14,7 @@ from paasmaker.common.core import constants
 
 # Logging setup.
 import logging
-logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
+logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO, stream=sys.stderr)
 
 # TODO: Write tests for all the actions in this file. Integration tests might cover this off
 # though? But need to make sure we have appropriate coverage.
