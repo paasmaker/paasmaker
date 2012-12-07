@@ -46,6 +46,8 @@ class ApplicationRootController(BaseController):
 		workspace = self.db().query(paasmaker.model.Workspace).get(int(workspace_id))
 		if not workspace:
 			raise tornado.web.HTTPError(404, "No such workspace.")
+		if workspace.deleted:
+			raise tornado.web.HTTPError(404, "Deleted workspace.")
 		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=workspace)
 		return workspace
 
@@ -53,6 +55,8 @@ class ApplicationRootController(BaseController):
 		application = self.db().query(paasmaker.model.Application).get(int(application_id))
 		if not application:
 			raise tornado.web.HTTPError(404, "No such application.")
+		if application.deleted:
+			raise tornado.web.HTTPError(404, "Deleted application.")
 		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=application.workspace)
 		return application
 
@@ -67,7 +71,9 @@ class ApplicationListController(ApplicationRootController):
 			paasmaker.model.Application
 		).filter(
 			paasmaker.model.Application.workspace == workspace
-		).all()
+		).filter(
+			paasmaker.model.Application.deleted == None
+		)
 		self.add_data('workspace', workspace)
 		self.add_data('applications', applications)
 		self.render("application/list.html")
@@ -226,10 +232,18 @@ class ApplicationController(ApplicationRootController):
 	def get(self, application_id):
 		application = self._get_application(application_id)
 
+		versions = self.db().query(
+			paasmaker.model.ApplicationVersion
+		).filter(
+			paasmaker.model.ApplicationVersion.application == application
+		).filter(
+			paasmaker.model.ApplicationVersion.deleted == None
+		)
+
 		# TODO: Paginate...
 		# TODO: Unit test.
 		self.add_data('application', application)
-		self.add_data('versions', application.versions)
+		self.add_data('versions', versions)
 		self.add_data_template('constants', constants)
 		self.render("application/versions.html")
 

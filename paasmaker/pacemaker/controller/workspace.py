@@ -97,7 +97,11 @@ class WorkspaceListController(BaseController):
 	def get(self):
 		self.require_permission(constants.PERMISSION.WORKSPACE_LIST)
 		# TODO: Paginate...
-		workspaces = self.db().query(paasmaker.model.Workspace)
+		workspaces = self.db().query(
+			paasmaker.model.Workspace
+		).filter(
+			paasmaker.model.Workspace.deleted == None
+		)
 		self.add_data('workspaces', workspaces)
 		self.render("workspace/list.html")
 

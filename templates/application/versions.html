@@ -17,7 +17,7 @@
 			<th>Instance Types</th>
 			<th>Actions</th>
 		</tr>
-		{% for version in application.versions %}
+		{% for version in versions %}
 			<tr>
 				<td>
 					<a href="/version/{{ version.id }}">Version {{ version.version }}</a>

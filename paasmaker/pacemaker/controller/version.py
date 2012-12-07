@@ -23,6 +23,8 @@ class VersionRootController(BaseController):
 		version = self.db().query(paasmaker.model.ApplicationVersion).get(int(version_id))
 		if not version:
 			raise tornado.web.HTTPError(404, "No such version.")
+		if version.deleted:
+			raise tornado.web.HTTPError(404, "Deleted version.")
 		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=version.application.workspace)
 		return version
 
