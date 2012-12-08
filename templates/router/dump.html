@@ -23,6 +23,7 @@
 					{% for instance in entry['instances'] %}
 						<code>{{ instance.instance_id[0:8] }}</code>
 						({{ instance.application_instance_type.application_version.application.name }},
+						<span class="instance-{{ instance.state }}">{{ nice_state(instance.state) }}</span>,
 						v{{ instance.application_instance_type.application_version.version }},
 						{% if instance.application_instance_type.application_version.is_current %}
 							Current)<br />

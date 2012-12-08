@@ -7,6 +7,7 @@
 {% block body %}
 	<table class="table">
 		<tr>
+			<th>ID</th>
 			<th>Name</th>
 			<th>Route</th>
 			<th>Roles</th>
@@ -14,6 +15,9 @@
 		</tr>
 		{% for node in nodes %}
 			<tr>
+				<td>
+					<code>{{ node.uuid[0:8] }}</code>
+				</td>
 				<td>
 					<a href="/node/{{ node.id }}">{{ node.name }}</a>
 				</td>

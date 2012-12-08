@@ -18,10 +18,10 @@
 			{% for instance in instance_type.instances %}
 				<tr>
 					<td>
-						{{ instance.instance_id }}
+						<code>{{ instance.instance_id[0:8] }}</code>
 					</td>
 					<td>
-						{{ instance.node.name }}
+						<a href="/node/{{ instance.node.id }}">{{ instance.node.name }}</a>
 					</td>
 					<td>
 						{{ instance.port }}
