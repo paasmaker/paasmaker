@@ -4,6 +4,7 @@ import subprocess
 import tempfile
 import shutil
 import signal
+import json
 
 import paasmaker
 
@@ -98,6 +99,8 @@ http {
 		return parameters
 
 class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
+	config_modules = ['pacemaker', 'router']
+
 	def get_app(self):
 		self.late_init_configuration(self.io_loop)
 		routes = paasmaker.common.controller.example.ExampleController.get_routes({'configuration': self.configuration})
@@ -122,6 +125,10 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		self.errorlog = os.path.join(self.nginx['log_path'], 'error.log')
 		self.accesslog_stats = os.path.join(self.nginx['log_path'], 'access.log.paasmaker')
 		self.accesslog_combined = os.path.join(self.nginx['log_path'], 'access.log')
+
+		# Hack the configuration to insert the access log into it.
+		self.configuration['router']['stats_log'] = self.accesslog_stats
+		self.configuration.update_flat()
 
 		open(self.nginxconfig, 'w').write(self.nginx['configuration'])
 
@@ -227,3 +234,36 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		#print open(self.accesslog_stats, 'r').read()
 
 		self.assertEquals(response.code, 200, "Response is not 200.")
+
+		# Now test reading the stats log.
+		stats_reader = paasmaker.router.stats.StatsLogReader(self.configuration)
+		stats_reader.read(self.stop, self.stop)
+		result = self.wait()
+		self.assertEquals(result, "Completed reading file.")
+
+		# Read back the stats, and make sure they make some sense.
+		stats_output = paasmaker.router.stats.ApplicationStats(self.configuration, self.stop, self.stop)
+
+		# This is for uncaught requests.
+		stats_output.for_version_type('null')
+		result = self.wait()
+		#print json.dumps(result, indent=4, sort_keys=True)
+
+		self.assertEquals(result['requests'], 2, "Wrong number of requests.")
+		self.assertEquals(result['4xx'], 1, "Wrong number of requests.")
+		self.assertEquals(result['5xx'], 1, "Wrong number of requests.")
+		self.assertTrue(result['bytes'] > 500, "Wrong value returned.")
+		self.assertTrue(result['nginxtime'] > 1, "Wrong value returned.")
+		# Time will be zero, because the backends were not invoked for these requests.
+		self.assertTrue(result['time'] == 0, "Wrong value returned.")
+
+		# Now check for the supplied version ID.
+		stats_output.for_version_type('1')
+		result = self.wait()
+		#print json.dumps(result, indent=4, sort_keys=True)
+
+		self.assertEquals(result['requests'], 2, "Wrong number of requests.")
+		self.assertEquals(result['2xx'], 2, "Wrong number of requests.")
+		self.assertTrue(result['bytes'] > 400, "Wrong value returned.")
+		self.assertTrue(result['nginxtime'] > 0, "Wrong value returned.")
+		self.assertTrue(result['time'] > 0, "Wrong value returned.")

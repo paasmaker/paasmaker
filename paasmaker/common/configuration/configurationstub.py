@@ -109,6 +109,7 @@ heart:
 	router_config = """
 router:
   enabled: true
+  stats_log: %(stats_log)s
 """
 
 	def __init__(self, port=42500, modules=[], io_loop=None):
@@ -128,6 +129,7 @@ router:
 		self.params['router_stats_port'] = allocator.free_in_range(42510, 42599)
 		self.params['jobs_port'] = allocator.free_in_range(42510, 42599)
 		self.params['broker_port'] = allocator.free_in_range(42510, 42599)
+		self.params['stats_log'] = "%s/access.log.paasmaker" % self.params['log_dir']
 
 		# Create the configuration file.
 		configuration = self.default_config % self.params

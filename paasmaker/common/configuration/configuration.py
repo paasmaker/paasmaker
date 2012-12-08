@@ -178,6 +178,22 @@ class RouterSchema(colander.MappingSchema):
 		missing=False,
 		default=False)
 
+	process_stats = colander.SchemaNode(colander.Boolean(),
+		title="Process Stats",
+		description="If true, process the special JSON formatted nginx log file for statistics.",
+		default=True,
+		missing=True)
+
+	stats_log = colander.SchemaNode(colander.String(),
+		title="Stats log location",
+		description="NGINX Paasmaker stats log file location")
+
+	stats_interval = colander.SchemaNode(colander.Integer(),
+		title="Stats read interval",
+		description="The interval between reading log files, in milliseconds.",
+		default=1000,
+		missing=1000)
+
 	@staticmethod
 	def default():
 		return {
