@@ -87,7 +87,6 @@ class VersionRegisterController(VersionRootController):
 		def on_job_started():
 			self.add_data_template('generic_title', 'Registering instances')
 			self.render("job/genericstart.html")
-			self.finish()
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -119,7 +118,6 @@ class VersionStartupController(VersionRootController):
 		def on_job_started():
 			self.add_data_template('generic_title', 'Starting instances')
 			self.render("job/genericstart.html")
-			self.finish()
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -151,7 +149,6 @@ class VersionShutdownController(VersionRootController):
 		def on_job_started():
 			self.add_data_template('generic_title', 'Shutting down instances')
 			self.render("job/genericstart.html")
-			self.finish()
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -183,7 +180,6 @@ class VersionDeRegisterController(VersionRootController):
 		def on_job_started():
 			self.add_data_template('generic_title', 'De registering instances')
 			self.render("job/genericstart.html")
-			self.finish()
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)

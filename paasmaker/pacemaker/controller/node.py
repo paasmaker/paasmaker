@@ -120,7 +120,6 @@ class NodeRegisterController(BaseController):
 
 		# Return the response.
 		self.render("api/apionly.html")
-		self.finish()
 
 	def _write_instance_statuses(self, statuses):
 		# Fetch all the instances from the database.

@@ -202,7 +202,6 @@ class BaseController(tornado.web.RequestHandler):
 		else:
 			# TODO: Don't assume that the request is ready for rendering.
 			self.render("api/apionly.html")
-			self.finish()
 
 	def require_authentication(self, methods):
 		if len(methods) == 0:
@@ -401,6 +400,9 @@ class BaseController(tornado.web.RequestHandler):
 			variables['warnings'] = self.warnings
 			self.set_header('Content-Type', 'application/json')
 			self.write(json.dumps(variables, cls=paasmaker.util.jsonencoder.JsonEncoder))
+			# The super classes render() calls finish at this stage,
+			# so we do so here.
+			self.finish()
 		elif self.format == 'html':
 			variables = self.data
 			variables.update(self.root_data)

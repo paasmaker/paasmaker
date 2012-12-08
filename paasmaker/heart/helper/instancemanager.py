@@ -123,7 +123,7 @@ class InstanceManager(object):
 		return ports
 
 	def check_instances(self, callback):
-		# TODO: Add unit tests for this.
+		# TODO: Add unit tests for this. Desperately required.
 		instances = self.catalog.keys()
 		altered_instances = []
 		logger.info("Checking %d instances.", len(instances))
@@ -146,7 +146,7 @@ class InstanceManager(object):
 				logger.error("Instance %s is no longer running!", instance_id)
 				logger.error(message)
 				data = self.get_instance(instance_id)
-				data['instance']['state'] == constants.INSTANCE.ERROR
+				data['instance']['state'] = constants.INSTANCE.ERROR
 				self.save()
 				altered_instances.append(instance_id)
 				next_instance()
@@ -165,7 +165,7 @@ class InstanceManager(object):
 
 				if not plugin_exists:
 					# Well, that's an error.
-					data['instance']['state'] == constants.INSTANCE.ERROR
+					data['instance']['state'] = constants.INSTANCE.ERROR
 					self.save()
 					altered_instances.append(instance_id)
 					logger.error("Instance %s has a non existent runtime %s.", instance_id, data['instance_type']['runtime_name'])

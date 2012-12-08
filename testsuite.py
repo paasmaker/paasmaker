@@ -75,7 +75,7 @@ test_sets = {
 	paasmaker.common.job.coordinate.registerroot: ['all', 'slow', 'application', 'coordinate'],
 	paasmaker.common.job.routing.routing: ['all', 'slow', 'application', 'coordinate', 'router'],
 
-	paasmaker.pacemaker.controller.nginx: ['all', 'slow', 'controller', 'router'],
+	paasmaker.pacemaker.controller.router: ['all', 'slow', 'controller', 'router'],
 
 	paasmaker.pacemaker.placement.default: ['all', 'slow', 'application', 'placement'],
 

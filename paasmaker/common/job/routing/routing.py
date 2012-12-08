@@ -1,6 +1,7 @@
 
 import socket
 import uuid
+import json
 
 import paasmaker
 from paasmaker.common.core import constants
@@ -390,3 +391,11 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(self.not_in_redis(redis, set_key_version_2_id, first_version_instance_id), "First version version name found in second.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname, first_version_instance), "First version in hostname set.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version in hostname set.")
+
+		# Dump out the table.
+		dumper = paasmaker.router.tabledump.RouterTableDump(self.configuration, self.stop, self.stop)
+		dumper.dump()
+		dump = self.wait()
+
+		self.assertEquals(len(dump), 3, "Should have had three entries in the routing table.")
+		#print json.dumps(dump, indent=4, sort_keys=True, cls=paasmaker.util.JsonEncoder)

@@ -184,7 +184,6 @@ class ApplicationNewController(ApplicationRootController):
 				title = 'New Version - %s' % workspace.name
 			self.add_data_template('generic_title', title)
 			self.render("job/genericstart.html")
-			self.finish()
 
 		def application_job_ready(job_id):
 			self.add_data('job_id', job_id)
@@ -215,8 +214,7 @@ class ApplicationNewController(ApplicationRootController):
 		def manifest_extract_fail(message):
 			self.add_error("Failed to fetch manifest file.")
 			self.add_error(message)
-			self.set_status(500)
-			self.finish()
+			self.write_error(500)
 
 		plugin.extract_manifest(self.params['manifest_path'], manifest_extract_ok, manifest_extract_fail)
 
@@ -279,7 +277,6 @@ class ApplicationSetCurrentController(ApplicationRootController):
 		def job_started():
 			self.add_data_template('generic_title', 'Select current version')
 			self.render("job/genericstart.html")
-			self.finish()
 
 		def current_job_ready(job_id):
 			self.add_data('job_id', job_id)
