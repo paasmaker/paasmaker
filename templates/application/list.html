@@ -24,7 +24,9 @@
 					{{ application.health }}
 				</td>
 				<td>
-					<a href="/application/{{ application.id }}">{{ application.versions.count() }} versions</a>
+					<a href="/application/{{ application.id }}">
+						{{ application.versions.filter(paasmaker.model.ApplicationVersion.deleted == None).count() }} versions
+					</a>
 				</td>
 			</tr>
 		{% end %}

@@ -76,6 +76,7 @@ class ApplicationListController(ApplicationRootController):
 		)
 		self.add_data('workspace', workspace)
 		self.add_data('applications', applications)
+		self.add_data_template('paasmaker', paasmaker)
 		self.render("application/list.html")
 
 	@staticmethod
