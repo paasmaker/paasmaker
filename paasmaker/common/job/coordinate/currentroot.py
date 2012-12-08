@@ -41,6 +41,12 @@ class CurrentVersionRootJob(BaseJob, InstanceRootBase):
 		context = {}
 		context['application_version_id'] = application_version_id
 
+		# TODO: Add more unit tests to this code.
+		# Specifically:
+		# - Switching between different versions of an application.
+		# - Switching to the same version - the code does take this into
+		#   account, but some really weird bugs made this not work properly.
+
 		# Get the current version.
 		# Current version can be none, in which case we don't have to do some parts of the work.
 		new_version = session.query(paasmaker.model.ApplicationVersion).get(application_version_id)
@@ -58,9 +64,12 @@ class CurrentVersionRootJob(BaseJob, InstanceRootBase):
 		instance_types_new.reverse()
 
 		# List all the instance types - current version.
+		# TODO: Instead of just the current version, list all versions
+		# other than this version, to ensure that the routing table is completely
+		# correct, in case of other failures.
 		instance_types_current = []
 		if current_version and current_version.id != new_version.id:
-			for instance_type in new_version.instance_types:
+			for instance_type in current_version.instance_types:
 				instance_types_current.append(instance_type.id)
 				tags = tags.union(set(InstanceRootBase.get_tags_for(configuration, instance_type.id)))
 			instance_types_current.reverse()
@@ -158,7 +167,7 @@ class CurrentVersionRootJob(BaseJob, InstanceRootBase):
 					'instance_id': instance['id'],
 					'add': True
 				},
-				"Update routing for %s" % instance['instance_id'],
+				"Update routing for %s" % instance['instance_id'][0:8],
 				job_added,
 				parent=parent_id
 			)

@@ -459,6 +459,7 @@ class ApplicationVersion(OrmBase, Base):
 				'is_current': False
 			}
 		)
+		session.refresh(self)
 		# And allow ours to be current. Commit it all in one transaction.
 		self.is_current = True
 		session.add(self)

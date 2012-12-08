@@ -18,10 +18,10 @@
 		</tr>
 		{% for entry in table %}
 			<tr>
-				<td>{{ entry['hostname'] }}</td>
+				<td><a target="_blank" href="http://{{ entry['hostname'] }}">{{ entry['hostname'] }}</a></td>
 				<td>
 					{% for instance in entry['instances'] %}
-						{{ instance.instance_id }}
+						<code>{{ instance.instance_id[0:8] }}</code>
 						({{ instance.application_instance_type.application_version.application.name }},
 						v{{ instance.application_instance_type.application_version.version }},
 						{% if instance.application_instance_type.application_version.is_current %}
