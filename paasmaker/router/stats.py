@@ -185,6 +185,7 @@ class ApplicationStats(object):
 				# Ask redis for that set of IDs, and then process that.
 				def on_set_list(set_list):
 					if not set_list:
+						# This also occurs on an empty list.
 						self.error_callback('No such list for %s' % set_name)
 					else:
 						self._for_list(set_list, redis)
@@ -212,13 +213,18 @@ class ApplicationStats(object):
 			# Now hand it off to something else to finalize it.
 			self._finalize_stats(metric_totals)
 
-		# Ok, now, for the given id set list,
-		# query out all the relevant metrics.
-		pipeline = redis.pipeline(True)
-		for vtid in idset:
-			for metric in self.METRICS:
-				pipeline.get("stat_%s_%s" % (vtid, metric))
-		pipeline.execute(callback=on_stats_fetched)
+		if len(idset) == 0:
+			# No sets to process - which will cause an error
+			# later. Call the error callback.
+			self.error_callback("Empty ID list supplied.")
+		else:
+			# Ok, now, for the given id set list,
+			# query out all the relevant metrics.
+			pipeline = redis.pipeline(True)
+			for vtid in idset:
+				for metric in self.METRICS:
+					pipeline.get("stat_%s_%s" % (vtid, metric))
+			pipeline.execute(callback=on_stats_fetched)
 
 	def _finalize_stats(self, totals):
 		# Calculate any averages and percentages.

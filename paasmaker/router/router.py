@@ -267,3 +267,28 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		self.assertTrue(result['bytes'] > 400, "Wrong value returned.")
 		self.assertTrue(result['nginxtime'] > 0, "Wrong value returned.")
 		self.assertTrue(result['time'] > 0, "Wrong value returned.")
+
+		# Now try to fetch for a workspace ID. This won't exist,
+		# because this unit test doesn't insert those records.
+		stats_output.for_workspace(1)
+		result = self.wait()
+		self.assertIn("No such", result, "Wrong error message.")
+
+		# Caution: the second callback here is the error callback.
+		self.configuration.get_stats_redis(self.stop, None)
+		stats_redis = self.wait()
+
+		# Insert those records, and then try again.
+		stats_redis.sadd('workspace_1_vtids', '1', callback=self.stop)
+		self.wait()
+
+		stats_output.for_workspace(1)
+		result = self.wait()
+
+		# And the result should match the stats results for the
+		# version type.
+		self.assertEquals(result['requests'], 2, "Wrong number of requests.")
+		self.assertEquals(result['2xx'], 2, "Wrong number of requests.")
+		self.assertTrue(result['bytes'] > 400, "Wrong value returned.")
+		self.assertTrue(result['nginxtime'] > 0, "Wrong value returned.")
+		self.assertTrue(result['time'] > 0, "Wrong value returned.")

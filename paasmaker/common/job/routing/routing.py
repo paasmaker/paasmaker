@@ -129,6 +129,28 @@ class RouterTableUpdate(object):
 		self.logger.debug("Yes hostnames: %s", str(self.instance_sets_yes))
 		self.logger.debug("No hostnames: %s", str(self.instance_sets_no))
 
+		# Get the stats redis.
+		self.configuration.get_stats_redis(self.stats_redis_ready, self.redis_failed)
+
+	def stats_redis_ready(self, redis):
+		# Into this redis, insert the version type ID into the following sets.
+		# workspace_<wid>_vtids
+		# application_<aid>_vtids
+		# version_<vid>_vtids
+		# TODO: At this stage, we never remove them.
+		pipeline = redis.pipeline(True)
+		vtid = self.instance.application_instance_type.id
+		wid = self.instance.application_instance_type.application_version.application.workspace.id
+		aid = self.instance.application_instance_type.application_version.application.id
+		vid = self.instance.application_instance_type.application_version.id
+		nid = self.instance.node.id
+		pipeline.sadd('workspace_%d_vtids' % wid, vtid)
+		pipeline.sadd('application_%d_vtids' % aid, vtid)
+		pipeline.sadd('version_%d_vtids' % vid, vtid)
+		pipeline.sadd('node_%d_vtids' % nid, vtid)
+		pipeline.execute(self.on_stats_complete)
+
+	def on_stats_complete(self, result):
 		# Get the routing table redis.
 		self.configuration.get_router_table_redis(self.redis_ready, self.redis_failed)
 
