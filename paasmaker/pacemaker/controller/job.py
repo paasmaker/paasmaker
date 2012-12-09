@@ -24,10 +24,74 @@ class JobController(BaseController):
 		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=workspace)
 		return workspace
 
+	def _get_application(self, application_id):
+		application = self.db().query(paasmaker.model.Application).get(int(application_id))
+		if not application:
+			raise tornado.web.HTTPError(404, "No such application.")
+		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=application.workspace)
+		return application
+
+	def _get_version(self, version_id):
+		version = self.db().query(paasmaker.model.ApplicationVersion).get(int(version_id))
+		if not version:
+			raise tornado.web.HTTPError(404, "No such version.")
+		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=version.application.workspace)
+		return version
+
+	def _get_instance_type(self, instance_type_id):
+		instance_type = self.db().query(paasmaker.model.ApplicationInstanceType).get(int(instance_type_id))
+		if not instance_type:
+			raise tornado.web.HTTPError(404, "No such instance type.")
+		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=instance_type.application_version.application.workspace)
+		return instance_type
+
 	@tornado.web.asynchronous
-	def get(self, workspace_id):
-		workspace = self._get_workspace(workspace_id)
-		self.add_data('workspace', workspace)
+	def get(self, job_list_type, input_id):
+		tag = None
+		job_list = None
+		ret = None
+		if job_list_type == 'workspace':
+			workspace = self._get_workspace(input_id)
+			name = "Workspace %s" % workspace.name
+			ret = "/workspace/%d/applications" % workspace.id
+			ret_name = name
+			tag = "workspace:%d" % workspace.id
+		elif job_list_type == 'application':
+			application = self._get_application(input_id)
+			name = "Application %s" % application.name
+			ret = "/application/%d" % application.id
+			ret_name = name
+			tag = "application:%d" % application.id
+		elif job_list_type == 'version':
+			version = self._get_version(input_id)
+			name = "Version %d of %s" % (version.version, version.application.name)
+			ret = "/version/%d" % version.id
+			ret_name = name
+			tag = "application_version:%d" % version.id
+		elif job_list_type == 'instancetype':
+			instance_type = self._get_instance_type(input_id)
+			name = "Instance type %s of %s version %d" % (
+				instance_type.name,
+				instance_type.application_version.application.name,
+				instance_type.application_version.version
+			)
+			ret = "/version/%d" % instance_type.application_version.id
+			ret_name = name
+			tag = "application_version_type:%d" % instance_type.id
+		elif job_list_type == 'detail':
+			# TODO: We're not checking permissions here. But the theory is that
+			# the job ID will be hard to guess. Revisit this at a later date.
+			job_list = [input_id]
+			name = "Detail for job"
+
+		# Optional return URL.
+		if self.raw_params.has_key('ret'):
+			ret = self.raw_params['ret']
+			ret_name = "previous"
+
+		self.add_data_template('name', name)
+		self.add_data_template('ret', ret)
+		self.add_data_template('ret_name', ret_name)
 
 		# TODO: Paginate...
 		# TODO: Unit test.
@@ -35,12 +99,20 @@ class JobController(BaseController):
 			self.add_data('jobs', job_ids)
 			self.render("job/list.html")
 
-		self.configuration.job_manager.find_by_tag('workspace:%d' % workspace.id, on_found_jobs, limit=10)
+		if tag:
+			# Search by tag.
+			self.configuration.job_manager.find_by_tag(tag, on_found_jobs, limit=10)
+		else:
+			# Use the single given ID.
+			on_found_jobs(job_list)
 
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
-		routes.append((r"/job/(\d+)/list", JobController, configuration))
+		# The route for, eg, /job/list/workspace/1
+		routes.append((r"/job/list/(workspace|application|version|instancetype)/(\d+)", JobController, configuration))
+		# The route for job detail. Eg, /job/detail/<jobid>
+		routes.append((r"/job/(detail)/([-\w\d]+)", JobController, configuration))
 		return routes
 
 class JobSubscribeSchema(colander.MappingSchema):

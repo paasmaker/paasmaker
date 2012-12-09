@@ -9,7 +9,13 @@
 {% end %}
 
 {% block body %}
+	<div class="button-box">
+		<a class="btn" href="/application/{{ version.application.id }}">Back to {{ version.application.name }}</a>
+		<a class="btn" href="/job/list/version/{{ version.id }}">Jobs</a>
+	</div>
+
 	<h2>Summary</h2>
+
 	<table class="table">
 		<tr>
 			<th>Current:</th>

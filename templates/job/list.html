@@ -1,10 +1,16 @@
 {% extends "../layout/main.html" %}
 
 {% block pagetitle %}
-	Job list - {{ workspace.name }}
+	{{ name }}
 {% end %}
 
 {% block body %}
+	{% if ret %}
+		<div class="button-box">
+			<a class="btn" href="{{ ret }}">Back to {{ ret_name }}</a>
+		</div>
+	{% end %}
+
 	{% for job_id in jobs %}
 		<div class="job-root" data-job="{{ job_id }}">
 			Loading...

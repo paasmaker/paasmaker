@@ -360,6 +360,12 @@ class BaseController(tornado.web.RequestHandler):
 	def add_data_template(self, key, name):
 		self.template[key] = name
 
+	def get_data(self, key):
+		return self.data[key]
+
+	def get_data_template(self, key):
+		return self.template[key]
+
 	def format_form_error(self, field):
 		if self.data.has_key('input_errors') and self.data['input_errors'].has_key(field):
 			return '<ul class="error"><li>%s</li></ul>' % tornado.escape.xhtml_escape(self.data['input_errors'][field])
@@ -448,6 +454,13 @@ class BaseController(tornado.web.RequestHandler):
 		self.add_data('router_stats', None)
 		self.add_warning('Unable to fetch router stats: ' + error)
 		self._router_stats_callback({})
+
+	def _redirect_job(self, job_id, url):
+		self.redirect("/job/detail/%s?ret=%s" % (
+				job_id,
+				tornado.escape.url_escape(url)
+			)
+		)
 
 # A schema for websocket incoming messages, to keep them consistent.
 class WebsocketMessageSchemaCookie(colander.MappingSchema):

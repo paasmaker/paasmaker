@@ -5,6 +5,10 @@
 {% end %}
 
 {% block body %}
+	<div class="button-box">
+		<a href="/application/{{ version.application.id }}" class="btn">Back to {{ version.application.name }}</a>
+	</div>
+
 	{% for instance_type in version.instance_types %}
 		<h2>Instance type: {{ instance_type.name }}</h2>
 		<table class="table">

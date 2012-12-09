@@ -91,8 +91,7 @@ class VersionRegisterController(VersionRootController):
 		self.add_data('version', version)
 
 		def on_job_started():
-			self.add_data_template('generic_title', 'Registering instances')
-			self.render("job/genericstart.html")
+			self._redirect_job(self.get_data('job_id'), '/application/%d' % version.application.id)
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -122,8 +121,7 @@ class VersionStartupController(VersionRootController):
 			raise tornado.web.HTTPError(400, "Incorrect state.")
 
 		def on_job_started():
-			self.add_data_template('generic_title', 'Starting instances')
-			self.render("job/genericstart.html")
+			self._redirect_job(self.get_data('job_id'), '/application/%d' % version.application.id)
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -153,8 +151,7 @@ class VersionShutdownController(VersionRootController):
 			raise tornado.web.HTTPError(400, "Incorrect state.")
 
 		def on_job_started():
-			self.add_data_template('generic_title', 'Shutting down instances')
-			self.render("job/genericstart.html")
+			self._redirect_job(self.get_data('job_id'), '/application/%d' % version.application.id)
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -184,8 +181,7 @@ class VersionDeRegisterController(VersionRootController):
 			raise tornado.web.HTTPError(400, "Incorrect state.")
 
 		def on_job_started():
-			self.add_data_template('generic_title', 'De registering instances')
-			self.render("job/genericstart.html")
+			self._redirect_job(self.get_data('job_id'), '/application/%d' % version.application.id)
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)

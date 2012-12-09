@@ -186,11 +186,7 @@ class ApplicationNewController(ApplicationRootController):
 		)
 
 		def job_started():
-			title = 'New Application - %s' % workspace.name
-			if application:
-				title = 'New Version - %s' % workspace.name
-			self.add_data_template('generic_title', title)
-			self.render("job/genericstart.html")
+			self._redirect_job(self.get_data('job_id'), '/workspace/%d/applications' % workspace.id)
 
 		def application_job_ready(job_id):
 			self.add_data('job_id', job_id)
@@ -288,8 +284,8 @@ class ApplicationSetCurrentController(ApplicationRootController):
 
 		# TODO: Unit test.
 		def job_started():
-			self.add_data_template('generic_title', 'Select current version')
-			self.render("job/genericstart.html")
+			# Redirect to clear the post.
+			self._redirect_job(self.get_data('job_id'), '/application/%d' % application.id)
 
 		def current_job_ready(job_id):
 			self.add_data('job_id', job_id)
