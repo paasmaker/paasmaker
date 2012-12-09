@@ -137,95 +137,209 @@ var FileUploader = function(container)
 	});
 }
 
-var JobRootStreamHandler = function(container)
+var JobRootStreamHandler = function()
 {
-	this.container = container;
-	this.job_id = container.attr('data-job');
-
-	var _self = this;
-	this.jobStatusRemote = new WebSocket("ws://" + window.location.host + "/job/stream");
-	this.jobStatusRemote.onopen = function() {
-		_self.jobStatusRemote.send($.toJSON({request: 'subscribe', data: {'job_id': _self.job_id}}));
-	};
-	this.jobStatusRemote.onmessage = function (evt) {
-		var message = $.parseJSON(evt.data);
-		console.log(message);
-		switch(message.type)
-		{
-			case 'tree':
-				_self.renderJobTree(_self.container, [message.data], 0);
-				break;
-			case 'subscribed':
-				break;
-			case 'status':
-				_self.updateStatus(message.data);
-				break;
-			case 'new':
-				_self.newJob(_self.container, message.data);
-				break;
-		}
-	};
-
-	this.subscribedLogs = {};
-	this.logStreamRemote = new WebSocket("ws://" + window.location.host + "/log/stream");
-	this.logStreamRemote.onopen = function() {
-		console.log("Connected to remote for log streaming.");
-	};
-	this.logStreamRemote.onmessage = function (evt) {
-		var message = $.parseJSON(evt.data);
-		console.log(message);
-		switch(message.type)
-		{
-			case 'lines':
-				_self.handleNewLines(message.data);
-				break;
-		}
-	};
+	this.subscriptions = [];
+	this.handlers = {};
+	this.remote = null;
+	this.connecting = false;
 }
 
-/*JobRootStreamHandler.prototype.refreshTree = function(job_id)
+JobRootStreamHandler.prototype.subscribe = function(job_id, displayHandler)
 {
-	var message = $.toJSON({request: 'tree', data: {'job_id': job_id}});
-	this.jobStatusRemote.send(message);
-}*/
-
-JobRootStreamHandler.prototype.toggleSubscribeLog = function(job_id, container)
-{
-	if( this.subscribedLogs[job_id] )
+	var _self = this;
+	this.handlers[job_id] = displayHandler;
+	if( !this.remote )
 	{
-		// Already subscribed.
-		var message = $.toJSON({request: 'unsubscribe', data: {'job_id': job_id}});
-		console.log(message);
-		this.logStreamRemote.send(message);
-		this.subscribedLogs[job_id] = false
+		// We're not connected, so start connecting.
+		this.connecting = true;
+		this.remote = new WebSocket("ws://" + window.location.host + "/job/stream");
+		this.remote.onopen = function() { _self.onopen(); };
+		this.remote.onmessage = function (evt) { _self.onmessage(evt); };
+	}
+
+	if( this.connecting )
+	{
+		// Add it to the queue to be subscribed on startup.
+		this.subscriptions.push(job_id);
 	}
 	else
 	{
-		var position = container.attr('data-position');
-		if( !position )
-		{
-			position = 0;
-		}
-
-		// Not subscribed. Subscribe.
-		var message = $.toJSON({request: 'subscribe', data: {'job_id': job_id, 'position': position}});
-		console.log(message);
-		this.logStreamRemote.send(message);
-		this.subscribedLogs[job_id] = true
+		// Subscribe!
+		this.remote.send($.toJSON({request: 'subscribe', data: {'job_id': job_id}}));
 	}
 }
 
-JobRootStreamHandler.prototype.handleNewLines = function(message)
+JobRootStreamHandler.prototype.onopen = function()
+{
+	// Mark us as connected.
+	this.connecting = false;
+	// Send through initial subscriptions.
+	for( var i = 0; i < this.subscriptions.length; i++ )
+	{
+		this.subscribe(this.subscriptions[i], this.handlers[this.subscriptions[i]]);
+	}
+}
+
+JobRootStreamHandler.prototype.onmessage = function (evt)
+{
+	// Parse the message.
+	var message = $.parseJSON(evt.data);
+	console.log(message);
+
+	switch(message.type)
+	{
+		case 'tree':
+			var handler = this.handlers[message.data.job_id];
+			handler.renderJobTree([message.data], 0);
+			break;
+		case 'subscribed':
+			break;
+		case 'status':
+			var handler = this.handlers[message.data.root_id];
+			handler.updateStatus(message.data);
+			break;
+		case 'new':
+			var handler = this.handlers[message.data.root_id];
+			handler.newJob(message.data);
+			break;
+	}
+}
+
+var LogRootStreamHandler = function()
+{
+	this.subscriptions = [];
+	this.handlers = {};
+	this.remote = null;
+	this.connecting = false;
+}
+
+LogRootStreamHandler.prototype.isSubscribed = function(job_id)
+{
+	for( var i = 0; i < this.subscriptions.length; i++ )
+	{
+		if( this.subscriptions[i] == job_id )
+		{
+			return true;
+		}
+	}
+
+	return false;
+}
+
+LogRootStreamHandler.prototype.subscribe = function(job_id, displayHandler, position, startup)
+{
+	var _self = this;
+	this.handlers[job_id] = displayHandler;
+	if( !this.remote )
+	{
+		// We're not connected, so start connecting.
+		this.connecting = true;
+		this.remote = new WebSocket("ws://" + window.location.host + "/log/stream");
+		this.remote.onopen = function() { _self.onopen(); };
+		this.remote.onmessage = function (evt) { _self.onmessage(evt); };
+	}
+
+	if( this.connecting )
+	{
+		// Add it to the queue to be subscribed on startup.
+		if( !this.isSubscribed(job_id) )
+		{
+			this.subscriptions.push(job_id);
+		}
+	}
+	else
+	{
+		if( !this.isSubscribed(job_id) || startup )
+		{
+			if( !this.isSubscribed(job_id) )
+			{
+				this.subscriptions.push(job_id);
+			}
+
+			// Subscribe!
+			if( !position )
+			{
+				position = 0;
+			}
+			this.remote.send($.toJSON({request: 'subscribe', data: {'job_id': job_id, 'position': position}}));
+		}
+	}
+}
+
+LogRootStreamHandler.prototype.unsubscribe = function(job_id)
+{
+	// Remove from subscriptions.
+	for( var i = 0; i < this.subscriptions.length; i++ )
+	{
+		if( this.subscriptions[i] == job_id )
+		{
+			this.subscriptions.splice(i, 1);
+			break;
+		}
+	}
+
+	if( !this.connecting )
+	{
+		// It's connected, so send unsubscribe.
+		this.remote.send($.toJSON({request: 'unsubscribe', data: {'job_id': job_id}}));
+	}
+}
+
+LogRootStreamHandler.prototype.onopen = function()
+{
+	// Mark us as connected.
+	this.connecting = false;
+	// Send through initial subscriptions.
+	for( var i = 0; i < this.subscriptions.length; i++ )
+	{
+		this.subscribe(this.subscriptions[i], this.handlers[this.subscriptions[i]], 0, true);
+	}
+}
+
+LogRootStreamHandler.prototype.onmessage = function (evt)
+{
+	// Parse the message.
+	var message = $.parseJSON(evt.data);
+	console.log(message);
+
+	// Find a handler to work with it.
+	var handler = this.handlers[message.data.job_id];
+
+	switch(message.type)
+	{
+		case 'lines':
+			handler.handleNewLines(message.data);
+			break;
+	}
+}
+
+var JobDisplayHandler = function(container, jobStream, logStream)
+{
+	this.container = container;
+	this.jobStream = jobStream;
+	this.logStream = logStream;
+	this.job_id = container.attr('data-job');
+
+	this.jobStream.subscribe(this.job_id, this);
+}
+
+JobDisplayHandler.prototype.handleNewLines = function(message)
 {
 	var container = $('.' + message.job_id + ' .log');
 	container.append(message.lines.join(''));
 	container.attr('data-position', message.position);
 }
 
-JobRootStreamHandler.prototype.renderJobTree = function(container, tree, level)
+JobDisplayHandler.prototype.renderJobTree = function(tree, level, container)
 {
 	// Empty out the container.
-	container.empty();
+	var workingContainer = this.container;
+	if( container )
+	{
+		workingContainer = container;
+	}
+	workingContainer.empty();
 
 	// Sort my tree by time.
 	tree.sort(function(a, b) {
@@ -236,21 +350,21 @@ JobRootStreamHandler.prototype.renderJobTree = function(container, tree, level)
 	$.each(tree, function(index, element)
 	{
 		var thisContainer = _self.createContainer(element.job_id, level, element);
-		container.append(thisContainer);
+		workingContainer.append(thisContainer);
 	});
 }
 
-JobRootStreamHandler.prototype.newJob = function(container, data)
+JobDisplayHandler.prototype.newJob = function(data)
 {
 	// Find the parent container.
 	var parentId = data['parent_id'];
-	var parentChildContainer = $('.children-' + parentId);
+	var parentChildContainer = $('.children-' + parentId, this.container);
 	var levelParent = parseInt(parentChildContainer.parent().attr('data-level'), 10) + 1;
 	var newJobContainer = this.createContainer(data.job_id, levelParent, data);
 	parentChildContainer.append(newJobContainer);
 }
 
-JobRootStreamHandler.prototype.createContainer = function(job_id, level, data)
+JobDisplayHandler.prototype.createContainer = function(job_id, level, data)
 {
 	var thisJobContainer = $('<div class="job-status level' + level + '"></div>');
 	thisJobContainer.attr('data-level', level);
@@ -292,7 +406,6 @@ JobRootStreamHandler.prototype.createContainer = function(job_id, level, data)
 		logExpander.click(
 			function(e)
 			{
-				logContainer.slideToggle();
 				_self.toggleSubscribeLog(data.job_id, logContainer);
 
 				e.preventDefault();
@@ -306,13 +419,13 @@ JobRootStreamHandler.prototype.createContainer = function(job_id, level, data)
 	if( data.children )
 	{
 		var childContainer = $('.children', thisJobContainer);
-		_self.renderJobTree(childContainer, data.children, level + 1);
+		_self.renderJobTree(data.children, level + 1, childContainer);
 	}
 
 	return thisJobContainer;
 }
 
-JobRootStreamHandler.prototype.updateStatus = function(status)
+JobDisplayHandler.prototype.updateStatus = function(status)
 {
 	// Find the appropriate status element.
 	var el = $('.' + status.job_id + ' .state', this.container);
@@ -323,6 +436,21 @@ JobRootStreamHandler.prototype.updateStatus = function(status)
 	el.removeClass('state-ABORTED');
 	el.removeClass('state-WAITING');
 	$('.state', this.container).addClass('state-' + status.state);
+}
+
+JobDisplayHandler.prototype.toggleSubscribeLog = function(job_id, container)
+{
+	if( this.logStream.isSubscribed(job_id) )
+	{
+		container.slideUp();
+		this.logStream.unsubscribe(job_id);
+	}
+	else
+	{
+		var position = container.attr('data-position');
+		this.logStream.subscribe(job_id, this, position);
+		container.slideDown();
+	}
 }
 
 var RouterStatsStreamHandler = function(container)
@@ -416,12 +544,14 @@ $(document).ready(
 			);
 		}
 
+		var jobStream = new JobRootStreamHandler();
+		var logStream = new LogRootStreamHandler();
 		if( $('.job-root').length > 0 )
 		{
 			$('.job-root').each(
 				function(index, element)
 				{
-					var jobStream = new JobRootStreamHandler($(element));
+					var jobDisplay = new JobDisplayHandler($(element), jobStream, logStream);
 				}
 			);
 		}

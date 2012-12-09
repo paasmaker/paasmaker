@@ -136,16 +136,19 @@ class JobStreamHandler(BaseWebsocketHandler):
 	def on_job_status(self, message):
 		job_id = message.job_id
 		if self.subscribed.has_key(job_id):
-				# Send the status.
-				self.send_success('status', message.flatten())
+			def got_job_full(jobs):
+				self.send_success('status', jobs[job_id])
+
+			# Fetch all the data.
+			self.configuration.job_manager.get_jobs([message.job_id], got_job_full)
 
 		parent_id = message.parent_id
 		if parent_id and self.subscribed.has_key(parent_id):
-				# Send a new job.
-				def on_got_job(data):
-					self.send_success('new', data[job_id])
-				self.configuration.job_manager.get_jobs([job_id], on_got_job)
-				self.subscribed[message.job_id] = True
+			# Send a new job.
+			def on_got_job(data):
+				self.send_success('new', data[job_id])
+			self.configuration.job_manager.get_jobs([job_id], on_got_job)
+			self.subscribed[message.job_id] = True
 
 	def on_message(self, message):
 		# Message should be JSON.
