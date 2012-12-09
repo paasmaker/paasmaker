@@ -1,5 +1,12 @@
 import paasmaker
 
+# From: http://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list
+from itertools import izip
+def pairwise(iterable):
+	"s -> (s0,s1), (s2,s3), (s4, s5), ..."
+	a = iter(iterable)
+	return izip(a, a)
+
 class RouterTableDump(object):
 	def __init__(self, configuration, callback, error_callback):
 		self.configuration = configuration
@@ -14,18 +21,22 @@ class RouterTableDump(object):
 
 	def _got_redis(self, redis):
 		self.redis = redis
-		self.redis.keys('instance_ids_*', self._got_instance_ids)
+		self.redis.keys('instances_*', self._got_instance_ids)
 
 	def _got_instance_ids(self, instance_ids):
 		self.all_roots = instance_ids
 		pipeline = self.redis.pipeline(True)
 		for instance_set in instance_ids:
+			hostname = instance_set.replace("instances_", "")
+			# Fetch the instance IDs for this.
+			pipeline.smembers("instance_ids_%s" % hostname)
+			# Also fetch the instance routes.
 			pipeline.smembers(instance_set)
 		pipeline.execute(self._got_set_members)
 
 	def _got_set_members(self, members):
 		self.all_roots.reverse()
-		for instance_set in members:
+		for instance_set, instance_routes in pairwise(members):
 			# Infer the hostname from the key name.
 			hostname = self.all_roots.pop().replace("instance_ids_", "")
 			# Fetch out the instances. NOTE: This is quite intensive.
@@ -43,10 +54,13 @@ class RouterTableDump(object):
 			else:
 				application_id = 0
 
+			sorted_routes = list(instance_routes)
+			sorted_routes.sort()
 			entry = {
 				'hostname': hostname,
 				'instances': instances,
-				'application_id': application_id
+				'application_id': application_id,
+				'routes': sorted_routes
 			}
 			self.table.append(entry)
 
