@@ -1,0 +1,24 @@
+{% if router_stats %}
+	<div class="router-stats" data-name="{{ router_stats_name }}" data-inputid="{{ router_stats_input_id }}">
+			<div class="stats-row stat-requests clearfix">
+				<span class="title">Requests:</span>
+				<span class="value">{{ "%d" % router_stats['requests'] }}</span>
+			</div>
+			<div class="stats-row stat-bytes clearfix">
+				<span class="title">Bytes:</span>
+				<span class="value">{{ "%d" % router_stats['bytes'] }}</span>
+			</div>
+			<div class="stats-row stat-time_average clearfix">
+				<span class="title">Average time:</span>
+				<span class="value">{{ "%d" % router_stats['time_average'] }}</span>
+			</div>
+			<div class="stats-row stat-2xx_percentage clearfix">
+				<span class="title">2xx percentage:</span>
+				<span class="value">{{ "%.2f" % router_stats['2xx_percentage'] }}%</span>
+			</div>
+	</div>
+{% else %}
+	<div class="router-no-stats">
+		No router stats available.
+	</div>
+{% end %}

@@ -174,10 +174,16 @@ class NodeDetailController(BaseController):
 		self.require_permission(constants.PERMISSION.NODE_DETAIL_VIEW)
 		return node
 
+	@tornado.web.asynchronous
 	def get(self, node_id):
 		node = self._get_node(node_id)
 
 		self.add_data('node', node)
+
+		# Fetch the router stats.
+		self._get_router_stats_for('node', node.id, self._got_stats)
+
+	def _got_stats(self, result):
 		self.render("node/detail.html")
 
 	@staticmethod

@@ -428,6 +428,27 @@ class BaseController(tornado.web.RequestHandler):
 	def on_finish(self):
 		self.application.log_request(self)
 
+	# MISC HELPERS. TODO: Refactor this.
+	def _get_router_stats_for(self, name, input_id, callback):
+		self._router_stats_callback = callback
+		self._router_stats = paasmaker.router.stats.ApplicationStats(
+			self.configuration,
+			self._on_router_stats_success,
+			self._on_router_stats_error
+		)
+		self._router_stats.for_name(name, input_id)
+		self.add_data('router_stats_name', name)
+		self.add_data('router_stats_input_id', input_id)
+
+	def _on_router_stats_success(self, result):
+		self.add_data('router_stats', result)
+		self._router_stats_callback(result)
+
+	def _on_router_stats_error(self, error, exception=None):
+		self.add_data('router_stats', None)
+		self.add_warning('Unable to fetch router stats: ' + error)
+		self._router_stats_callback({})
+
 # A schema for websocket incoming messages, to keep them consistent.
 class WebsocketMessageSchemaCookie(colander.MappingSchema):
 	request = colander.SchemaNode(colander.String(),

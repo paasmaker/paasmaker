@@ -325,6 +325,53 @@ JobRootStreamHandler.prototype.updateStatus = function(status)
 	$('.state', this.container).addClass('state-' + status.state);
 }
 
+var RouterStatsStreamHandler = function(container)
+{
+	this.container = container;
+	this.input_name = container.attr('data-name');
+	this.input_id = container.attr('data-inputid');
+
+	var _self = this;
+	this.routerStatsRemote = new WebSocket("ws://" + window.location.host + "/router/stats/stream");
+	this.routerStatsRemote.onopen = function() {
+		_self.requestUpdate();
+	};
+	this.routerStatsRemote.onmessage = function (evt) {
+		var message = $.parseJSON(evt.data);
+		console.log(message);
+		switch(message.type)
+		{
+			case 'update':
+				_self.showUpdate(message.data);
+				break;
+		}
+	};
+
+	// For speed later, pre-lookup the value instances.
+	this.requests = $('.stat-requests .value', container);
+	this.bytes = $('.stat-bytes .value', container);
+	this.time_average = $('.stat-time_average .value', container);
+	this.twoxx_percentage = $('.stat-2xx_percentage .value', container);
+}
+
+RouterStatsStreamHandler.prototype.requestUpdate = function()
+{
+	console.log("Asking for update...");
+	this.routerStatsRemote.send($.toJSON({request: 'update', data: {'name': this.input_name, 'input_id': this.input_id}}));
+}
+
+RouterStatsStreamHandler.prototype.showUpdate = function(update)
+{
+	this.requests.text(number_format(update.requests));
+	this.bytes.text(number_format(update.bytes));
+	this.time_average.text(number_format(update.time_average));
+	this.twoxx_percentage.text(toFixed(update['2xx_percentage'], 2) + '%');
+
+	// And then in 1s, request it again.
+	var _self = this;
+	setTimeout(function(){ _self.requestUpdate(); }, 1000);
+}
+
 function testBrowserFeatures(resultContainer)
 {
 	resultContainer.empty();
@@ -378,5 +425,46 @@ $(document).ready(
 				}
 			);
 		}
+
+		if( $('.router-stats').length > 0 )
+		{
+			$('.router-stats').each(
+				function(index, element)
+				{
+					var routerStats = new RouterStatsStreamHandler($(element));
+				}
+			);
+		}
 	}
 )
+
+// Helper functions.
+// number_format from: http://phpjs.org/functions/number_format/
+function number_format (number, decimals, dec_point, thousands_sep) {
+  number = (number + '').replace(/[^0-9+\-Ee.]/g, '');
+  var n = !isFinite(+number) ? 0 : +number,
+    prec = !isFinite(+decimals) ? 0 : Math.abs(decimals),
+    sep = (typeof thousands_sep === 'undefined') ? ',' : thousands_sep,
+    dec = (typeof dec_point === 'undefined') ? '.' : dec_point,
+    s = '',
+    toFixedFix = function (n, prec) {
+      var k = Math.pow(10, prec);
+      return '' + Math.round(n * k) / k;
+    };
+  // Fix for IE parseFloat(0.55).toFixed(0) = 0;
+  s = (prec ? toFixedFix(n, prec) : '' + Math.round(n)).split('.');
+  if (s[0].length > 3) {
+    s[0] = s[0].replace(/\B(?=(?:\d{3})+(?!\d))/g, sep);
+  }
+  if ((s[1] || '').length < prec) {
+    s[1] = s[1] || '';
+    s[1] += new Array(prec - s[1].length + 1).join('0');
+  }
+  return s.join(dec);
+}
+
+// From: http://stackoverflow.com/questions/661562/how-to-format-a-float-in-javascript
+function toFixed(value, precision) {
+    var power = Math.pow(10, precision || 0);
+    return (Math.round(value * power) / power).toFixed(precision);
+}

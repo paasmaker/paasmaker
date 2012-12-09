@@ -167,13 +167,16 @@ class ApplicationStats(object):
 		self._for_set_name([version_type_id])
 
 	def for_version(self, version_id):
-		self._for_set_name('version_%s_vtids' % version_id)
+		self.for_name('version', version_id)
 
 	def for_application(self, application_id):
-		self._for_set_name('application_%s_vtids' % application_id)
+		self.for_name('application', application_id)
 
 	def for_workspace(self, workspace_id):
-		self._for_set_name('workspace_%s_vtids' % workspace_id)
+		self.for_name('workspace', workspace_id)
+
+	def for_name(self, name, input_id):
+		self._for_set_name('%s_%d_vtids' % (name, input_id))
 
 	def _for_set_name(self, set_name):
 		def on_redis(redis):

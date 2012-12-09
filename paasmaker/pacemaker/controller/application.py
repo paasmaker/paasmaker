@@ -62,6 +62,7 @@ class ApplicationRootController(BaseController):
 
 class ApplicationListController(ApplicationRootController):
 
+	@tornado.web.asynchronous
 	def get(self, workspace_id):
 		workspace = self._get_workspace(workspace_id)
 
@@ -77,6 +78,11 @@ class ApplicationListController(ApplicationRootController):
 		self.add_data('workspace', workspace)
 		self.add_data('applications', applications)
 		self.add_data_template('paasmaker', paasmaker)
+
+		# Fetch the router stats.
+		self._get_router_stats_for('workspace', workspace.id, self._got_stats)
+
+	def _got_stats(self, result):
 		self.render("application/list.html")
 
 	@staticmethod
@@ -228,6 +234,7 @@ class ApplicationNewController(ApplicationRootController):
 
 class ApplicationController(ApplicationRootController):
 
+	@tornado.web.asynchronous
 	def get(self, application_id):
 		application = self._get_application(application_id)
 
@@ -237,6 +244,11 @@ class ApplicationController(ApplicationRootController):
 		versions = application.versions.filter(paasmaker.model.ApplicationVersion.deleted == None)
 		self.add_data('versions', versions)
 		self.add_data_template('constants', constants)
+
+		# Fetch the router stats.
+		self._get_router_stats_for('application', application.id, self._got_stats)
+
+	def _got_stats(self, result):
 		self.render("application/versions.html")
 
 	@staticmethod
