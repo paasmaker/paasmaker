@@ -38,7 +38,7 @@ class RouterTableDump(object):
 		self.all_roots.reverse()
 		for instance_set, instance_routes in pairwise(members):
 			# Infer the hostname from the key name.
-			hostname = self.all_roots.pop().replace("instance_ids_", "")
+			hostname = self.all_roots.pop().replace("instances_", "")
 			# Fetch out the instances. NOTE: This is quite intensive.
 			instances = self.session.query(
 				paasmaker.model.ApplicationInstance
