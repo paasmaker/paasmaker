@@ -5,6 +5,8 @@ import logging
 
 import paasmaker
 
+import tornado
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -131,6 +133,34 @@ class StatsLogReader(object):
 		self.fp.close()
 		self.reading = False
 		self.callback("Completed reading file.")
+
+class StatsLogPeriodicManager(object):
+	def __init__(self, configuration):
+		# First, the log reader.
+		self.log_reader = StatsLogReader(configuration)
+		# Then the periodic callback handler.
+		self.periodic = tornado.ioloop.PeriodicCallback(
+			self.read_stats,
+			configuration.get_flat('router.stats_interval'),
+			io_loop=configuration.io_loop
+		)
+
+	def start(self):
+		self.periodic.start()
+
+	def read_stats(self):
+		# Attempt to read the stats.
+		self.log_reader.read(self._on_complete, self._on_error)
+
+	def _on_complete(self, message):
+		# Do nothing, it's already been logged.
+		pass
+
+	def _on_error(self, error, exception=None):
+		# Log the error, but allow it to try again next time.
+		logger.error(error)
+		if exception:
+			lgoger.error(exc_info=exception)
 
 class ApplicationStats(object):
 	METRICS = [

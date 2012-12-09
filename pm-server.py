@@ -126,6 +126,11 @@ def on_completed_startup():
 		request = paasmaker.common.api.NodeRegisterAPIRequest(configuration)
 		request.send(on_registration_complete)
 
+	# Also, start up the periodic router log reader now as well, if configured to do so.
+	if configuration.is_router() and configuration.get_flat('router.process_stats'):
+		configuration.stats_reader_periodic = paasmaker.router.stats.StatsLogPeriodicManager(configuration)
+		configuration.stats_reader_periodic.start()
+
 def on_intermediary_started(message):
 	logger.debug(message)
 	on_intermediary_started.required -= 1
