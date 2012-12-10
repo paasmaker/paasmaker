@@ -1,0 +1,48 @@
+
+An easy way to ensure that a python program will exit in safe fashion.
+
+(Custom signal handlers for SIGTERM and CTRL-C events)
+
+Motivation
+----------
+
+I realized that this package is needed when I was thinking about the best way to restart
+brackground workers in a graceful manner, without loosing data.
+
+The basic idea is that a worker should exit on the next data processing cycle 
+and the exit event should not break current program execution.
+
+I also believe that it's really bad idea to handle signals as exceptions 
+(e.g. KeyboardInterrupt) because you can't resume program execution and it's not
+always possible to do a rollback (talking to external services).
+
+Usage
+-----
+
+# Basic worker loop
+
+import safeclose
+
+with safeclose.section():
+  while not safeclose.exit():
+    # do work and never block for ever
+
+# Tornado web application
+
+import tornado
+
+def onexit():
+  tornado.ioloop.IOLoop.instance().stop()
+
+with safeclose.section(onexit):
+  tornado.ioloop.IOLoop.instance.start()
+
+
+safeclose.exit() should return True if the program receives SIGTERM or SIGINT (CTRL-C).
+
+License
+-------
+
+Copyright 2011 Andrei Savu
+Apache License 2.0
+

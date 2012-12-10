@@ -1,1 +1,2 @@
 import pika
+import safeclose

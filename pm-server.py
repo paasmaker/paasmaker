@@ -1,11 +1,16 @@
 #!/usr/bin/env python
 
+# Python imports.
+import os
+import sys
+
 # External library imports.
 import tornado.ioloop
 import tornado.web
-import tornado.options
+from tornado.options import options
 from pubsub import pub
 from pubsub.utils.exchandling import IExcHandler
+from paasmaker.thirdparty.safeclose import safeclose
 
 # Internal imports.
 import paasmaker
@@ -25,7 +30,7 @@ class PaasmakerPubSubExceptionHandler(IExcHandler):
 pub.setListenerExcHandler(PaasmakerPubSubExceptionHandler())
 
 # Parse command line options.
-tornado.options.parse_command_line()
+options.parse_command_line()
 
 # Load configuration
 logging.info("Loading configuration...")
@@ -37,6 +42,19 @@ logging.info("Resetting server log level to %s.", configuration['server_log_leve
 logger = logging.getLogger()
 logger.setLevel(getattr(logging, configuration['server_log_level']))
 configuration.dump()
+
+# Does the PID file already exist? If so, we're probably already running.
+is_debug = (options.debug == 1)
+pid_path = configuration.get_flat('pid_path')
+if os.path.exists(pid_path):
+	# Check the process.
+	pid = int(open(pid_path, 'r').read())
+	is_running = paasmaker.util.processcheck.ProcessCheck.is_running(pid, 'pm-server')
+	# If we're in debug mode, Tornado will auto reload on file changes,
+	# which causes this to think it's already running and exit.
+	if is_running and not is_debug:
+		logger.critical("Found existing process at pid %s, not starting again.", pid)
+		sys.exit(1)
 
 # Initialise the system.
 logging.info("Initialising system.")
@@ -126,6 +144,18 @@ def on_registration_complete(response):
 		logging.info("Successfully registered or updated with master.")
 
 def on_completed_startup():
+	if not is_debug:
+		# Fork into the background.
+		fork_result = os.fork()
+		if fork_result != 0:
+			# I'm the parent.
+			sys.exit(0)
+
+	# Write out our PID file.
+	fp = open(pid_path, 'w')
+	fp.write(str(os.getpid()))
+	fp.close()
+
 	# Start listening for HTTP requests, as everything is ready.
 	logging.info("Listening on port %d", configuration['http_port'])
 	application.listen(configuration['http_port'])
@@ -191,11 +221,16 @@ def on_ioloop_started():
 
 	logger.debug("Launched all startup jobs.")
 
+def on_exit():
+	logging.info("Exiting.")
+	os.unlink(pid_path)
+	sys.exit(0)
+
 # Commence the application.
 if __name__ == "__main__":
 	# Add a callback to get started once the IO loop is up and running.
 	tornado.ioloop.IOLoop.instance().add_callback(on_ioloop_started)
 
 	# Start up the IO loop.
-	tornado.ioloop.IOLoop.instance().start()
-	logging.info("Exiting.")
+	with safeclose.section(on_exit):
+		tornado.ioloop.IOLoop.instance().start()

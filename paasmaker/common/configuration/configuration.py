@@ -33,7 +33,7 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 # Set up command line options.
-define("debug", type=int, default=0, help="Enable Tornado debug mode.")
+define("debug", type=int, default=0, help="Enable Tornado debug mode. Also prevents Paasmaker from forking into the background.")
 define("configfile", type=str, default="", help="Override configuration file.")
 
 # Default ports.
@@ -326,6 +326,12 @@ class ConfigurationSchema(colander.MappingSchema):
 	scratch_directory = colander.SchemaNode(colander.String(),
 		title="Scratch Directory",
 		description="Directory used for random temporary files. Should be somewhere persistent between reboots, eg, not /tmp.")
+
+	pid_path = colander.SchemaNode(colander.String(),
+		title="PID path",
+		description="The path at which to write the PID file.",
+		default="paasmaker.pid",
+		missing="paasmaker.pid")
 
 	master = MasterSchema(default=MasterSchema.default(), missing=MasterSchema.default())
 
