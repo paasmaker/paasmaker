@@ -83,8 +83,13 @@ textarea.example-configuration
 .job-status .log
 {
 	display: none;
-	height: 200px;
+	height: 150px;
 	overflow: auto;
+}
+
+.job-status .log.no-data
+{
+	height: auto;
 }
 
 /* ROUTER STATS */

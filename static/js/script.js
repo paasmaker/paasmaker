@@ -311,6 +311,9 @@ LogRootStreamHandler.prototype.onmessage = function (evt)
 		case 'lines':
 			handler.handleNewLines(message.data);
 			break;
+		case 'zerosize':
+			handler.handleZeroSizeLog(message.data);
+			break;
 	}
 }
 
@@ -324,9 +327,17 @@ var JobDisplayHandler = function(container, jobStream, logStream)
 	this.jobStream.subscribe(this.job_id, this);
 }
 
+JobDisplayHandler.prototype.handleZeroSizeLog = function(message)
+{
+	var container = $('.' + message.job_id + ' .log');
+	container.html("No log entries for this job.")
+	container.addClass('no-data');
+}
+
 JobDisplayHandler.prototype.handleNewLines = function(message)
 {
 	var container = $('.' + message.job_id + ' .log');
+	container.removeClass('no-data');
 	var formatted = this.formatLogLines(message.lines.join(''));
 	container.append(formatted);
 	container.attr('data-position', message.position);

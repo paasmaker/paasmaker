@@ -8,6 +8,7 @@ import tornado.testing
 import json
 import uuid
 import logging
+import os
 
 import colander
 
@@ -100,17 +101,21 @@ class LogStreamHandler(BaseWebsocketHandler):
 
 	def send_job_log(self, job_id, last_position=0):
 		log_file = self.configuration.get_job_log_path(job_id)
+		if os.path.getsize(log_file) == 0:
+			# Report the zero size.
+			# TODO: Unit test this.
+			self.send_success('zerosize', {'job_id': job_id})
+		else:
+			fp = open(log_file, 'rb')
+			if last_position > 0:
+				fp.seek(last_position)
+			lines = ['Dummy line']
+			while len(lines) > 0:
+				lines = fp.readlines(BLOCK_READ)
+				self.send_success('lines', self.make_data(job_id, lines, fp.tell()))
 
-		fp = open(log_file, 'rb')
-		if last_position > 0:
-			fp.seek(last_position)
-		lines = ['Dummy line']
-		while len(lines) > 0:
-			lines = fp.readlines(BLOCK_READ)
-			self.send_success('lines', self.make_data(job_id, lines, fp.tell()))
-
-		self.last_positions[job_id] = fp.tell()
-		fp.close()
+			self.last_positions[job_id] = fp.tell()
+			fp.close()
 
 	@staticmethod
 	def get_routes(configuration):
