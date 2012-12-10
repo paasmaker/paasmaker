@@ -3,6 +3,7 @@ import warnings
 import os
 import json
 import time
+import math
 
 import paasmaker
 from ..testhelpers import TestHelpers
@@ -12,6 +13,7 @@ import tornado.web
 import tornado.websocket
 import tornado.escape
 import colander
+import sqlalchemy
 
 # Types of API requests.
 # 1. Node->Node. (ie, nodes talking to each other)
@@ -51,6 +53,9 @@ class BaseController(tornado.web.RequestHandler):
 	Base class for all controllers in the system.
 	"""
 	def initialize(self, configuration=None, io_loop=None):
+		# This is defined here so controllers can change it per-request.
+		self.DEFAULT_PAGE_SIZE = 10
+
 		self.configuration = configuration
 		self.data = {}
 		self.template = {}
@@ -461,6 +466,51 @@ class BaseController(tornado.web.RequestHandler):
 				tornado.escape.url_escape(url)
 			)
 		)
+
+	def _paginate(self, key, data, page_size=None):
+		page = 1
+		page_size = self.DEFAULT_PAGE_SIZE
+
+		if self.raw_params.has_key('page'):
+			try:
+				page = int(self.raw_params['page'])
+			except ValueError, ex:
+				# Invalid, ignore.
+				pass
+		if self.raw_params.has_key('pagesize'):
+			try:
+				page_size = int(self.raw_params['pagesize'])
+			except ValueError, ex:
+				# Invalid, ignore.
+				pass
+
+		if isinstance(data, sqlalchemy.orm.query.Query):
+			total = data.count()
+		else:
+			total = len(data)
+
+		# For JSON requests, by default, don't paginate, as
+		# this would be very confusing.
+		# If the JSON request supplies a pagesize, then we
+		# will start paginating.
+		if self.format != 'html' and not self.raw_params.has_key('pagesize'):
+			page_size = total
+
+		pages = 0
+		if total > 0:
+			pages = int(math.ceil(float(total) / float(page_size)))
+		start = (page - 1) * page_size
+		end = min(page * page_size, total)
+
+		page_data = {
+			'total': total,
+			'pages': pages,
+			'page': page,
+			'start': start + 1,
+			'end': end
+		}
+		self.add_data('%s_pagination' % key, page_data)
+		self.add_data(key, data[start:end])
 
 # A schema for websocket incoming messages, to keep them consistent.
 class WebsocketMessageSchemaCookie(colander.MappingSchema):

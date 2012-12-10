@@ -26,6 +26,18 @@ textarea.example-configuration
 	font-family: monospace;
 }
 
+/* PAGINATION */
+.pagination
+{
+	padding: 5px;
+
+	text-align: center;
+	-webkit-border-radius: 12px;
+	border-radius: 12px;
+	-webkit-box-shadow: 0px 0px 10px 0px #c0c0c0;
+	box-shadow: 0px 0px 10px 0px #c0c0c0;
+}
+
 /* JOB STATUSES */
 .job-root
 {

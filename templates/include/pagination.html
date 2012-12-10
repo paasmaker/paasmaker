@@ -1,0 +1,25 @@
+{% if page_data['pages'] > 1 %}
+	<div class="pagination">
+		<div class="details">
+			<span class="start">{{ page_data['start'] }}</span>
+			<span class="text"> - </span>
+			<span class="end">{{ page_data['end'] }}</span>
+			<span class="text"> of </span>
+			<span class="total">{{ page_data['total'] }}</span>
+		</div>
+		<div class="links">
+			{# Previous #}
+			<a class="btn btn-mini{% if page_data['page'] > 1 %}" href="?page={{ page_data['page'] - 1 }}"{% else %} disabled" href="#"{% end %}>&laquo;</a>
+
+			{# List of pages #}
+			{% for i in range(1, page_data['pages'] + 1) %}
+				<a class="btn btn-mini {% if i == page_data['page'] %}disabled{% end %}" href="?page={{ i }}">
+					{{ i }}
+				</a>
+			{% end %}
+
+			{# Next #}
+			<a class="btn btn-mini{% if page_data['page'] < page_data['pages'] %}" href="?page={{ page_data['page'] + 1 }}"{% else %} disabled" href="#"{% end %}>&raquo;</a>
+		</div>
+	</div>
+{% end %}

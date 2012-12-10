@@ -580,6 +580,14 @@ $(document).ready(
 				}
 			);
 		}
+
+		// Disable any disabled buttons.
+		$('.btn.disabled').click(
+			function(e)
+			{
+				e.preventDefault();
+			}
+		);
 	}
 )
 

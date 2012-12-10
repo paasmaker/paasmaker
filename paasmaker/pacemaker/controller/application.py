@@ -242,7 +242,7 @@ class ApplicationController(ApplicationRootController):
 		).order_by(
 			paasmaker.model.ApplicationVersion.version.desc()
 		)
-		self.add_data('versions', versions)
+		self._paginate('versions', versions, page_size=10)
 		self.add_data_template('constants', constants)
 
 		# Fetch the router stats.
