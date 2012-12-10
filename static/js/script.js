@@ -603,7 +603,7 @@ $(document).ready(
 					for( var i = 0; i < data.data.workspaces.length; i++ )
 					{
 						workspace = data.data.workspaces[i];
-						thisA = $('<a href="/workspace/' + workspace.id + '"></a>');
+						thisA = $('<a href="/workspace/' + workspace.id + '/applications"></a>');
 						thisA.text(workspace.name);
 						thisLi = $('<li></li>');
 						thisLi.append(thisA);
