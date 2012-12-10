@@ -8,6 +8,7 @@ from port import FreePortFinder, NoFreePortException
 from manageddaemon import ManagedDaemon, ManagedDaemonError
 from managedredis import ManagedRedis, ManagedRedisError
 from managedrabbitmq import ManagedRabbitMQ, ManagedRabbitMQError
+from managedpostgres import ManagedPostgres, ManagedPostgresError
 from memoryredis import MemoryRedis
 from temporaryrabbitmq import TemporaryRabbitMQ
 from commandsupervisor import CommandSupervisorLauncher

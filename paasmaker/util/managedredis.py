@@ -160,7 +160,7 @@ class ManagedRedisTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.server.start(self.stop, self.stop)
 		result = self.wait()
 
-		self.assertIn("In appropriate state", result, "Failed to start RabbitMQ server.")
+		self.assertIn("In appropriate state", result, "Failed to start Redis server.")
 
 		client = self.server.get_client()
 
