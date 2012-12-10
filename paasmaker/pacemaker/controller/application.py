@@ -237,7 +237,11 @@ class ApplicationController(ApplicationRootController):
 		# TODO: Paginate...
 		# TODO: Unit test.
 		self.add_data('application', application)
-		versions = application.versions.filter(paasmaker.model.ApplicationVersion.deleted == None)
+		versions = application.versions.filter(
+			paasmaker.model.ApplicationVersion.deleted == None
+		).order_by(
+			paasmaker.model.ApplicationVersion.version.desc()
+		)
 		self.add_data('versions', versions)
 		self.add_data_template('constants', constants)
 

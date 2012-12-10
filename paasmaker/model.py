@@ -398,7 +398,7 @@ class ApplicationVersion(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	application_id = Column(Integer, ForeignKey('application.id'), nullable=False, index=True)
-	application = relationship("Application", backref=backref('versions', order_by=id, lazy="dynamic"))
+	application = relationship("Application", backref=backref('versions', lazy="dynamic"))
 	version = Column(Integer, nullable=False)
 	is_current = Column(Boolean, nullable=False)
 	statistics = Column(Text, nullable=True)
