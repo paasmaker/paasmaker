@@ -369,12 +369,12 @@ JobDisplayHandler.prototype.createContainer = function(job_id, level, data)
 	var thisJobContainer = $('<div class="job-status level' + level + '"></div>');
 	thisJobContainer.attr('data-level', level);
 
-	var details = $('<div class="details"></div>');
+	var details = $('<div class="details clearfix"></div>');
 	details.addClass(job_id);
+	details.append($('<span class="state"></span>'));
+	details.append($('<span class="toolbox"></span>'));
 	details.append($('<span class="title"></span>'));
 	details.append($('<span class="summary"></span>'));
-	details.append($('<span class="toolbox"></span>'));
-	details.append($('<span class="state"></span>'));
 	details.append($('<span class="time"></span>'));
 	details.append($('<pre class="log"></pre>'));
 	thisJobContainer.append(details);
@@ -384,26 +384,22 @@ JobDisplayHandler.prototype.createContainer = function(job_id, level, data)
 	thisJobContainer.append(childrenContainer);
 
 	$('.title', thisJobContainer).text(data.title);
-	if( data.summary )
+	if( data.summary && data.state != 'SUCCESS' )
 	{
-		$('.summary', thisJobContainer).text(' (' + data.summary + ')');
+		$('.summary', thisJobContainer).text('Summary: ' + data.summary);
 	}
 	else
 	{
 		$('.summary', thisJobContainer).text('');
 	}
-	$('.state', thisJobContainer).text(data.state);
+
 	/*var thisTime = new Date();
 	thisTime.setTime(data.time * 1000);
 	$('.time', thisJobContainer).text(thisTime.toString());*/
-	// TODO: Have to switch states...
-	// TODO: Fix this.
+
 	var stateContainer = $('.state', thisJobContainer);
-	stateContainer.removeClass('state-SUCCESS');
-	stateContainer.removeClass('state-FAILED');
-	stateContainer.removeClass('state-ABORTED');
-	stateContainer.removeClass('state-WAITING');
-	stateContainer.addClass('state-' + data.state);
+	this.setStateClass(stateContainer, data.state);
+	this.setStateIcon(stateContainer, data.state);
 	var logContainer = $('.log', thisJobContainer);
 
 	var toolbox = $('.toolbox', thisJobContainer);
@@ -411,7 +407,7 @@ JobDisplayHandler.prototype.createContainer = function(job_id, level, data)
 	if( false == toolbox.hasClass('populated') )
 	{
 		// Populate and hook up the toolbox.
-		var logExpander = $('<a href="#"><i class="icon-list"></i></a>');
+		var logExpander = $('<a href="#" title="View log for this job"><i class="icon-list"></i></a>');
 		logExpander.click(
 			function(e)
 			{
@@ -434,22 +430,65 @@ JobDisplayHandler.prototype.createContainer = function(job_id, level, data)
 	return thisJobContainer;
 }
 
+BOOTSTRAP_CLASS_MAP = {
+	'FAILED': 'important', // Er, ok.
+	'ABORTED': 'warning',
+	'SUCCESS': 'success',
+	'WAITING': 'info',
+	'RUNNING': 'primary'
+}
+
+BOOTSTRAP_ICON_MAP = {
+	'FAILED': 'icon-remove',
+	'ABORTED': 'icon-ban-circle',
+	'SUCCESS': 'icon-ok',
+	'WAITING': 'icon-time',
+	'RUNNING': 'icon-random',
+	'NEW': 'icon-certificate'
+}
+
+JobDisplayHandler.prototype.setStateClass = function(element, state)
+{
+	var oldState = element.attr('data-state');
+	element.removeClass('state-' + oldState);
+	element.addClass('state-' + state);
+	element.attr('data-state', state);
+
+	// And add a class that inherits a bootstrap colour.
+	var bootstrapClass = BOOTSTRAP_CLASS_MAP[state];
+	if( !bootstrapClass )
+	{
+		bootstrapClass = 'default';
+	}
+
+	element.addClass('label');
+	element.addClass('label-' + bootstrapClass);
+}
+
+JobDisplayHandler.prototype.setStateIcon = function(element, state)
+{
+	var icon = $('<i></i>');
+	icon.addClass('icon-white');
+	icon.addClass(BOOTSTRAP_ICON_MAP[state]);
+
+	element.html(icon);
+	var textual = $('<span></span>');
+	textual.text(state);
+	element.append(textual);
+}
+
 JobDisplayHandler.prototype.updateStatus = function(status)
 {
 	// Find the appropriate status element.
 	var el = $('.' + status.job_id + ' .state', this.container);
 	el.text(status.state);
-	// TODO: Fix this.
-	el.removeClass('state-SUCCESS');
-	el.removeClass('state-FAILED');
-	el.removeClass('state-ABORTED');
-	el.removeClass('state-WAITING');
-	$('.state', this.container).addClass('state-' + status.state);
+	this.setStateClass($('.state', this.container), status.state);
+	this.setStateIcon($('.state', this.container), status.state);
 
-	if( status.summary )
+	if( status.summary && status.state != 'SUCCESS' )
 	{
 		var summaryEl = $('.' + status.job_id + ' .summary', this.container);
-		summaryEl.text(' (' + status.summary + ')');
+		summaryEl.text('Summary: ' + status.summary);
 	}
 }
 
