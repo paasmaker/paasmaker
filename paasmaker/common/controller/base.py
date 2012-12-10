@@ -696,8 +696,8 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase, TestHelpers):
 		# Create a test user - if required.
 		s = self.configuration.get_database_session()
 		user = s.query(paasmaker.model.User) \
-				.filter(paasmaker.model.User.login=='username') \
-				.first()
+			.filter(paasmaker.model.User.login=='username') \
+			.first()
 
 		if not user:
 			# Not found. Make one.

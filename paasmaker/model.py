@@ -355,6 +355,17 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 
 		return count > 0
 
+	@staticmethod
+	def list_of_workspaces_for_user(session, user):
+		# Return a list of IDs of workspaces that the given user can view.
+		query = session.query(
+			WorkspaceUserRoleFlat.workspace_id
+		).filter(
+			WorkspaceUserRoleFlat.user_id == user.id,
+			WorkspaceUserRoleFlat.permission == constants.PERMISSION.WORKSPACE_VIEW
+		)
+		return query
+
 class Application(OrmBase, Base):
 	__tablename__ = 'application'
 	__table_args__ = (Index('unique_app_per_workspace', "workspace_id", "name", unique=True),)

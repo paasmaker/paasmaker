@@ -79,7 +79,7 @@
 					<div class="alert alert-error">
 						<ul class="errors">
 							{% for error in errors %}
-								<li>{% raw error %}</li>
+								<li>{{ error }}</li>
 							{% end %}
 							{% try %}
 								{% for key, error in input_errors.iteritems() %}

@@ -95,13 +95,31 @@ class WorkspaceListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def get(self):
-		self.require_permission(constants.PERMISSION.WORKSPACE_LIST)
-		# TODO: Filter to your workspaces.
+		# Check to see if we have global workspace list permissions.
 		workspaces = self.db().query(
 			paasmaker.model.Workspace
-		).filter(
-			paasmaker.model.Workspace.deleted == None
 		)
+
+		if not self.has_permission(constants.PERMISSION.WORKSPACE_LIST):
+			# Nope, you have a limited selection. So limit the query to those.
+			workspaces = self.db().query(
+				paasmaker.model.Workspace
+			).filter(
+				paasmaker.model.Workspace.id.in_(
+					paasmaker.model.WorkspaceUserRoleFlat.list_of_workspaces_for_user(
+						self.db(),
+						self.get_current_user()
+					)
+				)
+			)
+
+		# Common filters.
+		workspaces = workspaces.filter(
+			paasmaker.model.Workspace.deleted == None
+		).order_by(
+			paasmaker.model.Workspace.name.asc()
+		)
+
 		self._paginate('workspaces', workspaces)
 		self.render("workspace/list.html")
 
@@ -233,3 +251,61 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		self.assertTrue(response.data.has_key('workspaces'), "Missing workspaces list.")
 		self.assertEquals(len(response.data['workspaces']), 1, "Not enough workspaces returned.")
 		self.assertEquals(response.data['workspaces'][0]['name'], 'Test workspace', "Returned workspace is not as expected.")
+
+		# Create a second workspace.
+		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
+		request.set_workspace_name('Second Workspace')
+		request.set_workspace_stub('test-two')
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+
+		second_workspace_id = int(response.data['workspace']['id'])
+
+		request = paasmaker.common.api.workspace.WorkspaceListAPIRequest(self.configuration)
+		request.set_superkey_auth()
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertTrue(response.data.has_key('workspaces'), "Missing workspaces list.")
+		self.assertEquals(len(response.data['workspaces']), 2, "Not enough workspaces returned.")
+
+		# Now, create a user and assign them permission only to view the second workspace.
+		session = self.configuration.get_database_session()
+		user = paasmaker.model.User()
+		user.login = 'username'
+		user.email = 'username@example.com'
+		user.password = 'testtest'
+		role = paasmaker.model.Role()
+		role.name = 'Workspace Level'
+		role.add_permission(constants.PERMISSION.WORKSPACE_VIEW)
+
+		session.add(user)
+		session.add(role)
+
+		workspace = session.query(paasmaker.model.Workspace).get(second_workspace_id)
+
+		wu = paasmaker.model.WorkspaceUserRole()
+		wu.workspace = workspace
+		wu.user = user
+		wu.role = role
+		session.add(wu)
+		session.commit()
+
+		paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
+
+		session.refresh(user)
+
+		# Fetch the workspace list as that user.
+		request = paasmaker.common.api.workspace.WorkspaceListAPIRequest(self.configuration)
+		request.set_apikey_auth(user.apikey)
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertTrue(response.data.has_key('workspaces'), "Missing workspaces list.")
+		self.assertEquals(len(response.data['workspaces']), 1, "Not enough workspaces returned.")
+		self.assertEquals(response.data['workspaces'][0]['name'], 'Second Workspace', "Returned workspace is not as expected.")

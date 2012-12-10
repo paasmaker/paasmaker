@@ -595,7 +595,6 @@ $(document).ready(
 		var workspaceListContainer = $('.nav .workspace-list');
 		if( workspaceListContainer.length > 0 )
 		{
-			console.log("Making request...");
 			$.getJSON(
 				'/workspace/list?format=json',
 				function(data, text, xhr)
