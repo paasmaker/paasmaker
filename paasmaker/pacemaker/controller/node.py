@@ -153,9 +153,8 @@ class NodeListController(BaseController):
 	def get(self):
 		self.require_permission(constants.PERMISSION.NODE_LIST)
 
-		# TODO: Paginate...
 		nodes = self.db().query(paasmaker.model.Node)
-		self.add_data('nodes', nodes)
+		self._paginate('nodes', nodes)
 		self.render("node/list.html")
 
 	@staticmethod

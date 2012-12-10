@@ -145,9 +145,8 @@ class UserListController(BaseController):
 
 	def get(self):
 		self.require_permission(constants.PERMISSION.USER_LIST)
-		# TODO: Paginate...
 		users = self.db().query(paasmaker.model.User)
-		self.add_data('users', users)
+		self._paginate('users', users)
 		self.render("user/list.html")
 
 	@staticmethod

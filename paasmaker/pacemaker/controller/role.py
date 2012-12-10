@@ -49,9 +49,8 @@ class RoleListController(BaseController):
 
 	def get(self):
 		self.require_permission(constants.PERMISSION.ROLE_LIST)
-		# TODO: Pagination.
-		roles = self.db().query(paasmaker.model.Role).all()
-		self.add_data('roles', roles)
+		roles = self.db().query(paasmaker.model.Role)
+		self._paginate('roles', roles)
 
 		self.render("role/list.html")
 
@@ -72,7 +71,7 @@ class RoleAllocationListController(BaseController):
 		).filter(
 			paasmaker.model.WorkspaceUserRole.deleted == None
 		)
-		self.add_data('allocations', allocations)
+		self._paginate('allocations', allocations)
 
 		self.render("role/allocationlist.html")
 

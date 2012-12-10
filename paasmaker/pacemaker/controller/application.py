@@ -66,7 +66,6 @@ class ApplicationListController(ApplicationRootController):
 	def get(self, workspace_id):
 		workspace = self._get_workspace(workspace_id)
 
-		# TODO: Paginate...
 		# TODO: Unit test.
 		applications = self.db().query(
 			paasmaker.model.Application
@@ -76,7 +75,7 @@ class ApplicationListController(ApplicationRootController):
 			paasmaker.model.Application.deleted == None
 		)
 		self.add_data('workspace', workspace)
-		self.add_data('applications', applications)
+		self._paginate('applications', applications)
 		self.add_data_template('paasmaker', paasmaker)
 
 		# Fetch the router stats.
@@ -234,7 +233,6 @@ class ApplicationController(ApplicationRootController):
 	def get(self, application_id):
 		application = self._get_application(application_id)
 
-		# TODO: Paginate...
 		# TODO: Unit test.
 		self.add_data('application', application)
 
@@ -248,7 +246,7 @@ class ApplicationController(ApplicationRootController):
 			paasmaker.model.ApplicationVersion.is_current == True
 		).first()
 
-		self._paginate('versions', versions, page_size=10)
+		self._paginate('versions', versions)
 		self.add_data_template('constants', constants)
 		self.add_data('current_version', current_version)
 
