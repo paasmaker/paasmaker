@@ -376,7 +376,7 @@ JobDisplayHandler.prototype.createContainer = function(job_id, level, data)
 	details.append($('<span class="toolbox"></span>'));
 	details.append($('<span class="state"></span>'));
 	details.append($('<span class="time"></span>'));
-	details.append($('<div class="log"></div>'));
+	details.append($('<pre class="log"></pre>'));
 	thisJobContainer.append(details);
 
 	var childrenContainer = $('<div class="children"></div>');

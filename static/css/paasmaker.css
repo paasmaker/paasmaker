@@ -38,12 +38,6 @@ textarea.example-configuration
 .job-root
 {
 	margin-bottom: 10px;
-	padding: 10px;
-
-	-webkit-border-radius: 12px;
-	border-radius: 12px;
-	-webkit-box-shadow: 0px 0px 10px 0px #c0c0c0;
-	box-shadow: 0px 0px 10px 0px #c0c0c0;
 }
 
 .job-status .state-SUCCESS
@@ -95,27 +89,13 @@ textarea.example-configuration
 	display: none;
 	height: 200px;
 	overflow: auto;
-
-	white-space: pre;
-	font-family: monospace;
-
-	-webkit-box-shadow: 0px 0px 4px 0px #c0c0c0;
-	box-shadow: 0px 0px 4px 0px #c0c0c0;
-
-	color: white;
-	background-color: black;
 }
 
 /* ROUTER STATS */
 .router-stats, .router-no-stats
 {
 	margin-bottom: 10px;
-	padding: 10px;
 
-	-webkit-border-radius: 12px;
-	border-radius: 12px;
-	-webkit-box-shadow: 0px 0px 10px 0px #c0c0c0;
-	box-shadow: 0px 0px 10px 0px #c0c0c0;
 	float: right;
 
 	width: 300px;
