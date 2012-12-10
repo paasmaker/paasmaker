@@ -237,13 +237,20 @@ class ApplicationController(ApplicationRootController):
 		# TODO: Paginate...
 		# TODO: Unit test.
 		self.add_data('application', application)
+
 		versions = application.versions.filter(
 			paasmaker.model.ApplicationVersion.deleted == None
 		).order_by(
 			paasmaker.model.ApplicationVersion.version.desc()
 		)
+
+		current_version = application.versions.filter(
+			paasmaker.model.ApplicationVersion.is_current == True
+		).first()
+
 		self._paginate('versions', versions, page_size=10)
 		self.add_data_template('constants', constants)
+		self.add_data('current_version', current_version)
 
 		# Fetch the router stats.
 		self._get_router_stats_for('application', application.id, self._got_stats)

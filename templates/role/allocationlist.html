@@ -7,7 +7,7 @@
 {% block body %}
 	<p><a href="/role/allocation/assign">Create a new allocation</a></p>
 
-	<table class="table">
+	<table class="table table-striped table-bordered">
 		<tr>
 			<th>User</th>
 			<th>Role</th>
@@ -36,10 +36,12 @@
 					{% end %}
 				</td>
 				<td>
-					<form method="POST" action="/role/allocation/unassign">
-						<input type="hidden" name="allocation_id" value="{{ allocation.id }}" />
-						<input type="submit" class="btn" value="Remove" />
-					</form>
+					<div class="table-button-box">
+						<form method="POST" action="/role/allocation/unassign">
+							<input type="hidden" name="allocation_id" value="{{ allocation.id }}" />
+							<input type="submit" class="btn btn-mini btn-danger" value="Remove" />
+						</form>
+					</div>
 				</td>
 			</tr>
 		{% end %}

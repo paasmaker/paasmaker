@@ -1,0 +1,63 @@
+<tr>
+	<td>
+		<a href="/version/{{ version.id }}">Version {{ version.version }}</a>
+	</td>
+	<td>
+		{% if version.is_current and version.state != constants.VERSION.RUNNING %}
+			DOWN
+		{% else %}
+			{% if version.is_current %}Current{% else %}No{% end %}
+		{% end %}
+	</td>
+	<td>
+		<span class="version-{{ version.state }}">{{ nice_state(version.state) }}</span>
+	</td>
+	<td>
+		{% set health_data = version.health %}
+		{% if health_data['overall'] == constants.HEALTH.OK %}
+			{{ health_data['overall'] }}
+		{% else %}
+			{% for itype in health_data['types'] %}
+				{{ itype }}: {{ health_data['types'][itype]['state'] }} - {{ health_data['types'][itype]['message'] }}<br />
+			{% end %}
+		{% end %}
+	</td>
+	<td>
+		<a href="/version/{{ version.id }}">{{ len(version.instance_types) }} type(s)</a>
+	</td>
+	<td>
+		<div class="table-button-box">
+			<a class="btn btn-mini" href="/version/{{ version.id }}/instances">Instances</a>
+			{% if version.state == constants.VERSION.PREPARED %}
+				<form method="POST" action="/version/{{ version.id }}/register">
+					<input type="submit" class="btn btn-mini btn-success" value="Register" />
+				</form>
+			{% end %}
+			{% if version.state == constants.VERSION.READY %}
+				<form method="POST" action="/version/{{ version.id }}/start">
+					<input type="submit" class="btn btn-mini btn-success" value="Start" />
+				</form>
+			{% end %}
+			{% if version.state == constants.VERSION.RUNNING %}
+				<form method="POST" action="/version/{{ version.id }}/stop">
+					<input type="submit" class="btn btn-mini btn-danger" value="Stop" />
+				</form>
+			{% end %}
+			{% if version.state == constants.VERSION.READY %}
+				<form method="POST" action="/version/{{ version.id }}/deregister">
+					<input type="submit" class="btn btn-mini btn-warning" value="De Register" />
+				</form>
+			{% end %}
+			{% if version.state == constants.VERSION.RUNNING and not version.is_current %}
+				<form method="POST" action="/version/{{ version.id }}/setcurrent">
+					<input type="submit" class="btn btn-mini btn-primary" value="Make Current" />
+				</form>
+			{% end %}
+			{% if version.state == constants.VERSION.PREPARED %}
+				<form method="POST" action="/version/{{ version.id }}/delete">
+					<input type="submit" class="btn btn-mini btn-danger" value="Delete" />
+				</form>
+			{% end %}
+		</div>
+	</td>
+</tr>
