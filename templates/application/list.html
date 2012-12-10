@@ -9,9 +9,9 @@
 {% end %}
 
 {% block body %}
-	<div class="button-box">
-		<a class="btn" href="/workspace/list">Back to workspace list</a>
-		<a class="btn" href="/workspace/{{ workspace.id }}/applications/new">Create a new application</a>
+	<div class="btn-group btn-group-header">
+		<a class="btn" href="/workspace/list">Workspaces</a>
+		<a class="btn" href="/workspace/{{ workspace.id }}/applications/new">Create Application</a>
 		<a class="btn" href="/job/list/workspace/{{ workspace.id }}">Jobs</a>
 	</div>
 

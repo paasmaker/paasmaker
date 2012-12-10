@@ -8,9 +8,8 @@ ul.errors
 	list-style-type: none;
 }
 
-div.button-box
+div.btn-group-header
 {
-	padding-top: 5px;
 	padding-bottom: 5px;
 }
 
