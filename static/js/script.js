@@ -372,6 +372,7 @@ JobDisplayHandler.prototype.createContainer = function(job_id, level, data)
 	var details = $('<div class="details"></div>');
 	details.addClass(job_id);
 	details.append($('<span class="title"></span>'));
+	details.append($('<span class="summary"></span>'));
 	details.append($('<span class="toolbox"></span>'));
 	details.append($('<span class="state"></span>'));
 	details.append($('<span class="time"></span>'));
@@ -383,6 +384,14 @@ JobDisplayHandler.prototype.createContainer = function(job_id, level, data)
 	thisJobContainer.append(childrenContainer);
 
 	$('.title', thisJobContainer).text(data.title);
+	if( data.summary )
+	{
+		$('.summary', thisJobContainer).text(' (' + data.summary + ')');
+	}
+	else
+	{
+		$('.summary', thisJobContainer).text('');
+	}
 	$('.state', thisJobContainer).text(data.state);
 	/*var thisTime = new Date();
 	thisTime.setTime(data.time * 1000);
@@ -436,6 +445,12 @@ JobDisplayHandler.prototype.updateStatus = function(status)
 	el.removeClass('state-ABORTED');
 	el.removeClass('state-WAITING');
 	$('.state', this.container).addClass('state-' + status.state);
+
+	if( status.summary )
+	{
+		var summaryEl = $('.' + status.job_id + ' .summary', this.container);
+		summaryEl.text(' (' + status.summary + ')');
+	}
 }
 
 JobDisplayHandler.prototype.toggleSubscribeLog = function(job_id, container)

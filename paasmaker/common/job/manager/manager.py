@@ -214,7 +214,7 @@ class JobManager(object):
 			#if self.abort_handlers.has_key(job_id):
 			#	del self.abort_handlers[job_id]
 			# Now publish the fact that the job has reached the given state.
-			self.configuration.send_job_status(job_id, state)
+			self.configuration.send_job_status(job_id, state, summary=summary)
 
 		def on_context_updated():
 			# Update the job state first.
@@ -398,8 +398,12 @@ class JobManager(object):
 					'state': job_data['state'],
 					'node': job_data['node'],
 					'title': job_data['title'],
-					'time': job_data['time']
+					'time': job_data['time'],
+					'summary': None
 				}
+
+				if job_data.has_key('summary'):
+					job_subset['summary'] = job_data['summary']
 
 				if not roots.has_key(job_id):
 					roots[job_id] = {'children': []}

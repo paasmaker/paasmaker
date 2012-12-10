@@ -381,14 +381,21 @@ class ImNotARouter(ImNotA):
 	pass
 
 class JobStatusMessage(object):
-	def __init__(self, job_id, state, source, parent_id=None):
+	def __init__(self, job_id, state, source, parent_id=None, summary=None):
 		self.job_id = job_id
 		self.state = state
 		self.source = source
 		self.parent_id = parent_id
+		self.summary = summary
 
 	def flatten(self):
-		return {'job_id': self.job_id, 'state': self.state, 'source': self.source, 'parent_id': self.parent_id}
+		return {
+			'job_id': self.job_id,
+			'state': self.state,
+			'source': self.source,
+			'parent_id': self.parent_id,
+			'summary': self.summary
+		}
 
 class InstanceStatusMessage(object):
 	def __init__(self, instance_id, state, source):
@@ -907,7 +914,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			self.job_watcher = paasmaker.util.joblogging.JobWatcher(self)
 	def get_job_watcher(self):
 		return self.job_watcher
-	def send_job_status(self, job_id, state, source=None, parent_id=None):
+	def send_job_status(self, job_id, state, source=None, parent_id=None, summary=None):
 		"""
 		Propagate the status of a job to listeners who care inside our
 		instance, and also likely down the Rabbit hole to other listeners.
@@ -919,7 +926,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			send_source = self.get_node_uuid()
 
 		# Make the message objects.
-		status = JobStatusMessage(job_id, state, send_source, parent_id=parent_id)
+		status = JobStatusMessage(job_id, state, send_source, parent_id=parent_id, summary=summary)
 
 		status_topic = self.get_job_status_pub_topic(job_id)
 
