@@ -31,6 +31,7 @@ test_sets = {
 	paasmaker.util.managedrabbitmq: ['slow', 'util', 'messaging', 'managedservice', 'rabbitmq'],
 	paasmaker.util.managedredis: ['slow', 'util', 'redis', 'managedservice'],
 	paasmaker.util.managedpostgres: ['slow', 'util', 'postgres', 'managedservice'],
+	paasmaker.util.managedmysql: ['slow', 'util', 'mysql', 'managedservice'],
 	paasmaker.util.asyncdns: ['all', 'slow', 'util', 'network'],
 
 	paasmaker.router.router: ['all', 'slow', 'router'],
