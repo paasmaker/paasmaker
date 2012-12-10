@@ -38,7 +38,7 @@
 			<div class="nav-collapse collapse">
 				<p class="navbar-text pull-right">
 					{% if current_user %}
-						Logged in as <a href="/profile" class="navbar-link">{{ escape(current_user.name) }}</a>. <a href="/logout">Logout</a>
+						Logged in as <a href="/profile" class="navbar-link">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
 					{% else %}
 						<a href="/login">Login</a>
 					{% end %}
