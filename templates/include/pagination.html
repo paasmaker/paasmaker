@@ -7,19 +7,23 @@
 		<span class="total">{{ page_data['total'] }}</span>
 	</div>
 	{% if page_data['pages'] > 1 %}
-		<div class="links">
+		<div class="links btn-group">
+			{# First #}
+			<a title="First Page" class="btn {% if page_data['page'] > 1 %}" href="?page=1"{% else %} disabled" href="#"{% end %}>&laquo;</a>
 			{# Previous #}
-			<a class="btn btn-mini{% if page_data['page'] > 1 %}" href="?page={{ page_data['page'] - 1 }}"{% else %} disabled" href="#"{% end %}>&laquo;</a>
+			<a title="Previous Page" class="btn {% if page_data['page'] > 1 %}" href="?page={{ page_data['page'] - 1 }}"{% else %} disabled" href="#"{% end %}>&lsaquo;</a>
 
 			{# List of pages #}
 			{% for i in range(1, page_data['pages'] + 1) %}
-				<a class="btn btn-mini {% if i == page_data['page'] %}disabled{% end %}" href="?page={{ i }}">
+				<a title="Page {{ i }}" class="btn {% if i == page_data['page'] %}disabled{% end %}" href="?page={{ i }}">
 					{{ i }}
 				</a>
 			{% end %}
 
 			{# Next #}
-			<a class="btn btn-mini{% if page_data['page'] < page_data['pages'] %}" href="?page={{ page_data['page'] + 1 }}"{% else %} disabled" href="#"{% end %}>&raquo;</a>
+			<a title="Next Page" class="btn {% if page_data['page'] < page_data['pages'] %}" href="?page={{ page_data['page'] + 1 }}"{% else %} disabled" href="#"{% end %}>&rsaquo;</a>
+			{# Last #}
+			<a title="Last Page" class="btn {% if page_data['page'] < page_data['pages'] %}" href="?page={{ page_data['pages'] }}"{% else %} disabled" href="#"{% end %}>&raquo;</a>
 		</div>
 	{% end %}
 </div>
