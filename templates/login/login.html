@@ -6,8 +6,11 @@
 
 {% block body %}
 	<form method="POST">
-		Username: <input type="text" name="username" /><br />
-		Password: <input type="password" name="password" /><br />
-		<input type="submit" value="Login" />
+		<label for="username">Username:<label>
+		<input type="text" name="username" id="username" required="required" />
+		<label for="password">Password:</label>
+		<input type="password" id="password" name="password" required="required" />
+		<br />
+		<input type="submit" class="btn" value="Login" />
 	</form>
 {% end %}

@@ -588,6 +588,30 @@ $(document).ready(
 				e.preventDefault();
 			}
 		);
+
+		// Populate the workspaces dropdown.
+		// TODO: Make this more efficient without having the server include it in the HTML.
+		// NOTE: This doesn't handle errors - if you're not logged in, no list.
+		var workspaceListContainer = $('.nav .workspace-list');
+		if( workspaceListContainer.length > 0 )
+		{
+			console.log("Making request...");
+			$.getJSON(
+				'/workspace/list?format=json',
+				function(data, text, xhr)
+				{
+					for( var i = 0; i < data.data.workspaces.length; i++ )
+					{
+						workspace = data.data.workspaces[i];
+						thisA = $('<a href="/workspace/' + workspace.id + '"></a>');
+						thisA.text(workspace.name);
+						thisLi = $('<li></li>');
+						thisLi.append(thisA);
+						workspaceListContainer.append(thisLi);
+					}
+				}
+			);
+		}
 	}
 )
 

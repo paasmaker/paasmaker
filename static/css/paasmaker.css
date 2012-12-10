@@ -1,9 +1,11 @@
 /* Paasmaker CSS */
 
 /* COMMON CSS STYLES */
-ul.error
+ul.errors
 {
 	color: red;
+	margin: 0px;
+	list-style-type: none;
 }
 
 div.button-box

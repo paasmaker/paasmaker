@@ -44,18 +44,26 @@
 					{% end %}
 				</p>
 				<ul class="nav">
-					<li><a href="/workspace/list">Workspaces</a></li>
-					<li class="dropdown">
-						<a href="#" class="dropdown-toggle" data-toggle="dropdown">Administration <b class="caret"></b></a>
-						<ul class="dropdown-menu">
-							<li><a href="/user/list">Users</a></li>
-							<li><a href="/role/list">Roles</a></li>
-							<li><a href="/role/allocation/list">Role Allocations</a></li>
-							<li><a href="/node/list">Nodes</a></li>
-							<li><a href="/router/nginx">NGINX config</a></li>
-							<li><a href="/router/dump">Router Table Dump</a></li>
-						</ul>
-					</li>
+					{# Don't bother showing any of this if you're not logged in. #}
+					{% if current_user %}
+						<li class="dropdown">
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown">Workspaces <b class="caret"></b></a>
+							<ul class="dropdown-menu workspace-list">
+								<li><a href="/workspace/list">All workspaces</a></li>
+							</ul>
+						</li>
+						<li class="dropdown">
+							<a href="#" class="dropdown-toggle" data-toggle="dropdown">Administration <b class="caret"></b></a>
+							<ul class="dropdown-menu">
+								<li><a href="/user/list">Users</a></li>
+								<li><a href="/role/list">Roles</a></li>
+								<li><a href="/role/allocation/list">Role Allocations</a></li>
+								<li><a href="/node/list">Nodes</a></li>
+								<li><a href="/router/nginx">NGINX config</a></li>
+								<li><a href="/router/dump">Router Table Dump</a></li>
+							</ul>
+						</li>
+					{% end %}
 				</ul>
 			</div><!--/.nav-collapse -->
 		</div>
@@ -68,18 +76,20 @@
 
 			{% block errors %}
 				{% if len(errors) > 0 %}
-					<ul class="errors">
-						{% for error in errors %}
-							<li>{% raw error %}</li>
-						{% end %}
-						{% try %}
-							{% for key, error in input_errors.iteritems() %}
-								<li>{{ key }}: {{ error }}</li>
+					<div class="alert alert-error">
+						<ul class="errors">
+							{% for error in errors %}
+								<li>{% raw error %}</li>
 							{% end %}
-						{% except NameError, ex %}
-							{# Does't have input errors. Ignore. #}
-						{% end %}
-					</ul>
+							{% try %}
+								{% for key, error in input_errors.iteritems() %}
+									<li>{{ key }}: {{ error }}</li>
+								{% end %}
+							{% except NameError, ex %}
+								{# Does't have input errors. Ignore. #}
+							{% end %}
+						</ul>
+					</div>
 				{% end %}
 			{% end %}
 
