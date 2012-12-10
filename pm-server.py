@@ -4,6 +4,8 @@
 import tornado.ioloop
 import tornado.web
 import tornado.options
+from pubsub import pub
+from pubsub.utils.exchandling import IExcHandler
 
 # Internal imports.
 import paasmaker
@@ -11,6 +13,16 @@ import paasmaker
 # Logging setup.
 import logging
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
+
+# Setup pubsub exception handling.
+# TODO: Figure out what to really do with this...
+# But this at least prevents it from aborting other things.
+class PaasmakerPubSubExceptionHandler(IExcHandler):
+	def __call__(self, listenerID, topicObj):
+		logging.error("Exception in pub/sub handler:", exc_info=True)
+		logging.error("Listener ID: %s", listenerID)
+
+pub.setListenerExcHandler(PaasmakerPubSubExceptionHandler())
 
 # Parse command line options.
 tornado.options.parse_command_line()
