@@ -858,6 +858,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		settings['static_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../../static')
 		settings['debug'] = (options.debug == 1)
 		settings['xheaders'] = True
+		if not settings['debug']:
+			# Turn on GZIP encoding, when not in debug mode.
+			settings['gzip'] = True
 		return settings
 
 	def get_scratch_path(self, filename):
