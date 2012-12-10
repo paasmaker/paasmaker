@@ -44,6 +44,22 @@ class ManifestReaderJob(BaseJob):
 		if not context['application_id']:
 			# New application.
 			self.logger.debug("Creating new application for manifest.")
+
+			# See if the application already exists.
+			application_name = self.manifest.get_flat('application.name')
+			existing = session.query(
+				paasmaker.model.Application
+			).filter(
+				paasmaker.model.Application.name == application_name,
+				paasmaker.model.Application.workspace == workspace
+			).first()
+
+			if existing:
+				error_message = "Application %s already exists in this workspace." % application_name
+				self.logger.error(error_message)
+				self.failed(error_message)
+				return
+
 			application = self.manifest.create_application(session, workspace)
 		else:
 			self.logger.debug("Using existing application for manifest.")
