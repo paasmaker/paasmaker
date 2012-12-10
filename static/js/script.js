@@ -327,8 +327,30 @@ var JobDisplayHandler = function(container, jobStream, logStream)
 JobDisplayHandler.prototype.handleNewLines = function(message)
 {
 	var container = $('.' + message.job_id + ' .log');
-	container.append(message.lines.join(''));
+	var formatted = this.formatLogLines(message.lines.join(''));
+	container.append(formatted);
 	container.attr('data-position', message.position);
+}
+
+LOG_LEVEL_MAP = [
+	['DEBUG', 'label'],
+	['INFO', 'label label-info'],
+	['WARNING', 'label label-warning'],
+	['ERROR', 'label label-important'],
+	['CRITICAL', 'label label-important']
+]
+
+JobDisplayHandler.prototype.formatLogLines = function(lines)
+{
+	var output = lines;
+	for( var i = 0; i < LOG_LEVEL_MAP.length; i++ )
+	{
+		output = output.replace(
+			new RegExp('\\s' + LOG_LEVEL_MAP[i][0] + '\\s', 'g'),
+			' <span class="' + LOG_LEVEL_MAP[i][1] + '">' + LOG_LEVEL_MAP[i][0] + '</span> '
+		);
+	}
+	return output;
 }
 
 JobDisplayHandler.prototype.renderJobTree = function(tree, level, container)
