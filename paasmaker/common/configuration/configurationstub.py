@@ -112,7 +112,7 @@ router:
   stats_log: %(stats_log)s
 """
 
-	def __init__(self, port=42500, modules=[], io_loop=None):
+	def __init__(self, port=42600, modules=[], io_loop=None):
 		# Choose filenames and set up example configuration.
 		configfile = tempfile.mkstemp()
 		self.params = {}
@@ -125,10 +125,10 @@ router:
 		self.params['heart_working_dir'] = tempfile.mkdtemp()
 		self.params['scratch_dir'] = tempfile.mkdtemp()
 		self.params['master_port'] = port
-		self.params['router_table_port'] = allocator.free_in_range(42510, 42599)
-		self.params['router_stats_port'] = allocator.free_in_range(42510, 42599)
-		self.params['jobs_port'] = allocator.free_in_range(42510, 42599)
-		self.params['broker_port'] = allocator.free_in_range(42510, 42599)
+		self.params['router_table_port'] = allocator.free_in_range(42610, 42699)
+		self.params['router_stats_port'] = allocator.free_in_range(42610, 42699)
+		self.params['jobs_port'] = allocator.free_in_range(42610, 42699)
+		self.params['broker_port'] = allocator.free_in_range(42610, 42699)
 		self.params['stats_log'] = "%s/access.log.paasmaker" % self.params['log_dir']
 
 		# Create the configuration file.
