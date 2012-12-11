@@ -484,11 +484,14 @@ BOOTSTRAP_ICON_MAP = {
 JobDisplayHandler.prototype.setStateClass = function(element, state)
 {
 	var oldState = element.attr('data-state');
-	element.removeClass('state-' + oldState);
-	var oldBootstrapClass = BOOTSTRAP_CLASS_MAP[oldState];
-	if( oldBootstrapClass )
+	if( oldState )
 	{
-		element.removeClass(oldBootstrapClass);
+		element.removeClass('state-' + oldState);
+		var oldBootstrapClass = BOOTSTRAP_CLASS_MAP[oldState];
+		if( oldBootstrapClass )
+		{
+			element.removeClass('label-' + oldBootstrapClass);
+		}
 	}
 	element.addClass('state-' + state);
 	element.attr('data-state', state);
