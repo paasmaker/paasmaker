@@ -60,14 +60,23 @@ class RegisterInstanceJob(BaseJob):
 		self.logger.info("Fetching package from %s", raw_url)
 		parsed = urlparse.urlparse(raw_url)
 
-		if parsed.scheme == 'paasmaker' and parsed.netloc == self.configuration.get_node_uuid():
-			packed_path = os.path.join(
-				self.configuration.get_scratch_path_exists('packed'),
-				parsed.path.strip('/') # TODO: Prevent "../" in this path.
-			)
-			self.begin_unpacking(packed_path)
+		self.resolved_package_name = parsed.path.strip('/') # TODO: Prevent '../' and otherwise sanitise this name.
+		self.resolved_package_path = os.path.join(
+			self.configuration.get_scratch_path_exists('packed'),
+			self.resolved_package_name
+		)
+
+		if os.path.exists(self.resolved_package_path):
+			# No need to download it, it's already here!
+			self.begin_unpacking(self.resolved_package_path)
+		elif parsed.scheme == 'paasmaker' and parsed.netloc == self.configuration.get_node_uuid():
+			# This means the file should have been here, but is not... so fail with an error.
+			# TODO: Test this condition.
+			self.failed("Missing package file %s which should be stored on this node.", self.resolved_package_path)
 		elif parsed.scheme == 'paasmaker':
-			# TODO: Test that this code works.
+			# It's hosted on another node - for the moment we're assuming the single master
+			# so go off and fetch it.
+			# TODO: Test this condition.
 			self.fetch_package(raw_url, parsed_url)
 		else:
 			self.failed("Unknown package scheme %s.", parsed.scheme)
@@ -75,7 +84,7 @@ class RegisterInstanceJob(BaseJob):
 	def fetch_package(self, raw_url, parsed_url):
 		request = paasmaker.common.api.package.PackageDownloadAPIRequest(self.configuration)
 		request.fetch(
-			parsed_url.path.strip('/'),  # TODO: Prevent "../" in this path.
+			self.resolved_package_name,
 			self._package_fetched,
 			self._package_failed,
 			self._package_progress
