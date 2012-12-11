@@ -45,6 +45,7 @@ class OrmBase(object):
 			# Calculate the age of the record.
 			now = datetime.datetime.utcnow()
 			fields['updated_age'] = (now - fields['updated']).total_seconds()
+			fields['created_age'] = (now - fields['created']).total_seconds()
 		else:
 			fields['id'] = None
 			fields['updated'] = None
@@ -834,7 +835,7 @@ class TestModel(unittest.TestCase):
 		s = self.session
 		item = s.query(Node).first()
 		flat = item.flatten()
-		self.assertEquals(len(flat.keys()), 15, "Item has incorrect number of keys.")
+		self.assertEquals(len(flat.keys()), 16, "Item has incorrect number of keys.")
 		self.assertTrue(flat.has_key('id'), "Missing ID.")
 		self.assertTrue(flat.has_key('name'), "Missing name.")
 		self.assertTrue(isinstance(flat['id'], int), "ID is not an integer.")
