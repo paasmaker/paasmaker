@@ -66,11 +66,36 @@ class RegisterInstanceJob(BaseJob):
 				parsed.path.strip('/') # TODO: Prevent "../" in this path.
 			)
 			self.begin_unpacking(packed_path)
+		elif parsed.scheme == 'paasmaker':
+			# TODO: Test that this code works.
+			self.fetch_package(raw_url, parsed_url)
 		else:
-			# Download it first. TODO: Do this at some stage...
-			# Or check to see if we already have it cached locally,
-			# and it matches the appropriate checksum.
-			self.begin_unpacking(local_path)
+			self.failed("Unknown package scheme %s.", parsed.scheme)
+
+	def fetch_package(self, raw_url, parsed_url):
+		request = paasmaker.common.api.package.PackageDownloadAPIRequest(self.configuration)
+		request.fetch(
+			parsed_url.path.strip('/'),  # TODO: Prevent "../" in this path.
+			self._package_fetched,
+			self._package_failed,
+			self._package_progress
+		)
+
+	def _package_fetched(self, path, message):
+		self.logger.info(message)
+		self.begin_unpacking(path)
+
+	def _package_failed(self, error, exception=None):
+		self.logger.error(error)
+		if exception:
+			self.logger.error(exc_info=exception)
+		self.failed("Failed to download package: %s", error)
+
+	def _package_progress(self, size, total):
+		percent = 0.0
+		if total > 0:
+			percent = (float(size) / float(total)) * 100
+		self.logger.info("Downloaded %d of %d bytes (%0.2f%%)", size, total, percent)
 
 	def begin_unpacking(self, package_path):
 		self.log_fp = self.logger.takeover_file()

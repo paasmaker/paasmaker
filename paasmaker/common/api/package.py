@@ -89,4 +89,4 @@ class PackageDownloadAPIRequest(paasmaker.util.APIRequest):
 		if response.error:
 			self.error_callback(response.error)
 		else:
-			self.callback("Transferred %d bytes successfully." % self.total_size)
+			self.callback(self.output_file, "Transferred %d bytes successfully." % self.total_size)

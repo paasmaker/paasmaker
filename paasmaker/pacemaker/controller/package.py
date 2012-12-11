@@ -99,6 +99,9 @@ class PackageControllerTest(BaseControllerTest):
 			os.unlink(self.temp_output)
 		super(PackageControllerTest, self).tearDown()
 
+	def _package_complete(self, path, message):
+		self.stop(message)
+
 	def test_simple(self):
 		# Set up a dummy file.
 		dummy_package = '1_1.tar.gz'
@@ -117,7 +120,7 @@ class PackageControllerTest(BaseControllerTest):
 
 		# NOTE: We need to override the output file here, because otherwise it would overwrite itself...
 		request = paasmaker.common.api.package.PackageDownloadAPIRequest(self.configuration)
-		request.fetch(dummy_package, self.stop, self.stop, progress_callback, output_file=self.temp_output)
+		request.fetch(dummy_package, self._package_complete, self.stop, progress_callback, output_file=self.temp_output)
 		response = self.wait()
 
 		self.assertIn("Transferred", response, "Result was not successful.")
@@ -128,7 +131,7 @@ class PackageControllerTest(BaseControllerTest):
 
 		# Try again, with an invalid path.
 		request = paasmaker.common.api.package.PackageDownloadAPIRequest(self.configuration)
-		request.fetch('1_2.tar.gz', self.stop, self.stop, progress_callback, output_file=self.temp_output)
+		request.fetch('1_2.tar.gz', self._package_complete, self.stop, progress_callback, output_file=self.temp_output)
 		response = self.wait()
 
 		self.assertIn("404", response, "Result was not an error.")
