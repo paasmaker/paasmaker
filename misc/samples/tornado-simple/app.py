@@ -16,7 +16,7 @@ class MainHandler(tornado.web.RequestHandler):
 
 class EnvironHandler(tornado.web.RequestHandler):
 	def get(self):
-		result = '<pre>'
+		result = '<pre>\n'
 		for key, value in os.environ.iteritems():
 			result += tornado.escape.xhtml_escape(key) + ' = '
 			if len(value) > 0 and value[0] == '{':
