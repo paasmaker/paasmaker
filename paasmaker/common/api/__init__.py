@@ -11,3 +11,4 @@ from upload import UploadFileAPIRequest
 from role import RoleCreateAPIRequest, RoleEditAPIRequest, RoleListAPIRequest, RoleAllocationListAPIRequest, RoleAllocationAPIRequest
 from application import ApplicationGetAPIRequest, ApplicationListAPIRequest
 from version import VersionGetAPIRequest
+from package import PackageSizeAPIRequest, PackageDownloadAPIRequest
