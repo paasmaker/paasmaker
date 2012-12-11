@@ -36,6 +36,9 @@ instances:
       strategy: paasmaker.placement.default
     hostnames:
       - tornado-simple.local.paasmaker.net
+    crons:
+      - runspec: '* * * * *'
+        uri: /environ
 
 services:
   - name: variables
