@@ -32,7 +32,7 @@ class OrmBase(object):
 	__mapper_args__ = { 'extension': OrmExtension() }
 	created = Column(DateTime, nullable=False, default=now)
 	deleted = Column(DateTime, nullable=True, default=None, index=True)
-	updated = Column(DateTime, nullable=False, default=now)
+	updated = Column(DateTime, nullable=False, default=now, index=True)
 
 	def flatten(self, field_list=None):
 		# If field_list is not None, return just those fields.
@@ -476,6 +476,7 @@ class ApplicationVersion(OrmBase, Base):
 		self.is_current = True
 		session.add(self)
 		session.commit()
+		session.refresh(self)
 
 	@property
 	def health(self):
@@ -685,7 +686,7 @@ class ApplicationInstanceTypeCron(OrmBase, Base):
 		return "<ApplicationInstanceTypeCron('%s':'%s')>" % (self.runspec, self.uri)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['application_instance_type', 'runspec', 'uri'])
+		return super(Node, self).flatten(['application_instance_type_id', 'runspec', 'uri'])
 
 class Service(OrmBase, Base):
 	__tablename__ = 'service'

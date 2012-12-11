@@ -107,6 +107,12 @@ class PacemakerSchema(colander.MappingSchema):
 		title="Super authentication token",
 		description="An authentication token that can be used to do anything, specifically designed to bootstrap the system. Also used for encrypting cookies.")
 
+	run_crons = colander.SchemaNode(colander.Boolean(),
+		title="Run cron tasks",
+		description="If true, run the cron tasks on this node. If you have multiple pacemakers, you won't want to do this on two of them.",
+		missing=True,
+		default=True)
+
 	@staticmethod
 	def default():
 		return {'enabled': False, 'plugins': []}
@@ -632,6 +638,14 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					'paasmaker.pacemaker.auth.internal.InternalAuth',
 					{},
 					'Internal Authentication'
+				)
+
+				# CRON PLUGINS
+				self.plugins.register(
+					'paasmaker.job.cron',
+					'paasmaker.pacemaker.cron.cronrunner.CronRunJob',
+					{},
+					'Cron Runner'
 				)
 
 			# Load plugins from the config now, so we can override the

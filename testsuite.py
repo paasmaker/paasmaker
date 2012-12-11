@@ -35,6 +35,7 @@ test_sets = {
 	paasmaker.util.asyncdns: ['all', 'slow', 'util', 'network'],
 
 	paasmaker.router.router: ['all', 'slow', 'router'],
+	paasmaker.pacemaker.cron.cronrunner: ['all', 'cron'],
 
 	paasmaker.common.configuration.configuration: ['all', 'quick', 'configuration'],
 	paasmaker.common.configuration.configurationstub: ['all', 'quick', 'configuration'],

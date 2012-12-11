@@ -173,6 +173,10 @@ def on_completed_startup():
 		configuration.stats_reader_periodic = paasmaker.router.stats.StatsLogPeriodicManager(configuration)
 		configuration.stats_reader_periodic.start()
 
+	# Start up the cron manager.
+	if configuration.is_pacemaker() and configuration.get_flat('pacemaker.run_crons'):
+		configuration.cron_periodic = paasmaker.pacemaker.cron.cronrunner.CronPeriodicManager(configuration)
+
 def on_intermediary_started(message):
 	logger.debug(message)
 	on_intermediary_started.required -= 1
