@@ -259,6 +259,10 @@ class BaseController(tornado.web.RequestHandler):
 		"""
 		Check to see if the node authentication is valid.
 		"""
+		auth_using_header = self.request.headers.has_key('Node-Token')
+		if auth_using_header:
+			if self.request.headers['node-token'] == self.configuration.get_flat('node_token'):
+				return True
 		if self.auth.has_key('method') and self.auth['method'] == 'node':
 			if self.auth.has_key('value') and self.auth['value'] == self.configuration.get_flat('node_token'):
 				return True
