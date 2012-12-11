@@ -46,7 +46,8 @@ class BaseJob(Plugin):
 		with a short summary of the failure. You should make use of the
 		self.logger attribute to log anything as well.
 		"""
-		raise NotImplementedError("You must implement start_job().")
+		cls = str(self.__class__)
+		raise NotImplementedError("You must implement start_job() - in %s" % cls)
 
 	def abort_job(self):
 		"""
@@ -57,7 +58,8 @@ class BaseJob(Plugin):
 		been called and if you have not yet indicated success or failure.
 		When you're done, call self.aborted() with a summary as appropriate.
 		"""
-		raise NotImplementedError("You must implement abort_job().")
+		cls = str(self.__class__)
+		raise NotImplementedError("You must implement abort_job() - in %s" % cls)
 
 	def abort_handler(self, context):
 		"""
