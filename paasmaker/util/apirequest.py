@@ -47,7 +47,7 @@ class APIRequest(object):
 		self.target = None
 		self.method = 'POST'
 		if configuration:
-			self.authmethod = 'node'
+			self.authmethod = 'nodeheader'
 			self.authvalue = self.configuration.get_flat('node_token')
 			self.io_loop = configuration.io_loop
 		else:
@@ -68,7 +68,7 @@ class APIRequest(object):
 		self.authvalue = key
 
 	def set_nodekey_auth(self, key):
-		self.authmethod = 'node'
+		self.authmethod = 'nodeheader'
 		self.authvalue = key
 
 	def set_superkey_auth(self, key=None):
@@ -137,6 +137,10 @@ class APIRequest(object):
 			if not kwargs.has_key('headers'):
 				kwargs['headers'] = {}
 			kwargs['headers']['Super-Token'] = self.authvalue
+		if self.authmethod == 'nodeheader':
+			if not kwargs.has_key('headers'):
+				kwargs['headers'] = {}
+			kwargs['headers']['Node-Token'] = self.authvalue
 
 		# The function called when it returns.
 		# It's a closure to preserve the callback provided.
