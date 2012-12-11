@@ -130,6 +130,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 						self.send_error("Error for job %s: %s" % (job_id, error), message)
 
 					# Now we try to connect to it.
+					# TODO: Test connection errors and handling of those errors.
 					logger.debug("Starting connection to %s", str(node))
 					remote = LogStreamRemoteClient(
 						"ws://%s:%d/log/stream" % (node.route, node.apiport),
