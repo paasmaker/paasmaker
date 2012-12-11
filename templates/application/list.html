@@ -12,7 +12,8 @@
 	<div class="btn-group btn-group-header">
 		<a class="btn" href="/workspace/list">Workspaces</a>
 		<a class="btn" href="/workspace/{{ workspace.id }}/applications/new">Create Application</a>
-		<a class="btn" href="/job/list/workspace/{{ workspace.id }}">Jobs</a>
+		<a class="btn" href="/job/list/workspace/{{ workspace.id }}">All Jobs</a>
+		<a class="btn" href="/job/list/workspace/{{ workspace.id }}?sub=cron">Cron Jobs</a>
 	</div>
 
 	<table class="table table-striped table-bordered">

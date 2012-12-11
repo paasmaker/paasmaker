@@ -5,6 +5,7 @@ import time
 import os
 import uuid
 import logging
+import datetime
 
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest
@@ -150,6 +151,7 @@ class CronRunJob(paasmaker.common.job.base.BaseJob):
 		).get(task_id)
 
 		self.logger.info("Starting cron task %s" % task.uri)
+		self.started = datetime.datetime.now()
 
 		# Find an instance to service us.
 		self.logger.info("Looking for instance to service this request.")
@@ -197,7 +199,11 @@ class CronRunJob(paasmaker.common.job.base.BaseJob):
 		self.log_fp.write(data)
 
 	def _on_request_complete(self, response):
+		self.log_fp.write("\n")
 		self.logger.untakeover_file(self.log_fp)
+		ended = datetime.datetime.now()
+		runtime = (ended - self.started).total_seconds()
+		self.logger.info("Runtime: %f seconds.", runtime)
 		# See what happened.
 		if response.error:
 			self.logger.error("Failed to make request:", exc_info=response.error)
@@ -225,17 +231,22 @@ class CronRunJob(paasmaker.common.job.base.BaseJob):
 
 				instance_type = task.application_instance_type
 
-				task_title = "Cron task '%s' for application %s, version %d" % (
+				task_title = "Cron task '%s' for application %s, version %d, at %s" % (
 					task.uri,
 					task.application_instance_type.application_version.application.name,
-					task.application_instance_type.application_version.version
+					task.application_instance_type.application_version.version,
+					datetime.datetime.utcnow().isoformat()
 				)
 
 				tags = []
 				tags.append('workspace:%d' % instance_type.application_version.application.workspace.id)
+				tags.append('workspace:cron:%d' % instance_type.application_version.application.workspace.id)
 				tags.append('application:%d' % instance_type.application_version.application.id)
+				tags.append('application:cron:%d' % instance_type.application_version.application.id)
 				tags.append('application_version:%d' % instance_type.application_version.id)
+				tags.append('application_version:cron:%d' % instance_type.application_version.id)
 				tags.append('application_instance_type:%d' % instance_type.id)
+				tags.append('application_instance_type:cron:%d' % instance_type.id)
 				tags.append('application_instance_type_cron:%d' % task.id)
 
 				def on_job_executable():

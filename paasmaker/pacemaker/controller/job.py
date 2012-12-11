@@ -50,24 +50,27 @@ class JobController(BaseController):
 		tag = None
 		job_list = None
 		ret = None
+		sub_type = ""
+		if self.raw_params.has_key('sub'):
+			sub_type = self.raw_params['sub'] + ':'
 		if job_list_type == 'workspace':
 			workspace = self._get_workspace(input_id)
 			name = "Workspace %s" % workspace.name
 			ret = "/workspace/%d/applications" % workspace.id
 			ret_name = name
-			tag = "workspace:%d" % workspace.id
+			tag = "workspace:%s%d" % (sub_type, workspace.id)
 		elif job_list_type == 'application':
 			application = self._get_application(input_id)
 			name = "Application %s" % application.name
 			ret = "/application/%d" % application.id
 			ret_name = name
-			tag = "application:%d" % application.id
+			tag = "application:%s%d" % (sub_type, application.id)
 		elif job_list_type == 'version':
 			version = self._get_version(input_id)
 			name = "Version %d of %s" % (version.version, version.application.name)
 			ret = "/version/%d" % version.id
 			ret_name = name
-			tag = "application_version:%d" % version.id
+			tag = "application_version:%s%d" % (sub_type, version.id)
 		elif job_list_type == 'instancetype':
 			instance_type = self._get_instance_type(input_id)
 			name = "Instance type %s of %s version %d" % (
@@ -77,7 +80,7 @@ class JobController(BaseController):
 			)
 			ret = "/version/%d" % instance_type.application_version.id
 			ret_name = name
-			tag = "application_version_type:%d" % instance_type.id
+			tag = "application_instance_type:%s%d" % (sub_type, instance_type.id)
 		elif job_list_type == 'detail':
 			# TODO: We're not checking permissions here. But the theory is that
 			# the job ID will be hard to guess. Revisit this at a later date.
@@ -101,7 +104,7 @@ class JobController(BaseController):
 
 		if tag:
 			# Search by tag.
-			self.configuration.job_manager.find_by_tag(tag, on_found_jobs, limit=10)
+			self.configuration.job_manager.find_by_tag(tag, on_found_jobs, limit=50)
 		else:
 			# Use the single given ID.
 			on_found_jobs(job_list)
