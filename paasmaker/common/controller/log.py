@@ -86,8 +86,9 @@ class LogStreamHandler(BaseWebsocketHandler):
 
 			elif self.configuration.is_pacemaker():
 				logger.info("Looking for %s log in the cluster.", job_id)
-				# Find which node the job belongs to.
-				# And then get that to stream the logs to us.
+				# The logs are in another castle.
+				# Fortunately in our modern day and age, we can
+				# just connect to the other castle and stream the logs.
 				self.handle_remote_subscribe(job_id, subscribe['position'], message)
 
 			else:
