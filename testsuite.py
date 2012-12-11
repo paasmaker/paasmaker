@@ -47,7 +47,7 @@ test_sets = {
 
 	paasmaker.common.controller.example: ['all', 'quick', 'controller', 'example'],
 	paasmaker.common.controller.information: ['all', 'quick', 'controller'],
-	paasmaker.common.controller.log: ['all', 'slow', 'controller', 'websocket'],
+	paasmaker.common.controller.log: ['all', 'slow', 'controller', 'websocket', 'logstream'],
 	paasmaker.pacemaker.controller.user: ['all', 'slow', 'controller', 'user'],
 	paasmaker.pacemaker.controller.role: ['all', 'slow', 'controller', 'role'],
 	paasmaker.pacemaker.controller.login: ['all', 'slow', 'controller', 'login'],

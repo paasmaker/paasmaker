@@ -885,20 +885,20 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.job_manager.evaluate()
 	def get_job_logger(self, job_id):
 		return paasmaker.util.joblogging.JobLoggerAdapter(logging.getLogger('job'), job_id, self, self.get_job_watcher())
-	def get_job_log_path(self, job_id):
+	def get_job_log_path(self, job_id, create_if_missing=True):
 		container = os.path.join(self['log_directory'], 'job')
 		checksum = hashlib.md5()
 		checksum.update(job_id)
 		checksum = checksum.hexdigest()
 		container = os.path.join(container, checksum[0:2])
-		if not os.path.exists(container):
+		if not os.path.exists(container) and create_if_missing:
 			os.makedirs(container)
 		path = os.path.join(container, checksum[2:] + '.log')
 		# Create the file if it doesn't exist - prevents errors
 		# trying to watch the file before anything's been written to it
 		# (shouldn't be an issue for production, but causes issues in
 		# unit tests with weird global log levels.)
-		if not os.path.exists(path):
+		if not os.path.exists(path) and create_if_missing:
 			fp = open(path, 'a')
 			fp.close()
 		return path
@@ -916,7 +916,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# can't start with a number.
 		return ('job', 'status', 'j' + job_id)
 	def job_exists_locally(self, job_id):
-		path = self.get_job_log_path(job_id)
+		path = self.get_job_log_path(job_id, create_if_missing=False)
 		return os.path.exists(path)
 	def setup_job_watcher(self):
 		if not self.job_watcher:
