@@ -354,6 +354,7 @@ LOG_LEVEL_MAP = [
 JobDisplayHandler.prototype.formatLogLines = function(lines)
 {
 	var output = lines;
+	output = htmlEscape(output);
 	for( var i = 0; i < LOG_LEVEL_MAP.length; i++ )
 	{
 		output = output.replace(
@@ -484,6 +485,11 @@ JobDisplayHandler.prototype.setStateClass = function(element, state)
 {
 	var oldState = element.attr('data-state');
 	element.removeClass('state-' + oldState);
+	var oldBootstrapClass = BOOTSTRAP_CLASS_MAP[oldState];
+	if( oldBootstrapClass )
+	{
+		element.removeClass(oldBootstrapClass);
+	}
 	element.addClass('state-' + state);
 	element.attr('data-state', state);
 
@@ -715,4 +721,15 @@ function number_format (number, decimals, dec_point, thousands_sep) {
 function toFixed(value, precision) {
     var power = Math.pow(10, precision || 0);
     return (Math.round(value * power) / power).toFixed(precision);
+}
+
+// From: http://stackoverflow.com/questions/1219860/javascript-jquery-html-encoding
+// TODO: Reconsider if this is appropriate.
+function htmlEscape(str) {
+    return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;');
 }
