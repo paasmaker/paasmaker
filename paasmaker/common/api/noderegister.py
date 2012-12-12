@@ -78,15 +78,37 @@ class NodeUpdatePeriodicManager(object):
 		# Create the periodic handler.
 		self.periodic = tornado.ioloop.PeriodicCallback(
 			self._node_report_in,
-			60000, # Always every 60 seconds.
+			configuration.get_flat('node_report_interval'),
 			io_loop=configuration.io_loop
 		)
+
+		# Flag to store if the periodic has started.
 		self.started = False
+		# Flag to indicate that it's currently reporting to the master.
+		self.reporting = False
+		# Flag to indicate that it should attempt to report in again
+		# immediately once it's done this report (because there is newer data).
+		self.followreport = False
+
 		# Report in now.
-		self._node_report_in()
+		self.trigger()
+
+	def trigger(self):
+		if self.reporting:
+			# Already reporting, indicate that it should follow
+			# this report with another one immediately.
+			self.followreport = True
+		else:
+			# Trigger the update now.
+			self._node_report_in()
 
 	def _node_report_in(self):
 		# Register the node with the server.
+		self.reporting = True
+		# Reset the follow flag.
+		self.followreport = False
+
+		# Determine the type and make the request.
 		if self.configuration.get_node_uuid():
 			request = paasmaker.common.api.NodeUpdateAPIRequest(self.configuration)
 			request.send(self._on_registration_complete)
@@ -105,6 +127,12 @@ class NodeUpdatePeriodicManager(object):
 			logger.error("Unable to register with the master node.")
 			for error in response.errors:
 				logger.error(error)
-			logger.info("Waiting for another 60 seconds and then we'll try again.")
+			logger.info("Waiting until the next report interval and then we'll try again.")
 		else:
 			logger.info("Successfully registered or updated with master.")
+
+		self.reporting = False
+
+		if self.followreport:
+			# Go again!
+			self.trigger()

@@ -353,6 +353,12 @@ class ConfigurationSchema(colander.MappingSchema):
 		default=False,
 		missing=False)
 
+	node_report_interval = colander.SchemaNode(colander.Integer(),
+		title="Node report interval",
+		description="How long in milliseconds between reports back to the master node. Default 60seconds.",
+		default=60000,
+		missing=60000)
+
 	broker = MessageBrokerSchema(default=MessageBrokerSchema.default(), missing=MessageBrokerSchema.default())
 
 	pacemaker = PacemakerSchema(default=PacemakerSchema.default(), missing=PacemakerSchema.default())
