@@ -134,15 +134,6 @@ application_settings = configuration.get_tornado_configuration()
 #print str(application_settings)
 application = tornado.web.Application(routes, **application_settings)
 
-def on_registration_complete(response):
-	if not response.success or len(response.errors) > 0:
-		logging.error("Unable to register with the master node.")
-		for error in response.errors:
-			logging.error(error)
-		# TODO: Do we now quit? Or retry in a little bit?
-	else:
-		logging.info("Successfully registered or updated with master.")
-
 def on_completed_startup():
 	if not is_debug:
 		# Fork into the background.
@@ -161,12 +152,8 @@ def on_completed_startup():
 	application.listen(configuration['http_port'])
 
 	# Register the node with the server.
-	if configuration.get_node_uuid():
-		request = paasmaker.common.api.NodeUpdateAPIRequest(configuration)
-		request.send(on_registration_complete)
-	else:
-		request = paasmaker.common.api.NodeRegisterAPIRequest(configuration)
-		request.send(on_registration_complete)
+	# This periodic manager will handle keeping it up to date.
+	configuration.node_register_periodic = paasmaker.common.api.NodeUpdatePeriodicManager(configuration)
 
 	# Also, start up the periodic router log reader now as well, if configured to do so.
 	if configuration.is_router() and configuration.get_flat('router.process_stats'):
