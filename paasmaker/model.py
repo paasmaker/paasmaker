@@ -43,9 +43,11 @@ class OrmBase(object):
 			fields['created'] = self.__dict__['created']
 
 			# Calculate the age of the record.
-			now = datetime.datetime.utcnow()
-			fields['updated_age'] = (now - fields['updated']).total_seconds()
-			fields['created_age'] = (now - fields['created']).total_seconds()
+			# Why use the same reference? So they're both relative
+			# to exactly the same time.
+			reference = now()
+			fields['updated_age'] = self.updated_age(reference)
+			fields['created_age'] = self.created_age(reference)
 		else:
 			fields['id'] = None
 			fields['updated'] = None
@@ -63,6 +65,16 @@ class OrmBase(object):
 	def delete(self):
 		"""Mark the object as deleted. You still need to save it."""
 		self.deleted = now()
+
+	def updated_age(self, reference=None):
+		if not reference:
+			reference = now()
+		return (reference - self.updated).total_seconds()
+
+	def created_age(self, reference=None):
+		if not reference:
+			reference = now()
+		return (reference - self.created).total_seconds()
 
 class Node(OrmBase, Base):
 	__tablename__ = 'node'

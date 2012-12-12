@@ -11,6 +11,7 @@
 			<th>Name</th>
 			<th>Route</th>
 			<th>Roles</th>
+			<th>Last Heard</th>
 			<th>State</th>
 		</tr>
 		{% for node in nodes %}
@@ -28,6 +29,9 @@
 					{% if node.pacemaker %}Pacemaker{% end %}
 					{% if node.heart %}Heart{% end %}
 					{% if node.router %}Router{% end %}
+				</td>
+				<td>
+					{{ "%0.2f" % node.updated_age() }}s
 				</td>
 				<td>
 					<span class="node-{{ node.state }}">{{ nice_state(node.state) }}</span>

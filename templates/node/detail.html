@@ -14,11 +14,11 @@
 		<li>UUID: <code>{{ node.uuid }}</code></li>
 		<li>Route: {{ node.route }}:{{ node.apiport }}</li>
 		<li>State: {{ node.state }}</li>
-		<li>Last report: {{ str(node.last_heard) }} UTC</li>
-		<li>Roles:
-			{% if node.pacemaker %}Pacemaker{% end %}
-			{% if node.heart %}Heart{% end %}
-			{% if node.router %}Router{% end %}
+		<li>Last report: {{ str(node.last_heard) }} UTC ({{ "%0.2f" % node.updated_age() }}s ago)</li>
+		<li>
+			{% if node.pacemaker %}<i class="icon-calendar"></i> Pacemaker<br />{% end %}
+			{% if node.heart %}<i class="icon-heart"></i> Heart<br />{% end %}
+			{% if node.router %}<i class="icon-random"></i> Router<br />{% end %}
 		</li>
 	</ul>
 
