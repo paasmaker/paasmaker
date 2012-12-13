@@ -86,6 +86,7 @@ class JobController(BaseController):
 			# the job ID will be hard to guess. Revisit this at a later date.
 			job_list = [input_id]
 			name = "Detail for job"
+			ret_name = "previous"
 
 		# Optional return URL.
 		if self.raw_params.has_key('ret'):
