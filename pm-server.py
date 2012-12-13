@@ -208,7 +208,8 @@ def on_ioloop_started():
 	configuration.setup_message_exchange(on_intermediary_started, on_intermediary_failed)
 
 	# Check instances.
-	configuration.instances.check_instances(on_check_instances_complete)
+	if configuration.is_heart():
+		configuration.instances.check_instances(on_check_instances_complete)
 
 	logger.debug("Launched all startup jobs.")
 
