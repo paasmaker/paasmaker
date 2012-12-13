@@ -208,6 +208,11 @@ class RouterTableUpdate(object):
 				pipeline.srem("instances_" + key, self.instance_address)
 				pipeline.srem("instance_ids_" + key, self.instance_id)
 
+		# Add a serial number to the routing table.
+		# We just increment it. It's later used to check that the
+		# slaves match the master.
+		pipeline.incr("serial")
+
 		pipeline.execute(callback=self.redis_complete)
 
 	def redis_complete(self, results):
@@ -444,10 +449,19 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname, first_version_instance), "First version in hostname set.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version in hostname set.")
 
+		def got_table(table, serial):
+			got_table.table = table
+			got_table.serial = serial
+			self.stop()
+
 		# Dump out the table.
-		dumper = paasmaker.router.tabledump.RouterTableDump(self.configuration, self.stop, self.stop)
+		dumper = paasmaker.router.tabledump.RouterTableDump(self.configuration, got_table, self.stop)
 		dumper.dump()
-		dump = self.wait()
+		self.wait()
+
+		dump = got_table.table
+		serial = got_table.serial
 
 		self.assertEquals(len(dump), 3, "Should have had three entries in the routing table.")
 		#print json.dumps(dump, indent=4, sort_keys=True, cls=paasmaker.util.JsonEncoder)
+		self.assertTrue(serial > 0, "Serial number was not incremented.")

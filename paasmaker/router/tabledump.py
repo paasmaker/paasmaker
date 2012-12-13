@@ -26,6 +26,7 @@ class RouterTableDump(object):
 	def _got_instance_ids(self, instance_ids):
 		self.all_roots = instance_ids
 		pipeline = self.redis.pipeline(True)
+		pipeline.get('serial')
 		for instance_set in instance_ids:
 			hostname = instance_set.replace("instances_", "")
 			# Fetch the instance IDs for this.
@@ -36,7 +37,8 @@ class RouterTableDump(object):
 
 	def _got_set_members(self, members):
 		self.all_roots.reverse()
-		for instance_set, instance_routes in pairwise(members):
+		serial = members[0]
+		for instance_set, instance_routes in pairwise(members[1:]):
 			# Infer the hostname from the key name.
 			hostname = self.all_roots.pop().replace("instances_", "")
 			# Fetch out the instances. NOTE: This is quite intensive.
@@ -70,4 +72,4 @@ class RouterTableDump(object):
 		# http://stackoverflow.com/questions/931092/reverse-a-string-in-python)
 		self.table.sort(key=lambda x: "%d_%s" % (x['application_id'], x['hostname'][::1]))
 
-		self.callback(self.table)
+		self.callback(self.table, serial)
