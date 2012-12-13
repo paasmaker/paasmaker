@@ -10,6 +10,9 @@ logger.addHandler(logging.NullHandler())
 
 class NodeRegisterAPIRequest(paasmaker.util.APIRequest):
 
+	# TODO: Override the appropriate functions to turn down the
+	# connect and request timeouts.
+
 	def build_payload(self):
 		# Build our payload.
 		payload = {}

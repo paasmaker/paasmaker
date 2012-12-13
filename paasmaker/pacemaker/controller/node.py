@@ -47,99 +47,239 @@ class NodeRegisterController(BaseController):
 	@tornado.web.asynchronous
 	@tornado.gen.engine
 	def post(self, action):
-		if action == 'register':
-			self.validate_data(NodeRegisterSchema())
-		elif action == 'update':
-			self.validate_data(NodeUpdateSchema())
+		self.action = action
+		if self.action == 'register':
+			valid_data = self.validate_data(NodeRegisterSchema())
+		elif self.action == 'update':
+			valid_data = self.validate_data(NodeUpdateSchema())
+
+		if not valid_data:
+			# Handle the very unusual case of if a HTML request
+			# is tried against this controller.
+			raise tornado.web.HTTPError(400, "Invalid request.")
 
 		do_connectivity_check = False
-		if action == 'register':
-			# Create a UUID for this node.
-			new_uuid = str(uuid.uuid4())
-
+		if self.action == 'register':
 			# Look for nodes with the same route/API port.
-			duplicate_node = self.db().query(paasmaker.model.Node) \
-				.filter(paasmaker.model.Node.route==self.params['route']) \
-				.filter(paasmaker.model.Node.apiport==self.params['apiport']).first()
-
-			if duplicate_node:
-				self.add_error("Node appears to already be registered - name %s, UUID %s." % (duplicate_node.name, duplicate_node.uuid))
-			else:
-				node = paasmaker.model.Node(self.params['name'], self.params['route'], self.params['apiport'], new_uuid, constants.NODE.ACTIVE)
-				logger.debug("New node %s(%s:%d), assigned UUID %s. Checking connectivity...", node.name, node.route, node.apiport, new_uuid)
+			self.node = self._find_new_node()
+			if self.node:
 				do_connectivity_check = True
+			else:
+				raise tornado.web.HTTPError(400, "Invalid request.")
 
-		if action == 'update':
+		if self.action == 'update':
 			# Find the node.
-			node = self.db().query(paasmaker.model.Node) \
-				.filter(paasmaker.model.Node.uuid==self.params['uuid']).first()
-
-			if not node:
-				self.add_error("Can't find your node record. Please register instead.")
-			else:
-				# Update the node.
-				node.name = self.params['name']
-				node.route = self.params['route']
-				node.apiport = self.params['apiport']
-				node.state = constants.NODE.ACTIVE
+			self.node = self._find_existing_node()
+			if self.node:
 				do_connectivity_check = True
+			else:
+				raise tornado.web.HTTPError(400, "Invalid request.")
 
 		# If we're doing a connectivity check, also update the other attributes for the node.
 		if do_connectivity_check:
 			tags = self.params['tags']
-			node.heart = tags['roles']['heart']
-			node.pacemaker = tags['roles']['pacemaker']
-			node.router = tags['roles']['router']
+			self.node.heart = tags['roles']['heart']
+			self.node.pacemaker = tags['roles']['pacemaker']
+			self.node.router = tags['roles']['router']
+			self.node.tags = tags
 
-			node.tags = tags
-
-		if do_connectivity_check:
 			# Attempt to connect to the node...
 			request = paasmaker.common.api.information.InformationAPIRequest(self.configuration)
-			request.set_target(node)
+			request.set_target(self.node)
 			# TODO: Make the timeout configurable.
-			response = yield tornado.gen.Task(request.send, connect_timeout=1.0)
-			if response.success:
-				# Success! Save the node.
-				session = self.db()
-				session.add(node)
-				session.commit()
+			request.send(self._finished_connectivity, connect_timeout=1.0)
+		else:
+			self._finished_response()
 
-				# Send back the appropriate data.
-				self.add_data('node', node)
-				logger.info("Successfully %s node %s(%s:%d) UUID %s", action, node.name, node.route, node.apiport, node.uuid)
+	def _finished_connectivity(self, response):
+		if response.success:
+			# Success! Save the node.
+			session = self.db()
+			session.add(self.node)
+			session.commit()
 
-				# Write the instance statuses.
-				if node.heart:
-					self._write_instance_statuses(self.params['instances'])
+			session.refresh(self.node)
+			# Send back the appropriate data.
+			# TODO: Figure out why it needs to be flattened now.
+			# If you don't, it sends back an object with id being None.
+			self.add_data('node', self.node.flatten())
+
+			logger.info(
+				"Successfully %s node %s(%s:%d) UUID %s",
+				self.action,
+				self.node.name,
+				self.node.route,
+				self.node.apiport,
+				self.node.uuid
+			)
+
+			# Write the instance statuses, if needed.
+			if self.node.heart:
+				self._write_instance_statuses(self.params['instances'])
 			else:
-				self.add_errors(response.errors)
-				logger.error("Failed to connect to node %s(%s:%d) UUID %s", node.name, node.route, node.apiport, node.uuid)
-				for error in self.errors:
-					logger.error(error)
+				self._finished_response()
+		else:
+			self.add_errors(response.errors)
+			logger.error(
+				"Failed to connect to node %s(%s:%d) UUID %s",
+				self.node.name,
+				self.node.route,
+				self.node.apiport,
+				self.node.uuid
+			)
+			for error in self.errors:
+				logger.error(error)
 
+			self._finished_response()
+
+	def _finished_response(self):
+		# Commit any changes to the database.
+		self.db().commit()
 		# Return the response.
 		self.render("api/apionly.html")
+
+	def _find_new_node(self):
+		# Create a UUID for this node.
+		new_uuid = str(uuid.uuid4())
+
+		# Look for nodes with the same route/API port.
+		duplicate_node = self.db().query(
+			paasmaker.model.Node
+		).filter(
+			paasmaker.model.Node.route == self.params['route']
+		).filter(
+			paasmaker.model.Node.apiport == self.params['apiport']
+		).first()
+
+		if duplicate_node:
+			self.add_error("Node appears to already be registered - name %s, UUID %s." % (duplicate_node.name, duplicate_node.uuid))
+			return None
+		else:
+			node = paasmaker.model.Node(
+				self.params['name'],
+				self.params['route'],
+				self.params['apiport'],
+				new_uuid,
+				constants.NODE.ACTIVE
+			)
+			logger.debug("New node %s(%s:%d), assigned UUID %s. Checking connectivity...", node.name, node.route, node.apiport, new_uuid)
+			return node
+
+	def _find_existing_node(self):
+		# Find the node.
+		node = self.db().query(
+			paasmaker.model.Node
+		).filter(
+			paasmaker.model.Node.uuid == self.params['uuid']
+		).first()
+
+		if not node:
+			self.add_error("Can't find your node record. Please register instead.")
+			return None
+		else:
+			# Update the node.
+			node.name = self.params['name']
+			node.route = self.params['route']
+			node.apiport = self.params['apiport']
+			node.state = constants.NODE.ACTIVE
+			return node
 
 	def _write_instance_statuses(self, statuses):
 		# Fetch all the instances from the database.
 		if len(statuses.keys()) > 0:
 			session = self.db()
-			instances = session.query(
+			instance_list = session.query(
 				paasmaker.model.ApplicationInstance
 			).filter(
 				paasmaker.model.ApplicationInstance.instance_id.in_(statuses.keys())
+			).all()
+
+			def process_instance_list():
+				try:
+					instance = instance_list.pop()
+
+					def state_change_complete():
+						logger.info(
+							"Updating state for %s: %s -> %s",
+							instance.instance_id,
+							instance.state,
+							statuses[instance.instance_id]
+						)
+						instance.state = statuses[instance.instance_id]
+						session.add(instance)
+
+						# Process the next one.
+						process_instance_list()
+
+						# end state_change_complete()
+
+					if statuses.has_key(instance.instance_id):
+						if instance.state != statuses[instance.instance_id]:
+							# It's changed. Handle the change, and call us back when done.
+							self._handle_state_change(
+								instance,
+								statuses[instance.instance_id],
+								state_change_complete
+							)
+						else:
+							# Just process the next one.
+							process_instance_list()
+
+				except IndexError, ex:
+					# No more entries.
+					self._finished_response()
+
+				# end of process_instance_list()
+
+			# Kick off the processing.
+			process_instance_list()
+
+		else:
+			# Not statuses to update.
+			self._finished_response()
+
+	def _handle_state_change(self, instance, newstate, callback):
+		def update_job_executable():
+			# Done, call the callback.
+			callback()
+
+		def update_job_added(job_id):
+			try:
+				job_list = self.get_data('jobs')
+			except KeyError, ex:
+				job_list = []
+
+			job_list.append(job_id)
+			self.add_data('jobs', job_list)
+
+			self.configuration.job_manager.allow_execution(job_id, update_job_executable)
+
+		if newstate == constants.INSTANCE.RUNNING:
+			# It's now running. Insert a job to update the routing.
+			self.configuration.job_manager.add_job(
+				'paasmaker.job.routing.update',
+				{
+					'instance_id': instance.id,
+					'add': True
+				},
+				"Update routing for %s" % instance.instance_id,
+				update_job_added
 			)
-
-			# Now, for each instance...
-			for instance in instances:
-				if instance.state != statuses[instance.instance_id]:
-					logger.info("Updating state for %s: %s -> %s", instance.instance_id, instance.state, statuses[instance.instance_id])
-					instance.state = statuses[instance.instance_id]
-					session.add(instance)
-
-			# And save to the DB.
-			session.commit()
+		elif newstate == constants.INSTANCE.STOPPED or newstate == constants.INSTANCE.ERROR:
+			# It's no longer running (or should be removed).
+			# Update it's routing.
+			self.configuration.job_manager.add_job(
+				'paasmaker.job.routing.update',
+				{
+					'instance_id': instance.id,
+					'add': False
+				},
+				"Update routing for %s" % instance.instance_id,
+				update_job_added
+			)
+		else:
+			# Nothing to do.
+			callback()
 
 	@staticmethod
 	def get_routes(configuration):
@@ -193,6 +333,12 @@ class NodeDetailController(BaseController):
 
 class NodeControllerTest(BaseControllerTest):
 	config_modules = ['pacemaker', 'heart']
+
+	def setUp(self):
+		super(NodeControllerTest, self).setUp()
+		# Fire up the job manager.
+		self.configuration.startup_job_manager(self.stop)
+		self.wait()
 
 	def get_app(self):
 		self.late_init_configuration(self.io_loop)
@@ -306,7 +452,7 @@ class NodeControllerTest(BaseControllerTest):
 		instance.instance_id = str(uuid.uuid4())
 		instance.application_instance_type = instance_type
 		instance.node = node
-		instance.state = paasmaker.common.core.constants.INSTANCE.RUNNING
+		instance.state = paasmaker.common.core.constants.INSTANCE.STARTING
 
 		session.add(instance)
 		session.commit()
@@ -326,8 +472,32 @@ class NodeControllerTest(BaseControllerTest):
 		self.assertTrue(response.data.has_key('node'), "Missing node object in return data.")
 		self.assertTrue(response.data['node'].has_key('id'), "Missing ID in return data.")
 		self.assertTrue(response.data['node'].has_key('uuid'), "Missing UUID in return data.")
-		# TODO: Figure out why we're getting a new ORM object back... but only here...
-		#self.assertEquals(first_id, response.data['node']['id'], "Updated ID is different to original.")
+		self.assertEquals(first_id, response.data['node']['id'], "Updated ID is different to original.")
+
+		# Check that it's still in the correct state.
+		session.refresh(instance)
+		self.assertEquals(instance.state, constants.INSTANCE.STARTING, "Instance was not in expected state.")
+
+		# Change the instance status in the local store, and then update again.
+		instance_data['instance']['state'] = constants.INSTANCE.RUNNING
+		session.refresh(instance)
+		self.assertEquals(instance.state, constants.INSTANCE.STARTING, "Instance was not in expected state.")
+
+		request = NodeUpdateAPIRequestLocalHost(self.configuration)
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertEquals(len(response.errors), 0, "There were errors.")
+		self.assertEquals(len(response.warnings), 0, "There were warnings.")
+		self.assertTrue(response.data.has_key('node'), "Missing node object in return data.")
+		self.assertTrue(response.data['node'].has_key('id'), "Missing ID in return data.")
+		self.assertTrue(response.data['node'].has_key('uuid'), "Missing UUID in return data.")
+		self.assertEquals(first_id, response.data['node']['id'], "Updated ID is different to original.")
+
+		# Should also have returned one job.
+		# TODO: Do a more exhaustive check than this.
+		self.assertEquals(len(response.data['jobs']), 1, "Didn't queue up a job.")
 
 		# Change the instance status in the local store, and then update again.
 		instance_data['instance']['state'] = constants.INSTANCE.ERROR
@@ -341,6 +511,10 @@ class NodeControllerTest(BaseControllerTest):
 		self.failIf(not response.success)
 		self.assertEquals(len(response.errors), 0, "There were errors.")
 		self.assertEquals(len(response.warnings), 0, "There were warnings.")
+
+		# Should also have returned one job.
+		# TODO: Do a more exhaustive check than this.
+		self.assertEquals(len(response.data['jobs']), 1, "Didn't queue up a job.")
 
 		# And refresh and check the database version changed.
 		session.refresh(instance)
@@ -362,7 +536,7 @@ class NodeControllerTest(BaseControllerTest):
 		response = self.wait()
 
 		self.failIf(response.success)
-		self.assertEquals(len(response.errors), 1, "There were no errors.")
+		self.assertEquals(len(response.errors), 3, "There were no errors.")
 		self.assertEquals(len(response.warnings), 0, "There were warnings.")
 
 	def test_fail_connect_host(self):
