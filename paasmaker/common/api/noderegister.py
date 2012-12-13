@@ -75,6 +75,10 @@ class NodeUpdateAPIRequest(NodeRegisterAPIRequest):
 	def get_endpoint(self):
 		return '/node/update'
 
+class NodeShutdownAPIRequest(NodeUpdateAPIRequest):
+	def get_endpoint(self):
+		return '/node/shutdown'
+
 class NodeUpdatePeriodicManager(object):
 	def __init__(self, configuration):
 		self.configuration = configuration
@@ -104,6 +108,10 @@ class NodeUpdatePeriodicManager(object):
 		else:
 			# Trigger the update now.
 			self._node_report_in()
+
+	def stop(self):
+		self.periodic.stop()
+		self.started = False
 
 	def _node_report_in(self):
 		# Register the node with the server.

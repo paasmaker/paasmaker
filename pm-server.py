@@ -209,11 +209,38 @@ def on_ioloop_started():
 
 	# Check instances.
 	if configuration.is_heart():
-		configuration.instances.check_instances(on_check_instances_complete)
+		configuration.instances.check_instances_startup(on_check_instances_complete)
 
 	logger.debug("Launched all startup jobs.")
 
-def on_exit():
+def on_exit_request():
+	# Check all instances for shutdown, if we're a heart.
+	configuration.node_register_periodic.stop()
+	if configuration.is_heart():
+		configuration.instances.check_instances_shutdown(on_exit_instances_checked)
+	else:
+		on_exit_instances_checked([])
+
+def on_exit_instances_checked(altered_list):
+	logger.info("Finished checking instances.")
+	# Report that we're shutting down.
+	# This also sends back all the instance statuses.
+	# If it fails, we exit anyway. TODO: Is this right?
+	request = paasmaker.common.api.NodeShutdownAPIRequest(configuration)
+	request.send(on_told_master_shutdown)
+
+def on_told_master_shutdown(response):
+	if not response.success or len(response.errors) > 0:
+		logger.error("Unable to shutdown with the master node.")
+		for error in response.errors:
+			logger.error(error)
+		logger.error("Exiting anyway...")
+	else:
+		logger.info("Successfully shutdown with master.")
+
+	on_actual_exit()
+
+def on_actual_exit():
 	logging.info("Exiting.")
 	os.unlink(pid_path)
 	sys.exit(0)
@@ -224,5 +251,5 @@ if __name__ == "__main__":
 	tornado.ioloop.IOLoop.instance().add_callback(on_ioloop_started)
 
 	# Start up the IO loop.
-	with safeclose.section(on_exit):
+	with safeclose.section(on_exit_request):
 		tornado.ioloop.IOLoop.instance().start()

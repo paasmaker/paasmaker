@@ -50,7 +50,7 @@ class NodeRegisterController(BaseController):
 		self.action = action
 		if self.action == 'register':
 			valid_data = self.validate_data(NodeRegisterSchema())
-		elif self.action == 'update':
+		elif self.action == 'update' or self.action == 'shutdown':
 			valid_data = self.validate_data(NodeUpdateSchema())
 
 		if not valid_data:
@@ -67,11 +67,13 @@ class NodeRegisterController(BaseController):
 			else:
 				raise tornado.web.HTTPError(400, "Invalid request.")
 
-		if self.action == 'update':
+		if self.action == 'update' or self.action == 'shutdown':
 			# Find the node.
 			self.node = self._find_existing_node()
 			if self.node:
-				do_connectivity_check = True
+				if self.action == 'update':
+					# Only need connectivity check if we're updating.
+					do_connectivity_check = True
 			else:
 				raise tornado.web.HTTPError(400, "Invalid request.")
 
@@ -89,6 +91,7 @@ class NodeRegisterController(BaseController):
 			# TODO: Make the timeout configurable.
 			request.send(self._finished_connectivity, connect_timeout=1.0)
 		else:
+			self.add_data('node', self.node.flatten())
 			self._finished_response()
 
 	def _finished_connectivity(self, response):
@@ -181,7 +184,10 @@ class NodeRegisterController(BaseController):
 			node.name = self.params['name']
 			node.route = self.params['route']
 			node.apiport = self.params['apiport']
-			node.state = constants.NODE.ACTIVE
+			if self.action == 'shutdown':
+				node.state = constants.NODE.STOPPED
+			else:
+				node.state = constants.NODE.ACTIVE
 			return node
 
 	def _write_instance_statuses(self, statuses):
@@ -284,7 +290,7 @@ class NodeRegisterController(BaseController):
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
-		routes.append((r"/node/(register|update)", NodeRegisterController, configuration))
+		routes.append((r"/node/(register|update|shutdown)", NodeRegisterController, configuration))
 		return routes
 
 class NodeListController(BaseController):
@@ -365,6 +371,11 @@ class NodeControllerTest(BaseControllerTest):
 
 		first_id = response.data['node']['id']
 
+		session = self.configuration.get_database_session()
+		node = session.query(paasmaker.model.Node).get(first_id)
+
+		self.assertEquals(constants.NODE.ACTIVE, node.state, "Node not in correct state.")
+
 		# Register again. This should fail, as it detects the same route/port combination.
 		request = NodeRegisterAPIRequestLocalHost(self.configuration)
 		request.send(self.stop)
@@ -385,6 +396,9 @@ class NodeControllerTest(BaseControllerTest):
 		self.assertTrue(response.data['node'].has_key('uuid'), "Missing UUID in return data.")
 		self.assertEquals(first_id, response.data['node']['id'], "Updated ID is different to original.")
 
+		session.refresh(node)
+		self.assertEquals(constants.NODE.ACTIVE, node.state, "Node not in correct state.")
+
 		# Test the listing of nodes here too.
 		request = paasmaker.common.api.nodelist.NodeListAPIRequest(self.configuration)
 		request.set_superkey_auth()
@@ -396,6 +410,22 @@ class NodeControllerTest(BaseControllerTest):
 		self.assertEquals(len(response.warnings), 0, "There were warnings.")
 		self.assertTrue(response.data.has_key('nodes'), "Missing nodes list.")
 		self.assertEquals(len(response.data['nodes']), 1, "Not the expected number of nodes.")
+
+		# Finally, shutdown the node.
+		request = NodeShutdownAPIRequestLocalHost(self.configuration)
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+		self.assertEquals(len(response.errors), 0, "There were errors.")
+		self.assertEquals(len(response.warnings), 0, "There were warnings.")
+		self.assertTrue(response.data.has_key('node'), "Missing node object in return data.")
+		self.assertTrue(response.data['node'].has_key('id'), "Missing ID in return data.")
+		self.assertTrue(response.data['node'].has_key('uuid'), "Missing UUID in return data.")
+		self.assertEquals(first_id, response.data['node']['id'], "Updated ID is different to original.")
+
+		session.refresh(node)
+		self.assertEquals(constants.NODE.STOPPED, node.state, "Node not in correct state.")
 
 	def test_update_instances(self):
 		# Register the node.
@@ -566,6 +596,16 @@ class NodeUpdateAPIRequestLocalHost(paasmaker.common.api.NodeUpdateAPIRequest):
 	"""
 	def build_payload(self):
 		data = super(NodeUpdateAPIRequestLocalHost, self).build_payload()
+		data['route'] = 'localhost'
+		return data
+
+class NodeShutdownAPIRequestLocalHost(paasmaker.common.api.NodeShutdownAPIRequest):
+	"""
+	Stub class to send back localhost as the route - on some machines,
+	the local path detection causes the unit tests to fail.
+	"""
+	def build_payload(self):
+		data = super(NodeShutdownAPIRequestLocalHost, self).build_payload()
 		data['route'] = 'localhost'
 		return data
 

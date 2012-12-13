@@ -1,6 +1,6 @@
 
 from information import InformationAPIRequest
-from noderegister import NodeRegisterAPIRequest, NodeUpdateAPIRequest, NodeUpdatePeriodicManager
+from noderegister import NodeRegisterAPIRequest, NodeUpdateAPIRequest, NodeUpdatePeriodicManager, NodeShutdownAPIRequest
 from nodelist import NodeListAPIRequest
 from login import LoginAPIRequest
 from user import UserCreateAPIRequest, UserEditAPIRequest

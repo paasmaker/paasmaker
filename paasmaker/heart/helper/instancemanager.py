@@ -43,7 +43,7 @@ class InstanceManager(object):
 				logger.error("Heart catalog is broken, so using a blank catalog.")
 				self.catalog = {}
 
-	def save(self):
+	def save(self, report_to_master=True):
 		# Save the catalog to disk, writing a new one out and then
 		# renaming it, to make it atomic.
 		path = self.get_catalog_path()
@@ -54,7 +54,8 @@ class InstanceManager(object):
 		os.rename(path_temp, path)
 		logger.debug("Wrote out new catalog.")
 		# Trigger a writeback to the master node.
-		self.configuration.instance_status_trigger()
+		if report_to_master:
+			self.configuration.instance_status_trigger()
 
 	def add_instance(self, instance_id, data):
 		if self.catalog.has_key(instance_id):
@@ -124,11 +125,11 @@ class InstanceManager(object):
 
 		return ports
 
-	def check_instances(self, callback):
+	def check_instances_startup(self, callback):
 		# TODO: Add unit tests for this. Desperately required.
 		instances = self.catalog.keys()
 		altered_instances = []
-		logger.info("Checking %d instances.", len(instances))
+		logger.info("Checking %d instances on startup.", len(instances))
 
 		def next_instance():
 			if len(instances) > 0:
@@ -140,6 +141,9 @@ class InstanceManager(object):
 			def on_success_instance(message):
 				# All good. No action to take.
 				logger.info("Instance %s is still running.", instance_id)
+				data = self.get_instance(instance_id)
+				data['instance']['state'] = constants.INSTANCE.RUNNING
+				self.save()
 				next_instance()
 				# end of on_success_instance()
 
@@ -156,8 +160,10 @@ class InstanceManager(object):
 
 			data = self.get_instance(instance_id)
 			logger.info("Instance %s in state %s", instance_id, data['instance']['state'])
-			if data['instance']['state'] == constants.INSTANCE.RUNNING:
-				# It's supposed to be running. Check that it is...
+			if data['instance']['state'] == constants.INSTANCE.RUNNING or \
+				data['instance']['state'] == constants.INSTANCE.STOPPED:
+				# If it's marked as running, it's supposed to be running - check that it is.
+				# If it's marked as stopped, it might still be running, so check that state.
 				# TODO: This suddenly ties the instance manager to the
 				# plugins system. This is probably ok, but consider this further.
 				plugin_exists = self.configuration.plugins.exists(
@@ -185,6 +191,91 @@ class InstanceManager(object):
 						on_success_instance,
 						on_error_instance
 					)
+			else:
+				next_instance()
+			# end of check_instance()
+
+		next_instance()
+
+	def check_instances_shutdown(self, callback):
+		# TODO: Add unit tests for this. Desperately required.
+		instances = self.catalog.keys()
+		altered_instances = []
+		logger.info("Checking %d instances on shutdown.", len(instances))
+
+		# What are we doing here? Basically, if it's running,
+		# mark it as STOPPED. We don't kill the instance, unless it
+		# is an exclusive instance. When the state change gets reported
+		# back to the master, it will be taken out of the routing table.
+		# On startup, we check all the instances, and if they're still
+		# running, they get their state updated.
+
+		def next_instance():
+			if len(instances) > 0:
+				check_instance(instances.pop())
+			else:
+				callback(altered_instances)
+
+		def check_instance(instance_id):
+			def on_success_shutdown(message):
+				# All good. It's shut down now.
+				logger.info("Instance %s is now shutdown.", instance_id)
+				data = self.get_instance(instance_id)
+				data['instance']['state'] = constants.INSTANCE.STOPPED
+				self.save(report_to_master=False)
+				next_instance()
+				# end of on_success_instance()
+
+			def on_error_shutdown(message, exception=None):
+				# Something went wrong... put it into error state.
+				logger.error("Instance %s is now in error.", instance_id)
+				logger.error(message)
+				data = self.get_instance(instance_id)
+				data['instance']['state'] = constants.INSTANCE.ERROR
+				self.save(report_to_master=False)
+				altered_instances.append(instance_id)
+				next_instance()
+				# end of on_error_instance()
+
+			data = self.get_instance(instance_id)
+			logger.info("Checking instance %s currently in state %s", instance_id, data['instance']['state'])
+			if data['instance']['state'] == constants.INSTANCE.RUNNING:
+				if data['instance_type']['exclusive']:
+					logger.info("Instance %s is exclusive, so really stopping.", instance_id)
+					# Needs to be stopped.
+					# TODO: This suddenly ties the instance manager to the
+					# plugins system. This is probably ok, but consider this further.
+					plugin_exists = self.configuration.plugins.exists(
+						data['instance_type']['runtime_name'],
+						paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
+					)
+
+					if not plugin_exists:
+						# Well, that's an error.
+						data['instance']['state'] = constants.INSTANCE.ERROR
+						self.save()
+						altered_instances.append(instance_id)
+						logger.error("Instance %s has a non existent runtime %s.", instance_id, data['instance_type']['runtime_name'])
+						next_instance()
+					else:
+						runtime = self.configuration.plugins.instantiate(
+							data['instance_type']['runtime_name'],
+							paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
+							data['instance_type']['runtime_parameters'],
+							logger # CAUTION: TODO: Not a job logger!
+						)
+
+						runtime.stop(
+							instance_id,
+							on_success_shutdown,
+							on_error_shutdown
+						)
+				else:
+					# Mark it as stopped and move on.
+					logger.info("Marking instance %s as STOPPED, but not actually doing that.", instance_id)
+					data['instance']['state'] = constants.INSTANCE.STOPPED
+					self.save(report_to_master=False)
+					next_instance()
 			else:
 				next_instance()
 			# end of check_instance()
