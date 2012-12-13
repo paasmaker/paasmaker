@@ -126,8 +126,12 @@ class RouterTableUpdate(object):
 			for hostname in all_hostnames:
 				self.instance_sets_no.append(hostname.lower())
 
-		self.logger.debug("Yes hostnames: %s", str(self.instance_sets_yes))
-		self.logger.debug("No hostnames: %s", str(self.instance_sets_no))
+		self.logger.debug("Yes hostnames:")
+		for hostname in self.instance_sets_yes:
+			self.logger.debug("- %s", hostname)
+		self.logger.debug("No hostnames:")
+		for hostname in self.instance_sets_no:
+			self.logger.debug("- %s", hostname)
 
 		# Get the stats redis.
 		self.configuration.get_stats_redis(self.stats_redis_ready, self.redis_failed)
