@@ -8,7 +8,7 @@ import paasmaker
 from paasmaker.common.core import constants
 
 import sqlalchemy
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Enum, Table, Index
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Table, Index
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.orm.interfaces import MapperExtension
@@ -84,7 +84,7 @@ class Node(OrmBase, Base):
 	route = Column(String, nullable=False)
 	apiport = Column(Integer, nullable=False)
 	uuid = Column(String, nullable=False, unique=True, index=True)
-	state = Column(Enum(*constants.NODE.ALL), nullable=False)
+	state = Column(String, nullable=False, index=True)
 	last_heard = Column(DateTime, nullable=False)
 
 	heart = Column(Boolean, nullable=False, default=False)
@@ -232,8 +232,6 @@ class RolePermission(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	role_id = Column(Integer, ForeignKey('role.id'), nullable=False, index=True)
-	# TODO: This is no longer an ENUM, meaning there is no database-level constraint
-	# on the data. This is because it was too hard to add new permissions in development.
 	permission = Column(String, nullable=False, index=True)
 
 	def __repr__(self):
@@ -297,8 +295,6 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 	role = relationship("Role")
 	user_id = Column(Integer, ForeignKey('user.id'), index=True)
 	user = relationship("User")
-	# TODO: This is no longer an ENUM, meaning there is no database-level constraint
-	# on the data. This is because it was too hard to add new permissions in development.
 	permission = Column(String, nullable=False, index=True)
 
 	def __repr__(self):
@@ -430,7 +426,7 @@ class ApplicationVersion(OrmBase, Base):
 	source_path = Column(String, nullable=True)
 	source_checksum = Column(String, nullable=True)
 
-	state = Column(Enum(*constants.VERSION.ALL), nullable=False, index=True)
+	state = Column(String, nullable=False, index=True)
 
 	services = relationship('Service', secondary=application_version_services, backref='application_versions')
 
@@ -636,7 +632,7 @@ class ApplicationInstance(OrmBase, Base):
 	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
 	node = relationship("Node", backref=backref('instances', order_by=id))
 	port = Column(Integer, nullable=True, index=True)
-	state = Column(Enum(*constants.INSTANCE.ALL), nullable=False, index=True)
+	state = Column(String, nullable=False, index=True)
 	_statistics = Column("statistics", Text, nullable=True)
 
 	def __repr__(self):
@@ -711,7 +707,7 @@ class Service(OrmBase, Base):
 	provider = Column(String, nullable=False, index=True)
 	_parameters = Column('parameters', Text, nullable=False)
 	_credentials = Column('credentials', Text, nullable=True)
-	state = Column(Enum(*constants.SERVICE.ALL), nullable=False, index=True)
+	state = Column(String, nullable=False, index=True)
 
 	@hybrid_property
 	def parameters(self):
