@@ -415,15 +415,6 @@ class JobStatusMessage(object):
 			'summary': self.summary
 		}
 
-class InstanceStatusMessage(object):
-	def __init__(self, instance_id, state, source):
-		self.instance_id = instance_id
-		self.state = state
-		self.source = source
-
-	def flatten(self):
-		return {'instance_id': self.instance_id, 'state': self.state, 'source': self.source}
-
 class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def __init__(self, io_loop=None):
 		super(Configuration, self).__init__(ConfigurationSchema())
@@ -845,10 +836,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			logger.debug(
 				"%d of %d things ready for the message broker.",
 				self.message_exchange_ready_counter,
-				3
+				1
 			)
 			logger.debug(message)
-			if self.message_exchange_ready_counter == 3:
+			if self.message_exchange_ready_counter == 1:
 				logger.debug("Message exchange is now ready.")
 				callback("Message exchange is now ready.")
 
@@ -857,8 +848,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			logger.debug("Server is ready. Setting up exchange.")
 			self.exchange.setup(
 				client,
-				something_ready,
-				something_ready,
 				something_ready
 			)
 
