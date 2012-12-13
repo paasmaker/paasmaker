@@ -48,10 +48,10 @@ class InstanceExitController(BaseController):
 				code = int(code)
 				if code == 0:
 					instance['instance']['state'] = constants.INSTANCE.STOPPED
-					self.configuration.send_instance_status(instance_id, constants.INSTANCE.STOPPED)
+					self.configuration.instances.save()
 				else:
 					instance['instance']['state'] = constants.INSTANCE.ERROR
-					self.configuration.send_instance_status(instance_id, constants.INSTANCE.ERROR)
+					self.configuration.instances.save()
 
 				self.add_data('success', True)
 				self.configuration.instances.save()
@@ -81,18 +81,11 @@ class InstanceRegisterControllerTest(BaseControllerTest, TestHelpers):
 		#print str(message.flatten())
 		self.stop(message)
 
-	def on_instance_status(self, message):
-		#print str(message.flatten())
-		self.stop(message)
-
 	def test_exit(self):
 		instance_data = self.create_sample_instance_data(self.configuration, 'paasmaker.runtime.shell', {}, '1', 'tornado-simple')
 
 		instance_id = instance_data['instance']['instance_id']
 		self.configuration.instances.add_instance(instance_id, instance_data)
-
-		# Now, listen for intance updates.
-		pub.subscribe(self.on_instance_status, self.configuration.get_instance_status_pub_topic(instance_id))
 
 		# Set up the exit handler.
 		baseruntime = paasmaker.heart.runtime.BaseRuntime(
@@ -106,8 +99,10 @@ class InstanceRegisterControllerTest(BaseControllerTest, TestHelpers):
 
 		self.http_client.fetch(self.get_url(instance_data['runtime']['exit']['url'] + '0'), self.noop)
 
-		state = self.wait()
-		self.assertEquals(state.state, constants.INSTANCE.STOPPED)
+		# Wait a short time.
+		self.short_wait_hack()
+		# And check that the local state is updated.
+		self.assertEquals(instance_data['instance']['state'], constants.INSTANCE.STOPPED)
 
 		# Try it again, with a zero exit code - it will fail because the key has already been used.
 		self.http_client.fetch(self.get_url(instance_data['runtime']['exit']['url'] + '0'), self.stop)
@@ -122,5 +117,7 @@ class InstanceRegisterControllerTest(BaseControllerTest, TestHelpers):
 
 		self.http_client.fetch(self.get_url(instance_data['runtime']['exit']['url'] + '1'), self.noop)
 
-		state = self.wait()
-		self.assertEquals(state.state, constants.INSTANCE.ERROR)
+		# Wait a short time.
+		self.short_wait_hack()
+		# And check that the local state is updated.
+		self.assertEquals(instance_data['instance']['state'], constants.INSTANCE.ERROR)

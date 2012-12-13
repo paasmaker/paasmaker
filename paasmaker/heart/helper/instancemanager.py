@@ -53,6 +53,8 @@ class InstanceManager(object):
 		fp.close()
 		os.rename(path_temp, path)
 		logger.debug("Wrote out new catalog.")
+		# Trigger a writeback to the master node.
+		self.configuration.instance_status_trigger()
 
 	def add_instance(self, instance_id, data):
 		if self.catalog.has_key(instance_id):

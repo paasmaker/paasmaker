@@ -54,7 +54,6 @@ class InstanceShutdownJob(BaseJob):
 		# Record the instance state.
 		self.instance_data['instance']['state'] = constants.INSTANCE.STOPPED
 		self.configuration.instances.save()
-		self.configuration.send_instance_status(self.instance_id, constants.INSTANCE.STOPPED)
 
 		self.logger.info("Instance stopped successfully.")
 		self.success({self.instance_id: constants.INSTANCE.STOPPED}, "Stopped instance successfully.")
@@ -65,6 +64,5 @@ class InstanceShutdownJob(BaseJob):
 			self.logger.error(exception)
 		self.instance_data['instance']['state'] = constants.INSTANCE.ERROR
 		self.configuration.instances.save()
-		self.configuration.send_instance_status(self.instance_id, constants.INSTANCE.ERROR)
 
 		self.failed(message)

@@ -1022,34 +1022,12 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 		return path
 
-	def get_instance_status_pub_topic(self, instance_id):
-		# Why add the 'i' to the instance name? It seems a topic name
-		# can't start with a number.
-		return ('instance', 'status', 'i' + instance_id)
-	def get_instance_audit_pub_topic(self, instance_id):
-		# Why add the 'j' to the job name? It seems a topic name
-		# can't start with a number.
-		return ('instance', 'audit', 'j' + instance_id)
-	def send_instance_status(self, instance_id, state, source=None):
-		"""
-		Propagate the status of an instance, potentially via the message
-		broker.
-		"""
-		# If source is not supplied, send along our own UUID.
-		send_source = source
-		if not send_source:
-			send_source = self.get_node_uuid()
-
-		# Make the message objects.
-		status = InstanceStatusMessage(instance_id, state, send_source)
-
-		status_topic = self.get_instance_status_pub_topic(instance_id)
-		audit_topic = self.get_instance_audit_pub_topic(instance_id)
-
-		# Send the status message.
-		pub.sendMessage(status_topic, message=status)
-		# And then the audit message.
-		pub.sendMessage(audit_topic, message=status)
+	def instance_status_trigger(self):
+		if hasattr(self, 'node_register_periodic'):
+			# Trigger a call to update the master with instance statuses.
+			# This will do one at a time, but stack them to it's always up
+			# to date.
+			self.node_register_periodic.trigger()
 
 class TestConfiguration(unittest.TestCase):
 	minimum_config = """
