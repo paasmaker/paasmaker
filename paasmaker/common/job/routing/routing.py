@@ -56,6 +56,32 @@ class RoutingUpdateJob(BaseJob):
 		self.logger.error(message)
 		self.failed(message)
 
+	@staticmethod
+	def setup_for_instance(configuration, session, instance, add, callback):
+		tags = []
+		instance_type = instance.application_instance_type
+		tags.append('workspace:%d' % instance_type.application_version.application.workspace.id)
+		tags.append('application:%d' % instance_type.application_version.application.id)
+		tags.append('application_version:%d' % instance_type.application_version.id)
+		tags.append('application_instance_type:%d' % instance_type.id)
+
+		update_title = "Update routing for '%s' for application %s, version %d" % (
+			instance.instance_id,
+			instance_type.application_version.application.name,
+			instance_type.application_version.version
+		)
+
+		configuration.job_manager.add_job(
+			'paasmaker.job.routing.update',
+			{
+				'instance_id': instance.id,
+				'add': add
+			},
+			update_title,
+			callback=callback,
+			tags=tags
+		)
+
 class RouterTableUpdate(object):
 	def __init__(self, configuration, instance, add, logger):
 		self.configuration = configuration

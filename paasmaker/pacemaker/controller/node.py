@@ -262,25 +262,21 @@ class NodeRegisterController(BaseController):
 
 		if newstate == constants.INSTANCE.RUNNING:
 			# It's now running. Insert a job to update the routing.
-			self.configuration.job_manager.add_job(
-				'paasmaker.job.routing.update',
-				{
-					'instance_id': instance.id,
-					'add': True
-				},
-				"Update routing for %s" % instance.instance_id,
+			paasmaker.common.job.routing.routing.RoutingUpdateJob.setup_for_instance(
+				self.configuration,
+				self.db(),
+				instance,
+				True,
 				update_job_added
 			)
 		elif newstate == constants.INSTANCE.STOPPED or newstate == constants.INSTANCE.ERROR:
 			# It's no longer running (or should be removed).
 			# Update it's routing.
-			self.configuration.job_manager.add_job(
-				'paasmaker.job.routing.update',
-				{
-					'instance_id': instance.id,
-					'add': False
-				},
-				"Update routing for %s" % instance.instance_id,
+			paasmaker.common.job.routing.routing.RoutingUpdateJob.setup_for_instance(
+				self.configuration,
+				self.db(),
+				instance,
+				False,
 				update_job_added
 			)
 		else:
