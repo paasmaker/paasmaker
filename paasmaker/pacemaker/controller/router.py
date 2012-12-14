@@ -1,5 +1,6 @@
 
 import json
+import time
 
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest, BaseWebsocketHandler
@@ -61,6 +62,25 @@ class RouterStatsRequestSchema(colander.MappingSchema):
 		title="The input ID",
 		description="The input ID of the stats requested (eg, workspace ID, application ID, etc)")
 
+class RouterHistoryRequestSchema(colander.MappingSchema):
+	name = colander.SchemaNode(colander.String(),
+		title="Name of history requested",
+		description="The name of the history requested (eg, workspace, application, etc)")
+	input_id = colander.SchemaNode(colander.String(),
+		title="The input ID",
+		description="The input ID of the history requested (eg, workspace ID, application ID, etc)")
+	metric = colander.SchemaNode(colander.String(),
+		title="The metric to fetch",
+		description="The metric to fetch the history for.")
+	start = colander.SchemaNode(colander.Integer(),
+		title="Start time",
+		description="Start of the history period to request for - a unix timestamp.")
+	end = colander.SchemaNode(colander.Integer(),
+		title="End time",
+		description="End of the history period to request for - a unix timestamp. Omit to select the latest time.",
+		missing=None,
+		default=None)
+
 # TODO: Permissions. Will want to cache these lookups!
 class RouterStatsStreamHandler(BaseWebsocketHandler):
 	AUTH_METHODS = [BaseWebsocketHandler.USER, BaseWebsocketHandler.SUPER]
@@ -89,13 +109,15 @@ class RouterStatsStreamHandler(BaseWebsocketHandler):
 		# Message should be JSON.
 		parsed = self.parse_message(message)
 		if parsed:
+			if self.error:
+				self.send_error(self.error, parsed)
+			elif not self.ready:
+				self.send_error("Not yet ready. Sorry.", parsed)
+
 			if parsed['request'] == 'update':
-				if self.error:
-					self.send_error(self.error, parsed)
-				elif not self.ready:
-					self.send_error("Not yet ready. Sorry.", parsed)
-				else:
-					self.handle_update(parsed)
+				self.handle_update(parsed)
+			if parsed['request'] == 'history':
+				self.handle_history(parsed)
 
 	def handle_update(self, message):
 		def got_stats(stats):
@@ -109,6 +131,35 @@ class RouterStatsStreamHandler(BaseWebsocketHandler):
 
 		# Must match the request schema.
 		request = self.validate_data(message, RouterStatsRequestSchema())
+		if request:
+			# Request some stats.
+			# TODO: Check permissions!
+			self.stats_output.vtset_for_name(
+				request['name'],
+				int(request['input_id']),
+				got_set
+			)
+
+	def handle_history(self, message):
+		# Must match the request schema.
+		request = self.validate_data(message, RouterHistoryRequestSchema())
+
+		def got_history(history):
+			self.send_success('history', history)
+
+		def failed_history(error, exception=None):
+			self.send_error('error', message)
+
+		def got_set(vtset):
+			self.stats_output.history_for_list(
+				vtset,
+				request['metric'],
+				got_history,
+				failed_history,
+				request['start'],
+				request['end']
+			)
+
 		if request:
 			# Request some stats.
 			# TODO: Check permissions!
@@ -175,6 +226,12 @@ class RouterStreamHandlerTestClient(TornadoWebSocketClient):
 		message = {'request': 'update', 'data': data, 'auth': auth}
 		self.send(json.dumps(message))
 
+	def history(self, name, input_id, metric, start, end=None):
+		data = {'name': name, 'input_id': input_id, 'metric': metric, 'start': start, 'end': end}
+		auth = {'method': 'super', 'value': self.configuration.get_flat('pacemaker.super_token')}
+		message = {'request': 'history', 'data': data, 'auth': auth}
+		self.send(json.dumps(message))
+
 	def received_message(self, m):
 		#print "Client: got %s" % m
 		# Record the log lines.
@@ -203,6 +260,13 @@ class RouterStreamHandlerTest(BaseControllerTest):
 		client.update('workspace', 1)
 		client.update('version_type', 1)
 
+		self.short_wait_hack()
+
+		client.history('workspace', 1, 'requests', time.time() - 60)
+		client.history('version_type', 1, 'requests', time.time() - 60)
+		client.history('workspace', 1, 'requests', time.time() - 60, time.time())
+		client.history('version_type', 1, 'requests', time.time() - 60, time.time())
+
 		# Wait for it all to complete.
 		self.short_wait_hack()
 
@@ -213,7 +277,11 @@ class RouterStreamHandlerTest(BaseControllerTest):
 		expected_types = [
 			'ready',
 			'error',
-			'update'
+			'update',
+			'history',
+			'history',
+			'history',
+			'history'
 		]
 
 		self.assertEquals(len(expected_types), len(client.messages), "Not the right number of messages.")
