@@ -579,7 +579,30 @@ var RouterStatsStreamHandler = function(container)
 	this.requests = $('.stat-requests .value', container);
 	this.bytes = $('.stat-bytes .value', container);
 	this.time_average = $('.stat-time_average .value', container);
+	this.onexx_percentage = $('.stat-1xx_percentage .value', container);
 	this.twoxx_percentage = $('.stat-2xx_percentage .value', container);
+	this.threexx_percentage = $('.stat-3xx_percentage .value', container);
+	this.fourxx_percentage = $('.stat-4xx_percentage .value', container);
+	this.fivexx_percentage = $('.stat-5xx_percentage .value', container);
+	this.nginxtime_average = $('.stat-nginxtime_average .value', container);
+
+	// Hook up the show more/less button.
+	var showButton = $('.show-all', container);
+	var secondary = $('.secondary', container);
+	showButton.click(
+		function(e)
+		{
+			if( secondary.is(':visible') )
+			{
+				showButton.text('Show all');
+			}
+			else
+			{
+				showButton.text('Hide');
+			}
+			secondary.slideToggle();
+		}
+	);
 }
 
 RouterStatsStreamHandler.prototype.requestUpdate = function()
@@ -592,7 +615,12 @@ RouterStatsStreamHandler.prototype.showUpdate = function(update)
 	this.requests.text(number_format(update.requests));
 	this.bytes.text(number_format(update.bytes));
 	this.time_average.text(number_format(update.time_average));
+	this.onexx_percentage.text(toFixed(update['1xx_percentage'], 2) + '%');
 	this.twoxx_percentage.text(toFixed(update['2xx_percentage'], 2) + '%');
+	this.threexx_percentage.text(toFixed(update['3xx_percentage'], 2) + '%');
+	this.fourxx_percentage.text(toFixed(update['4xx_percentage'], 2) + '%');
+	this.fivexx_percentage.text(toFixed(update['5xx_percentage'], 2) + '%');
+	this.nginxtime_average.text(number_format(update.nginxtime_average));
 
 	// And then in 1s, request it again.
 	var _self = this;

@@ -1,21 +1,23 @@
 {% if router_stats %}
 	<div class="router-stats well well-small" data-name="{{ router_stats_name }}" data-inputid="{{ router_stats_input_id }}">
-			<div class="stats-row stat-requests clearfix">
-				<span class="title">Requests:</span>
-				<span class="value">{{ "%d" % router_stats['requests'] }}</span>
+		{% set in_primary = True %}
+		<div class="primary">
+		{% for rset in router_stats_display %}
+			{% if not rset['primary'] and in_primary %}
+				</div>
+				<div class="secondary">
+				{% set in_primary = False %}
+			{% end %}
+			<div class="stats-row stat-{{ rset['key'] }} clearfix">
+				<span class="title">{{ rset['title'] }}:</span>
+				<span class="value">{{ rset['format'] % router_stats[rset['key']] }}</span>
 			</div>
-			<div class="stats-row stat-bytes clearfix">
-				<span class="title">Bytes:</span>
-				<span class="value">{{ "%d" % router_stats['bytes'] }}</span>
-			</div>
-			<div class="stats-row stat-time_average clearfix">
-				<span class="title">Average time:</span>
-				<span class="value">{{ "%d" % router_stats['time_average'] }}</span>
-			</div>
-			<div class="stats-row stat-2xx_percentage clearfix">
-				<span class="title">2xx percentage:</span>
-				<span class="value">{{ "%.2f" % router_stats['2xx_percentage'] }}%</span>
-			</div>
+		{% end %}
+		</div> {# End of secondary div #}
+		<div class="btn-group">
+			<a href="#" class="show-all btn btn-mini">Show all</a>
+			<a href="#" class="show-graph btn btn-mini">Graph</a>
+		</div>
 	</div>
 {% else %}
 	<div class="router-no-stats">

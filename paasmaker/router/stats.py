@@ -227,6 +227,65 @@ class ApplicationStats(object):
 		('5xx', 'requests')
 	]
 
+	DISPLAY_SET = [
+		# TODO: According to the docs, should be able to use %n to format
+		# including thousands seperators... but this doesn't work.
+		{
+			'title': 'Requests',
+			'key': 'requests',
+			'format': '%d',
+			'primary': True
+		},
+		{
+			'title': 'Bytes',
+			'key': 'bytes',
+			'format': '%d',
+			'primary': True
+		},
+		{
+			'title': 'Average Time',
+			'key': 'time_average',
+			'format': '%d',
+			'primary': True
+		},
+		{
+			'title': '1xx Percentage',
+			'key': '1xx_percentage',
+			'format': '%0.2f%%',
+			'primary': False
+		},
+		{
+			'title': '2xx Percentage',
+			'key': '2xx_percentage',
+			'format': '%0.2f%%',
+			'primary': False
+		},
+		{
+			'title': '3xx Percentage',
+			'key': '3xx_percentage',
+			'format': '%0.2f%%',
+			'primary': False
+		},
+		{
+			'title': '4xx Percentage',
+			'key': '4xx_percentage',
+			'format': '%0.2f%%',
+			'primary': False
+		},
+		{
+			'title': '5xx Percentage',
+			'key': '5xx_percentage',
+			'format': '%0.2f%%',
+			'primary': False
+		},
+		{
+			'title': 'NGINX Time',
+			'key': 'nginxtime_average',
+			'format': '%d',
+			'primary': False
+		}
+	]
+
 	def __init__(self, configuration):
 		self.configuration = configuration
 

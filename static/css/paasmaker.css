@@ -98,6 +98,7 @@ textarea.example-configuration
 	margin-bottom: 10px;
 
 	float: right;
+	right: 0px;
 
 	width: 250px;
 }
@@ -114,4 +115,9 @@ textarea.example-configuration
 	float: right;
 	font-size: 1.5em;
 	text-align: right;
+}
+
+.router-stats .secondary
+{
+	display: none;
 }
