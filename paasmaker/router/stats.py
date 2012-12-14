@@ -27,6 +27,7 @@ class StatsLogReader(object):
 		if self.reading:
 			# Already reading, so don't start reading again.
 			callback("Still reading.")
+			return
 		else:
 			self.reading = True
 			self.records = {}
@@ -44,6 +45,7 @@ class StatsLogReader(object):
 	def _got_position(self, position):
 		if not position:
 			position = 0
+		position = int(position)
 
 		# Open the file, seek to that position, and start reading.
 		filename = self.configuration.get_flat('router.stats_log')
@@ -81,6 +83,9 @@ class StatsLogReader(object):
 			try:
 				parsed = json.loads(line)
 				key = parsed['key']
+				if key == '':
+					# Bad key. Just reset it.
+					key = 'null'
 
 				# Basic stats.
 				self._store_value(key, 'requests', 1)
@@ -194,6 +199,7 @@ class StatsLogPeriodicManager(object):
 
 	def _on_complete(self, message):
 		# Do nothing, it's already been logged.
+		#logger.info(message)
 		pass
 
 	def _on_error(self, error, exception=None):

@@ -196,6 +196,8 @@ def on_ioloop_started():
 	on_intermediary_started.required += 1
 	# For the message exchange startup.
 	on_intermediary_started.required += 1
+	# For the managed NGINX startup.
+	on_intermediary_started.required += 1
 
 	if configuration.is_heart():
 		# For checking instances.
@@ -206,6 +208,9 @@ def on_ioloop_started():
 
 	# Message exchange.
 	configuration.setup_message_exchange(on_intermediary_started, on_intermediary_failed)
+
+	# Managed NGINX.
+	configuration.setup_managed_nginx(on_intermediary_started, on_intermediary_failed)
 
 	# Check instances.
 	if configuration.is_heart():

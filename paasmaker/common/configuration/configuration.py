@@ -46,6 +46,8 @@ DEFAULT_REDIS_JOBS = 42513
 
 DEFAULT_RABBITMQ = 42520
 
+DEFAULT_NGINX = 42530
+
 DEFAULT_APPLICATION_MIN = 42600
 DEFAULT_APPLICATION_MAX = 42699
 
@@ -177,6 +179,22 @@ class RedisConnectionSlaveSchema(RedisConnectionSchema):
 	def default():
 		return {'enabled': False}
 
+class NginxSchema(colander.MappingSchema):
+	managed = colander.SchemaNode(colander.Boolean(),
+		title="Enable managed nginx",
+		description="If enabled, a managed version of NGINX is started as appropriate, pointing to the correct resources for this node. Note that you must specify a port, and it must be >1024, as this node won't be run as root.",
+		default=False,
+		missing=False)
+	port = colander.SchemaNode(colander.Integer(),
+		title="Managed NGINX port",
+		description="The port to run the managed NGINX on.",
+		default=DEFAULT_NGINX,
+		missing=DEFAULT_NGINX)
+
+	@staticmethod
+	def default():
+		return {'managed': False, 'port': DEFAULT_NGINX}
+
 class RouterSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
 		title="Router enabled",
@@ -197,13 +215,16 @@ class RouterSchema(colander.MappingSchema):
 	stats_interval = colander.SchemaNode(colander.Integer(),
 		title="Stats read interval",
 		description="The interval between reading log files, in milliseconds.",
-		default=1000,
-		missing=1000)
+		default=500,
+		missing=500)
+
+	nginx = NginxSchema(missing=NginxSchema.default(), default=NginxSchema.default())
 
 	@staticmethod
 	def default():
 		return {
-			'enabled': False
+			'enabled': False,
+			'nginx': NginxSchema.default()
 		}
 
 class RedisSchema(colander.MappingSchema):
@@ -852,6 +873,36 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			)
 
 		self.get_message_broker_connection(on_connection_ready, error_callback)
+
+	def setup_managed_nginx(self, callback, error_callback):
+		if self.get_flat('router.nginx.managed'):
+			# Fire up the managed version, if it's not already running.
+			self.nginx_server = paasmaker.util.managednginx.ManagedNginx(self)
+			directory = self.get_scratch_path('nginx')
+			try:
+				self.nginx_server.load_parameters(directory)
+			except paasmaker.util.ManagedDaemonError, ex:
+				# Doesn't yet exist. Create it.
+				self.nginx_server.configure(
+					directory,
+					self.get_flat('router.nginx.port')
+				)
+
+			def on_nginx_started(message):
+				# Set the stats log path manually.
+				self['router']['stats_log'] = os.path.join(directory, 'access.log.paasmaker')
+				self.update_flat()
+
+				# And let the caller know we're ready.
+				callback(message)
+
+			def on_nginx_failed(message, exception=None):
+				error_callback(message, exception)
+
+			self.nginx_server.start_if_not_running(on_nginx_started, on_nginx_failed)
+		else:
+			# It's not managed. Do nothing.
+			callback("NGINX not managed - no action taken.")
 
 	def get_tornado_configuration(self):
 		settings = {}
