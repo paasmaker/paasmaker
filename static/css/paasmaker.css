@@ -119,8 +119,12 @@ textarea.example-configuration
 {
 	display: block;
 	float: right;
-	font-size: 1.5em;
 	text-align: right;
+}
+
+.router-stats .stats-row .value .diff
+{
+	font-size: 1.5em;
 }
 
 .router-stats .secondary
@@ -130,6 +134,7 @@ textarea.example-configuration
 
 .router-stats .graph
 {
+	margin-top: 5px;
 	display: none;
 	height: 100px;
 }

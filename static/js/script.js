@@ -619,16 +619,10 @@ var RouterStatsStreamHandler = function(container)
 	graphButton.click(
 		function(e)
 		{
-			graphArea.toggle();
+			_self.graphArea.toggle();
 			_self.isGraphing = !_self.isGraphing;
-			if( _self.isGraphing )
-			{
-				_self.setupGraphArea();
-				if( _self.ready )
-				{
-					_self.requestGraph();
-				}
-			}
+			_self.setupGraphArea();
+			_self.requestGraph();
 		}
 	);
 
@@ -677,11 +671,27 @@ RouterStatsStreamHandler.prototype.requestGraph = function()
 	);
 }
 
+RouterStatsStreamHandler.prototype.displayIncludingLast = function(key, values, container)
+{
+	var value = '';
+	value += number_format(values[key]);
+
+	if( this.lastNumbers )
+	{
+		var difference = values[key] - this.lastNumbers[key];
+
+		value += ' <span class="diff">' + number_format(difference) + '/s</span>';
+	}
+
+	container.html(value);
+}
+
 RouterStatsStreamHandler.prototype.showUpdate = function(update)
 {
-	this.requests.text(number_format(update.requests));
-	this.bytes.text(number_format(update.bytes));
+	this.displayIncludingLast('requests', update, this.requests);
+	this.displayIncludingLast('bytes', update, this.bytes);
 	this.time_average.text(number_format(update.time_average));
+
 	this.onexx_percentage.text(toFixed(update['1xx_percentage'], 2) + '%');
 	this.twoxx_percentage.text(toFixed(update['2xx_percentage'], 2) + '%');
 	this.threexx_percentage.text(toFixed(update['3xx_percentage'], 2) + '%');
@@ -692,6 +702,8 @@ RouterStatsStreamHandler.prototype.showUpdate = function(update)
 	// And then in 1s, request it again.
 	var _self = this;
 	setTimeout(function(){ _self.requestUpdate(); }, 1000);
+
+	this.lastNumbers = update;
 }
 
 RouterStatsStreamHandler.prototype.showGraph = function(graphdata)
