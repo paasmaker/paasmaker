@@ -117,6 +117,10 @@ class FreePortFinderTest(unittest.TestCase):
 		port = finder.free_in_range(10000, 10100)
 		self.assertTrue(port >= 10000 and port <= 10100)
 
+		# Change the range, and try again.
+		port = finder.free_in_range(10050, 10100)
+		self.assertTrue(port >= 10000 and port <= 10100)
+
 	def test_allocated(self):
 		finder = FreePortFinder()
 
@@ -140,6 +144,15 @@ class FreePortFinderTest(unittest.TestCase):
 		self.assertNotIn(port, [10004, 10006])
 		port = finder.free_in_range(10000, 10100)
 		self.assertNotIn(port, [10004, 10006])
+
+		finder = FreePortFinder()
+		finder.add_allocated_port(10000)
+
+		# Remove some allocated ports, and then see if we get it.
+		finder.remove_allocated_port(10000)
+
+		port = finder.free_in_range(10000, 10100)
+		self.assertEquals(port, 10000)
 
 	def test_finder_in_use(self):
 		finder = FreePortFinder()
