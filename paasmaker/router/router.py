@@ -68,17 +68,16 @@ http {
 	"""
 
 	@staticmethod
-	def get_nginx_config(configuration, unit_test=False):
+	def get_nginx_config(configuration, managed_params=None):
 		parameters = {}
 
-		parameters['temp_dir'] = configuration.get_scratch_path_exists('nginx')
-
-		if unit_test:
-			parameters['listen_port'] = configuration.get_free_port()
+		if managed_params:
+			parameters['temp_dir'] = managed_params['temp_path']
+			parameters['listen_port'] = managed_params['port']
 			parameters['log_path'] = tempfile.mkdtemp()
-			parameters['temp_paths'] = NginxRouter.TEMP_PATHS % parameters
-			parameters['pid_path'] = parameters['temp_dir']
-			parameters['log_level'] = 'debug'
+			parameters['temp_paths'] = NginxRouter.TEMP_PATHS % {'temp_dir': managed_params['temp_path']}
+			parameters['pid_path'] = managed_params['pid_path']
+			parameters['log_level'] = managed_params['log_level']
 		else:
 			parameters['listen_port'] = 80
 			# TODO: This is Linux specific.
@@ -114,7 +113,14 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 	def setUp(self):
 		super(RouterTest, self).setUp()
 
-		self.nginx = NginxRouter.get_nginx_config(self.configuration, unit_test=True)
+		managed_params = {}
+		managed_params['port'] = self.configuration.get_free_port()
+		managed_params['log_path'] = tempfile.mkdtemp()
+		managed_params['temp_path'] = self.configuration.get_scratch_path_exists('nginx')
+		managed_params['pid_path'] = managed_params['temp_path']
+		managed_params['log_level'] = 'debug'
+
+		self.nginx = NginxRouter.get_nginx_config(self.configuration, managed_params=managed_params)
 
 		# Fire up an nginx instance.
 		self.nginxconfig = tempfile.mkstemp()[1]
