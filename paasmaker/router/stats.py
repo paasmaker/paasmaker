@@ -256,9 +256,21 @@ class ApplicationStats(object):
 			'primary': True
 		},
 		{
+			'title': '1xx',
+			'key': '1xx',
+			'format': '%d',
+			'primary': False
+		},
+		{
 			'title': '1xx Percentage',
 			'key': '1xx_percentage',
 			'format': '%0.2f%%',
+			'primary': False
+		},
+		{
+			'title': '2xx',
+			'key': '2xx',
+			'format': '%d',
 			'primary': False
 		},
 		{
@@ -268,15 +280,33 @@ class ApplicationStats(object):
 			'primary': False
 		},
 		{
+			'title': '3xx',
+			'key': '3xx',
+			'format': '%d',
+			'primary': False
+		},
+		{
 			'title': '3xx Percentage',
 			'key': '3xx_percentage',
 			'format': '%0.2f%%',
 			'primary': False
 		},
 		{
+			'title': '4xx',
+			'key': '4xx',
+			'format': '%d',
+			'primary': False
+		},
+		{
 			'title': '4xx Percentage',
 			'key': '4xx_percentage',
 			'format': '%0.2f%%',
+			'primary': False
+		},
+		{
+			'title': '5xx',
+			'key': '5xx',
+			'format': '%d',
 			'primary': False
 		},
 		{

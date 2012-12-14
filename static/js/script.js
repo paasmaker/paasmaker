@@ -588,6 +588,12 @@ var RouterStatsStreamHandler = function(container)
 	this.requests = $('.stat-requests .value', container);
 	this.bytes = $('.stat-bytes .value', container);
 	this.time_average = $('.stat-time_average .value', container);
+	this.onexx = $('.stat-1xx .value', container);
+	this.twoxx = $('.stat-2xx .value', container);
+	this.threexx = $('.stat-3xx .value', container);
+	this.fourxx = $('.stat-4xx .value', container);
+	this.fivexx = $('.stat-5xx .value', container);
+
 	this.onexx_percentage = $('.stat-1xx_percentage .value', container);
 	this.twoxx_percentage = $('.stat-2xx_percentage .value', container);
 	this.threexx_percentage = $('.stat-3xx_percentage .value', container);
@@ -680,7 +686,7 @@ RouterStatsStreamHandler.prototype.displayIncludingLast = function(key, values, 
 	{
 		var difference = values[key] - this.lastNumbers[key];
 
-		value += ' <span class="diff">' + number_format(difference) + '/s</span>';
+		value += ' - <span class="diff">' + number_format(difference) + '/s</span>';
 	}
 
 	container.html(value);
@@ -691,6 +697,12 @@ RouterStatsStreamHandler.prototype.showUpdate = function(update)
 	this.displayIncludingLast('requests', update, this.requests);
 	this.displayIncludingLast('bytes', update, this.bytes);
 	this.time_average.text(number_format(update.time_average));
+
+	this.displayIncludingLast('1xx', update, this.onexx);
+	this.displayIncludingLast('2xx', update, this.twoxx);
+	this.displayIncludingLast('3xx', update, this.threexx);
+	this.displayIncludingLast('4xx', update, this.fourxx);
+	this.displayIncludingLast('5xx', update, this.fivexx);
 
 	this.onexx_percentage.text(toFixed(update['1xx_percentage'], 2) + '%');
 	this.twoxx_percentage.text(toFixed(update['2xx_percentage'], 2) + '%');

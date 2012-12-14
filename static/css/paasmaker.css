@@ -124,7 +124,15 @@ textarea.example-configuration
 
 .router-stats .stats-row .value .diff
 {
-	font-size: 1.5em;
+}
+
+.router-stats .stats-row.stat-1xx_percentage,
+.router-stats .stats-row.stat-2xx_percentage,
+.router-stats .stats-row.stat-3xx_percentage,
+.router-stats .stats-row.stat-4xx_percentage,
+.router-stats .stats-row.stat-5xx_percentage
+{
+	display: none;
 }
 
 .router-stats .secondary
