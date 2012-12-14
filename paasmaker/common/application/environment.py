@@ -22,6 +22,14 @@ class ApplicationEnvironment(object):
 
 		# Workspace parameters.
 		meta['workspace'] = version.application.workspace.tags
+		meta['application'] = {
+			'application_id': version.application.id,
+			'name': version.application.name,
+			'workspace': version.application.workspace.name,
+			'workspace_stub': version.application.workspace.stub,
+			'version': version.version,
+			'version_id': version.id
+		}
 
 		environment['PM_METADATA'] = json.dumps(meta)
 
