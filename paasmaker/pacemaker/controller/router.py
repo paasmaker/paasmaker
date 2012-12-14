@@ -143,9 +143,18 @@ class RouterStatsStreamHandler(BaseWebsocketHandler):
 	def handle_history(self, message):
 		# Must match the request schema.
 		request = self.validate_data(message, RouterHistoryRequestSchema())
+		end = int(time.time())
 
 		def got_history(history):
-			self.send_success('history', history)
+			self.send_success('history',
+				{
+					'points': history,
+					'name': request['name'],
+					'input_id': request['input_id'],
+					'start': request['start'],
+					'end': end
+				}
+			)
 
 		def failed_history(error, exception=None):
 			self.send_error('error', message)

@@ -121,3 +121,9 @@ textarea.example-configuration
 {
 	display: none;
 }
+
+.router-stats .graph
+{
+	display: none;
+	height: 100px;
+}

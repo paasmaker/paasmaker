@@ -185,7 +185,7 @@ JobRootStreamHandler.prototype.onmessage = function (evt)
 {
 	// Parse the message.
 	var message = $.parseJSON(evt.data);
-	console.log(message);
+	//console.log(message);
 
 	switch(message.type)
 	{
@@ -301,7 +301,7 @@ LogRootStreamHandler.prototype.onmessage = function (evt)
 {
 	// Parse the message.
 	var message = $.parseJSON(evt.data);
-	console.log(message);
+	//console.log(message);
 
 	// Find a handler to work with it.
 	var handler = this.handlers[message.data.job_id];
@@ -562,11 +562,14 @@ var RouterStatsStreamHandler = function(container)
 	};
 	this.routerStatsRemote.onmessage = function (evt) {
 		var message = $.parseJSON(evt.data);
-		console.log(message);
+		//console.log(message);
 		switch(message.type)
 		{
 			case 'update':
 				_self.showUpdate(message.data);
+				break;
+			case 'history':
+				_self.showGraph(message.data);
 				break;
 			case 'ready':
 				// Start updating.
@@ -603,11 +606,52 @@ var RouterStatsStreamHandler = function(container)
 			secondary.slideToggle();
 		}
 	);
+
+	var graphButton = $('.show-graph', container);
+	var graphArea = $('.graph', container);
+	this.isGraphing = false;
+	graphButton.click(
+		function(e)
+		{
+			graphArea.toggle();
+			_self.isGraphing = !_self.isGraphing;
+			if( _self.isGraphing )
+			{
+				var options = {
+					series: { shadowSize: 1 },
+					yaxis: { min: 0 },
+					xaxis: { mode: "time", minTickSize: [30, "second"], }
+				};
+				_self.plot = $.plot(graphArea, [], options);
+
+				_self.requestGraph();
+			}
+		}
+	);
 }
 
 RouterStatsStreamHandler.prototype.requestUpdate = function()
 {
 	this.routerStatsRemote.send($.toJSON({request: 'update', data: {'name': this.input_name, 'input_id': this.input_id}}));
+}
+
+RouterStatsStreamHandler.prototype.requestGraph = function()
+{
+	var now = new Date();
+	// TODO: Allow more configuration, less assumptions.
+	this.routerStatsRemote.send(
+		$.toJSON(
+			{
+				request: 'history',
+				data: {
+					'name': this.input_name,
+					'input_id': this.input_id,
+					'metric': 'requests',
+					'start': (now.getTime() / 1000) - 60
+				}
+			}
+		)
+	);
 }
 
 RouterStatsStreamHandler.prototype.showUpdate = function(update)
@@ -625,6 +669,52 @@ RouterStatsStreamHandler.prototype.showUpdate = function(update)
 	// And then in 1s, request it again.
 	var _self = this;
 	setTimeout(function(){ _self.requestUpdate(); }, 1000);
+}
+
+RouterStatsStreamHandler.prototype.showGraph = function(graphdata)
+{
+	//console.log(graphdata.points);
+	var graphPoints = graphdata.points;
+	if( graphPoints.length == 0 )
+	{
+		// No data returned. Fake it!
+		graphPoints.push([graphdata.start, 0]);
+		graphPoints.push([graphdata.end, 0]);
+	}
+	else
+	{
+		if( graphPoints[0][0] != graphdata.start )
+		{
+			// Doesn't start with the start time. Insert
+			// a point to make it make sense.
+			graphPoints.splice(0, 0, [graphdata.start, 0])
+		}
+		if( graphPoints[graphPoints.length - 1][0] != graphdata.end )
+		{
+			// Doesn't end with the end time. Insert a
+			// point to make it make sense.
+			graphPoints.append([graphdata.end, 0])
+		}
+	}
+
+	// Now convert all the times to unix timestamp milliseconds.
+	for( var i = 0; i < graphPoints.length; i++ )
+	{
+		graphPoints[i][0] *= 1000;
+	}
+
+	//console.log(graphPoints);
+
+	this.plot.setData([graphPoints]);
+	this.plot.setupGrid();
+	this.plot.draw();
+
+	// And then in 1s, request it again.
+	if( this.isGraphing )
+	{
+		var _self = this;
+		setTimeout(function(){ _self.requestGraph(); }, 1000);
+	}
 }
 
 function testBrowserFeatures(resultContainer)
