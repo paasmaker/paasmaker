@@ -1,5 +1,8 @@
-{% if router_stats %}
-	<div class="router-stats well well-small" data-name="{{ router_stats_name }}" data-inputid="{{ router_stats_input_id }}">
+{% if router_stats['data'] %}
+	<div class="router-stats well well-small" data-name="{{ router_stats['name'] }}" data-inputid="{{ router_stats['input_id'] }}">
+		{% if router_stats['title'] %}
+			<div class="complete-title">{{ router_stats['title'] }}</div>
+		{% end %}
 		{% set in_primary = True %}
 		<div class="primary">
 		{% for rset in router_stats_display %}
@@ -10,7 +13,7 @@
 			{% end %}
 			<div class="stats-row stat-{{ rset['key'] }} clearfix">
 				<span class="title">{{ rset['title'] }}:</span>
-				<span class="value">{{ rset['format'] % router_stats[rset['key']] }}</span>
+				<span class="value">{{ rset['format'] % router_stats['data'][rset['key']] }}</span>
 			</div>
 		{% end %}
 		</div> {# End of secondary div #}

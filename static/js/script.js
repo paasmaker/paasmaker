@@ -556,6 +556,7 @@ var RouterStatsStreamHandler = function(container)
 	this.input_id = container.attr('data-inputid');
 
 	var _self = this;
+	this.ready = false;
 	this.routerStatsRemote = new WebSocket("ws://" + window.location.host + "/router/stats/stream");
 	this.routerStatsRemote.onopen = function() {
 		// It will send us a ready message when we can start.
@@ -572,8 +573,13 @@ var RouterStatsStreamHandler = function(container)
 				_self.showGraph(message.data);
 				break;
 			case 'ready':
+				this.ready = true;
 				// Start updating.
 				_self.requestUpdate();
+				if( _self.isGraphing )
+				{
+					_self.requestGraph();
+				}
 				break;
 		}
 	};
@@ -608,7 +614,7 @@ var RouterStatsStreamHandler = function(container)
 	);
 
 	var graphButton = $('.show-graph', container);
-	var graphArea = $('.graph', container);
+	this.graphArea = $('.graph', container);
 	this.isGraphing = false;
 	graphButton.click(
 		function(e)
@@ -617,17 +623,34 @@ var RouterStatsStreamHandler = function(container)
 			_self.isGraphing = !_self.isGraphing;
 			if( _self.isGraphing )
 			{
-				var options = {
-					series: { shadowSize: 1 },
-					yaxis: { min: 0 },
-					xaxis: { mode: "time", minTickSize: [30, "second"], }
-				};
-				_self.plot = $.plot(graphArea, [], options);
-
-				_self.requestGraph();
+				_self.setupGraphArea();
+				if( _self.ready )
+				{
+					_self.requestGraph();
+				}
 			}
 		}
 	);
+
+	// If the graph area is visible on page load,
+	// start graphing now.
+	if( this.graphArea.is(':visible') )
+	{
+		this.setupGraphArea();
+		// Don't make the first call to update the graph,
+		// because it's likely not ready yet.
+		this.isGraphing = true;
+	}
+}
+
+RouterStatsStreamHandler.prototype.setupGraphArea = function()
+{
+	var options = {
+		series: { shadowSize: 1, bars: { show: true, fill: true, barWidth: 1000 } },
+		yaxis: { min: 0 },
+		xaxis: { mode: "time", minTickSize: [30, "second"], }
+	};
+	this.plot = $.plot(this.graphArea, [], options);
 }
 
 RouterStatsStreamHandler.prototype.requestUpdate = function()
@@ -693,7 +716,7 @@ RouterStatsStreamHandler.prototype.showGraph = function(graphdata)
 		{
 			// Doesn't end with the end time. Insert a
 			// point to make it make sense.
-			graphPoints.append([graphdata.end, 0])
+			graphPoints.push([graphdata.end, 0])
 		}
 	}
 

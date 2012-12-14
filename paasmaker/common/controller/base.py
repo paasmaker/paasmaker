@@ -443,42 +443,49 @@ class BaseController(tornado.web.RequestHandler):
 	def on_finish(self):
 		self.application.log_request(self)
 
-	# MISC HELPERS. TODO: Refactor this.
-	def _get_router_stats_for(self, name, input_id, callback):
-		self._router_stats_callback = callback
-		self._router_stats = paasmaker.router.stats.ApplicationStats(
+	def _get_router_stats_for(self, name, input_id, callback, output_key='router_stats', title=None):
+		router_stats = paasmaker.router.stats.ApplicationStats(
 			self.configuration
 		)
-		self.add_data('router_stats_name', name)
-		self.add_data('router_stats_input_id', input_id)
+
+		output = {
+			'name': name,
+			'input_id': input_id,
+			'title': title,
+			'data': None
+		}
+
+		if output_key:
+			self.add_data(output_key, output)
+
 		self.add_data_template('router_stats_display', paasmaker.router.stats.ApplicationStats.DISPLAY_SET)
-		self._router_stats.setup(
-			self._on_router_stats_ready,
-			self._on_router_stats_error
+
+		def got_router_stats(result):
+			output['data'] = result
+			callback(result)
+
+		def router_stats_error(error, exception=None):
+			self.add_warning('Unable to fetch router stats: ' + error)
+			callback(None)
+
+		def got_router_vtset(vtset):
+			router_stats.total_for_list(
+				vtset,
+				got_router_stats,
+				router_stats_error
+			)
+
+		def stats_system_ready():
+			router_stats.vtset_for_name(
+				name,
+				input_id,
+				got_router_vtset
+			)
+
+		router_stats.setup(
+			stats_system_ready,
+			router_stats_error
 		)
-
-	def _on_router_stats_ready(self):
-		self._router_stats.vtset_for_name(
-			self.get_data('router_stats_name'),
-			self.get_data('router_stats_input_id'),
-			self._on_router_stats_got_vtset
-		)
-
-	def _on_router_stats_got_vtset(self, vtset):
-		self._router_stats.total_for_list(
-			vtset,
-			self._on_router_stats_output,
-			self._on_router_stats_error
-		)
-
-	def _on_router_stats_output(self, result):
-		self.add_data('router_stats', result)
-		self._router_stats_callback(result)
-
-	def _on_router_stats_error(self, error, exception=None):
-		self.add_data('router_stats', None)
-		self.add_warning('Unable to fetch router stats: ' + error)
-		self._router_stats_callback({})
 
 	def _redirect_job(self, job_id, url):
 		self.redirect("/job/detail/%s?ret=%s" % (

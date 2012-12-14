@@ -103,6 +103,12 @@ textarea.example-configuration
 	width: 250px;
 }
 
+.router-stats .complete-title
+{
+	text-align: center;
+	font-weight: bold;
+}
+
 .router-stats .stats-row .title
 {
 	display: block;
@@ -126,4 +132,25 @@ textarea.example-configuration
 {
 	display: none;
 	height: 100px;
+}
+
+.router-stats-collection .router-stats
+{
+	float: left;
+	margin-right: 10px;
+}
+
+.router-stats-collection .router-stats .secondary
+{
+	display: block;
+}
+
+.router-stats-collection .router-stats .graph
+{
+	display: block;
+}
+
+.router-stats-collection .router-stats .btn-group
+{
+	display: none;
 }

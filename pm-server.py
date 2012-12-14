@@ -73,6 +73,7 @@ if configuration.is_pacemaker():
 
 	logging.info("Setting up pacemaker routes...")
 	routes.extend(paasmaker.pacemaker.controller.index.IndexController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.overview.OverviewController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.login.LoginController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.login.LogoutController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.user.UserEditController.get_routes(route_extras))

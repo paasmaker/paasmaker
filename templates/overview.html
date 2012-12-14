@@ -1,0 +1,14 @@
+{% extends "layout/main.html" %}
+
+{% block body %}
+	<h1>System Overview</h1>
+
+	<div class="router-stats-collection">
+		{% module Template("include/router_stats.html", router_stats=router_stats, router_stats_display=router_stats_display) %}
+
+		{% for workspace in workspaces %}
+			{# This is a hack. #}
+			{% module Template("include/router_stats.html", router_stats=eval("workspace_%d" % workspace.id), router_stats_display=router_stats_display) %}
+		{% end %}
+	</div>
+{% end %}

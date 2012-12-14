@@ -31,6 +31,7 @@ class StatsLogReader(object):
 		else:
 			self.reading = True
 			self.records = {}
+			self.hashrecords = {}
 
 		# Fetch the stats redis instance.
 		self.callback = callback
@@ -317,6 +318,10 @@ class ApplicationStats(object):
 		elif name == 'version_type':
 			# Pass it back directly.
 			callback([input_id])
+			return
+		elif name == 'uncaught':
+			# Pass back a suitable list.
+			callback(['null'])
 			return
 		else:
 			raise ValueError("Unknown input name %s" % name)
