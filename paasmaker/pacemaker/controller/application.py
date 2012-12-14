@@ -108,13 +108,13 @@ class ApplicationNewController(ApplicationRootController):
 		self.require_permission(constants.PERMISSION.APPLICATION_CREATE, workspace=workspace)
 
 		# Return a list of available SCMs and stuff.
-		scm_plugins = self.configuration.plugins.plugins_for(paasmaker.util.plugin.MODE.SCM_CHOOSER)
+		scm_plugins = self.configuration.plugins.plugins_for(paasmaker.util.plugin.MODE.SCM_FORM)
 
 		result_list = []
 		for plugin_name in scm_plugins:
 			plugin = self.configuration.plugins.instantiate(
 				plugin_name,
-				paasmaker.util.plugin.MODE.SCM_CHOOSER
+				paasmaker.util.plugin.MODE.SCM_FORM
 			)
 
 			if self.format == 'html':
@@ -122,7 +122,8 @@ class ApplicationNewController(ApplicationRootController):
 				result = {}
 				result['plugin'] = plugin_name
 				result['title'] = self.configuration.plugins.title(plugin_name)
-				result['form'] = plugin.create_form()
+				# TODO: Pull the last version params.
+				result['form'] = plugin.create_form({})
 
 				result_list.append(result)
 			else:

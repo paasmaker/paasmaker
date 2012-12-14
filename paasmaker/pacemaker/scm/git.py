@@ -25,8 +25,9 @@ class GitSCMParametersSchema(colander.MappingSchema):
 		default="HEAD")
 
 class GitSCM(BaseSCM):
-	MODES = [paasmaker.util.plugin.MODE.SCM_EXPORT, paasmaker.util.plugin.MODE.SCM_CHOOSER]
-	PARAMETERS_SCHEMA = {paasmaker.util.plugin.MODE.SCM_EXPORT: GitSCMParametersSchema()}
+	PARAMETERS_SCHEMA = {
+		paasmaker.util.plugin.MODE.SCM_EXPORT: GitSCMParametersSchema()
+	}
 
 	def create_working_copy(self, callback, error_callback):
 		# Make a directory to extract to. It should be persistent.
@@ -87,39 +88,7 @@ class GitSCM(BaseSCM):
 			cwd=self.path
 		)
 
-	def extract_manifest(self, manifest_path, callback, error_callback):
-		self.logger.info("Extracting manifest file from %s", self.parameters['location'])
-		self.path = self.get_persistent_scm_dir()
-
-		# Unfortunately, to extract the manifest file, we need to clone the whole lot.
-		# So start doing that now. It does save time later though...
-		worker = GitGetDirectoryUpToDate(
-			self.configuration,
-			self.path,
-			self.parameters,
-			self.logger
-		)
-
-		def git_up_to_date(path):
-			# Move on to extracting the manifest file.
-			self._extract_manifest_real(manifest_path, callback, error_callback)
-
-		worker.start(git_up_to_date, error_callback)
-
-	def _extract_manifest_real(self, manifest_path, callback, error_callback):
-		# See if the file exists.
-		full_manifest_path = os.path.join(self.path, manifest_path)
-
-		if os.path.exists(full_manifest_path):
-			manifest_fp = open(full_manifest_path, 'r')
-			manifest = manifest_fp.read()
-			manifest_fp.close()
-
-			callback(manifest)
-		else:
-			error_callback('Unable to locate manifest file at the path %s' % manifest_path)
-
-	def create_form(self):
+	def create_form(self, last_parameters):
 		return """
 		<label for="parameters.location">Repository URL:</label>
 		<input type="text" name="parameters.location" required="required" />
@@ -302,30 +271,6 @@ class GitSCMTest(BaseSCMTest):
 		shutil.rmtree(self.repo)
 
 		super(GitSCMTest, self).tearDown()
-
-	def test_extract_manifest(self):
-		# Now unpack it using the plugin.
-		logger = self.configuration.get_job_logger('testscmgit')
-		plugin = self.registry.instantiate(
-			'paasmaker.scm.git',
-			paasmaker.util.plugin.MODE.SCM_EXPORT,
-			{
-				'location': self.repo
-			},
-			logger
-		)
-
-		# Extract a manifest file.
-		plugin.extract_manifest('manifest.yml', self.stop, self.stop)
-		result = self.wait()
-
-		# Check that the manifest was returned.
-		self.assertIn("format: 1", result, "Missing manifest contents.")
-
-		# Try to extract an invalid manifest path.
-		plugin.extract_manifest('manifest_noexist.yml', self.stop, self.stop)
-		result = self.wait()
-		self.assertIn("Unable to locate", result, "Missing error message.")
 
 	def test_working_copy(self):
 		logger = self.configuration.get_job_logger('testscmgit')

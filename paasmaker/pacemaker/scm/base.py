@@ -19,10 +19,13 @@ class BaseSCMParametersSchema(colander.MappingSchema):
 		description="The location to fetch the source code from - typically a URL of some kind.")
 
 class BaseSCM(paasmaker.util.plugin.Plugin):
-	MODES = [paasmaker.util.plugin.MODE.SCM_EXPORT]
+	MODES = [paasmaker.util.plugin.MODE.SCM_EXPORT, paasmaker.util.plugin.MODE.SCM_FORM]
+
 	# These are defaults - you should set your own.
 	OPTIONS_SCHEMA = BaseSCMConfigurationSchema()
-	PARAMETERS_SCHEMA = {paasmaker.util.plugin.MODE.SCM_EXPORT: BaseSCMParametersSchema()}
+	PARAMETERS_SCHEMA = {
+		paasmaker.util.plugin.MODE.SCM_EXPORT: BaseSCMParametersSchema()
+	}
 
 	def get_this_scm_path(self, postfix):
 		scratch_path = self.configuration.get_flat('scratch_directory')
@@ -73,18 +76,11 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 		"""
 		raise NotImplementedError("You must implement create_working_copy().")
 
-	def extract_manifest(self, manifest_path, callback, error_callback):
-		"""
-		From your input parameters, extract the manifest file, and call the callback
-		with the contents of that file.
-		"""
-		raise NotImplementedError("You must implement extract_manifest().")
-
-	def create_form(self):
+	def create_form(self, last_selections):
 		"""
 		Return some HTML that goes into the form to be inserted into the
-		web page, for users to interact with. TODO: Figure out how to add
-		appropriate JavaScript hooks for this.
+		web page, for users to interact with. The supplied last_selections
+		is a hash that contains what was used last time (or empty if not found).
 		"""
 		raise NotImplementedError("You must implement create_form().")
 

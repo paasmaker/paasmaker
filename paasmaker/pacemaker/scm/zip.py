@@ -7,7 +7,7 @@ from base import BaseSCM, BaseSCMTest
 import paasmaker
 
 class ZipSCM(BaseSCM):
-	MODES = [paasmaker.util.plugin.MODE.SCM_EXPORT, paasmaker.util.plugin.MODE.SCM_CHOOSER]
+	MODES = [paasmaker.util.plugin.MODE.SCM_EXPORT]
 
 	def create_working_copy(self, callback, error_callback):
 		# Make a directory to extract to.
@@ -39,44 +39,7 @@ class ZipSCM(BaseSCM):
 			on_exit=cb,
 			io_loop=self.configuration.io_loop)
 
-	def extract_manifest(self, manifest_path, callback, error_callback):
-		self.logger.info("Extracting manifest file from %s", self.parameters['location'])
-
-		# Create a temp dir to extract this to.
-		temp_extract_path = tempfile.mkdtemp()
-
-		# Extract the supplied file to it.
-		command = ['unzip', '-d', temp_extract_path, self.parameters['location'], manifest_path]
-
-		# CAUTION: This means the logger MUST be a job logger.
-		# TODO: Handle this nicer...
-		log_fp = self.logger.takeover_file()
-
-		def cb(code):
-			self.logger.untakeover_file(log_fp)
-			self.logger.info("Zip command returned code: %d", code)
-			#self.configuration.debug_cat_job_log(self.logger.job_id)
-			if code == 0:
-				manifest_fp = open(os.path.join(temp_extract_path, manifest_path), 'r')
-				manifest = manifest_fp.read()
-				manifest_fp.close()
-
-				shutil.rmtree(temp_extract_path)
-
-				callback(manifest)
-			else:
-				# TODO: Make this error message more helpful.
-				shutil.rmtree(temp_extract_path)
-				error_callback("Unable to extract manifest.")
-
-		# Start the extractor. This will call cb() defined above when done.
-		extractor = paasmaker.util.Popen(command,
-			stdout=log_fp,
-			stderr=log_fp,
-			on_exit=cb,
-			io_loop=self.configuration.io_loop)
-
-	def create_form(self):
+	def create_form(self, last_parameters):
 		return """
 		<div class="file-uploader-widget"></div>
 		"""
@@ -121,18 +84,6 @@ class ZipSCMTest(BaseSCMTest):
 			{'location': tempzip},
 			logger
 		)
-
-		# Extract a manifest file.
-		plugin.extract_manifest('manifest.yml', self.stop, self.stop)
-		result = self.wait()
-
-		# Check that the manifest was returned.
-		self.assertIn("format: 1", result, "Missing manifest contents.")
-
-		# Try to extract an invalid manifest path.
-		plugin.extract_manifest('manifest_noexist.yml', self.stop, self.stop)
-		result = self.wait()
-		self.assertIn("Unable to extract", result, "Missing error message.")
 
 		# Proceed.
 		plugin.create_working_copy(self.success_callback, self.failure_callback)
