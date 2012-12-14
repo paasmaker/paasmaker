@@ -89,7 +89,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 				# The logs are in another castle.
 				# Fortunately in our modern day and age, we can
 				# just connect to the other castle and stream the logs.
-				self.handle_remote_subscribe(job_id, subscribe['position'], message)
+				self.handle_remote_subscribe(job_id, subscribe['position'], message, unittest_force_remote=unittest_force_remote)
 
 			else:
 				# Nope.
@@ -97,12 +97,17 @@ class LogStreamHandler(BaseWebsocketHandler):
 				logger.error(error_message)
 				self.send_error(error_message, message)
 
-	def handle_remote_subscribe(self, job_id, position, message):
+	def handle_remote_subscribe(self, job_id, position, message, unittest_force_remote=False):
 		def on_got_job(data):
 			logger.debug("Got job metata for %s", job_id)
 			# Got the job metadata. Now look up the node.
 			job_data = data[job_id]
 			nodeuuid = job_data['node']
+			if not unittest_force_remote and nodeuuid == self.configuration.get_node_uuid():
+				# Prevent us from connecting to ourselves...
+				self.send_success('zerosize', {'job_id': job_id})
+				return
+
 			if self.remote_connections.has_key(nodeuuid):
 				logger.debug("Using existing connection to %s", nodeuuid)
 				# We have an existing connection. Reuse that.
