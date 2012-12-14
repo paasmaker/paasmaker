@@ -45,11 +45,24 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 		This is designed for SCMs that can update their code,
 		so can be persistent between SCM runs.
 		"""
+		# TODO: Consider how to lock this!
 		name = self.raw_parameters['location']
 		name = re.sub(r'[^.A-Za-z]', '_', name)
 		name = name.replace("__", "_")
 		name = name.replace("__", "_")
 		return self.get_this_scm_path(name)
+
+	def get_persistent_output_dir(self):
+		"""
+		Get a persistent directory to output the result of repo
+		into, that can be used by prepare commands to get ready.
+		"""
+		# TODO: Consider how to lock this!
+		name = self.raw_parameters['location']
+		name = re.sub(r'[^.A-Za-z]', '_', name)
+		name = name.replace("__", "_")
+		name = name.replace("__", "_")
+		return self.get_this_scm_path(name + '_output')
 
 	def create_working_copy(self, callback, error_callback):
 		"""
