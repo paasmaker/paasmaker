@@ -234,6 +234,18 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# Should be 200 this time.
 		self.assertEquals(response.code, 200, "Response is not 200.")
 
+		# Try with a port in the Host header.
+		request = tornado.httpclient.HTTPRequest(
+			"http://localhost:%d/example" % self.nginxport,
+			method="GET",
+			headers={'Host': 'foo.com:1000'})
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, self.stop)
+		response = self.wait()
+
+		# Should be 200.
+		self.assertEquals(response.code, 200, "Response is not 200.")
+
 		# Try to fetch the one level wildcard version.
 		request = tornado.httpclient.HTTPRequest(
 			"http://localhost:%d/example" % self.nginxport,
@@ -281,8 +293,8 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		result = self.wait()
 		#print json.dumps(result, indent=4, sort_keys=True)
 
-		self.assertEquals(result['requests'], 2, "Wrong number of requests.")
-		self.assertEquals(result['2xx'], 2, "Wrong number of requests.")
+		self.assertEquals(result['requests'], 3, "Wrong number of requests.")
+		self.assertEquals(result['2xx'], 3, "Wrong number of requests.")
 		self.assertTrue(result['bytes'] > 400, "Wrong value returned.")
 		self.assertTrue(result['nginxtime'] > 0, "Wrong value returned.")
 		self.assertTrue(result['time'] > 0, "Wrong value returned.")
@@ -308,8 +320,8 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 		# And the result should match the stats results for the
 		# version type.
-		self.assertEquals(result['requests'], 2, "Wrong number of requests.")
-		self.assertEquals(result['2xx'], 2, "Wrong number of requests.")
+		self.assertEquals(result['requests'], 3, "Wrong number of requests.")
+		self.assertEquals(result['2xx'], 3, "Wrong number of requests.")
 		self.assertTrue(result['bytes'] > 400, "Wrong value returned.")
 		self.assertTrue(result['nginxtime'] > 0, "Wrong value returned.")
 		self.assertTrue(result['time'] > 0, "Wrong value returned.")
@@ -333,4 +345,4 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 		self.assertEquals(len(result), 1, "Wrong number of data points.")
 		self.assertEquals(len(result[0]), 2, "Malformed response.")
-		self.assertEquals(result[0][1], 2, "Wrong number of requests.")
+		self.assertEquals(result[0][1], 3, "Wrong number of requests.")

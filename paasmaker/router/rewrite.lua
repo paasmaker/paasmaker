@@ -29,6 +29,11 @@ end
 -- Convert the incoming hostname to lowercase.
 host = host:lower()
 
+-- Strip off any port in the host. This is probably
+-- against the HTTP spec, but allows for easier testing,
+-- and possibly some other magic scenarios.
+host = host:gsub("[:].*", "", 1)
+
 -- Convert 'www.foo.com' into '*.foo.com' for a secondary search.
 wildcard_host = host:gsub("(.-)[.]", "*.", 1)
 

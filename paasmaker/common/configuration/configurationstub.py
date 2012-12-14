@@ -33,6 +33,10 @@ master:
   port: %(master_port)d
   isitme: true
 
+misc_ports:
+  min: 42700
+  max: 42799
+
 broker:
   host: localhost
   port: %(broker_port)d
@@ -125,10 +129,10 @@ router:
 		self.params['heart_working_dir'] = tempfile.mkdtemp()
 		self.params['scratch_dir'] = tempfile.mkdtemp()
 		self.params['master_port'] = port
-		self.params['router_table_port'] = allocator.free_in_range(42610, 42699)
-		self.params['router_stats_port'] = allocator.free_in_range(42610, 42699)
-		self.params['jobs_port'] = allocator.free_in_range(42610, 42699)
-		self.params['broker_port'] = allocator.free_in_range(42610, 42699)
+		self.params['router_table_port'] = allocator.free_in_range(42710, 42799)
+		self.params['router_stats_port'] = allocator.free_in_range(42710, 42799)
+		self.params['jobs_port'] = allocator.free_in_range(42710, 42799)
+		self.params['broker_port'] = allocator.free_in_range(42710, 42799)
 		self.params['stats_log'] = "%s/access.log.paasmaker" % self.params['log_dir']
 
 		# Create the configuration file.
