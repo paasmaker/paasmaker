@@ -391,3 +391,4 @@ class GitSCMTest(BaseSCMTest):
 		self.assertIn("BRANCH CHANGE", app_contents, "Local checkout was not updated.")
 
 		# TODO: Test the error paths in this file, as there are so many of them.
+		# TODO: Test the branching thing on a real remote URL.
