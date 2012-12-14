@@ -363,4 +363,31 @@ class GitSCMTest(BaseSCMTest):
 		app_contents = open(os.path.join(self.path, 'app.py'), 'r').read()
 		self.assertIn("Test update - in master", app_contents, "Local checkout was not updated.")
 
+		# In our local repo, switch to a branch, change a file, and then try to deploy from
+		# that branch.
+		self._run_git_command(['git', 'checkout', 'test'])
+		open(os.path.join(self.repo, 'app.py'), 'a').write("\n# BRANCH CHANGE\n");
+		self._run_git_command(['git', 'add', '.'])
+		self._run_git_command(['git', 'commit', '-m', 'Updated something in the branch.'])
+
+		plugin = self.registry.instantiate(
+			'paasmaker.scm.git',
+			paasmaker.util.plugin.MODE.SCM_EXPORT,
+			{
+				'location': self.repo,
+				'branch': 'test'
+			},
+			logger
+		)
+
+		plugin.create_working_copy(self.success_callback, self.failure_callback)
+
+		self.wait()
+
+		self.assertTrue(self.success, "Did not clone properly.")
+		self.assertTrue(os.path.exists(os.path.join(self.path, 'app.py')), "app.py does not exist.")
+		self.assertFalse(os.path.exists(os.path.join(self.path, '.git')), "Output directory still has git metadata.")
+		app_contents = open(os.path.join(self.path, 'app.py'), 'r').read()
+		self.assertIn("BRANCH CHANGE", app_contents, "Local checkout was not updated.")
+
 		# TODO: Test the error paths in this file, as there are so many of them.
