@@ -121,18 +121,14 @@ class GitSCM(BaseSCM):
 
 	def create_form(self):
 		return """
-		<label>
-			Repository URL:
-			<input type="text" name="location" />
-		</label>
-		<label>
-			Branch:
-			<input type="text" name="branch" />
-		</label>
-		<label>
-			Revision:
-			<input type="text" name="revision" />
-		</label>
+		<label for="parameters.location">Repository URL:</label>
+		<input type="text" name="parameters.location" required="required" />
+
+		<label for="parameters.branch">Branch:</label>
+		<input type="text" name="parameters.branch" placeholder="master" />
+
+		<label for="parameters.revision">Revision:</label>
+		<input type="text" name="parameters.revision" placeholder="HEAD" />
 		"""
 
 	def create_summary(self):

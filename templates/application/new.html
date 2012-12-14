@@ -9,20 +9,24 @@
 {% end %}
 
 {% block body %}
-	{% for scm in scms %}
-		<div class="scm">
-			<h3>{{ scm['title'] }}</h3>
-			<form method="POST">
-				<input type="hidden" name="scm" value="{{ scm['plugin'] }}" />
+	<div class="scm-container">
+		{% for scm in scms %}
+			<div class="scm">
+				<h3>{{ scm['title'] }}</h3>
+				<div class="inner">
+					<form method="POST">
+						<input type="hidden" name="scm" value="{{ scm['plugin'] }}" />
 
-				{% raw scm['form'] %}
+						{% raw scm['form'] %}
 
-				<label for="manifest_path">Manifest Path:</label>
-				<input name="manifest_path" id="manifest_path" type="text" value="manifest.yml" required="required" />
+						<label for="manifest_path">Manifest Path:</label>
+						<input name="manifest_path" id="manifest_path" type="text" value="manifest.yml" required="required" />
 
-				<br />
-				<input type="submit" value="Create" class="btn" />
-			</form>
-		</div>
-	{% end %}
+						<br />
+						<input type="submit" value="Create" class="btn" />
+					</form>
+				</div>
+			</div>
+		{% end %}
+	</div>
 {% end %}

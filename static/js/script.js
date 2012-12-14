@@ -860,6 +860,30 @@ $(document).ready(
 				}
 			);
 		}
+
+		// On the new applications page, collapse the options until you click one.
+		var scms = $('.scm-container');
+		if( scms.length > 0 )
+		{
+			$('.scm', scms).each(
+				function(index, element)
+				{
+					var el = $(element);
+					var inner = $('.inner', el);
+					inner.hide();
+					var show = $('<a href="#">Show...</a>');
+					show.click(
+						function(e)
+						{
+							inner.show();
+							show.hide();
+							e.preventDefault();
+						}
+					);
+					el.append(show);
+				}
+			);
+		}
 	}
 )
 
