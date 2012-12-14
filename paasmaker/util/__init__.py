@@ -10,6 +10,7 @@ from managedredis import ManagedRedis, ManagedRedisError
 from managedrabbitmq import ManagedRabbitMQ, ManagedRabbitMQError
 from managedpostgres import ManagedPostgres, ManagedPostgresError
 from managedmysql import ManagedMySQL, ManagedMySQLError
+from managednginx import ManagedNginx, ManagedNginxError
 from memoryredis import MemoryRedis
 from temporaryrabbitmq import TemporaryRabbitMQ
 from commandsupervisor import CommandSupervisorLauncher

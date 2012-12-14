@@ -74,7 +74,7 @@ http {
 		if managed_params:
 			parameters['temp_dir'] = managed_params['temp_path']
 			parameters['listen_port'] = managed_params['port']
-			parameters['log_path'] = tempfile.mkdtemp()
+			parameters['log_path'] = managed_params['log_path']
 			parameters['temp_paths'] = NginxRouter.TEMP_PATHS % {'temp_dir': managed_params['temp_path']}
 			parameters['pid_path'] = managed_params['pid_path']
 			parameters['log_level'] = managed_params['log_level']

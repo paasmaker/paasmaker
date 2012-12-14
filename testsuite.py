@@ -32,6 +32,7 @@ test_sets = {
 	paasmaker.util.managedredis: ['slow', 'util', 'redis', 'managedservice'],
 	paasmaker.util.managedpostgres: ['slow', 'util', 'postgres', 'managedservice'],
 	paasmaker.util.managedmysql: ['slow', 'util', 'mysql', 'managedservice'],
+	paasmaker.util.managednginx: ['slow', 'util', 'nginx', 'managedservice'],
 	paasmaker.util.asyncdns: ['all', 'slow', 'util', 'network'],
 
 	paasmaker.router.router: ['all', 'slow', 'router'],
