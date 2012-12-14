@@ -30,7 +30,10 @@ class CronList(object):
 			if arg:
 				dates.append(arg.isoformat())
 
-		return max(*dates)
+		if len(dates) == 0:
+			return "0"
+		else:
+			return max(*dates)
 
 	def _get_cache_key(self, session):
 		updated_cron = session.query(

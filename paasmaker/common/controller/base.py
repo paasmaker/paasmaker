@@ -451,6 +451,7 @@ class BaseController(tornado.web.RequestHandler):
 		)
 		self.add_data('router_stats_name', name)
 		self.add_data('router_stats_input_id', input_id)
+		self.add_data_template('router_stats_display', paasmaker.router.stats.ApplicationStats.DISPLAY_SET)
 		self._router_stats.setup(
 			self._on_router_stats_ready,
 			self._on_router_stats_error
@@ -472,7 +473,6 @@ class BaseController(tornado.web.RequestHandler):
 
 	def _on_router_stats_output(self, result):
 		self.add_data('router_stats', result)
-		self.add_data('router_stats_display', paasmaker.router.stats.ApplicationStats.DISPLAY_SET)
 		self._router_stats_callback(result)
 
 	def _on_router_stats_error(self, error, exception=None):

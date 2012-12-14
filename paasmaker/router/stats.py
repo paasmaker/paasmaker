@@ -311,7 +311,7 @@ class ApplicationStats(object):
 			callback(list(vtids))
 
 		if name == 'workspace' or name == 'application' or \
-			name == 'version':
+			name == 'version' or name == 'node':
 			# These are valid.
 			pass
 		elif name == 'version_type':

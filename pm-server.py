@@ -150,6 +150,7 @@ def on_completed_startup():
 	# Start listening for HTTP requests, as everything is ready.
 	logging.info("Listening on port %d", configuration['http_port'])
 	application.listen(configuration['http_port'])
+	logging.info("All systems are go.")
 
 	# Register the node with the server.
 	# This periodic manager will handle keeping it up to date.
@@ -189,6 +190,11 @@ def on_check_instances_complete(altered_instances):
 	else:
 		on_intermediary_started("Instance checking complete, no changes.")
 
+def on_redis_started(redis):
+	# Well, we don't care about the redis client passed,
+	# but mark this item as complete.
+	on_intermediary_started("Started a redis successfully.")
+
 def on_ioloop_started():
 	logger.debug("IO loop running. Launching other connections.")
 
@@ -197,6 +203,10 @@ def on_ioloop_started():
 	# For the message exchange startup.
 	on_intermediary_started.required += 1
 	# For the managed NGINX startup.
+	on_intermediary_started.required += 1
+	# For the possibly managed router table redis startup.
+	on_intermediary_started.required += 1
+	# For the possibly managed stats redis startup.
 	on_intermediary_started.required += 1
 
 	if configuration.is_heart():
@@ -208,6 +218,12 @@ def on_ioloop_started():
 
 	# Message exchange.
 	configuration.setup_message_exchange(on_intermediary_started, on_intermediary_failed)
+
+	# Possibly managed routing table startup.
+	configuration.get_router_table_redis(on_redis_started, on_intermediary_failed)
+
+	# Possibly managed stats redis startup.
+	configuration.get_stats_redis(on_redis_started, on_intermediary_failed)
 
 	# Managed NGINX.
 	configuration.setup_managed_nginx(on_intermediary_started, on_intermediary_failed)
