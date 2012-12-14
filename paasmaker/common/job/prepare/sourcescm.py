@@ -6,7 +6,8 @@ from paasmaker.util.plugin import MODE
 import colander
 
 class SourceSCMJobParametersSchema(colander.MappingSchema):
-	scm = colander.SchemaNode(colander.Mapping(unknown='preserve'))
+	scm_name = colander.SchemaNode(colander.String())
+	scm_parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'))
 
 class SourceSCMJob(BaseJob):
 	PARAMETERS_SCHEMA = {MODE.JOB: SourceSCMJobParametersSchema()}
@@ -14,13 +15,13 @@ class SourceSCMJob(BaseJob):
 	def start_job(self, context):
 		try:
 			scm_plugin = self.configuration.plugins.instantiate(
-				self.parameters['scm']['method'],
+				self.parameters['scm_name'],
 				paasmaker.util.plugin.MODE.SCM_EXPORT,
-				self.parameters['scm']['parameters'],
+				self.parameters['scm_parameters'],
 				self.logger
 			)
 		except paasmaker.common.configuration.InvalidConfigurationException, ex:
-			error_message = "Failed to start a SCM plugin for %s.", self.parameters['method']
+			error_message = "Failed to start a SCM plugin for %s.", self.parameters['scm_name']
 			logger.critical(error_message)
 			logger.critical(ex)
 			self.failed(error_message)
@@ -28,7 +29,7 @@ class SourceSCMJob(BaseJob):
 
 		# Now that SCM plugin should create us a directory that we can work on.
 		# The success callback will emit a working directory.
-		# TODO: Cleanup on failure/abort
+		# TODO: Cleanup on failure/abort.
 		scm_plugin.create_working_copy(self.scm_success, self.scm_failure)
 
 	def scm_success(self, path, message):

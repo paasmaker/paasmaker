@@ -1,4 +1,6 @@
 
+import os
+
 import paasmaker
 from paasmaker.common.core import constants
 from paasmaker.common.core import constants
@@ -10,33 +12,18 @@ class ManifestReaderJob(BaseJob):
 
 	def start_job(self, context):
 		self.output_context = {}
-		self.logger.debug("About to start reading manifest from file %s", context['manifest_file'])
+		manifest_full_path = os.path.join(context['working_path'], context['manifest_path'])
+		self.logger.debug("About to start reading manifest from file %s", manifest_full_path)
 
 		# Load the manifest.
 		self.manifest = paasmaker.common.application.configuration.ApplicationConfiguration()
 		try:
-			self.manifest.load_from_file([context['manifest_file']])
+			self.manifest.load_from_file([manifest_full_path])
 		except paasmaker.common.configuration.InvalidConfigurationException, ex:
 			self.logger.critical("Failed to load configuration:")
-			self.logger.critical(ex)
+			self.logger.critical(exc_info=ex)
 			self.failed("Failed to load configuration.")
 			return
-
-		# Check that the source SCM exists.
-		scm_exists = self.configuration.plugins.exists(
-			self.manifest['application']['source']['method'],
-			paasmaker.util.plugin.MODE.SCM_EXPORT
-		)
-		if not scm_exists:
-			error_message = "SCM plugin %s does not exist." % self.manifest['application']['source']['method']
-			self.logger.critical(error_message)
-			self.failed(error_message)
-			return
-
-		# If the file is uploaded, inject it into the manifest.
-		if context['uploaded_file']:
-			self.logger.debug("Setting uploaded file: %s", context['uploaded_file'])
-			self.manifest.set_upload_location(context['uploaded_file'])
 
 		# Now based on that successul loading of the manifest, get started.
 		session = self.configuration.get_database_session()
@@ -104,14 +91,13 @@ class ManifestReaderJob(BaseJob):
 		# - Manifest reader
 		# - Packer
 		#   - Preparer
-		#     - SCM
 		#     - Service Container
 		#       - Service A
 		#       - Service B
 		# Because the jobs execute from the leaf first,
-		# the SCM will execute first, concurrently
-		# with the services, then the packer and preparer once
-		# both of those are complete.
+		# the services will execute first (in paralell),
+		# then the packer and preparer once both of those
+		# are complete.
 
 		# Add some extra tags to the root job.
 		tags = []
@@ -128,29 +114,17 @@ class ManifestReaderJob(BaseJob):
 			tags=tags
 		)
 
-		self.services_done = False
-		self.scm_done = False
-
 	def on_packer_added(self, packer_job_id):
 		# Add the preparer.
 		self.configuration.job_manager.add_job(
 			'paasmaker.job.prepare.preparer',
-			{'data': self.manifest['application']['source']['prepare']},
+			{'data': self.manifest['application']['prepare']},
 			'Prepare source code',
 			parent=packer_job_id,
 			callback=self.on_preparer_added
 		)
 
 	def on_preparer_added(self, preparer_job_id):
-		# Add the SCM.
-		self.configuration.job_manager.add_job(
-			'paasmaker.job.prepare.scm',
-			{'scm': self.manifest['application']['source']},
-			'SCM export',
-			parent=preparer_job_id,
-			callback=self.on_scm_added
-		)
-
 		# Also add the service container, and then services themselves.
 		self.configuration.job_manager.add_job(
 			'paasmaker.job.prepare.servicecontainer',
@@ -159,11 +133,6 @@ class ManifestReaderJob(BaseJob):
 			parent=preparer_job_id,
 			callback=self.on_service_container_added
 		)
-
-	def on_scm_added(self, scm_job_id):
-		self.scm_done = True
-		# This will call complete if done.
-		self.on_prepare_complete()
 
 	def on_service_container_added(self, service_container_job_id):
 		# Queue up all the services.
@@ -175,7 +144,6 @@ class ManifestReaderJob(BaseJob):
 				except IndexError, ex:
 					# No more services to create.
 					# So signal completion.
-					self.services_done = True
 					self.on_prepare_complete()
 				# end create_service_queued()
 
@@ -190,18 +158,16 @@ class ManifestReaderJob(BaseJob):
 
 		if len(self.destroyable_service_list) == 0:
 			# No jobs. Proceed to prepare.
-			self.services_done = True
 			self.on_prepare_complete()
 		else:
 			# Kick off the service job add process.
 			create_service(self.destroyable_service_list.pop())
 
 	def on_prepare_complete(self):
-		if self.scm_done and self.services_done:
-			## KICKOFF
-			# At this stage, all the code following has executed it's callbacks to get to
-			# here. So now we can make our jobs executable and let them run wild.
-			self.configuration.job_manager.allow_execution(self.job_id, callback=self.on_execution_allowed)
+		## KICKOFF
+		# At this stage, all the code following has executed it's callbacks to get to
+		# here. So now we can make our jobs executable and let them run wild.
+		self.configuration.job_manager.allow_execution(self.job_id, callback=self.on_execution_allowed)
 
 	def on_execution_allowed(self):
 		# Success! All queued up.

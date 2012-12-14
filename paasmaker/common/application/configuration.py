@@ -79,25 +79,13 @@ class PrepareSection(colander.MappingSchema):
 	def default():
 		return {'commands': [], 'runtime': {'name': None}}
 
-class ApplicationSource(colander.MappingSchema):
-	method = colander.SchemaNode(colander.String(),
-		title="Source fetching method",
-		description="The method to grab and prepare the source",
-		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern))
-	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Parameters for the source fetcher.",
-		description="Any parameters to the source fetching method.",
-		default={},
-		missing={})
-	prepare = PrepareSection(default=PrepareSection.default(), missing=PrepareSection.default())
-
 class Application(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Application name",
 		decription="The name of the application",
 		validator=colander.Regex(VALID_IDENTIFIER, "Application names must match " + VALID_IDENTIFIER.pattern))
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
-	source = ApplicationSource()
+	prepare = PrepareSection(default=PrepareSection.default(), missing=PrepareSection.default())
 
 class Cron(colander.MappingSchema):
 	# TODO: Place an epic regex on this field to validate it.
@@ -177,9 +165,6 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 				# In future this can be used to print a nicer report.
 				# Because the default output is rather confusing...!
 				raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self['instance']['instances'])
-
-	def set_upload_location(self, location):
-		self['application']['source']['parameters']['location'] = location
 
 	def create_application(self, session, workspace):
 		application = paasmaker.model.Application()
@@ -261,21 +246,17 @@ application:
   name: foo.com
   tags:
     tag: value
-  source:
-    method: paasmaker.scm.git
-    parameters:
-      location: git@foo.com/paasmaker/paasmaker.git
-    prepare:
-      runtime:
-        name: paasmaker.runtime.shell
-        version: 1
-      commands:
-        - plugin: paasmaker.prepare.symfony2
-        - plugin: paasmaker.prepare.shell
-          parameters:
-            commands:
-              - php composer.phar install
-              - php app/console cache:clear
+  prepare:
+    runtime:
+      name: paasmaker.runtime.shell
+      version: 1
+    commands:
+      - plugin: paasmaker.prepare.symfony2
+      - plugin: paasmaker.prepare.shell
+        parameters:
+          commands:
+            - php composer.phar install
+            - php app/console cache:clear
 
 instances:
   web:

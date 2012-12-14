@@ -5,19 +5,15 @@ application:
   name: tornado-simple
   tags:
     tag: value
-  source:
-    method: paasmaker.scm.zip
-    parameters:
-      location: upload
-    prepare:
-      runtime:
-        name: paasmaker.runtime.shell
-        version: 1
-      commands:
-        - plugin: paasmaker.prepare.shell
-          parameters:
-            commands:
-              - echo "foo" > prepare.txt
+  prepare:
+    runtime:
+      name: paasmaker.runtime.shell
+      version: 1
+    commands:
+      - plugin: paasmaker.prepare.shell
+        parameters:
+          commands:
+            - echo "foo" > prepare.txt
 
 instances:
   web:

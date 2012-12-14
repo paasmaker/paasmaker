@@ -1,6 +1,7 @@
 
 import os
 import subprocess
+import json
 
 import paasmaker
 from paasmaker.common.core import constants
@@ -14,36 +15,54 @@ from pubsub import pub
 
 class ApplicationPrepareRootJob(BaseJob):
 	@staticmethod
-	def setup(configuration, name, manifest, workspace_id, callback, application_id=None, uploaded_file=None):
+	def setup(configuration,
+			name,
+			manifest_path,
+			workspace_id,
+			scm_name,
+			scm_parameters,
+			callback,
+			application_id=None):
 		# Set up the context.
 		context = {}
-		context['manifest_file'] = manifest
+		context['manifest_path'] = manifest_path
 		context['application_name'] = name
 		context['workspace_id'] = workspace_id
 		context['application_id'] = application_id
-		context['uploaded_file'] = uploaded_file
 		context['environment'] = {}
 
 		tags = []
 		tags.append('workspace:%d' % workspace_id)
 
-		def on_manifest_reader_added(root_job_id, manifest_reader_job_id):
-			# Ok, at this stage we're queued. The manifest reader will
-			# queue up more jobs for us as we go along.
-			callback(root_job_id)
-
 		def on_root_job_added(root_job_id):
-			def on_mini_manifest(manifest_reader_job_id):
-				on_manifest_reader_added(root_job_id, manifest_reader_job_id)
+			def on_scm_job_added(scm_job_id):
+				# Ok, at this stage we're queued. The manifest reader will
+				# queue up more jobs for us as we go along.
+				callback(root_job_id)
+
+			def manfiest_reader_added(manifest_reader_job_id):
+				# Add the SCM.
+				configuration.job_manager.add_job(
+					'paasmaker.job.prepare.scm',
+					{
+						'scm_name': scm_name,
+						'scm_parameters': scm_parameters
+					},
+					'SCM export',
+					parent=manifest_reader_job_id,
+					callback=on_scm_job_added
+				)
+				# end of manifest_reader_added()
 
 			# Make a manifest reader job as a child of this root job.
 			configuration.job_manager.add_job(
 				'paasmaker.job.prepare.manifestreader',
 				{},
 				"Manifest reader",
-				on_mini_manifest,
+				manfiest_reader_added,
 				parent=root_job_id
 			)
+			# end of on_root_job_added()
 
 		configuration.job_manager.add_job(
 			'paasmaker.job.prepare.root',
@@ -143,8 +162,11 @@ class PrepareJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 			'foo.com',
 			manifest,
 			workspace.id,
-			self.stop,
-			uploaded_file=tempzip
+			'paasmaker.scm.zip',
+			{
+				'location': tempzip
+			},
+			self.stop
 		)
 
 		root_job_id = self.wait()
@@ -156,6 +178,10 @@ class PrepareJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# And make it work.
 		self.configuration.job_manager.allow_execution(root_job_id, self.stop)
 		self.wait()
+
+		#self.configuration.job_manager.get_pretty_tree(root_job_id, self.stop)
+		#tree = self.wait()
+		#print json.dumps(tree, indent=4, sort_keys=True)
 
 		result = self.wait()
 		while result.state != constants.JOB.SUCCESS:

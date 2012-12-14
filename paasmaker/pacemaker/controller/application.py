@@ -90,6 +90,7 @@ class ApplicationListController(ApplicationRootController):
 		routes.append((r"/workspace/(\d+)/applications", ApplicationListController, configuration))
 		return routes
 
+# TODO: Unit test. Desperately required!
 class ApplicationNewController(ApplicationRootController):
 
 	def get(self, input_id):
@@ -106,7 +107,6 @@ class ApplicationNewController(ApplicationRootController):
 
 		self.require_permission(constants.PERMISSION.APPLICATION_CREATE, workspace=workspace)
 
-		# TODO: Unit test.
 		# Return a list of available SCMs and stuff.
 		scm_plugins = self.configuration.plugins.plugins_for(paasmaker.util.plugin.MODE.SCM_CHOOSER)
 
@@ -142,12 +142,14 @@ class ApplicationNewController(ApplicationRootController):
 		if self.request.uri.startswith('/application'):
 			application = self._get_application(input_id)
 			application_id = application.id
+			application_name = application.name
 			workspace = application.workspace
 			self.add_data('new_application', False)
 			self.add_data('application', application)
 		else:
 			application = None
 			application_id = None
+			application_name = 'New Application'
 			workspace = self._get_workspace(input_id)
 			self.add_data('new_application', True)
 
@@ -162,7 +164,7 @@ class ApplicationNewController(ApplicationRootController):
 			# Supply back a much nicer error, and probably refill forms and stuff.
 			raise tornado.web.HTTPError(400, "Invalid parameters")
 
-		raw_scm_paramters = self.params['parameters']
+		raw_scm_parameters = self.params['parameters']
 		upload_location = None
 		if self.params['uploaded_file']:
 			# Insert the location of the file into the raw SCM params.
@@ -170,19 +172,7 @@ class ApplicationNewController(ApplicationRootController):
 				self.configuration.get_scratch_path_exists('uploads'),
 				self.params['uploaded_file']
 			)
-			raw_scm_paramters['location'] = upload_location
-
-		# TODO: This is a hack to get around the fact that the plugin must have
-		# a logger that can be taken over.
-		tologger = self.configuration.get_job_logger(str(uuid.uuid4()))
-
-		# Try to create the new application.
-		plugin = self.configuration.plugins.instantiate(
-			self.params['scm'],
-			paasmaker.util.plugin.MODE.SCM_EXPORT,
-			raw_scm_paramters,
-			logger=tologger
-		)
+			raw_scm_parameters['location'] = upload_location
 
 		def job_started():
 			self._redirect_job(self.get_data('job_id'), '/workspace/%d/applications' % workspace.id)
@@ -191,34 +181,16 @@ class ApplicationNewController(ApplicationRootController):
 			self.add_data('job_id', job_id)
 			self.configuration.job_manager.allow_execution(job_id, callback=job_started)
 
-		# Extract the manifest file.
-		def manifest_extract_ok(manifest):
-			# Write it out to disk.
-			manifest_file_spec = tempfile.mkstemp()[1]
-			manifest_fp = open(manifest_file_spec, 'w')
-			manifest_fp.write(manifest)
-			manifest_fp.close()
-
-			application_name = 'new application'
-			if application:
-				application_name = application.name
-
-			paasmaker.common.job.prepare.prepareroot.ApplicationPrepareRootJob.setup(
-				self.configuration,
-				application_name,
-				manifest_file_spec,
-				workspace.id,
-				application_job_ready,
-				application_id=application_id,
-				uploaded_file=upload_location
-			)
-
-		def manifest_extract_fail(message):
-			self.add_error("Failed to fetch manifest file.")
-			self.add_error(message)
-			self.write_error(500)
-
-		plugin.extract_manifest(self.params['manifest_path'], manifest_extract_ok, manifest_extract_fail)
+		paasmaker.common.job.prepare.prepareroot.ApplicationPrepareRootJob.setup(
+			self.configuration,
+			application_name,
+			self.params['manifest_path'],
+			workspace.id,
+			self.params['scm'],
+			raw_scm_parameters,
+			application_job_ready,
+			application_id=application_id
+		)
 
 	@staticmethod
 	def get_routes(configuration):
