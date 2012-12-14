@@ -7,6 +7,7 @@ from paasmaker.common.core import constants
 
 import tornado
 import colander
+from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 class NginxController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
@@ -60,10 +61,6 @@ class RouterStatsRequestSchema(colander.MappingSchema):
 		title="The input ID",
 		description="The input ID of the stats requested (eg, workspace ID, application ID, etc)")
 
-# TODO: Add unit tests for this. No, seriously.
-# TODO: None of this handler is re-entrant - if you back up a few requests, it will
-# behave strangely. Refactor it to fix this. Also, it won't work properly for multiple
-# stats requests per page - it will mix them up.
 # TODO: Permissions. Will want to cache these lookups!
 class RouterStatsStreamHandler(BaseWebsocketHandler):
 	AUTH_METHODS = [BaseWebsocketHandler.USER, BaseWebsocketHandler.SUPER]
@@ -71,34 +68,55 @@ class RouterStatsStreamHandler(BaseWebsocketHandler):
 	def open(self):
 		# Fetch our stats loader.
 		self.stats_output = paasmaker.router.stats.ApplicationStats(
-			self.configuration,
-			self._on_stats_result,
+			self.configuration
+		)
+		self.ready = False
+		self.error = None
+		self.stats_output.setup(
+			self._on_stats_ready,
 			self._on_stats_error
 		)
-		self.last_message = None
+
+	def _on_stats_ready(self):
+		self.ready = True
+		self.send_success('ready', True)
+
+	def _on_stats_error(self, error, exception=None):
+		self.ready = False
+		self.error = error
 
 	def on_message(self, message):
 		# Message should be JSON.
 		parsed = self.parse_message(message)
 		if parsed:
 			if parsed['request'] == 'update':
-				self.handle_update(parsed)
+				if self.error:
+					self.send_error(self.error, parsed)
+				elif not self.ready:
+					self.send_error("Not yet ready. Sorry.", parsed)
+				else:
+					self.handle_update(parsed)
 
 	def handle_update(self, message):
+		def got_stats(stats):
+			self.send_success('update', stats)
+
+		def failed_stats(error, exception=None):
+			self.send_error('error', message)
+
+		def got_set(vtset):
+			self.stats_output.total_for_list(vtset, got_stats, failed_stats)
+
 		# Must match the request schema.
 		request = self.validate_data(message, RouterStatsRequestSchema())
 		if request:
 			# Request some stats.
 			# TODO: Check permissions!
-			self.last_message = message
-			self.stats_output.for_name(request['name'], int(request['input_id']))
-
-	def _on_stats_result(self, result):
-		# Send back the pretty tree to the client.
-		self.send_success('update', result)
-
-	def _on_stats_error(self, error, exception=None):
-		self.send_error(error, self.last_message)
+			self.stats_output.vtset_for_name(
+				request['name'],
+				int(request['input_id']),
+				got_set
+			)
 
 	def on_close(self):
 		pass
@@ -142,3 +160,62 @@ class TableDumpControllerTest(BaseControllerTest):
 
 		self.failIf(response.error)
 		self.assertIn('table', response.body)
+
+class RouterStreamHandlerTestClient(TornadoWebSocketClient):
+	def opened(self):
+		self.messages = []
+
+	def closed(self, code, reason=None):
+		#print "Client: closed"
+		pass
+
+	def update(self, name, input_id):
+		data = {'name': name, 'input_id': input_id}
+		auth = {'method': 'super', 'value': self.configuration.get_flat('pacemaker.super_token')}
+		message = {'request': 'update', 'data': data, 'auth': auth}
+		self.send(json.dumps(message))
+
+	def received_message(self, m):
+		#print "Client: got %s" % m
+		# Record the log lines.
+		# CAUTION: m is NOT A STRING.
+		parsed = json.loads(str(m))
+		self.messages.append(parsed)
+
+class RouterStreamHandlerTest(BaseControllerTest):
+	config_modules = ['pacemaker']
+
+	def get_app(self):
+		self.late_init_configuration(self.io_loop)
+		routes = RouterStatsStreamHandler.get_routes({'configuration': self.configuration})
+		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
+		return application
+
+	def test_router_stream(self):
+		client = RouterStreamHandlerTestClient("ws://localhost:%d/router/stats/stream" % self.get_http_port(), io_loop=self.io_loop)
+		client.configuration = self.configuration
+		client.connect()
+
+		# Wait for it to announce it's ready.
+		self.short_wait_hack(length=0.2)
+
+		# Ask for updates.
+		client.update('workspace', 1)
+		client.update('version_type', 1)
+
+		# Wait for it all to complete.
+		self.short_wait_hack()
+
+		#print json.dumps(client.messages, indent=4, sort_keys=True)
+
+		# Now, analyze what happened.
+		# TODO: Make this clearer and more exhaustive.
+		expected_types = [
+			'ready',
+			'error',
+			'update'
+		]
+
+		self.assertEquals(len(expected_types), len(client.messages), "Not the right number of messages.")
+		for i in range(len(expected_types)):
+			self.assertEquals(client.messages[i]['type'], expected_types[i], "Wrong type for message %d" % i)

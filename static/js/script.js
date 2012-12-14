@@ -558,7 +558,7 @@ var RouterStatsStreamHandler = function(container)
 	var _self = this;
 	this.routerStatsRemote = new WebSocket("ws://" + window.location.host + "/router/stats/stream");
 	this.routerStatsRemote.onopen = function() {
-		_self.requestUpdate();
+		// It will send us a ready message when we can start.
 	};
 	this.routerStatsRemote.onmessage = function (evt) {
 		var message = $.parseJSON(evt.data);
@@ -567,6 +567,10 @@ var RouterStatsStreamHandler = function(container)
 		{
 			case 'update':
 				_self.showUpdate(message.data);
+				break;
+			case 'ready':
+				// Start updating.
+				_self.requestUpdate();
 				break;
 		}
 	};
@@ -580,7 +584,6 @@ var RouterStatsStreamHandler = function(container)
 
 RouterStatsStreamHandler.prototype.requestUpdate = function()
 {
-	console.log("Asking for update...");
 	this.routerStatsRemote.send($.toJSON({request: 'update', data: {'name': this.input_name, 'input_id': this.input_id}}));
 }
 

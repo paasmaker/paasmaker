@@ -447,15 +447,30 @@ class BaseController(tornado.web.RequestHandler):
 	def _get_router_stats_for(self, name, input_id, callback):
 		self._router_stats_callback = callback
 		self._router_stats = paasmaker.router.stats.ApplicationStats(
-			self.configuration,
-			self._on_router_stats_success,
-			self._on_router_stats_error
+			self.configuration
 		)
-		self._router_stats.for_name(name, input_id)
 		self.add_data('router_stats_name', name)
 		self.add_data('router_stats_input_id', input_id)
+		self._router_stats.setup(
+			self._on_router_stats_ready,
+			self._on_router_stats_error
+		)
 
-	def _on_router_stats_success(self, result):
+	def _on_router_stats_ready(self):
+		self._router_stats.vtset_for_name(
+			self.get_data('router_stats_name'),
+			self.get_data('router_stats_input_id'),
+			self._on_router_stats_got_vtset
+		)
+
+	def _on_router_stats_got_vtset(self, vtset):
+		self._router_stats.total_for_list(
+			vtset,
+			self._on_router_stats_output,
+			self._on_router_stats_error
+		)
+
+	def _on_router_stats_output(self, result):
 		self.add_data('router_stats', result)
 		self._router_stats_callback(result)
 

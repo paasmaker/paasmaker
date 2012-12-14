@@ -5,6 +5,7 @@ import tempfile
 import shutil
 import signal
 import json
+import time
 
 import paasmaker
 
@@ -156,6 +157,12 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		self.configuration.get_router_table_redis(self.stop, None)
 		return self.wait()
 
+	def get_stats_redis_client(self):
+		# CAUTION: The second callback is the error callback,
+		# and this will break if it tries to call it. TODO: fix this.
+		self.configuration.get_stats_redis(self.stop, None)
+		return self.wait()
+
 	def test_simple_request(self):
 		request = tornado.httpclient.HTTPRequest(
 			"http://localhost:%d/example" % self.nginxport,
@@ -242,10 +249,13 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		self.assertEquals(result, "Completed reading file.")
 
 		# Read back the stats, and make sure they make some sense.
-		stats_output = paasmaker.router.stats.ApplicationStats(self.configuration, self.stop, self.stop)
+		stats_output = paasmaker.router.stats.ApplicationStats(self.configuration)
+		stats_output.setup(self.stop, self.stop)
+		# Wait for it to be ready.
+		self.wait()
 
 		# This is for uncaught requests.
-		stats_output.for_version_type('null')
+		stats_output.total_for_uncaught(self.stop, self.stop)
 		result = self.wait()
 		#print json.dumps(result, indent=4, sort_keys=True)
 
@@ -258,7 +268,10 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		self.assertTrue(result['time'] == 0, "Wrong value returned.")
 
 		# Now check for the supplied version ID.
-		stats_output.for_version_type('1')
+		stats_output.vtset_for_name('version_type', 1, self.stop)
+		vtset = self.wait()
+		#print json.dumps(vtset, indent=4, sort_keys=True)
+		stats_output.total_for_list(vtset, self.stop, self.stop)
 		result = self.wait()
 		#print json.dumps(result, indent=4, sort_keys=True)
 
@@ -270,9 +283,9 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 		# Now try to fetch for a workspace ID. This won't exist,
 		# because this unit test doesn't insert those records.
-		stats_output.for_workspace(1)
+		stats_output.vtset_for_name('workspace', 1, self.stop)
 		result = self.wait()
-		self.assertIn("No such", result, "Wrong error message.")
+		self.assertEquals(len(result), 0, "Returned vtids for a workspace!")
 
 		# Caution: the second callback here is the error callback.
 		self.configuration.get_stats_redis(self.stop, None)
@@ -282,7 +295,9 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		stats_redis.sadd('workspace_1_vtids', '1', callback=self.stop)
 		self.wait()
 
-		stats_output.for_workspace(1)
+		stats_output.vtset_for_name('workspace', 1, self.stop)
+		vtset = self.wait()
+		stats_output.total_for_list(vtset, self.stop, self.stop)
 		result = self.wait()
 
 		# And the result should match the stats results for the
@@ -292,3 +307,24 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		self.assertTrue(result['bytes'] > 400, "Wrong value returned.")
 		self.assertTrue(result['nginxtime'] > 0, "Wrong value returned.")
 		self.assertTrue(result['time'] > 0, "Wrong value returned.")
+
+		# This is to assist with debugging the history stats.
+		#stats_redis = self.get_stats_redis_client()
+		#stats_redis.keys('history_*', self.stop)
+		#keys = self.wait()
+		#print json.dumps(keys, indent=4, sort_keys=True)
+		#for key in keys:
+		#	stats_redis.hgetall(key, self.stop)
+		#	hmap = self.wait()
+		#	print json.dumps(hmap, indent=4, sort_keys=True)
+
+		stats_output.vtset_for_name('version_type', 1, self.stop)
+		vtset = self.wait()
+		#print json.dumps(vtset, indent=4, sort_keys=True)
+		stats_output.history_for_list(vtset, 'requests', self.stop, self.stop, time.time() - 60)
+		result = self.wait()
+		#print json.dumps(result, indent=4, sort_keys=True)
+
+		self.assertEquals(len(result), 1, "Wrong number of data points.")
+		self.assertEquals(len(result[0]), 2, "Malformed response.")
+		self.assertEquals(result[0][1], 2, "Wrong number of requests.")

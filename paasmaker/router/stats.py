@@ -2,6 +2,7 @@
 import os
 import json
 import logging
+import time
 
 import paasmaker
 
@@ -17,6 +18,7 @@ class StatsLogReader(object):
 		self.configuration = configuration
 		self.reading = False
 		self.records = {}
+		self.hashrecords = {}
 
 	def get_position_key(self):
 		return "position_%s" % self.configuration.get_node_uuid()
@@ -87,11 +89,13 @@ class StatsLogReader(object):
 				# The upstream response time, if given.
 				if parsed['upstream_response_time'] != '-':
 					# Convert it into decimal milliseconds.
-					self._store_value(key, 'time', int(float(parsed['upstream_response_time']) * 1000))
+					upstream_response_milliseconds = int(float(parsed['upstream_response_time']) * 1000)
+					self._store_value(key, 'time', upstream_response_milliseconds)
 					self._store_value(key, 'timecount', 1)
 
 				# nginx's own time, converted into decimal milliseconds.
-				self._store_value(key, 'nginxtime', int(float(parsed['nginx_response_time']) * 1000))
+				nginx_time_milliseconds = int(float(parsed['nginx_response_time']) * 1000)
+				self._store_value(key, 'nginxtime', nginx_time_milliseconds)
 
 				# Split the response code into categories.
 				code_category = "%dxx" % (parsed['code'] / 100)
@@ -99,6 +103,31 @@ class StatsLogReader(object):
 
 				# But why not, let's store the exact code too! It's quite cheap.
 				self._store_value(key, parsed['code'], 1)
+
+				# For graphs. The target keys are like this:
+				# history_<vtid>_NNNNNNNNN_requests
+				# Where NNNNNNN is the unix time in seconds at the top of the hour.
+				# The key type is a hash.
+				hour_top = parsed['timemsec'] - (parsed['timemsec'] % 3600)
+				history_prefix = "history_%s_%d" % (key, hour_top)
+				# And co-orce this one into an int.
+				history_key = "%d" % parsed['timemsec']
+
+				# Basic stats.
+				self._store_hash_value("%s_requests" % history_prefix, history_key, 1)
+				self._store_hash_value("%s_bytes" % history_prefix, history_key, parsed['bytes'])
+
+				# Upstream response time and count.
+				if parsed['upstream_response_time'] != '-':
+					# Convert it into decimal milliseconds.
+					self._store_hash_value("%s_time" % history_prefix, history_key, upstream_response_milliseconds)
+					self._store_hash_value("%s_timecount" % history_prefix, history_key, 1)
+
+				# Response code.
+				self._store_hash_value("%s_%s" % (history_prefix, code_category), history_key, 1)
+
+				# nginx's own time, converted into decimal milliseconds.
+				self._store_hash_value("%s_nginxtime" % history_prefix, history_key, nginx_time_milliseconds)
 
 			except ValueError, ex:
 				# Invalid line. Skip it.
@@ -118,6 +147,14 @@ class StatsLogReader(object):
 		else:
 			self.records[final_key] = value
 
+	def _store_hash_value(self, bucket, key, value):
+		if not self.hashrecords.has_key(bucket):
+			self.hashrecords[bucket] = {}
+		if not self.hashrecords[bucket].has_key(key):
+			self.hashrecords[bucket][key] = 0
+
+		self.hashrecords[bucket][key] += value
+
 	def _finalize_batch(self):
 		position = self.fp.tell()
 		logger.debug("Completed reading up to position %d", position)
@@ -125,6 +162,9 @@ class StatsLogReader(object):
 		pipeline = self.redis.pipeline(True)
 		for key, value in self.records.iteritems():
 			pipeline.incrby(key, value)
+		for bucket, keyset in self.hashrecords.iteritems():
+			for key, value in keyset.iteritems():
+				pipeline.hincrby(bucket, key, amount=value)
 		pipeline.set(self.get_position_key(), position)
 		pipeline.execute(self._batch_finalized)
 
@@ -187,47 +227,42 @@ class ApplicationStats(object):
 		('5xx', 'requests')
 	]
 
-	def __init__(self, configuration, callback, error_callback):
+	def __init__(self, configuration):
 		self.configuration = configuration
-		self.callback = callback
-		self.error_callback = error_callback
 
-	def for_version_type(self, version_type_id):
-		# Jump directly to the list.
-		self._for_set_name([version_type_id])
+	def setup(self, callback, error_callback):
+		self.ready_callback = callback
+		self.configuration.get_stats_redis(
+			self._redis_ready,
+			error_callback
+		)
 
-	def for_version(self, version_id):
-		self.for_name('version', version_id)
+	def _redis_ready(self, redis):
+		self.redis = redis
+		self.ready_callback()
 
-	def for_application(self, application_id):
-		self.for_name('application', application_id)
+	def vtset_for_name(self, name, input_id, callback):
+		def got_set(vtids):
+			callback(list(vtids))
 
-	def for_workspace(self, workspace_id):
-		self.for_name('workspace', workspace_id)
+		if name == 'workspace' or name == 'application' or \
+			name == 'version':
+			# These are valid.
+			pass
+		elif name == 'version_type':
+			# Pass it back directly.
+			callback([input_id])
+			return
+		else:
+			raise ValueError("Unknown input name %s" % name)
 
-	def for_name(self, name, input_id):
-		self._for_set_name('%s_%d_vtids' % (name, input_id))
+		set_key = "%s_%d_vtids" % (name, input_id)
+		self.redis.smembers(set_key, callback=got_set)
 
-	def _for_set_name(self, set_name):
-		def on_redis(redis):
-			# Fetch the set name.
-			if isinstance(set_name, list):
-				# Use the list directly.
-				self._for_list(set_name, redis)
-			else:
-				# Ask redis for that set of IDs, and then process that.
-				def on_set_list(set_list):
-					if not set_list:
-						# This also occurs on an empty list.
-						self.error_callback('No such list for %s' % set_name)
-					else:
-						self._for_list(set_list, redis)
+	def total_for_uncaught(self, callback, error_callback):
+		self.total_for_list(['null'], callback, error_callback)
 
-				redis.smembers(set_name, callback=on_set_list)
-
-		self.configuration.get_stats_redis(on_redis, self.error_callback)
-
-	def _for_list(self, idset, redis):
+	def total_for_list(self, idset, callback, error_callback):
 		def on_stats_fetched(stats):
 			# Parse the result from Redis into something more manageable.
 			metric_totals = {}
@@ -244,22 +279,22 @@ class ApplicationStats(object):
 					metric_totals[metric] += int(stat)
 
 			# Now hand it off to something else to finalize it.
-			self._finalize_stats(metric_totals)
+			self._finalize_stats(metric_totals, callback)
 
 		if len(idset) == 0:
 			# No sets to process - which will cause an error
 			# later. Call the error callback.
-			self.error_callback("Empty ID list supplied.")
+			error_callback("Empty ID list supplied.")
 		else:
 			# Ok, now, for the given id set list,
 			# query out all the relevant metrics.
-			pipeline = redis.pipeline(True)
+			pipeline = self.redis.pipeline(True)
 			for vtid in idset:
 				for metric in self.METRICS:
 					pipeline.get("stat_%s_%s" % (vtid, metric))
 			pipeline.execute(callback=on_stats_fetched)
 
-	def _finalize_stats(self, totals):
+	def _finalize_stats(self, totals, callback):
 		# Calculate any averages and percentages.
 		for average in self.AVERAGES:
 			output_key = "%s_average" % average[0]
@@ -283,4 +318,63 @@ class ApplicationStats(object):
 				totals[output_key] = (float(quotient) / float(divisor)) * 100.0
 
 		# And we're done.
-		self.callback(totals)
+		callback(totals)
+
+	def history_for_list(self, idset, metric, callback, error_callback, start, end=None):
+		# CAUTION: Returns up to 1 value per second in the given range.
+		# Use very carefully!
+		# 1. Build list of history sets required from redis.
+		# 2. Query all those history sets.
+		# 3. Merge all those history sets together, culling off data in the process.
+		# 4. Perform finalization of the data (averaging, etc)
+
+		if not end:
+			end = int(time.time())
+
+		# Make sure it's an int.
+		start = int(start)
+
+		def on_stats_fetched(stats):
+			# Parse the result from Redis into something more manageable.
+			intermediate_merge = {}
+			for stat_set in stats:
+				for key, value in stat_set.iteritems():
+					ikey = int(key)
+					if ikey >= start and ikey <= end:
+						# The key here is the unix timestamp of the data.
+						if not intermediate_merge.has_key(key):
+							intermediate_merge[key] = 0
+
+						intermediate_merge[key] += int(value)
+
+			# Now, convert that hash map into a sorted list.
+			ordered_data = []
+			for key, value in intermediate_merge.iteritems():
+				ordered_data.append([int(key), value])
+
+			ordered_data.sort(key=lambda x: x[0])
+
+			# TODO: Handle averaging...
+			callback(ordered_data)
+			# end of on_stats_fetched()
+
+		# Output:
+		# [
+		#   [time, value]
+		# ]
+		# Queries from redis:
+		# history_<vtid>_NNNNNNNNNN_<metric> x 1 per vtid x 1 per hour boundary.
+		real_start = int(start - (start % 3600))
+		hour_boundaries = range(real_start, int(end), 3600)
+
+		pipeline = self.redis.pipeline(True)
+		for vtid in idset:
+			for boundary in hour_boundaries:
+				key = "history_%s_%s_%s" % (
+					vtid,
+					boundary,
+					metric
+				)
+				pipeline.hgetall(key)
+
+		pipeline.execute(on_stats_fetched)
