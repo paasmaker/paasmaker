@@ -16,7 +16,9 @@ class SelectLocationsJobParametersSchema(colander.MappingSchema):
 	application_instance_type_id = colander.SchemaNode(colander.Integer())
 
 class SelectLocationsJob(BaseJob):
-	PARAMETERS_SCHEMA = {MODE.JOB: SelectLocationsJobParametersSchema()}
+	MODES = {
+		MODE.JOB: SelectLocationsJobParametersSchema()
+	}
 
 	def start_job(self, context):
 		self.logger.info("Starting to select locations.")

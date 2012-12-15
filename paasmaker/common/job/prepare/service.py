@@ -26,7 +26,9 @@ class ServiceContainerJob(BaseJob):
 		self.success({'environment': environment}, "All services created and updated.")
 
 class ServiceJob(BaseJob):
-	PARAMETERS_SCHEMA = {MODE.JOB: ServiceJobParametersSchema()}
+	MODES = {
+		MODE.JOB: ServiceJobParametersSchema()
+	}
 
 	def start_job(self, context):
 		self.session = self.configuration.get_database_session()

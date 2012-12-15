@@ -9,7 +9,9 @@ class SourcePreparerJobParametersSchema(colander.MappingSchema):
 	data = colander.SchemaNode(colander.Mapping(unknown='preserve'))
 
 class SourcePreparerJob(BaseJob):
-	PARAMETERS_SCHEMA = {MODE.JOB: SourcePreparerJobParametersSchema()}
+	MODES = {
+		MODE.JOB: SourcePreparerJobParametersSchema()
+	}
 
 	def done(self, message):
 		self.success({'environment': self.environment}, message)

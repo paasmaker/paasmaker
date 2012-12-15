@@ -15,9 +15,10 @@ class BaseJobParametersSchema(colander.MappingSchema):
 	pass
 
 class BaseJob(Plugin):
-	MODES = [MODE.JOB]
+	MODES = {
+		MODE.JOB: BaseJobParametersSchema()
+	}
 	OPTIONS_SCHEMA = BaseJobOptionsSchema()
-	PARAMETERS_SCHEMA = {MODE.JOB: BaseJobParametersSchema()}
 
 	def configure(self, manager, job_id, metadata):
 		self.job_manager = manager

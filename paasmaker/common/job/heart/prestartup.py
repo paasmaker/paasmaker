@@ -10,7 +10,9 @@ class PreInstanceStartupJobParametersSchema(colander.MappingSchema):
 	instance_id = colander.SchemaNode(colander.String())
 
 class PreInstanceStartupJob(BaseJob):
-	PARAMETERS_SCHEMA = {MODE.JOB: PreInstanceStartupJobParametersSchema()}
+	MODES = {
+		MODE.JOB: PreInstanceStartupJobParametersSchema()
+	}
 
 	def done(self, message):
 		self.success({}, message)

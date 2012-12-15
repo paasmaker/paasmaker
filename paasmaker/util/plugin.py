@@ -41,14 +41,11 @@ class Plugin(object):
 	A subclass for your classes to make them into plugins.
 	Note that you need the __init__ method supplied by this
 	class.
-	To use, you will need to give your plugin modes (by setting
-	your subclasses' class variable 'MODES' and also OPTIONS_SCHEMA
-	with a colander schema for your options, and if one of your modes
-	requires it, PARAMETERS_SCHEMA.
+	To use, you will need to give your plugin metadata, that
+	indicate what modes it runs in, and also any options schema.
 	"""
-	MODES = []
+	MODES = {}
 	OPTIONS_SCHEMA = None
-	PARAMETERS_SCHEMA = {}
 
 	def __init__(self, configuration, mode, options, parameters, called_name, logger=None):
 		self.configuration = configuration
@@ -90,9 +87,9 @@ class Plugin(object):
 		"""
 		try:
 			# Validate.
-			self.parameters = self.PARAMETERS_SCHEMA[mode].deserialize(self.raw_parameters)
+			self.parameters = self.MODES[mode].deserialize(self.raw_parameters)
 			# And flatten.
-			self.parameters_flat = self.PARAMETERS_SCHEMA[mode].flatten(self.parameters)
+			self.parameters_flat = self.MODES[mode].flatten(self.parameters)
 		except colander.Invalid, ex:
 			# Raise another exception that encapsulates more context.
 			# In future this can be used to print a nicer report.
@@ -165,11 +162,11 @@ class PluginRegistry:
 		self.title_registry[plugin] = title
 
 		# Now go ahead and put it into the mode registry.
-		for mode in former.MODES:
+		for mode in former.MODES.keys():
 			if not self.mode_registry.has_key(mode):
 				self.mode_registry[mode] = []
 			self.mode_registry[mode].append(plugin)
-			if MODE_REQUIRE_PARAMS[mode] and not former.PARAMETERS_SCHEMA.has_key(mode):
+			if MODE_REQUIRE_PARAMS[mode] and not former.MODES[mode]:
 				raise ValueError("Supplied class does not have a parameter schema, but has a mode that accepts parameters.")
 
 	def exists(self, plugin, mode):
@@ -188,7 +185,7 @@ class PluginRegistry:
 
 	def instantiate(self, plugin, mode, parameters=None, logger=None):
 		klass = get_class(self.class_registry[plugin])
-		if mode not in klass.MODES:
+		if not klass.MODES.has_key(mode):
 			raise ValueError("Plugin %s does not have mode %s" % (plugin, mode))
 
 		instance = klass(self.configuration, mode, self.options_registry[plugin], parameters, plugin, logger)
@@ -200,7 +197,7 @@ class PluginRegistry:
 		if MODE_REQUIRE_PARAMS[mode]:
 			if parameters is None:
 				raise ValueError("Plugin %s requires parameters but none were passed." % plugin)
-			elif not instance.PARAMETERS_SCHEMA.has_key(mode):
+			elif not instance.MODES.has_key(mode):
 				raise ValueError("Plugin %s does not have a paramters schema, but it should." % plugin)
 			else:
 				instance.check_parameters(mode)
@@ -226,9 +223,11 @@ class PluginExampleParametersSchema(colander.MappingSchema):
 	parameter2 = colander.SchemaNode(colander.String(), default="Test", missing="Test")
 
 class PluginExample(Plugin):
-	MODES = [MODE.TEST_PARAM, MODE.TEST_NOPARAM]
+	MODES = {
+		MODE.TEST_PARAM: PluginExampleParametersSchema(),
+		MODE.TEST_NOPARAM: None
+	}
 	OPTIONS_SCHEMA = PluginExampleOptionsSchema()
-	PARAMETERS_SCHEMA = {MODE.TEST_PARAM: PluginExampleParametersSchema()}
 
 	def do_nothing(self):
 		pass

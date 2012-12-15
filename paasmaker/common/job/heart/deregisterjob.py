@@ -18,7 +18,9 @@ class DeRegisterInstanceJob(BaseJob):
 	A job to de-register an instance on the node.
 	This means deleting it and all it's files.
 	"""
-	PARAMETERS_SCHEMA = {MODE.JOB: DeRegisterInstanceJobSchema()}
+	MODES = {
+		MODE.JOB: DeRegisterInstanceJobSchema()
+	}
 
 	def start_job(self, context):
 		self.output_context = {}

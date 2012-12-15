@@ -16,9 +16,10 @@ class AllowAnyAuth(InternalAuth):
 	the supplied password. Afterwards, they can then authenticate
 	normally.
 	"""
-	MODES = [paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN]
+	MODES = {
+		paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN: None
+	}
 	OPTIONS_SCHEMA = AllowAnyConfigurationSchema()
-	PARAMETERS_SCHEMA = {}
 
 	def authenticate(self, session, username, password, callback, error_callback):
 		# HACK: Make our instance think it's internal.

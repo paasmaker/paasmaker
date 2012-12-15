@@ -22,9 +22,10 @@ class DefaultPlacement(BasePlacement):
 	not to start more than one instance of an application on a single node,
 	but will allow repeats to satisfy quotas.
 	"""
-	MODES = [paasmaker.util.plugin.MODE.PLACEMENT]
+	MODES = {
+		paasmaker.util.plugin.MODE.PLACEMENT: DefaultPlacementParametersSchema()
+	}
 	OPTIONS_SCHEMA = DefaultPlacementConfigurationSchema()
-	PARAMETERS_SCHEMA = {paasmaker.util.plugin.MODE.PLACEMENT: DefaultPlacementParametersSchema()}
 
 	def fail_if_none(self, nodes, callback, reason):
 		if len(nodes) == 0:

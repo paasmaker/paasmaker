@@ -17,7 +17,9 @@ class InstanceShutdownJob(BaseJob):
 	"""
 	A job to stop the instance on this node.
 	"""
-	PARAMETERS_SCHEMA = {MODE.JOB: InstanceShutdownJobSchema()}
+	MODES = {
+		MODE.JOB: InstanceShutdownJobSchema()
+	}
 
 	def start_job(self, context):
 		self.instance_id = self.parameters['instance_id']

@@ -17,9 +17,10 @@ class ParametersService(BaseService):
 	This service simply returns, encoded, the parameters passed into it. Useful
 	for testing or for pumping in configuration or values from the manifest.
 	"""
-	MODES = [paasmaker.util.plugin.MODE.SERVICE_CREATE]
+	MODES = {
+		paasmaker.util.plugin.MODE.SERVICE_CREATE: ParametersServiceParametersSchema()
+	}
 	OPTIONS_SCHEMA = ParametersServiceConfigurationSchema()
-	PARAMETERS_SCHEMA = {paasmaker.util.plugin.MODE.SERVICE_CREATE: ParametersServiceParametersSchema()}
 
 	def create(self, callback, error_callback):
 		# Does the same thing as update.

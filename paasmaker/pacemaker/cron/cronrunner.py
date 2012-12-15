@@ -143,7 +143,9 @@ class CronRunJobSchema(colander.MappingSchema):
 	task_id = colander.SchemaNode(colander.Integer())
 
 class CronRunJob(paasmaker.common.job.base.BaseJob):
-	PARAMETERS_SCHEMA = {MODE.JOB: CronRunJobSchema()}
+	MODES = {
+		MODE.JOB: CronRunJobSchema()
+	}
 
 	def start_job(self, context):
 		task_id = self.parameters['task_id']

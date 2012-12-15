@@ -7,8 +7,6 @@ from base import BaseSCM, BaseSCMTest
 import paasmaker
 
 class ZipSCM(BaseSCM):
-	MODES = [paasmaker.util.plugin.MODE.SCM_EXPORT]
-
 	def create_working_copy(self, callback, error_callback):
 		# Make a directory to extract to.
 		path = self.get_temporary_scm_dir()

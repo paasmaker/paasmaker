@@ -17,7 +17,9 @@ class InstanceStartupJob(BaseJob):
 	"""
 	A job to start the instance on this node.
 	"""
-	PARAMETERS_SCHEMA = {MODE.JOB: InstanceStartupJobSchema()}
+	MODES = {
+		MODE.JOB: InstanceStartupJobSchema()
+	}
 
 	def start_job(self, context):
 		self.instance_id = self.parameters['instance_id']

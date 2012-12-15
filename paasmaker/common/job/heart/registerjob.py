@@ -30,7 +30,9 @@ class RegisterInstanceJob(BaseJob):
 	This means downloading it, unpacking it.
 	Not starting though - we'll let the pacemaker advise us of that.
 	"""
-	PARAMETERS_SCHEMA = {MODE.JOB: RegisterInstanceJobSchema()}
+	MODES = {
+		MODE.JOB: RegisterInstanceJobSchema()
+	}
 
 	def start_job(self, context):
 		self.output_context = {}

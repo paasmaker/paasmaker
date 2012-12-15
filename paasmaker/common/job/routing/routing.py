@@ -21,7 +21,9 @@ class RoutingUpdateJobParametersSchema(colander.MappingSchema):
 	add = colander.SchemaNode(colander.Boolean())
 
 class RoutingUpdateJob(BaseJob):
-	PARAMETERS_SCHEMA = {MODE.JOB: RoutingUpdateJobParametersSchema()}
+	MODES = {
+		MODE.JOB: RoutingUpdateJobParametersSchema()
+	}
 
 	def start_job(self, context):
 		self.instance_id = self.parameters['instance_id']

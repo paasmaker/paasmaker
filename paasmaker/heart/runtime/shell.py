@@ -32,16 +32,12 @@ class ShellEnvironmentParametersSchema(colander.MappingSchema):
 	pass
 
 class ShellRuntime(BaseRuntime):
-	MODES = [
-		paasmaker.util.plugin.MODE.RUNTIME_VERSIONS,
-		paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT,
-		paasmaker.util.plugin.MODE.RUNTIME_EXECUTE
-	]
-	OPTIONS_SCHEMA = ShellRuntimeOptionsSchema()
-	PARAMETERS_SCHEMA = {
+	MODES = {
 		paasmaker.util.plugin.MODE.RUNTIME_EXECUTE: ShellRuntimeParametersSchema(),
-		paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT: ShellEnvironmentParametersSchema()
+		paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT: ShellEnvironmentParametersSchema(),
+		paasmaker.util.plugin.MODE.RUNTIME_VERSIONS: None
 	}
+	OPTIONS_SCHEMA = ShellRuntimeOptionsSchema()
 
 	def get_versions(self):
 		# Just return this version.

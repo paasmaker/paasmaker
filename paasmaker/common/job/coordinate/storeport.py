@@ -16,7 +16,9 @@ class StorePortJobParametersSchema(colander.MappingSchema):
 	database_id = colander.SchemaNode(colander.Integer())
 
 class StorePortJob(BaseJob):
-	PARAMETERS_SCHEMA = {MODE.JOB: StorePortJobParametersSchema()}
+	MODES = {
+		MODE.JOB: StorePortJobParametersSchema()
+	}
 
 	def start_job(self, context):
 		instance_id = self.parameters['instance_id']

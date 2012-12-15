@@ -10,7 +10,9 @@ class SourceSCMJobParametersSchema(colander.MappingSchema):
 	scm_parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'))
 
 class SourceSCMJob(BaseJob):
-	PARAMETERS_SCHEMA = {MODE.JOB: SourceSCMJobParametersSchema()}
+	MODES = {
+		MODE.JOB: SourceSCMJobParametersSchema()
+	}
 
 	def start_job(self, context):
 		try:

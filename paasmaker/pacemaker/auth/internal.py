@@ -12,9 +12,10 @@ class InternalAuth(BaseAuth):
 	"""
 	This is the internal authentication plugin.
 	"""
-	MODES = [paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN]
+	MODES = {
+		paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN: None
+	}
 	OPTIONS_SCHEMA = InternalUserConfigurationSchema()
-	PARAMETERS_SCHEMA = {}
 
 	def authenticate(self, session, username, password, callback, error_callback):
 		# Search for user, where the source matches our name.

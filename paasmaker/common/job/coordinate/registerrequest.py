@@ -16,7 +16,9 @@ class RegisterRequestJobParametersSchema(colander.MappingSchema):
 	application_instance_type_id = colander.SchemaNode(colander.Integer())
 
 class RegisterRequestJob(BaseJob):
-	PARAMETERS_SCHEMA = {MODE.JOB: RegisterRequestJobParametersSchema()}
+	MODES = {
+		MODE.JOB: RegisterRequestJobParametersSchema()
+	}
 
 	def start_job(self, context):
 		self.logger.info("Creating node registration jobs.")

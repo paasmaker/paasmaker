@@ -34,9 +34,11 @@ class PHPRuntimeParametersSchema(colander.MappingSchema):
 		default=False)
 
 class PHPRuntime(BaseRuntime):
-	MODES = [paasmaker.util.plugin.MODE.RUNTIME_STARTUP, paasmaker.util.plugin.MODE.RUNTIME_VERSIONS]
+	MODES = {
+		paasmaker.util.plugin.MODE.RUNTIME_STARTUP: PHPRuntimeParametersSchema(),
+		paasmaker.util.plugin.MODE.RUNTIME_VERSIONS: None
+	}
 	OPTIONS_SCHEMA = PHPRuntimeOptionsSchema()
-	PARAMETERS_SCHEMA = {paasmaker.util.plugin.MODE.RUNTIME_STARTUP: PHPRuntimeParametersSchema()}
 
 	def get_versions(self):
 		# TODO: Handle when this fails, rather than letting it bubble.

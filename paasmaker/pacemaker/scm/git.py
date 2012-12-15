@@ -25,8 +25,9 @@ class GitSCMParametersSchema(colander.MappingSchema):
 		default="HEAD")
 
 class GitSCM(BaseSCM):
-	PARAMETERS_SCHEMA = {
-		paasmaker.util.plugin.MODE.SCM_EXPORT: GitSCMParametersSchema()
+	MODES = {
+		paasmaker.util.plugin.MODE.SCM_EXPORT: GitSCMParametersSchema(),
+		paasmaker.util.plugin.MODE.SCM_FORM: None
 	}
 
 	def create_working_copy(self, callback, error_callback):
