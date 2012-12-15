@@ -73,6 +73,8 @@ test_sets = {
 	paasmaker.pacemaker.scm.tarball: ['all', 'scm', 'slow'],
 	paasmaker.pacemaker.scm.git: ['all', 'scm', 'slow'],
 
+	paasmaker.pacemaker.scmlist.bitbucket: ['all', 'scmlist', 'slow'],
+
 	paasmaker.pacemaker.auth.internal: ['all', 'auth'],
 	paasmaker.pacemaker.auth.allowany: ['all', 'auth'],
 
