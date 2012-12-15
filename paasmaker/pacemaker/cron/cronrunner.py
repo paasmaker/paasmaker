@@ -381,6 +381,8 @@ class CronRunnerTest(BaseControllerTest):
 		application_version.source_path = "paasmaker://foo/bar"
 		application_version.source_checksum = 'dummychecksumhere'
 		application_version.state = paasmaker.common.core.constants.VERSION.PREPARED
+		application_version.scm_name = 'paasmaker.scm.zip'
+		application_version.scm_parameters = {}
 
 		version_1 = application_version
 
@@ -423,6 +425,8 @@ class CronRunnerTest(BaseControllerTest):
 		application_version.source_path = "paasmaker://foo/bar"
 		application_version.source_checksum = 'dummychecksumhere'
 		application_version.state = paasmaker.common.core.constants.VERSION.PREPARED
+		application_version.scm_name = 'paasmaker.scm.zip'
+		application_version.scm_parameters = {}
 
 		version_2 = application_version
 

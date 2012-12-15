@@ -121,6 +121,8 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		application_version.is_current = False
 		application_version.manifest = ''
 		application_version.state = constants.VERSION.PREPARED
+		application_version.scm_name = 'paasmaker.scm.zip'
+		application_version.scm_parameters = {}
 
 		instance_type = paasmaker.model.ApplicationInstanceType()
 		instance_type.application_version = application_version

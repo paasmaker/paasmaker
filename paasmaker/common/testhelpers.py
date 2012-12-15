@@ -95,6 +95,8 @@ class TestHelpers(object):
 		application_version.source_path = "paasmaker://%s/%s" % (self.configuration.get_node_uuid(), os.path.basename(temptarball))
 		application_version.source_checksum = 'dummychecksumhere'
 		application_version.state = paasmaker.common.core.constants.VERSION.PREPARED
+		application_version.scm_name = 'paasmaker.scm.zip'
+		application_version.scm_parameters = {}
 
 		application_version.services.append(service)
 
