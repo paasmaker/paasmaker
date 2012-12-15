@@ -3,12 +3,44 @@
 {% block body %}
 	<h1>System Overview</h1>
 
+	<h2>Instances</h2>
+
+	<table>
+		<tr>
+			<th>State</th>
+			<th>Count</th>
+		</tr>
+		{% for instance in instances %}
+			<tr>
+				<td><span class="instance-{{ instance[0] }}">{{ nice_state(instance[0]) }}</span></td>
+				<td>{{ instance[1] }}</td>
+			</tr>
+		{% end %}
+	</table>
+
+	<h2>Nodes</h2>
+
+	<table>
+		<tr>
+			<th>State</th>
+			<th>Count</th>
+		</tr>
+		{% for node in nodes %}
+			<tr>
+				<td><span class="node-{{ node[0] }}">{{ nice_state(node[0]) }}</span></td>
+				<td>{{ node[1] }}</td>
+			</tr>
+		{% end %}
+	</table>
+
+	<h2>Routing</h2>
+
 	<div class="router-stats-collection">
 		{% module Template("include/router_stats.html", router_stats=router_stats, router_stats_display=router_stats_display) %}
 
 		{% for workspace in workspaces %}
 			{# This is a hack. #}
-			{% module Template("include/router_stats.html", router_stats=eval("workspace_%d" % workspace.id), router_stats_display=router_stats_display) %}
+			{% module Template("include/router_stats.html", router_stats=eval("workspace_%d_router" % workspace.id), router_stats_display=router_stats_display) %}
 		{% end %}
 	</div>
 {% end %}

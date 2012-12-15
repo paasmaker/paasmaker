@@ -4,6 +4,7 @@ from paasmaker.common.controller import BaseController
 from paasmaker.common.core import constants
 
 import tornado
+from sqlalchemy import func
 
 class OverviewController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
@@ -12,6 +13,24 @@ class OverviewController(BaseController):
 	def get(self):
 		self.require_permission(constants.PERMISSION.SYSTEM_OVERVIEW)
 
+		# Instance status counts
+		instance_status_counts = self.db().query(
+			paasmaker.model.ApplicationInstance.state,
+			func.count()
+		).group_by(
+			paasmaker.model.ApplicationInstance.state
+		)
+		self.add_data('instances', instance_status_counts)
+
+		node_status_counts = self.db().query(
+			paasmaker.model.Node.state,
+			func.count()
+		).group_by(
+			paasmaker.model.Node.state
+		)
+		self.add_data('nodes', node_status_counts)
+
+		# Workspace routing stats.
 		self.workspace_list = self.db().query(
 			paasmaker.model.Workspace
 		).order_by(
@@ -29,7 +48,7 @@ class OverviewController(BaseController):
 				'workspace',
 				workspace.id,
 				self._process_workspace,
-				output_key="workspace_%d" % workspace.id,
+				output_key="workspace_%d_router" % workspace.id,
 				title="Workspace %s" % workspace.name
 			)
 
