@@ -173,7 +173,7 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 
 		return application
 
-	def unpack_into_database(self, session, application):
+	def unpack_into_database(self, session, application, scm_name, scm_parameters):
 		# Figure out the new version number.
 		new_version_number = paasmaker.model.ApplicationVersion.get_next_version_number(session, application)
 
@@ -183,6 +183,8 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 		version.application = application
 		version.version = new_version_number
 		version.state = constants.VERSION.NEW
+		version.scm_name = scm_name
+		version.scm_parameters = scm_parameters
 
 		# Import instances.
 		for name, imetadata in self['instances'].iteritems():
@@ -347,7 +349,7 @@ services:
 		session.commit()
 
 		application = config.create_application(session, workspace)
-		version = config.unpack_into_database(session, application)
+		version = config.unpack_into_database(session, application, 'paasmaker.scm.zip', {'foo': 'bar'})
 
 		session.add(application)
 		session.add(version)
@@ -361,3 +363,5 @@ services:
 		self.assertEquals(len(version.services), 2, "Unexpected number of services.")
 		self.assertEquals(len(version.services[0].parameters), 1, "Unexpected number of keys in the services parameters.")
 		self.assertEquals(len(version.instance_types[0].crons), 2, "Unexpected number of crons.")
+		self.assertEquals(version.scm_name, 'paasmaker.scm.zip', "Did not store the SCM name.")
+		self.assertEquals(version.scm_parameters['foo'], 'bar', "Did not store the SCM parameters.")

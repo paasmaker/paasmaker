@@ -382,8 +382,7 @@ class Application(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False, index=True)
 	workspace = relationship("Workspace", backref=backref('applications', order_by=id))
-	# Names are unique per workspace. TODO: Figure out how to handle the hostname issue
-	# with this - as apps are assigned hostnames name.cluster, which won't work.
+	# Names are unique per workspace.
 	name = Column(String, index=True)
 	manifest_path = Column(String, nullable=True)
 
@@ -425,6 +424,8 @@ class ApplicationVersion(OrmBase, Base):
 	manifest = Column(Text, nullable=False)
 	source_path = Column(String, nullable=True)
 	source_checksum = Column(String, nullable=True)
+	scm_name = Column(String, nullable=False)
+	_scm_parameters = Column("scm_parameters", Text, nullable=False)
 
 	state = Column(String, nullable=False, index=True)
 
@@ -433,11 +434,22 @@ class ApplicationVersion(OrmBase, Base):
 	def __init__(self):
 		self.is_current = False
 
+	@hybrid_property
+	def scm_parameters(self):
+		if self._scm_parameters:
+			return json.loads(self._scm_parameters)
+		else:
+			return {}
+
+	@scm_parameters.setter
+	def scm_parameters(self, val):
+		self._scm_parameters = json.dumps(val)
+
 	def __repr__(self):
 		return "<ApplicationVersion('%s'@'%s' - active: %s)>" % (self.version, self.application, str(self.is_current))
 
 	def flatten(self, field_list=None):
-		return super(ApplicationVersion, self).flatten(['application_id', 'version', 'is_current', 'health'])
+		return super(ApplicationVersion, self).flatten(['application_id', 'version', 'is_current', 'health', 'scm_name', 'scm_parameters'])
 
 	def flatten_for_heart(self):
 		fields = ['version', 'source_path', 'source_checksum']

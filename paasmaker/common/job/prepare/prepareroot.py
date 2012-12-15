@@ -29,6 +29,8 @@ class ApplicationPrepareRootJob(BaseJob):
 		context['application_name'] = name
 		context['workspace_id'] = workspace_id
 		context['application_id'] = application_id
+		context['scm_name'] = scm_name
+		context['scm_parameters'] = scm_parameters
 		context['environment'] = {}
 
 		tags = []
