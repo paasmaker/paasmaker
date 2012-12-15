@@ -89,16 +89,21 @@ class GitSCM(BaseSCM):
 		)
 
 	def create_form(self, last_parameters):
-		return """
+		template = """
 		<label for="parameters.location">Repository URL:</label>
-		<input type="text" name="parameters.location" required="required" />
+		<input type="text" name="parameters.location" value="%(location)s" required="required" />
 
 		<label for="parameters.branch">Branch:</label>
-		<input type="text" name="parameters.branch" placeholder="master" />
+		<input type="text" name="parameters.branch" value="%(branch)s" placeholder="master" />
 
 		<label for="parameters.revision">Revision:</label>
 		<input type="text" name="parameters.revision" placeholder="HEAD" />
 		"""
+
+		return template % {
+			'location': self._encoded_or_default(last_parameters, 'location', ''),
+			'branch': self._encoded_or_default(last_parameters, 'branch', '')
+		}
 
 	def create_summary(self):
 		return {

@@ -94,11 +94,24 @@ class ApplicationListController(ApplicationRootController):
 class ApplicationNewController(ApplicationRootController):
 
 	def get(self, input_id):
+		last_version_params = {}
 		if self.request.uri.startswith('/application'):
 			application = self._get_application(input_id)
 			workspace = application.workspace
 			self.add_data('new_application', False)
 			self.add_data('application', application)
+
+			# Get the last version, and thus it's last SCM parameters.
+			last_version = self.db().query(
+				paasmaker.model.ApplicationVersion
+			).filter(
+				paasmaker.model.ApplicationVersion.application == application
+			).order_by(
+				paasmaker.model.ApplicationVersion.version.desc()
+			).first()
+
+			self.add_data('last_version', last_version)
+			last_version_params = last_version.scm_parameters
 		else:
 			application = None
 			workspace = self._get_workspace(input_id)
@@ -122,8 +135,7 @@ class ApplicationNewController(ApplicationRootController):
 				result = {}
 				result['plugin'] = plugin_name
 				result['title'] = self.configuration.plugins.title(plugin_name)
-				# TODO: Pull the last version params.
-				result['form'] = plugin.create_form({})
+				result['form'] = plugin.create_form(last_version_params)
 
 				result_list.append(result)
 			else:

@@ -5,6 +5,7 @@ import re
 
 import paasmaker
 
+import tornado
 import tornado.testing
 import colander
 
@@ -83,6 +84,19 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 		is a hash that contains what was used last time (or empty if not found).
 		"""
 		raise NotImplementedError("You must implement create_form().")
+
+	def _encoded_or_default(self, selections, key, default):
+		"""
+		Helper function to check to see if key exists in the given
+		selections dict. If it doesn't, it returns the given default
+		value. Before returning the value, it's HTML escaped.
+		"""
+		if selections.has_key(key):
+			value = selections[key]
+		else:
+			value = default
+
+		return tornado.escape.xhtml_escape(value)
 
 	def create_summary(self):
 		"""
