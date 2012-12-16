@@ -60,7 +60,7 @@ class ScmListController(BaseController):
 			self._got_error
 		)
 
-	def _got_list(self, result):
+	def _got_list(self, result, message):
 		self.add_data('repositories', result)
 		self._render()
 
@@ -95,7 +95,7 @@ class DummySCMList(BaseSCMList):
 				'title': 'Test Entry 2',
 				'url': 'http://repoprovider.com/path/to/repo/2'
 			}
-		])
+		], "Success")
 
 class DummySCMErrorList(BaseSCMList):
 	MODES = {

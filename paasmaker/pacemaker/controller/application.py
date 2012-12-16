@@ -128,28 +128,38 @@ class ApplicationNewController(ApplicationRootController):
 		scm_plugins = self.configuration.plugins.plugins_for(paasmaker.util.plugin.MODE.SCM_FORM)
 
 		result_list = []
+		repo_lister_master = self.configuration['pacemaker']['scmlisters']
 		for plugin_name in scm_plugins:
 			plugin = self.configuration.plugins.instantiate(
 				plugin_name,
 				paasmaker.util.plugin.MODE.SCM_FORM
 			)
 
+			# Get a list of listers as well.
+			repo_listers = []
+			for lister in repo_lister_master:
+				if lister['for'] == plugin_name:
+					for repo_plugin in lister['plugins']:
+						lister_meta = {}
+						lister_meta['plugin'] = repo_plugin
+						lister_meta['title'] = self.configuration.plugins.title(repo_plugin)
+						repo_listers.append(lister_meta)
+
+			result = {}
+			result['listers'] = repo_listers
+
 			if self.format == 'html':
 				# Fetch the HTML instead.
-				result = {}
 				result['plugin'] = plugin_name
 				result['title'] = self.configuration.plugins.title(plugin_name)
 				result['form'] = plugin.create_form(last_version_params)
-
-				result_list.append(result)
 			else:
-				result = {}
 				result['plugin'] = plugin_name
 				result['title'] = self.configuration.plugins.title(plugin_name)
 				result['parameters'] = plugin.create_summary()
 				result['parameters']['manifest_path'] = "The path inside the SCM to the manifest file."
 
-				result_list.append(result)
+			result_list.append(result)
 
 		self.add_data('scms', result_list)
 		self.render("application/new.html")

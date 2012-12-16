@@ -25,6 +25,14 @@
 						<br />
 						<input type="submit" value="Create" class="btn" />
 					</form>
+					{% if len(scm['listers']) > 0 %}
+						{% for lister in scm['listers'] %}
+							<h4>{{ lister['title'] }}</h4>
+							<select class="scm-list" data-plugin="{{ lister['plugin'] }}">
+								<option value="">Loading...</option>
+							</select>
+						{% end %}
+					{% end %}
 				</div>
 			</div>
 		{% end %}

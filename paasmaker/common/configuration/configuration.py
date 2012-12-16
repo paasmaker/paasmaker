@@ -72,6 +72,19 @@ class PluginSchema(colander.MappingSchema):
 class PluginsSchema(colander.SequenceSchema):
 	plugin = PluginSchema()
 
+class ScmListerSchema(colander.MappingSchema):
+	for_name = colander.SchemaNode(colander.String(),
+		name="for",
+		title="The SCM plugin that these listers are for.")
+	plugins = colander.SchemaNode(colander.Sequence(),
+		colander.SchemaNode(colander.String()),
+		title="Plugins that list repositories.",
+		default=[],
+		missing=[])
+
+class ScmListersSchema(colander.SequenceSchema):
+	lister = ScmListerSchema()
+
 class PacemakerSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
 		title="Pacemaker enabled",
@@ -92,6 +105,12 @@ class PacemakerSchema(colander.MappingSchema):
 	plugins = PluginsSchema(
 		title="Plugins",
 		description="A list of plugins registered on this pacemaker.",
+		missing=[],
+		default=[])
+
+	scmlisters = ScmListersSchema(
+		title="SCM listers",
+		description="A set of SCM listers and their matching SCMs.",
 		missing=[],
 		default=[])
 
@@ -117,7 +136,7 @@ class PacemakerSchema(colander.MappingSchema):
 
 	@staticmethod
 	def default():
-		return {'enabled': False, 'plugins': []}
+		return {'enabled': False, 'plugins': [], 'scmlisters': []}
 
 class HeartSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -669,6 +688,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			# Load plugins from the config now, so we can override the
 			# default plugins if we need to.
 			self.load_plugins(self.plugins, self['pacemaker']['plugins'])
+
+		# TODO: validate the contents of scmlisters, that they all
+		# are relevant plugins.
 
 		self.update_flat()
 

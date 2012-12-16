@@ -84,6 +84,10 @@ pacemaker:
     - name: paasmaker.auth.internal
       class: paasmaker.pacemaker.auth.internal.InternalAuth
       title: Internal Authentication
+  scmlisters:
+    - for: paasmaker.scm.zip
+      plugins:
+        - paasmaker.scmlist.dummy
 """
 
 	heart_config = """

@@ -24,6 +24,11 @@ class BitbucketSCMListOptionsSchema(colander.MappingSchema):
 		description="The URL base for repositories, which governs how you access them. Prepended to the URL.",
 		default="git@bitbucket.org:",
 		missing="git@bitbucket.org:")
+	url_postfix = colander.SchemaNode(colander.String(),
+		title="URL Postfix",
+		description="The postfix added to the URL.",
+		default=".git",
+		missing=".git")
 
 class BitbucketSCMList(BaseSCMList):
 	MODES = {
@@ -57,7 +62,7 @@ class BitbucketSCMList(BaseSCMList):
 		result = []
 		for repo in repolist:
 			title = "%(slug)s" % repo
-			url = self.options['url_base'] + "%(owner)s/%(slug)s" % repo
+			url = self.options['url_base'] + "%(owner)s/%(slug)s" % repo + self.options['url_postfix']
 			result.append({'title': title, 'url': url})
 		return result
 

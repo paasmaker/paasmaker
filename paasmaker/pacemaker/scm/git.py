@@ -92,7 +92,7 @@ class GitSCM(BaseSCM):
 	def create_form(self, last_parameters):
 		template = """
 		<label for="parameters.location">Repository URL:</label>
-		<input type="text" name="parameters.location" value="%(location)s" required="required" />
+		<input class="lister-target" type="text" name="parameters.location" value="%(location)s" required="required" />
 
 		<label for="parameters.branch">Branch:</label>
 		<input type="text" name="parameters.branch" value="%(branch)s" placeholder="master" />

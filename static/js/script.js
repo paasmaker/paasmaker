@@ -883,6 +883,40 @@ $(document).ready(
 					el.append(show);
 				}
 			);
+
+			$('.scm-list').each(
+				function(index, element)
+				{
+					var el = $(element);
+					var plugin = el.attr('data-plugin');
+					$.getJSON(
+						'/scm/list/repos?plugin=' + escape(plugin),
+						function(data, text, xhr)
+						{
+							el.empty();
+							el.append($('<option value="">Select...</option>'));
+							for(var i = 0; i < data.data.repositories.length; i++ )
+							{
+								var entry = data.data.repositories[i];
+								var op = $('<option></option>');
+								op.text(entry.title);
+								op.val(entry.url);
+
+								el.append(op);
+							}
+						}
+					);
+					el.change(
+						function(e)
+						{
+							// TODO: This assumes a lot about the HTML.
+							var inner = el.parent();
+							var location = $('input.lister-target', $(inner));
+							location.val(el.val());
+						}
+					);
+				}
+			);
 		}
 	}
 )
