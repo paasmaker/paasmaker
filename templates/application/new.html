@@ -11,9 +11,9 @@
 {% block body %}
 	<div class="scm-container">
 		{% for scm in scms %}
-			<div class="scm">
+			<div class="scm {% if last_scm_name == scm['plugin'] %}scm-active{% end %}">
 				<h3>{{ scm['title'] }}</h3>
-				<div class="inner">
+				<div class="inner well well-small">
 					<form method="POST">
 						<input type="hidden" name="scm" value="{{ scm['plugin'] }}" />
 

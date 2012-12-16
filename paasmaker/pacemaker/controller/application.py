@@ -94,6 +94,7 @@ class ApplicationListController(ApplicationRootController):
 class ApplicationNewController(ApplicationRootController):
 
 	def get(self, input_id):
+		last_scm_name = None
 		last_version_params = {}
 		if self.request.uri.startswith('/application'):
 			application = self._get_application(input_id)
@@ -112,11 +113,14 @@ class ApplicationNewController(ApplicationRootController):
 
 			self.add_data('last_version', last_version)
 			last_version_params = last_version.scm_parameters
+			last_scm_name = last_version.scm_name
 		else:
 			application = None
 			workspace = self._get_workspace(input_id)
 			self.add_data('new_application', True)
 		self.add_data('workspace', workspace)
+		self.add_data('last_scm_params', last_version_params)
+		self.add_data('last_scm_name', last_scm_name)
 
 		self.require_permission(constants.PERMISSION.APPLICATION_CREATE, workspace=workspace)
 

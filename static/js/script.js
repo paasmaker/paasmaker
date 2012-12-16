@@ -865,13 +865,13 @@ $(document).ready(
 		var scms = $('.scm-container');
 		if( scms.length > 0 )
 		{
-			$('.scm', scms).each(
+			$('.scm', scms).not('.scm-active').each(
 				function(index, element)
 				{
 					var el = $(element);
 					var inner = $('.inner', el);
 					inner.hide();
-					var show = $('<a href="#">Show...</a>');
+					var show = $('<a href="#"><i class="icon-plus-sign"></i> Show...</a>');
 					show.click(
 						function(e)
 						{
