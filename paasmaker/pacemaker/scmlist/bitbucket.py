@@ -31,10 +31,10 @@ class BitbucketSCMList(BaseSCMList):
 	}
 	OPTIONS_SCHEMA = BitbucketSCMListOptionsSchema()
 
-	def get_repo_list(self, callback, error_callback):
+	def get_repo_list(self, bypass_cache, callback, error_callback):
 		def got_list(response):
 			if response.error:
-				error_callback(str(response.error))
+				error_callback(str(response.error), exception=response.error)
 			else:
 				# Success! Parse the body.
 				parsed = json.loads(response.body)
@@ -86,7 +86,7 @@ class BitbucketSCMListTest(BaseSCMListTest):
 			logger
 		)
 
-		plugin.get_repo_list(self.success_callback, self.failure_callback)
+		plugin.get_repo_list(False, self.success_callback, self.failure_callback)
 		self.wait()
 
 		self.assertTrue(self.success, "Did not succeed.")

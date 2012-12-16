@@ -25,7 +25,7 @@ class BaseSCMList(paasmaker.util.plugin.Plugin):
 	# These are defaults - you should set your own.
 	OPTIONS_SCHEMA = BaseSCMListConfigurationSchema()
 
-	def get_repo_list(self, callback, error_callback):
+	def get_repo_list(self, bypass_cache, callback, error_callback):
 		"""
 		Return a list of URLs and titles for this SCM.
 		The returned list should look like so:
@@ -57,7 +57,7 @@ class BaseSCMListTest(tornado.testing.AsyncTestCase):
 		self.repos = repos
 		self.stop()
 
-	def failure_callback(self, message):
+	def failure_callback(self, message, exception=None):
 		self.success = False
 		self.message = message
 		self.repos = None

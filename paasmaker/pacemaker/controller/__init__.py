@@ -14,3 +14,4 @@ from job import JobController, JobStreamHandler
 from version import VersionController, VersionInstancesController
 from router import NginxController
 from package import PackageDownloadController, PackageSizeController
+from scmlist import ScmListController
