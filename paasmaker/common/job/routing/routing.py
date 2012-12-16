@@ -215,7 +215,12 @@ class RouterTableUpdate(object):
 		# slaves match the master.
 		pipeline.incr("serial")
 
-		pipeline.execute(callback=self.redis_complete)
+		def save_redis(result):
+			# Ask Redis to save to disk. TODO: tweak the persistence
+			# options for Redis to be safer.
+			redis.bgsave(callback=self.redis_complete)
+
+		pipeline.execute(callback=save_redis)
 
 	def redis_complete(self, results):
 		# Completed the updates.
