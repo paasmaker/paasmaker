@@ -426,7 +426,11 @@ class JobManager(object):
 
 					roots[parent_id]['children'].append(roots[job_id])
 
-			callback(roots[on_job_full.root_id])
+			if roots.has_key(on_job_full.root_id):
+				callback(roots[on_job_full.root_id])
+			else:
+				# No such job.
+				callback({})
 
 		def on_root_tree(tree):
 			# Now fetch the complete job data on all these elements.
@@ -729,3 +733,15 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		result = self.get_state(job_id)
 		self.assertEquals(result, constants.JOB.FAILED, 'Test job did not fail.')
 		self.assertNotEquals(ABORT_HANDLER_RESPONSE, None, 'Abort handler did not run.')
+
+	def test_manager_no_job(self):
+		self.manager.get_jobs(['nope'], self.stop)
+		job_data = self.wait()
+
+		self.assertEquals(len(job_data), 0, "Returned some job data.")
+
+		self.manager.get_flat_tree('nope', self.stop)
+		tree = self.wait()
+
+		self.manager.get_pretty_tree('nope', self.stop)
+		tree = self.wait()

@@ -298,7 +298,9 @@ class RedisJobBackend(JobBackend):
 			output = {}
 			for result in values:
 				decoded = self._from_json(result)
-				output[decoded['job_id']] = decoded
+				if decoded.has_key('job_id'):
+					# If it's missing this key, there is no such job.
+					output[decoded['job_id']] = decoded
 			callback(output)
 
 		pipeline = self.redis.pipeline()
