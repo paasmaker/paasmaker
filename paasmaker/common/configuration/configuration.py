@@ -884,14 +884,19 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def get_job_logger(self, job_id):
 		return paasmaker.util.joblogging.JobLoggerAdapter(logging.getLogger('job'), job_id, self, self.get_job_watcher())
 	def get_job_log_path(self, job_id, create_if_missing=True):
-		container = os.path.join(self['log_directory'], 'job')
-		checksum = hashlib.md5()
-		checksum.update(job_id)
-		checksum = checksum.hexdigest()
-		container = os.path.join(container, checksum[0:2])
+		# TODO: Make this safer, but maintain the job id's relating to their on disk
+		# filenames.
+		if job_id.find('.') != -1 or job_id.find('/') != -1:
+			raise ValueError("Invalid and unsafe job ID.")
+
+		container = os.path.join(
+			self['log_directory'],
+			'job',
+			job_id[0:2]
+		)
 		if not os.path.exists(container) and create_if_missing:
 			os.makedirs(container)
-		path = os.path.join(container, checksum[2:] + '.log')
+		path = os.path.join(container, job_id[2:] + '.log')
 		# Create the file if it doesn't exist - prevents errors
 		# trying to watch the file before anything's been written to it
 		# (shouldn't be an issue for production, but causes issues in
