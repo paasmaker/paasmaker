@@ -7,11 +7,6 @@ master:
   host: localhost
   isitme: true
 
-broker:
-  host: localhost
-  port: 42520
-  managed: true
-
 redis:
   table:
     host: 127.0.0.1

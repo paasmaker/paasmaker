@@ -33,7 +33,6 @@ class MultiPaas(object):
 		database_path = os.path.join(self.cluster_root, 'paasmaker.db')
 		self.cluster_params['dsn'] = "sqlite:///%s" % database_path
 
-		self.cluster_params['broker_port'] = self.free_port()
 		self.cluster_params['jobs_redis_port'] = self.free_port()
 		self.cluster_params['stats_redis_port'] = self.free_port()
 		self.cluster_params['router_redis_port'] = self.free_port()
@@ -113,11 +112,6 @@ master:
   host: localhost
   port: %(master_port)d
   isitme: %(is_cluster_master)s
-
-broker:
-  host: localhost
-  port: %(broker_port)d
-  managed: %(is_cluster_master)s
 
 redis:
   table:

@@ -44,8 +44,6 @@ DEFAULT_ROUTER_REDIS_SLAVE = 42511
 DEFAULT_ROUTER_REDIS_STATS = 42512
 DEFAULT_REDIS_JOBS = 42513
 
-DEFAULT_RABBITMQ = 42520
-
 DEFAULT_NGINX = 42530
 
 DEFAULT_APPLICATION_MIN = 42600
@@ -277,38 +275,6 @@ class MiscPortsSchema(colander.MappingSchema):
 	def default():
 		return {'minimum': DEFAULT_APPLICATION_MIN, 'maximum': DEFAULT_APPLICATION_MAX}
 
-class MessageBrokerSchema(colander.MappingSchema):
-	host = colander.SchemaNode(colander.String(),
-		title="Hostname",
-		description="Hostname of the message broker.")
-	port = colander.SchemaNode(colander.Integer(),
-		title="Port",
-		description="The port of the message broker.")
-	username = colander.SchemaNode(colander.String(),
-		title="Username",
-		description="The username to connect as.",
-		default="guest",
-		missing="guest")
-	password = colander.SchemaNode(colander.String(),
-		title="Password",
-		description="The password to connect as.",
-		default="guest",
-		missing="guest")
-	virtualhost = colander.SchemaNode(colander.String(),
-		title="Virtual Host",
-		description="The virtual host to connect to.",
-		default="/",
-		missing="/")
-	managed = colander.SchemaNode(colander.Boolean(),
-		title="If this RabbitMQ is managed",
-		description="If true, this node will start up and shutdown a RabbitMQ as required.",
-		default=False,
-		missing=False)
-
-	@staticmethod
-	def default():
-		return {'host': 'localhost', 'port': 5672, 'username': 'guest', 'password': 'guest', 'virtualhost': '/', 'managed': False}
-
 class MasterSchema(colander.MappingSchema):
 	host = colander.SchemaNode(colander.String(),
 		title="Master Node",
@@ -399,8 +365,6 @@ class ConfigurationSchema(colander.MappingSchema):
 		default=60000,
 		missing=60000)
 
-	broker = MessageBrokerSchema(default=MessageBrokerSchema.default(), missing=MessageBrokerSchema.default())
-
 	pacemaker = PacemakerSchema(default=PacemakerSchema.default(), missing=PacemakerSchema.default())
 	heart = HeartSchema(defalt=HeartSchema.default(), missing=HeartSchema.default())
 	router = RouterSchema(default=RouterSchema.default(), missing=RouterSchema.default())
@@ -461,7 +425,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.port_allocator = paasmaker.util.port.FreePortFinder()
 		self.plugins = paasmaker.util.PluginRegistry(self)
 		self.uuid = None
-		self.exchange = None
 		self.job_watcher = None
 		self.job_manager = paasmaker.common.job.manager.manager.JobManager(self)
 		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
@@ -827,75 +790,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 	def get_jobs_redis(self, callback, error_callback):
 		self._get_redis('jobs', self['redis']['jobs'], callback, error_callback)
-
-	def _get_message_broker_client(self, callback, error_callback):
-		# Build the credentials.
-		credentials = pika.PlainCredentials(self.get_flat('broker.username'), self.get_flat('broker.password'))
-		# This will connect immediately.
-		parameters = pika.ConnectionParameters(host=str(self.get_flat('broker.host')),
-			port=self.get_flat('broker.port'),
-			virtual_host=str(self.get_flat('broker.virtualhost')),
-			credentials=credentials)
-		client = TornadoConnection(parameters, on_open_callback=callback, io_loop=self.io_loop)
-		# TODO: This supresses some warnings during unit tests, but maybe is not good for production.
-		client.set_backpressure_multiplier(1000)
-
-	def get_message_broker_connection(self, callback, error_callback):
-		if self.get_flat('broker.managed'):
-			# Fire up the managed version, if it's not already running.
-			self.broker_server = paasmaker.util.managedrabbitmq.ManagedRabbitMQ(self)
-			directory = self.get_scratch_path('rabbitmq')
-			try:
-				self.broker_server.load_parameters(directory)
-			except paasmaker.util.ManagedDaemonError, ex:
-				# Doesn't yet exist. Create it.
-				self.broker_server.configure(
-					directory,
-					self.get_flat('broker.port'),
-					self.get_flat('broker.host'),
-					self.get_flat('my_name')
-				)
-
-			def on_rabbitmq_started(message):
-				self._get_message_broker_client(callback, error_callback)
-
-			def on_rabbitmq_failed(message):
-				error_callback(message)
-
-			self.broker_server.start_if_not_running(on_rabbitmq_started, on_rabbitmq_failed)
-		else:
-			# Not a managed version, just connect and get it happening.
-			self._get_message_broker_client(callback, error_callback)
-
-	def setup_message_exchange(self, callback, error_callback):
-		self.exchange = paasmaker.common.core.MessageExchange(self)
-
-		# TODO: Handle when you've called this twice...
-		# Or call it again whilst it's starting up.
-		# TODO: Don't fire this up in single node mode.
-
-		self.message_exchange_ready_counter = 0
-		def something_ready(message):
-			self.message_exchange_ready_counter += 1
-			logger.debug(
-				"%d of %d things ready for the message broker.",
-				self.message_exchange_ready_counter,
-				1
-			)
-			logger.debug(message)
-			if self.message_exchange_ready_counter == 1:
-				logger.debug("Message exchange is now ready.")
-				callback("Message exchange is now ready.")
-
-		# A callback that finishes the setup.
-		def on_connection_ready(client):
-			logger.debug("Server is ready. Setting up exchange.")
-			self.exchange.setup(
-				client,
-				something_ready
-			)
-
-		self.get_message_broker_connection(on_connection_ready, error_callback)
 
 	def setup_managed_nginx(self, callback, error_callback):
 		if self.get_flat('router.nginx.managed'):

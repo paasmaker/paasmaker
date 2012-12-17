@@ -202,8 +202,6 @@ def on_ioloop_started():
 
 	# For the job manager startup.
 	on_intermediary_started.required += 1
-	# For the message exchange startup.
-	on_intermediary_started.required += 1
 	# For the managed NGINX startup.
 	on_intermediary_started.required += 1
 	# For the possibly managed router table redis startup.
@@ -217,9 +215,6 @@ def on_ioloop_started():
 
 	# Job manager
 	configuration.startup_job_manager(on_intermediary_started, on_intermediary_failed)
-
-	# Message exchange.
-	configuration.setup_message_exchange(on_intermediary_started, on_intermediary_failed)
 
 	# Possibly managed routing table startup.
 	configuration.get_router_table_redis(on_redis_started, on_intermediary_failed)
