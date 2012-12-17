@@ -126,6 +126,25 @@ redis:
     host: 127.0.0.1
     port: %(jobs_redis_port)d
     managed: %(is_cluster_master)s
+
+plugins:
+  - name: paasmaker.scm.zip
+    class: paasmaker.pacemaker.scm.zip.ZipSCM
+    title: Zip file SCM
+  - name: paasmaker.scm.tarball
+    class: paasmaker.pacemaker.scm.tarball.TarballSCM
+    title: Tarball SCM
+  - name: paasmaker.scm.git
+    class: paasmaker.pacemaker.scm.git.GitSCM
+    title: Git SCM
+
+  - name: paasmaker.runtime.shell
+    class: paasmaker.heart.runtime.ShellRuntime
+    title: Shell Runtime
+
+  - name: paasmaker.service.parameters
+    class: paasmaker.pacemaker.service.parameters.ParametersService
+    title: Parameters Service
 """
 
 	PACEMAKER = """
@@ -135,25 +154,6 @@ pacemaker:
   allow_supertoken: true
   cluster_hostname: %(cluster_hostname)s
   dsn: %(dsn)s
-  plugins:
-    - name: paasmaker.scm.zip
-      class: paasmaker.pacemaker.scm.zip.ZipSCM
-      title: Zip file SCM
-    - name: paasmaker.scm.tarball
-      class: paasmaker.pacemaker.scm.tarball.TarballSCM
-      title: Tarball SCM
-    - name: paasmaker.scm.git
-      class: paasmaker.pacemaker.scm.git.GitSCM
-      title: Git SCM
-    - name: paasmaker.prepare.shell
-      class: paasmaker.pacemaker.prepare.shell.ShellPrepare
-      title: Shell preparer
-    - name: paasmaker.runtime.shell
-      class: paasmaker.heart.runtime.ShellRuntime
-      title: Shell Runtime
-    - name: paasmaker.service.parameters
-      class: paasmaker.pacemaker.service.parameters.ParametersService
-      title: Parameters Service
 """
 
 	HEART = """

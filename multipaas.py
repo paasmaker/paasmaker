@@ -6,7 +6,7 @@ import paasmaker
 
 multipaas = paasmaker.util.multipaas.MultiPaas()
 
-multipaas.add_node(pacemaker=True, heart=True, router=True)
+multipaas.add_node(pacemaker=True, heart=False, router=True)
 multipaas.add_node(pacemaker=False, heart=True, router=True)
 
 multipaas.start_nodes()
@@ -28,3 +28,7 @@ multipaas.run_command(['role-allocate', role_result['role']['id'], user_result['
 
 print "Connect to the multipaas on: "
 print "http://localhost:%d/" % summary['configuration']['master_port']
+print "Routers:"
+for node in summary['nodes']:
+	if node.has_key('nginx_port'):
+		print "Port %d" % node['nginx_port']
