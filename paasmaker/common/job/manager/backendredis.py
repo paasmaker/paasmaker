@@ -101,7 +101,12 @@ class RedisJobBackend(JobBackend):
 		body = message.flatten()
 		encoded = json.dumps(body)
 		logger.debug("Sending job status message: %s", encoded)
-		self.redis.publish('job.status', encoded)
+		try:
+			self.redis.publish('job.status', encoded)
+		except ValueError, ex:
+			# TODO: React to this situation.
+			# TODO: This will bite later!
+			logger.error("Unable to send job status via Redis: ", exc_info=ex)
 
 	def _to_json(self, values):
 		out = {}

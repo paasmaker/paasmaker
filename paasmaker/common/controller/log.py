@@ -98,8 +98,12 @@ class LogStreamHandler(BaseWebsocketHandler):
 				self.send_error(error_message, message)
 
 	def handle_remote_subscribe(self, job_id, position, message, unittest_force_remote=False):
+		# TODO: Figure out how to send an error when both the instance and job logs don't exist.
 		def on_got_job(data):
 			logger.debug("Got job metata for %s", job_id)
+			if not data.has_key(job_id):
+				logger.info("No such job %s here.", job_id)
+				return
 			# Got the job metadata. Now look up the node.
 			job_data = data[job_id]
 			nodeuuid = job_data['node']
@@ -160,6 +164,19 @@ class LogStreamHandler(BaseWebsocketHandler):
 			# end on_got_job()
 
 		self.configuration.job_manager.get_jobs([job_id], on_got_job)
+
+		# Whilst that's going on, take a peek in the DB to see if the job_id
+		# matches an instance ID. If so, forward to that node.
+		session = self.configuration.get_database_session()
+		instance = session.query(
+			paasmaker.model.ApplicationInstance
+		).filter(
+			paasmaker.model.ApplicationInstance.instance_id == job_id
+		).first()
+		if instance:
+			# Found it!
+			on_got_job({job_id: {'node': instance.node.uuid}})
+		session.close()
 
 	def handle_remote_lines(self, job_id, lines, position):
 		logger.debug("Got %d lines from remote for %s.", len(lines), job_id)
@@ -451,3 +468,66 @@ class LogStreamHandlerTest(BaseControllerTest):
 		lines = self.wait()
 
 		self.assertEquals(2, len(lines), "Didn't download the expected number of lines.")
+
+	def test_remote_instance_log(self):
+		instance_type = self.create_sample_application(
+			self.configuration,
+			'paasmaker.runtime.shell',
+			{},
+			'1',
+			'tornado-simple'
+		)
+
+		nodeuuid = str(uuid.uuid4())
+		self.configuration.set_node_uuid(nodeuuid)
+		node = paasmaker.model.Node('test', 'localhost', self.get_http_port(), nodeuuid, constants.NODE.ACTIVE)
+		session = self.configuration.get_database_session()
+		session.add(node)
+		session.commit()
+		instance_type = session.query(paasmaker.model.ApplicationInstanceType).get(instance_type.id)
+
+		instance = self.create_sample_application_instance(
+			self.configuration,
+			session,
+			instance_type,
+			node
+		)
+
+		log = self.configuration.get_job_logger(instance.instance_id)
+		log.info("Test instance output.")
+
+		def got_lines(job_id, lines, position):
+			logging.debug("Instance ID: %s", job_id)
+			logging.debug("Lines: %s", str(lines))
+			logging.debug("Position: %d", position)
+			# Store the last position on this function.
+			got_lines.position = position
+			self.stop(lines)
+
+		self.client = LogStreamRemoteClient("ws://localhost:%d/log/stream" % self.get_http_port(), io_loop=self.io_loop)
+		self.client.configure(self.configuration, got_lines, self.stop, unittest_force_remote=True)
+		self.client.subscribe(instance.instance_id)
+		self.client.connect()
+
+		lines = self.wait()
+
+		self.assertEquals(len(lines), 1, "Didn't download the expected number of lines.")
+
+		# Unsubscribe, send more logs, then try again.
+		self.client.unsubscribe(instance.instance_id)
+
+		log.info("Another additional log entry.")
+		log.info("And Another additional log entry.")
+
+		self.client.subscribe(instance.instance_id, position=got_lines.position)
+
+		lines = self.wait()
+
+		self.assertEquals(2, len(lines), "Didn't download the expected number of lines.")
+
+		# Now try to subscibe to something that doesn't exist.
+		noexist = str(uuid.uuid4())
+		self.client.subscribe(noexist)
+
+		# TODO: The subscribe above currently hangs. Fix this and test it.
+		self.short_wait_hack()
