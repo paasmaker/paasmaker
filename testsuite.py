@@ -42,7 +42,7 @@ test_sets = {
 	paasmaker.common.configuration.configurationstub: ['all', 'quick', 'configuration'],
 	paasmaker.common.application.configuration: ['all', 'quick', 'configuration'],
 	paasmaker.common.core.messageexchange: ['slow', 'messaging', 'exchange', 'job'],
-	paasmaker.common.job.manager.backendredis: ['all', 'util', 'job', 'jobmanager', 'slow'],
+	paasmaker.common.job.manager.backendredis: ['all', 'util', 'job', 'jobmanager', 'slow', 'jobmanagerbackend'],
 	paasmaker.common.job.manager.manager: ['slow', 'util', 'job', 'jobmanager'],
 
 	paasmaker.model: ['all', 'slow', 'model'],

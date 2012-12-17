@@ -2,13 +2,18 @@
 import time
 import json
 import uuid
+import logging
 
 import paasmaker
 from ...testhelpers import TestHelpers
 from paasmaker.common.core import constants
 from backend import JobBackend
 
+from pubsub import pub
 import tornado.testing
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 class RedisJobBackend(JobBackend):
 	"""
@@ -44,11 +49,59 @@ class RedisJobBackend(JobBackend):
 
 	def setup(self, callback, error_callback):
 		self.setup_callback = callback
+		self.setup_steps = 2
 		self.configuration.get_jobs_redis(self.redis_ready, error_callback)
+		self.configuration.get_jobs_redis(self.pubsub_redis_ready, error_callback)
 
 	def redis_ready(self, client):
 		self.redis = client
-		self.setup_callback("Jobs backend Redis ready.")
+		self.setup_steps -= 1
+		self.check_setup_complete()
+
+	def pubsub_redis_ready(self, client):
+		self.pubsub_client = client
+
+		# Subscribe to the job status channel.
+		def on_subscribed(result):
+			# Set up the listen handler.
+			self.pubsub_client.listen(self._on_job_status_message)
+			# Listen to internally published messages.
+			pub.subscribe(self.send_job_status, 'job.status')
+			# And signal completion.
+			self.setup_steps -= 1
+			self.check_setup_complete()
+
+		self.pubsub_client.subscribe('job.status', on_subscribed)
+
+	def check_setup_complete(self):
+		if self.setup_steps == 0:
+			self.setup_callback("Jobs backend Redis ready.")
+
+	def _on_job_status_message(self, message):
+		if isinstance(message.body, int):
+			# It's a subscribed count. Ignore.
+			return
+
+		# TODO: Handle parse failures and other related issues.
+		parsed = json.loads(str(message.body))
+		self.configuration.send_job_status(
+			parsed['job_id'],
+			state=parsed['state'],
+			source=parsed['source'],
+			summary=parsed['summary'],
+			parent_id=parsed['parent_id']
+		)
+
+	def send_job_status(self, message):
+		# If we're the source for this message, don't forward it on.
+		if message.source == self.configuration.get_node_uuid():
+			logger.debug("Not sending message for job %s because it's from our node." % message.job_id)
+			return
+
+		body = message.flatten()
+		encoded = json.dumps(body)
+		logger.debug("Sending job status message: %s", encoded)
+		self.redis.publish('job.status', encoded)
 
 	def _to_json(self, values):
 		out = {}
@@ -613,3 +666,25 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.backend.get_tree('child1', self.stop, state=constants.JOB.NEW, node='here')
 		tree = self.wait()
 		self.assertEquals(len(tree), 3, "Failed to fetch the tree.")
+
+	def on_job_status_update(self, message):
+		self.stop(message)
+
+	def test_pubsub(self):
+		# Subscribe so we can catch the status update as it comes out.
+		job_id = str(uuid.uuid4())
+		pub.subscribe(self.on_job_status_update, self.configuration.get_job_status_pub_topic(job_id))
+
+		# Now send off a job update. This shouldn't actually touch the pubsub system.
+		self.configuration.send_job_status(job_id, state='TEST')
+		status = self.wait()
+		self.assertEquals(status.job_id, job_id, "Job ID was not as expected.")
+		self.assertEquals(status.state, 'TEST', "Job status was not as expected.")
+
+		# Now this time, force it to go through the pubsub and back out again.
+		message = paasmaker.common.configuration.JobStatusMessage(job_id, 'ROUNDTRIP', 'BOGUS')
+		self.backend.send_job_status(message)
+		status = self.wait()
+		self.assertEquals(status.job_id, job_id, "Job ID was not as expected.")
+		self.assertEquals(status.state, 'ROUNDTRIP', "Job status was not as expected.")
+		self.assertEquals(status.source, 'BOGUS', 'Source was correct.')

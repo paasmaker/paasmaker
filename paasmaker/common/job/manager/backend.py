@@ -1,4 +1,10 @@
 
+# CAUTION: TODO: It's expected that the JobBackend handles sending
+# pub/sub messages by subscribing to job.status and sending it to
+# other nodes. This works in the current implementation because
+# the only backend is Redis, which supports Pub/Sub natively.
+# Other backends might not, which might mean they need a different
+# message broker (such as RabbitMQ).
 
 class JobBackend(object):
 	def __init__(self, configuration):

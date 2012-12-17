@@ -1009,8 +1009,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def send_job_status(self, job_id, state, source=None, parent_id=None, summary=None):
 		"""
 		Propagate the status of a job to listeners who care inside our
-		instance, and also likely down the Rabbit hole to other listeners.
-		(Rabbit hole means RabbitMQ... so there is no confusion.)
+		instance, and also likely to other nodes as well. The Job manager
+		is responsible for getting it to other nodes.
 		"""
 		# If source is not supplied, send along our own UUID.
 		send_source = source
