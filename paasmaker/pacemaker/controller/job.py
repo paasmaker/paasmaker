@@ -103,12 +103,17 @@ class JobController(BaseController):
 			self.add_data('jobs', job_ids)
 			self.render("job/list.html")
 
+		def on_found_tree(tree):
+			self.add_data('detail', tree)
+			on_found_jobs(job_list)
+
 		if tag:
 			# Search by tag.
 			self.configuration.job_manager.find_by_tag(tag, on_found_jobs, limit=50)
 		else:
-			# Use the single given ID.
-			on_found_jobs(job_list)
+			# Use the single given ID. Attach the current state to this
+			# page as well...
+			self.configuration.job_manager.get_pretty_tree(input_id, on_found_tree)
 
 	@staticmethod
 	def get_routes(configuration):
