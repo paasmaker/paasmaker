@@ -100,12 +100,6 @@ class PacemakerSchema(colander.MappingSchema):
 		default=7,
 		missing=7)
 
-	plugins = PluginsSchema(
-		title="Plugins",
-		description="A list of plugins registered on this pacemaker.",
-		missing=[],
-		default=[])
-
 	scmlisters = ScmListersSchema(
 		title="SCM listers",
 		description="A set of SCM listers and their matching SCMs.",
@@ -134,7 +128,7 @@ class PacemakerSchema(colander.MappingSchema):
 
 	@staticmethod
 	def default():
-		return {'enabled': False, 'plugins': [], 'scmlisters': []}
+		return {'enabled': False, 'scmlisters': []}
 
 class HeartSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -147,15 +141,9 @@ class HeartSchema(colander.MappingSchema):
 		title="Working directory",
 		description="Directory where heart working files are stored")
 
-	plugins = PluginsSchema(
-		title="Plugins",
-		description="A list of plugins registered on this heart.",
-		missing=[],
-		default=[])
-
 	@staticmethod
 	def default():
-		return {'enabled': False, 'plugins': []}
+		return {'enabled': False}
 
 class RedisConnectionSchema(colander.MappingSchema):
 	host = colander.SchemaNode(colander.String(),
@@ -371,6 +359,12 @@ class ConfigurationSchema(colander.MappingSchema):
 
 	redis = RedisSchema(default=RedisSchema.default(), missing=RedisSchema.default())
 
+	plugins = PluginsSchema(
+		title="Plugins",
+		description="A list of plugins registered on this node. It's up to you to make sure they're applicable for this node type.",
+		missing=[],
+		default=[])
+
 	# Server related configuration. This is for an Ubuntu server, set up as
 	# per the installation instructions. Obviously, for other platforms
 	# this will need to be altered.
@@ -500,9 +494,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					{},
 					'Shell Prepare'
 				)
-
-			# Plugins.
-			self.load_plugins(self.plugins, self['heart']['plugins'])
 
 		# Pacemaker initialisation.
 		if self.is_pacemaker():
@@ -648,9 +639,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					'Cron Runner'
 				)
 
-			# Load plugins from the config now, so we can override the
-			# default plugins if we need to.
-			self.load_plugins(self.plugins, self['pacemaker']['plugins'])
+		# Plugins. Note that we load these after the defaults,
+		# so you can re-register the defaults with different options.
+		self.load_plugins(self.plugins, self['plugins'])
 
 		# TODO: validate the contents of scmlisters, that they all
 		# are relevant plugins.

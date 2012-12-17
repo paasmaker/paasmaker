@@ -59,6 +59,41 @@ redis:
     host: 0.0.0.0
     port: %(jobs_port)d
     managed: true
+
+plugins:
+  - name: paasmaker.service.parameters
+    class: paasmaker.pacemaker.service.parameters.ParametersService
+    title: Parameters Service
+  - name: paasmaker.scm.zip
+    class: paasmaker.pacemaker.scm.zip.ZipSCM
+    title: Zip file SCM
+  - name: paasmaker.prepare.shell
+    class: paasmaker.pacemaker.prepare.shell.ShellPrepare
+    title: Shell preparer
+  - name: paasmaker.runtime.shell
+    class: paasmaker.heart.runtime.ShellRuntime
+    title: Shell Runtime
+  - name: paasmaker.auth.internal
+    class: paasmaker.pacemaker.auth.internal.InternalAuth
+    title: Internal Authentication
+
+  - name: paasmaker.runtime.php
+    class: paasmaker.heart.runtime.PHPRuntime
+    title: PHP
+    parameters:
+      apache_config_dir: /tmp/foo
+  - name: paasmaker.startup.shell
+    class: paasmaker.pacemaker.prepare.shell.ShellPrepare
+    title: Shell startup
+  - name: paasmaker.runtime.shell
+    class: paasmaker.heart.runtime.ShellRuntime
+    title: Shell Runtime
+  #- name: paasmaker.runtime.ruby
+  #  class: paasmaker.heart.runtime.RubyRuntime
+  #  title: Ruby
+  #  parameters:
+  #    foo: bar
+  #    baz: bar
 """
 
 	pacemaker_config = """
@@ -68,22 +103,6 @@ pacemaker:
   allow_supertoken: true
   dsn: "sqlite:///:memory:"
   cluster_hostname: local.paasmaker.net
-  plugins:
-    - name: paasmaker.service.parameters
-      class: paasmaker.pacemaker.service.parameters.ParametersService
-      title: Parameters Service
-    - name: paasmaker.scm.zip
-      class: paasmaker.pacemaker.scm.zip.ZipSCM
-      title: Zip file SCM
-    - name: paasmaker.prepare.shell
-      class: paasmaker.pacemaker.prepare.shell.ShellPrepare
-      title: Shell preparer
-    - name: paasmaker.runtime.shell
-      class: paasmaker.heart.runtime.ShellRuntime
-      title: Shell Runtime
-    - name: paasmaker.auth.internal
-      class: paasmaker.pacemaker.auth.internal.InternalAuth
-      title: Internal Authentication
   scmlisters:
     - for: paasmaker.scm.zip
       plugins:
@@ -94,24 +113,6 @@ pacemaker:
 heart:
   enabled: true
   working_dir: %(heart_working_dir)s
-  plugins:
-    - name: paasmaker.runtime.php
-      class: paasmaker.heart.runtime.PHPRuntime
-      title: PHP
-      parameters:
-        apache_config_dir: /tmp/foo
-    - name: paasmaker.startup.shell
-      class: paasmaker.pacemaker.prepare.shell.ShellPrepare
-      title: Shell startup
-    - name: paasmaker.runtime.shell
-      class: paasmaker.heart.runtime.ShellRuntime
-      title: Shell Runtime
-    #- name: paasmaker.runtime.ruby
-    #  class: paasmaker.heart.runtime.RubyRuntime
-    #  title: Ruby
-    #  parameters:
-    #    foo: bar
-    #    baz: bar
 """
 
 	router_config = """
