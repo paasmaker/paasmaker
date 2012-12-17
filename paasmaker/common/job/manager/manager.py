@@ -145,12 +145,19 @@ class JobManager(object):
 			try:
 				yield
 			except Exception, ex:
-				# Log what happened.
-				logging.error("Job %s failed with exception:", job_id, exc_info=True)
-				job_logger = self.configuration.get_job_logger(job_id)
-				job_logger.error("Job failed with exception:", exc_info=True)
-				# Abort the job with an error.
-				self.completed(job_id, constants.JOB.FAILED, None, "Exception thrown: " + str(ex))
+				# TODO: Workaround: It's possible that the abort_job() hasn't been implemented,
+				# which causes a nice little loop here. But if something else raises this, then
+				# the job tree will just hang...
+				if isinstance(ex, NotImplementedError):
+					logger.critical("abort_job() is not implemented for this job.")
+					logger.critical(exc_info=ex)
+				else:
+					# Log what happened.
+					logging.error("Job %s failed with exception:", job_id, exc_info=True)
+					job_logger = self.configuration.get_job_logger(job_id)
+					job_logger.error("Job failed with exception:", exc_info=True)
+					# Abort the job with an error.
+					self.completed(job_id, constants.JOB.FAILED, None, "Exception thrown: " + str(ex))
 
 		def on_context(context):
 			def on_running(result):
