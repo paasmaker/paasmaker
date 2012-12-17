@@ -181,9 +181,6 @@ router:
 					logger.info("Killing off test redis instance.")
 					meta['manager'].destroy()
 
-		if hasattr(self, 'broker_server'):
-			self.broker_server.destroy()
-
 		# Remove files that we created.
 		shutil.rmtree(self.params['log_dir'])
 		shutil.rmtree(self.params['heart_working_dir'])

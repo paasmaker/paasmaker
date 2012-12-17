@@ -157,14 +157,17 @@ redis:
     host: 127.0.0.1
     port: %(router_redis_port)d
     managed: %(is_cluster_master)s
+    shutdown: true
   stats:
     host: 127.0.0.1
     port: %(stats_redis_port)d
     managed: %(is_cluster_master)s
+    shutdown: true
   jobs:
     host: 127.0.0.1
     port: %(jobs_redis_port)d
     managed: %(is_cluster_master)s
+    shutdown: true
 
 plugins:
   - name: paasmaker.scm.zip
@@ -208,6 +211,7 @@ router:
   nginx:
     port: %(nginx_port)d
     managed: true
+    shutdown: true
 """
 
 	def __init__(self, pacemaker, heart, router):

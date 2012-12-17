@@ -256,6 +256,10 @@ def on_told_master_shutdown(response):
 	else:
 		logger.info("Successfully shutdown with master.")
 
+	# Now stop any managed daemons.
+	configuration.shutdown_managed_nginx()
+	configuration.shutdown_managed_redis()
+
 	on_actual_exit()
 
 def on_actual_exit():

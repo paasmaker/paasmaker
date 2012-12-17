@@ -162,16 +162,21 @@ class RedisConnectionSchema(colander.MappingSchema):
 		description="If true, this is a managed redis instance. Paasmaker will create it on demand and manage storing it's data.",
 		default=False,
 		missing=False)
+	shutdown = colander.SchemaNode(colander.Boolean(),
+		title="Shutdown with node",
+		description="If true, this managed redis instance is shut down when the node is shut down.",
+		default=False,
+		missing=False)
 
 	@staticmethod
 	def default_router_table():
-		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_MASTER, 'managed': False}
+		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_MASTER, 'managed': False, 'shutdown': False}
 	@staticmethod
 	def default_router_stats():
-		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_STATS, 'managed': False}
+		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_STATS, 'managed': False, 'shutdown': False}
 	@staticmethod
 	def default_jobs():
-		return {'host': 'localhost', 'port': DEFAULT_REDIS_JOBS, 'managed': False}
+		return {'host': 'localhost', 'port': DEFAULT_REDIS_JOBS, 'managed': False, 'shutdown': False}
 
 class RedisConnectionSlaveSchema(RedisConnectionSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -195,10 +200,15 @@ class NginxSchema(colander.MappingSchema):
 		description="The port to run the managed NGINX on.",
 		default=DEFAULT_NGINX,
 		missing=DEFAULT_NGINX)
+	shutdown = colander.SchemaNode(colander.Boolean(),
+		title="Shutdown with node",
+		description="If true, this managed nginx instance is shut down when the node is shut down.",
+		default=False,
+		missing=False)
 
 	@staticmethod
 	def default():
-		return {'managed': False, 'port': DEFAULT_NGINX}
+		return {'managed': False, 'port': DEFAULT_NGINX, 'shutdown': False}
 
 class RouterSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -729,7 +739,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			if not hasattr(self, 'redis_meta'):
 				self.redis_meta = {}
 			if not self.redis_meta.has_key(meta_key):
-				self.redis_meta[meta_key] = {'state': 'CREATE', 'queue': []}
+				self.redis_meta[meta_key] = {
+					'state': 'CREATE',
+					'queue': [],
+					'shutdown': credentials['shutdown']
+				}
 
 			meta = self.redis_meta[meta_key]
 
@@ -782,6 +796,16 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def get_jobs_redis(self, callback, error_callback):
 		self._get_redis('jobs', self['redis']['jobs'], callback, error_callback)
 
+	def shutdown_managed_redis(self):
+		if hasattr(self, 'redis_meta'):
+			for key, meta in self.redis_meta.iteritems():
+				if meta['state'] == 'STARTED' and meta['shutdown']:
+					logger.info("Shutting down managed redis, because requested to do so.")
+					meta['manager'].stop()
+					# Wait until it stops.
+					while meta['manager'].is_running():
+						pass
+
 	def setup_managed_nginx(self, callback, error_callback):
 		if self.get_flat('router.nginx.managed'):
 			# Fire up the managed version, if it's not already running.
@@ -811,6 +835,12 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		else:
 			# It's not managed. Do nothing.
 			callback("NGINX not managed - no action taken.")
+
+	def shutdown_managed_nginx(self):
+		if self.get_flat('router.nginx.managed') and self.get_flat('router.nginx.shutdown'):
+			# Shut down the managed nginx, if it's running.
+			if self.nginx_server.is_running():
+				self.nginx_server.stop()
 
 	def get_tornado_configuration(self):
 		settings = {}
