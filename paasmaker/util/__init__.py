@@ -18,3 +18,4 @@ from popen import Popen
 from streamingchecksum import StreamingChecksum
 from processcheck import ProcessCheck
 from asyncdns import AsyncDNS
+from multipaas import MultiPaas
