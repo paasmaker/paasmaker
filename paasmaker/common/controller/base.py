@@ -703,11 +703,24 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase, TestHelpers):
 
 	def setUp(self):
 		self.configuration = None
+		self._port = None
+		self.test_port_allocator = paasmaker.util.port.FreePortFinder()
+
 		super(BaseControllerTest, self).setUp()
 		self.configuration.setup_job_watcher()
+
 	def tearDown(self):
 		self.configuration.cleanup()
 		super(BaseControllerTest, self).tearDown()
+
+	def get_http_port(self):
+		"""Returns the port used by the server.
+
+		A new port is chosen for each test.
+		"""
+		if self._port is None:
+			self._port = self.test_port_allocator.free_in_range(10100, 10199)
+		return self._port
 
 	def fetch_with_user_auth(self, url, **kwargs):
 		"""
