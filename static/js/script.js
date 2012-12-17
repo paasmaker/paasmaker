@@ -451,6 +451,27 @@ JobDisplayHandler.prototype.createContainer = function(job_id, level, data)
 			}
 		);
 		toolbox.append(logExpander);
+
+		if( data.state != 'SUCCESS' && data.state != 'FAILED' && data.state != 'ABORTED' )
+		{
+			var aborter = $('<a class="aborter" href="#" title="Abort Job"><i class="icon-off"></i></a>');
+			aborter.click(
+				function(e)
+				{
+					$.getJSON(
+						'/job/abort/' + job_id + '?format=json',
+						function( data )
+						{
+							// No action to date.
+							console.log(data);
+						}
+					);
+					e.preventDefault();
+				}
+			);
+			toolbox.append(aborter);
+		}
+
 		toolbox.addClass('populated');
 	}
 
@@ -526,6 +547,12 @@ JobDisplayHandler.prototype.updateStatus = function(status)
 	el.text(status.state);
 	this.setStateClass($('.state', this.container), status.state);
 	this.setStateIcon($('.state', this.container), status.state);
+
+	if( status.state == 'SUCCESS' || status.state == 'FAILED' || status.state == 'ABORTED' )
+	{
+		// Remove the abort button, if present.
+		$('.' + status.job_id + ' .aborter', this.container).remove();
+	}
 
 	if( status.summary && status.state != 'SUCCESS' )
 	{
