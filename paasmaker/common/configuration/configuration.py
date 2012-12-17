@@ -472,7 +472,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		new_search_path = list(search_path)
 		if options.configfile != "":
 			new_search_path.insert(0, options.configfile)
-		super(Configuration, self).load_from_file(search_path)
+		super(Configuration, self).load_from_file(new_search_path)
 
 	def post_load(self):
 		# Make sure directories exist.
@@ -852,7 +852,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				self.broker_server.configure(
 					directory,
 					self.get_flat('broker.port'),
-					self.get_flat('broker.host')
+					self.get_flat('broker.host'),
+					self.get_flat('my_name')
 				)
 
 			def on_rabbitmq_started(message):
