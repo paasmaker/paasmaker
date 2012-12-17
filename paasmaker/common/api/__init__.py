@@ -11,3 +11,4 @@ from role import RoleCreateAPIRequest, RoleEditAPIRequest, RoleListAPIRequest, R
 from application import ApplicationGetAPIRequest, ApplicationListAPIRequest
 from version import VersionGetAPIRequest
 from package import PackageSizeAPIRequest, PackageDownloadAPIRequest
+from job import JobAbortAPIRequest

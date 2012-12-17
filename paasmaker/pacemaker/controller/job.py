@@ -14,7 +14,7 @@ from ws4py.client.tornadoclient import TornadoWebSocketClient
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-class JobController(BaseController):
+class JobListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def _get_workspace(self, workspace_id):
@@ -119,9 +119,26 @@ class JobController(BaseController):
 	def get_routes(configuration):
 		routes = []
 		# The route for, eg, /job/list/workspace/1
-		routes.append((r"/job/list/(workspace|application|version|instancetype)/(\d+)", JobController, configuration))
+		routes.append((r"/job/list/(workspace|application|version|instancetype)/(\d+)", JobListController, configuration))
 		# The route for job detail. Eg, /job/detail/<jobid>
-		routes.append((r"/job/(detail)/([-\w\d]+)", JobController, configuration))
+		routes.append((r"/job/(detail)/([-\w\d]+)", JobListController, configuration))
+		return routes
+
+class JobAbortController(BaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def get(self, job_id):
+		# TODO: Attempt to tie this to a workspace for permissions
+		# purposes.
+		self.require_permission('JOB_ABORT')
+		self.configuration.job_manager.abort(job_id)
+		self.add_data('job_id', job_id)
+		self.render("job/abort.html")
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/job/abort/(.*)", JobAbortController, configuration))
 		return routes
 
 class JobSubscribeSchema(colander.MappingSchema):

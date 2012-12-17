@@ -623,6 +623,19 @@ class VersionDeleteAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class JobAbortAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("job_id", help="Job ID to abort")
+
+	def describe(self):
+		return "Abort a given job and it's related job tree."
+
+	def process(self, args):
+		request = paasmaker.common.api.job.JobAbortAPIRequest(None)
+		request.set_job(args.job_id)
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
@@ -679,6 +692,7 @@ ACTION_MAP = {
 	'version-deregister': VersionDeRegisterAction(),
 	'version-setcurrent': VersionSetCurrentAction(),
 	'version-delete': VersionDeleteAction(),
+	'job-abort': JobAbortAction(),
 	'help': HelpAction()
 }
 
