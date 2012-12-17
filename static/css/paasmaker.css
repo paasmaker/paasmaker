@@ -147,7 +147,7 @@ textarea.example-configuration
 	height: 100px;
 }
 
-.router-stats-collection .router-stats
+.router-stats-collection .router-stats, .router-stats-collection .router-no-stats
 {
 	float: left;
 	margin-right: 10px;
