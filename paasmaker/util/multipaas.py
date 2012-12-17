@@ -4,8 +4,15 @@ import tempfile
 import subprocess
 import json
 import os
+import logging
+import time
+import shutil
+import signal
 
 import paasmaker
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 class MultiPaas(object):
 	def __init__(self,
@@ -70,8 +77,25 @@ class MultiPaas(object):
 			node.start()
 
 	def stop_nodes(self):
-		for node in self.nodes:
-			node.stop()
+		# Kill off the nodes in reverse order.
+		cloned = list(self.nodes)
+		cloned.reverse()
+		pidlist = []
+		for node in cloned:
+			pidlist.append(node.stop())
+
+		# Wait until the nodes have finished.
+		for pid in pidlist:
+			if pid:
+				while paasmaker.util.processcheck.ProcessCheck.is_running(pid, 'pm-server'):
+					logger.info("Waiting for pid %d to finish.", pid)
+					time.sleep(0.1)
+
+		logger.info("All nodes stopped.")
+
+	def destroy(self):
+		logger.info("Destroying all node data...")
+		shutil.rmtree(self.cluster_root)
 
 	def get_summary(self):
 		summary = {}
@@ -82,14 +106,29 @@ class MultiPaas(object):
 
 		return summary
 
-	def run_command(self, arguments, auth='super'):
+	def get_executor(self):
+		return Executor(
+			'localhost',
+			self.cluster_params['master_port'],
+			'super',
+			self.cluster_params['super_token']
+		)
+
+class Executor(object):
+	def __init__(self, target_host, target_port, auth_method, auth_value):
+		self.target = []
+		self.target.extend(['-r', target_host])
+		self.target.extend(['-p', str(target_port)])
+		if auth_method == 'super':
+			self.auth = '--superkey=' + auth_value
+
+	def run(self, arguments):
 		command_line = []
 		command_line.append('./pm-command.py')
 		command_line.extend(arguments)
 
-		command_line.extend(['-p', str(self.cluster_params['master_port'])])
-		if auth == 'super':
-			command_line.extend(['--superkey=' + self.cluster_params['super_token']])
+		command_line.extend(self.target)
+		command_line.append(self.auth)
 
 		for i in range(len(command_line)):
 			if not isinstance(command_line[i], str):
@@ -240,15 +279,34 @@ router:
 	def start(self):
 		# Start it up, blocking until it starts successfully.
 		# We allow it to fork into the background.
+		log_file = os.path.join(self.complete_params['cluster_root'], "%s.log" % self.params['node_name'])
+		log_fp = open(log_file, 'w')
+		logging.info("Starting node %s...", self.params['node_name'])
 		subprocess.check_call(
 			[
 				'./pm-server.py',
 				'--configfile=' + self.config_path
-			]
+			],
+			stdout=log_fp,
+			stderr=log_fp
 		)
+		logging.info("Node %s should be started.", self.params['node_name'])
+
+	def get_pid(self):
+		pidfile = self.complete_params['pid_path']
+		if os.path.exists(pidfile):
+			return int(open(pidfile, 'r').read())
+		else:
+			return None
 
 	def stop(self):
 		# Find the PID.
-		pid = int(open(self.complete_params['pid_path'], 'r').read())
-		# And stop it.
-		os.kill(pid)
+		pid = self.get_pid()
+		if pid:
+			# And stop it.
+			os.kill(pid, signal.SIGTERM)
+			logging.info("Killed node %s.", self.params['node_name'])
+		else:
+			logging.error("Node %s not running.", self.params['node_name'])
+
+		return pid
