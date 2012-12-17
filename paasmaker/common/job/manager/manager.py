@@ -56,7 +56,10 @@ class JobManager(object):
 		until that tree is moved into the WAITING state.
 		"""
 		# Sanity check: make sure the given plugin exists
-		# and can be called as a job.
+		# and can be called as a job. TODO: This only checks if the plugin
+		# exists on the node that queued the job... which may or may not
+		# have the plugin! To work around this for the moment, all nodes
+		# have all the job plugins.
 		if not self.configuration.plugins.exists(plugin, paasmaker.util.plugin.MODE.JOB):
 			raise ValueError("Plugin %s doesn't exist in the JOB mode." % plugin)
 

@@ -453,191 +453,191 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			allocated_ports = self.instances.get_used_ports()
 			self.port_allocator.add_allocated_port(allocated_ports)
 
-			if self.get_flat('default_plugins'):
-				# Register default plugins.
-				# HEART JOBS
-				self.plugins.register(
-					'paasmaker.job.heart.registerinstance',
-					'paasmaker.common.job.heart.RegisterInstanceJob',
-					{},
-					'Instance Registration Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.heart.startup',
-					'paasmaker.common.job.heart.InstanceStartupJob',
-					{},
-					'Instance Startup Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.heart.prestartup',
-					'paasmaker.common.job.heart.PreInstanceStartupJob',
-					{},
-					'Pre Instance Startup Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.heart.shutdown',
-					'paasmaker.common.job.heart.InstanceShutdownJob',
-					{},
-					'Instance Shutdown Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.heart.deregisterinstance',
-					'paasmaker.common.job.heart.DeRegisterInstanceJob',
-					{},
-					'De Register Instance Job'
-				)
+		if self.get_flat('default_plugins'):
+			# HEART PLUGINS
+			# Register default plugins.
+			# HEART JOBS
+			self.plugins.register(
+				'paasmaker.job.heart.registerinstance',
+				'paasmaker.common.job.heart.RegisterInstanceJob',
+				{},
+				'Instance Registration Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.heart.startup',
+				'paasmaker.common.job.heart.InstanceStartupJob',
+				{},
+				'Instance Startup Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.heart.prestartup',
+				'paasmaker.common.job.heart.PreInstanceStartupJob',
+				{},
+				'Pre Instance Startup Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.heart.shutdown',
+				'paasmaker.common.job.heart.InstanceShutdownJob',
+				{},
+				'Instance Shutdown Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.heart.deregisterinstance',
+				'paasmaker.common.job.heart.DeRegisterInstanceJob',
+				{},
+				'De Register Instance Job'
+			)
 
-				# STARTUP PLUGINS
-				self.plugins.register(
-					'paasmaker.startup.shell',
-					'paasmaker.pacemaker.prepare.shell.ShellPrepare',
-					{},
-					'Shell Prepare'
-				)
+			# STARTUP PLUGINS
+			self.plugins.register(
+				'paasmaker.startup.shell',
+				'paasmaker.pacemaker.prepare.shell.ShellPrepare',
+				{},
+				'Shell Prepare'
+			)
 
-		# Pacemaker initialisation.
-		if self.is_pacemaker():
-			if self.get_flat('default_plugins'):
-				# Register default plugins.
-				# PREPARE JOBS
-				self.plugins.register(
-					'paasmaker.job.prepare.root',
-					'paasmaker.common.job.prepare.ApplicationPrepareRootJob',
-					{},
-					'Application Prepare Root Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.prepare.manifestreader',
-					'paasmaker.common.job.prepare.ManifestReaderJob',
-					{},
-					'Manifest Reader Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.prepare.scm',
-					'paasmaker.common.job.prepare.SourceSCMJob',
-					{},
-					'Source SCM Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.prepare.service',
-					'paasmaker.common.job.prepare.ServiceJob',
-					{},
-					'Service Management Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.prepare.servicecontainer',
-					'paasmaker.common.job.prepare.ServiceContainerJob',
-					{},
-					'Service Container Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.prepare.packer',
-					'paasmaker.common.job.prepare.SourcePackerJob',
-					{},
-					'Source Packer Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.prepare.preparer',
-					'paasmaker.common.job.prepare.SourcePreparerJob',
-					{},
-					'Source Preparer Job'
-				)
+		# PACEMAKER PLUGINS.
+		if self.get_flat('default_plugins'):
+			# Register default plugins.
+			# PREPARE JOBS
+			self.plugins.register(
+				'paasmaker.job.prepare.root',
+				'paasmaker.common.job.prepare.ApplicationPrepareRootJob',
+				{},
+				'Application Prepare Root Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.prepare.manifestreader',
+				'paasmaker.common.job.prepare.ManifestReaderJob',
+				{},
+				'Manifest Reader Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.prepare.scm',
+				'paasmaker.common.job.prepare.SourceSCMJob',
+				{},
+				'Source SCM Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.prepare.service',
+				'paasmaker.common.job.prepare.ServiceJob',
+				{},
+				'Service Management Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.prepare.servicecontainer',
+				'paasmaker.common.job.prepare.ServiceContainerJob',
+				{},
+				'Service Container Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.prepare.packer',
+				'paasmaker.common.job.prepare.SourcePackerJob',
+				{},
+				'Source Packer Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.prepare.preparer',
+				'paasmaker.common.job.prepare.SourcePreparerJob',
+				{},
+				'Source Preparer Job'
+			)
 
-				# COORDINATE JOBS
-				self.plugins.register(
-					'paasmaker.job.coordinate.selectlocations',
-					'paasmaker.common.job.coordinate.SelectLocationsJob',
-					{},
-					'Select Locations Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.coordinate.registerroot',
-					'paasmaker.common.job.coordinate.RegisterRootJob',
-					{},
-					'Register Root Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.coordinate.registerrequest',
-					'paasmaker.common.job.coordinate.RegisterRequestJob',
-					{},
-					'Register Request Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.coordinate.storeport',
-					'paasmaker.common.job.coordinate.StorePortJob',
-					{},
-					'Store Port Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.coordinate.startuproot',
-					'paasmaker.common.job.coordinate.StartupRootJob',
-					{},
-					'Startup Root Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.coordinate.shutdownroot',
-					'paasmaker.common.job.coordinate.ShutdownRootJob',
-					{},
-					'Shutdown Root Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.coordinate.deregisterroot',
-					'paasmaker.common.job.coordinate.DeRegisterRootJob',
-					{},
-					'De Register Root Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.coordinate.currentroot',
-					'paasmaker.common.job.coordinate.CurrentVersionRootJob',
-					{},
-					'Update Current Version Root Job'
-				)
-				self.plugins.register(
-					'paasmaker.job.coordinate.currentcontainer',
-					'paasmaker.common.job.coordinate.CurrentVersionContainerJob',
-					{},
-					'Update Current Version Container Job'
-				)
+			# COORDINATE JOBS
+			self.plugins.register(
+				'paasmaker.job.coordinate.selectlocations',
+				'paasmaker.common.job.coordinate.SelectLocationsJob',
+				{},
+				'Select Locations Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.coordinate.registerroot',
+				'paasmaker.common.job.coordinate.RegisterRootJob',
+				{},
+				'Register Root Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.coordinate.registerrequest',
+				'paasmaker.common.job.coordinate.RegisterRequestJob',
+				{},
+				'Register Request Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.coordinate.storeport',
+				'paasmaker.common.job.coordinate.StorePortJob',
+				{},
+				'Store Port Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.coordinate.startuproot',
+				'paasmaker.common.job.coordinate.StartupRootJob',
+				{},
+				'Startup Root Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.coordinate.shutdownroot',
+				'paasmaker.common.job.coordinate.ShutdownRootJob',
+				{},
+				'Shutdown Root Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.coordinate.deregisterroot',
+				'paasmaker.common.job.coordinate.DeRegisterRootJob',
+				{},
+				'De Register Root Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.coordinate.currentroot',
+				'paasmaker.common.job.coordinate.CurrentVersionRootJob',
+				{},
+				'Update Current Version Root Job'
+			)
+			self.plugins.register(
+				'paasmaker.job.coordinate.currentcontainer',
+				'paasmaker.common.job.coordinate.CurrentVersionContainerJob',
+				{},
+				'Update Current Version Container Job'
+			)
 
-				# ROUTING
-				self.plugins.register(
-					'paasmaker.job.routing.update',
-					'paasmaker.common.job.routing.RoutingUpdateJob',
-					{},
-					'Routing Update Job'
-				)
+			# ROUTING
+			self.plugins.register(
+				'paasmaker.job.routing.update',
+				'paasmaker.common.job.routing.RoutingUpdateJob',
+				{},
+				'Routing Update Job'
+			)
 
-				# PLACEMENT PLUGINS
-				self.plugins.register(
-					'paasmaker.placement.default',
-					'paasmaker.pacemaker.placement.default.DefaultPlacement',
-					{},
-					'Default Placement'
-				)
+			# PLACEMENT PLUGINS
+			self.plugins.register(
+				'paasmaker.placement.default',
+				'paasmaker.pacemaker.placement.default.DefaultPlacement',
+				{},
+				'Default Placement'
+			)
 
-				# PREPARE PLUGINS
-				self.plugins.register(
-					'paasmaker.prepare.shell',
-					'paasmaker.pacemaker.prepare.shell.ShellPrepare',
-					{},
-					'Shell Prepare'
-				)
+			# PREPARE PLUGINS
+			self.plugins.register(
+				'paasmaker.prepare.shell',
+				'paasmaker.pacemaker.prepare.shell.ShellPrepare',
+				{},
+				'Shell Prepare'
+			)
 
-				# AUTHENTICATION PLUGINS
-				self.plugins.register(
-					'paasmaker.auth.internal',
-					'paasmaker.pacemaker.auth.internal.InternalAuth',
-					{},
-					'Internal Authentication'
-				)
+			# AUTHENTICATION PLUGINS
+			self.plugins.register(
+				'paasmaker.auth.internal',
+				'paasmaker.pacemaker.auth.internal.InternalAuth',
+				{},
+				'Internal Authentication'
+			)
 
-				# CRON PLUGINS
-				self.plugins.register(
-					'paasmaker.job.cron',
-					'paasmaker.pacemaker.cron.cronrunner.CronRunJob',
-					{},
-					'Cron Runner'
-				)
+			# CRON PLUGINS
+			self.plugins.register(
+				'paasmaker.job.cron',
+				'paasmaker.pacemaker.cron.cronrunner.CronRunJob',
+				{},
+				'Cron Runner'
+			)
 
 		# Plugins. Note that we load these after the defaults,
 		# so you can re-register the defaults with different options.
