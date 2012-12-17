@@ -21,7 +21,7 @@ class ManifestReaderJob(BaseJob):
 			self.manifest.load_from_file([manifest_full_path])
 		except paasmaker.common.configuration.InvalidConfigurationException, ex:
 			self.logger.critical("Failed to load configuration:")
-			self.logger.critical(exc_info=ex)
+			self.logger.critical("Exception:", exc_info=ex)
 			self.failed("Failed to load configuration.")
 			return
 

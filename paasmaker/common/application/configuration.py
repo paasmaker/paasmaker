@@ -138,7 +138,7 @@ class Instance(colander.MappingSchema):
 
 class ConfigurationSchema(colander.MappingSchema):
 	application = Application()
-	services = Services()
+	services = Services(default=[], missing=[])
 	# NOTE: We validate the instances ApplicationConfiguration.post_load(), because
 	# there didn't seem to be an easy way to get Colander to validate them.
 	instances = colander.SchemaNode(colander.Mapping(unknown='preserve'))
