@@ -301,7 +301,7 @@ LogRootStreamHandler.prototype.onmessage = function (evt)
 {
 	// Parse the message.
 	var message = $.parseJSON(evt.data);
-	//console.log(message);
+	console.log(message);
 
 	// Find a handler to work with it.
 	var handler = this.handlers[message.data.job_id];
@@ -309,12 +309,34 @@ LogRootStreamHandler.prototype.onmessage = function (evt)
 	switch(message.type)
 	{
 		case 'lines':
-			handler.handleNewLines(message.data);
+			handler.handleNewLines(this, message.data);
 			break;
 		case 'zerosize':
-			handler.handleZeroSizeLog(message.data);
+			handler.handleZeroSizeLog(this, message.data);
 			break;
 	}
+}
+
+LOG_LEVEL_MAP = [
+	['DEBUG', 'label'],
+	['INFO', 'label label-info'],
+	['WARNING', 'label label-warning'],
+	['ERROR', 'label label-important'],
+	['CRITICAL', 'label label-important']
+]
+
+LogRootStreamHandler.prototype.formatLogLines = function(lines)
+{
+	var output = lines;
+	output = htmlEscape(output);
+	for( var i = 0; i < LOG_LEVEL_MAP.length; i++ )
+	{
+		output = output.replace(
+			new RegExp('\\s' + LOG_LEVEL_MAP[i][0] + '\\s', 'g'),
+			' <span class="' + LOG_LEVEL_MAP[i][1] + '">' + LOG_LEVEL_MAP[i][0] + '</span> '
+		);
+	}
+	return output;
 }
 
 var JobDisplayHandler = function(container, jobStream, logStream)
@@ -327,42 +349,20 @@ var JobDisplayHandler = function(container, jobStream, logStream)
 	this.jobStream.subscribe(this.job_id, this);
 }
 
-JobDisplayHandler.prototype.handleZeroSizeLog = function(message)
+JobDisplayHandler.prototype.handleZeroSizeLog = function(stream, message)
 {
 	var container = $('.' + message.job_id + ' .log');
 	container.html("No log entries for this job.")
 	container.addClass('no-data');
 }
 
-JobDisplayHandler.prototype.handleNewLines = function(message)
+JobDisplayHandler.prototype.handleNewLines = function(stream, message)
 {
 	var container = $('.' + message.job_id + ' .log');
 	container.removeClass('no-data');
-	var formatted = this.formatLogLines(message.lines.join(''));
+	var formatted = stream.formatLogLines(message.lines.join(''));
 	container.append(formatted);
 	container.attr('data-position', message.position);
-}
-
-LOG_LEVEL_MAP = [
-	['DEBUG', 'label'],
-	['INFO', 'label label-info'],
-	['WARNING', 'label label-warning'],
-	['ERROR', 'label label-important'],
-	['CRITICAL', 'label label-important']
-]
-
-JobDisplayHandler.prototype.formatLogLines = function(lines)
-{
-	var output = lines;
-	output = htmlEscape(output);
-	for( var i = 0; i < LOG_LEVEL_MAP.length; i++ )
-	{
-		output = output.replace(
-			new RegExp('\\s' + LOG_LEVEL_MAP[i][0] + '\\s', 'g'),
-			' <span class="' + LOG_LEVEL_MAP[i][1] + '">' + LOG_LEVEL_MAP[i][0] + '</span> '
-		);
-	}
-	return output;
 }
 
 JobDisplayHandler.prototype.renderJobTree = function(tree, level, container)
@@ -574,6 +574,58 @@ JobDisplayHandler.prototype.toggleSubscribeLog = function(job_id, container)
 		this.logStream.subscribe(job_id, this, position);
 		container.slideDown();
 	}
+}
+
+var InstanceLogDisplayHandler = function(logStream, instance_id)
+{
+	this.logStream = logStream;
+	this.instance_id = instance_id;
+
+	// Set up the container.
+	this.toggle = $('.toggle.' + instance_id);
+	this.toggle.html($('<i class="icon-list"></i>'));
+	this.container = $('.instance-log-container.' + instance_id);
+	this.pre = $('<pre></pre>');
+	this.container.hide();
+	this.container.append(this.pre);
+
+	var _self = this;
+	this.toggle.click(
+		function(e)
+		{
+			_self.toggleSubscribe();
+			e.preventDefault();
+		}
+	);
+}
+
+InstanceLogDisplayHandler.prototype.toggleSubscribe = function()
+{
+	if( this.logStream.isSubscribed(this.instance_id) )
+	{
+		this.container.slideUp();
+		this.logStream.unsubscribe(this.instance_id);
+	}
+	else
+	{
+		var position = this.pre.attr('data-position');
+		this.logStream.subscribe(this.instance_id, this, position);
+		this.container.slideDown();
+	}
+}
+
+InstanceLogDisplayHandler.prototype.handleZeroSizeLog = function(stream, message)
+{
+	this.pre.html("No log entries for this job.")
+	this.pre.addClass('no-data');
+}
+
+InstanceLogDisplayHandler.prototype.handleNewLines = function(stream, message)
+{
+	this.pre.removeClass('no-data');
+	var formatted = stream.formatLogLines(message.lines.join(''));
+	this.pre.append(formatted);
+	this.pre.attr('data-position', message.position);
 }
 
 var RouterStatsStreamHandler = function(container)
@@ -843,6 +895,15 @@ $(document).ready(
 				function(index, element)
 				{
 					var jobDisplay = new JobDisplayHandler($(element), jobStream, logStream);
+				}
+			);
+		}
+		if( $('.instance-log-container').length > 0 )
+		{
+			$('.instance-log-container').each(
+				function(index, element)
+				{
+					var instanceLogDisplay = new InstanceLogDisplayHandler(logStream, $(element).attr('data-instance'));
 				}
 			);
 		}

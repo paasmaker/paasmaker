@@ -224,6 +224,9 @@ class LogStreamHandler(BaseWebsocketHandler):
 		return message
 
 	def send_job_log(self, job_id, last_position=0):
+		# TODO: If the log is huge, we won't want to stream the whole
+		# thing, just the end of it. So only send back the last part of it,
+		# regardless of where we requested the file from.
 		log_file = self.configuration.get_job_log_path(job_id, create_if_missing=False)
 		if os.path.getsize(log_file) == 0:
 			# Report the zero size.

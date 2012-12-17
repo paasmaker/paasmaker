@@ -23,6 +23,7 @@
 				<tr>
 					<td>
 						<code>{{ instance.instance_id[0:8] }}</code>
+						<a href="#" class="toggle {{ instance.instance_id }}"></a>
 					</td>
 					<td>
 						<a href="/node/{{ instance.node.id }}">{{ instance.node.name }}</a>
@@ -35,6 +36,10 @@
 					</td>
 					<td>
 						<span class="instance-{{ instance.state }}">{{ nice_state(instance.state) }}</span>
+					</td>
+				</tr>
+				<tr>
+					<td colspan="5" class="instance-log-container {{ instance.instance_id }}" data-instance="{{ instance.instance_id }}">
 					</td>
 				</tr>
 			{% end %}
