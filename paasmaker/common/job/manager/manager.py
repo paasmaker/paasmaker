@@ -51,7 +51,7 @@ class JobManager(object):
 	def add_job(self, plugin, parameters, title, callback, parent=None, node=None, context=None, tags=[], abort_handler=False):
 		"""
 		Add the given job to the system, calling the callback with the
-		assigned job ID when it's inserted into the system. New jobs
+		assigned job id when it's inserted into the system. New jobs
 		are inserted with the state NEW, which means they won't be executed
 		until that tree is moved into the WAITING state.
 		"""
@@ -66,7 +66,7 @@ class JobManager(object):
 		# Generate a job_id.
 		job_id = str(uuid.uuid4())
 		logger.info("Adding job '%s'", title)
-		logger.debug("Allocated job ID %s", job_id)
+		logger.debug("Allocated job id %s", job_id)
 
 		# Figure out what node it belongs to. If supplied, use that one.
 		# Otherwise it's considered a local job.
@@ -107,6 +107,56 @@ class JobManager(object):
 		# Make a note of this being an abort handler.
 		if abort_handler:
 			self.abort_handlers[job_id] = True
+
+	def get_specifier(self):
+		return JobSpecifier()
+
+	def add_tree(self, treespec, callback, parent=None):
+		self._add_tree_recurse(treespec, callback, parent)
+
+	def _add_tree_recurse(self, tree, callback, parent=None):
+		# Record a list of the children that we can destroy later.
+		child_list = list(tree.children)
+		child_list.reverse()
+
+		def on_root_added(root_id):
+			# Root has been added. Start popping off
+			# children and adding them.
+			tree.job_id = root_id
+
+			def pop_child():
+				try:
+					child = child_list.pop()
+
+					def child_done(child_id):
+						child.job_id = child_id
+						# Work on the next child.
+						pop_child()
+						# end of child_done()
+
+					self._add_tree_recurse(child, child_done, parent=root_id)
+
+				except IndexError, ex:
+					# No more children. We're finished.
+					callback(root_id)
+				# end of pop_child()
+
+			# Start processing children.
+			pop_child()
+			# End of on_root_added()
+
+		# Add the root job.
+		self.add_job(
+			tree.parameters['plugin'],
+			tree.parameters['parameters'],
+			tree.parameters['title'],
+			on_root_added,
+			parent=parent,
+			node=tree.parameters['node'],
+			context=tree.parameters['context'],
+			tags=tree.parameters['tags'],
+			abort_handler=tree.parameters['abort_handler']
+		)
 
 	def allow_execution(self, job_id, callback=None, notify_others=True):
 		"""
@@ -443,6 +493,27 @@ class JobManager(object):
 
 		self.backend.get_root(job_id, on_found_root)
 
+class JobSpecifier(object):
+
+	def __init__(self):
+		self.children = []
+		self.parameters = {}
+
+	def set_job(self, plugin, parameters, title, node=None, context=None, tags=[], abort_handler=False):
+		self.parameters['plugin'] = plugin
+		self.parameters['parameters'] = parameters
+		self.parameters['title'] = title
+		self.parameters['node'] = node
+		self.parameters['context'] = context
+		self.parameters['tags'] = tags
+		self.parameters['abort_handler'] = abort_handler
+
+	def add_child(self):
+		spec = JobSpecifier()
+		self.children.append(spec)
+
+		return spec
+
 class TestSuccessJobRunner(BaseJob):
 	def start_job(self, context):
 		self.success({}, "Completed successfully.")
@@ -745,3 +816,48 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.manager.get_pretty_tree('nope', self.stop)
 		tree = self.wait()
+
+	def test_manager_proceedural_tree(self):
+		# Test out the easier to use proceedural tree API.
+
+		root = JobSpecifier()
+		root.set_job('paasmaker.job.success', {}, "Example root job.")
+
+		sub1 = root.add_child()
+		sub1.set_job('paasmaker.job.success', {}, "Example sub1 job.", tags=['test'])
+
+		sub1_1 = sub1.add_child()
+		sub1_1.set_job('paasmaker.job.success', {}, "Example subsub1 job.")
+
+		sub2 = root.add_child()
+		sub2.set_job('paasmaker.job.success', {}, "Example sub2 job.")
+
+		self.manager.add_tree(root, self.stop)
+		root_id = self.wait()
+
+		# Start processing them.
+		self.manager.allow_execution(root_id, callback=self.stop)
+		self.wait()
+
+		#self.dump_job_tree(root_id)
+		#self.wait()
+
+		# Wait for it to settle down.
+		self.short_wait_hack(length=0.2)
+
+		subsub1_status = self.get_state(sub1_1.job_id)
+		sub1_status = self.get_state(sub1.job_id)
+		sub2_status = self.get_state(sub2.job_id)
+		root_status = self.get_state(root.job_id)
+
+		self.assertEquals(subsub1_status, constants.JOB.SUCCESS, "Sub Sub 1 should have succeeded.")
+		self.assertEquals(sub1_status, constants.JOB.SUCCESS, "Sub 1 should have succeeded.")
+		self.assertEquals(sub2_status, constants.JOB.SUCCESS, "Sub 2 should have succeeded.")
+		self.assertEquals(root_status, constants.JOB.SUCCESS, "Root should have succeeded.")
+
+		# Fetch out the jobs by tag.
+		self.manager.find_by_tag('test', self.stop)
+		result = self.wait()
+
+		self.assertEquals(len(result), 1, "Returned incorrect number of tagged jobs.")
+		self.assertEquals(result[0], root_id, "Wrong tagged job returned.")
