@@ -150,7 +150,7 @@ class JobManager(object):
 				# the job tree will just hang...
 				if isinstance(ex, NotImplementedError):
 					logger.critical("abort_job() is not implemented for this job.")
-					logger.critical(exc_info=ex)
+					logger.critical("Exception:", exc_info=ex)
 				else:
 					# Log what happened.
 					logging.error("Job %s failed with exception:", job_id, exc_info=True)
