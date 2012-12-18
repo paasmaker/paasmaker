@@ -861,3 +861,59 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.assertEquals(len(result), 1, "Returned incorrect number of tagged jobs.")
 		self.assertEquals(result[0], root_id, "Wrong tagged job returned.")
+
+	def test_manager_proceedural_tree_graft(self):
+		# Test out the easier to use proceedural tree API.
+
+		root = JobSpecifier()
+		root.set_job('paasmaker.job.success', {}, "Example root job.")
+
+		sub1 = root.add_child()
+		sub1.set_job('paasmaker.job.success', {}, "Example sub1 job.", tags=['test'])
+
+		sub2 = root.add_child()
+		sub2.set_job('paasmaker.job.success', {}, "Example sub2 job.")
+
+		self.manager.add_tree(root, self.stop)
+		root_id = self.wait()
+
+		# Graft on another tree.
+		sub1_1 = JobSpecifier()
+		sub1_1.set_job('paasmaker.job.success', {}, "Example subsub1 job.")
+
+		self.manager.add_tree(sub1_1, self.stop, parent=sub1.job_id)
+		self.wait()
+
+		# Start processing them.
+		self.manager.allow_execution(root_id, callback=self.stop)
+		self.wait()
+
+		#self.dump_job_tree(root_id)
+		#self.wait()
+
+		# Wait for it to settle down.
+		self.short_wait_hack(length=0.2)
+
+		#self.manager.get_pretty_tree(root_id, self.stop)
+		#tree = self.wait()
+		#print json.dumps(tree, indent=4, sort_keys=True)
+
+		# TODO: Verify programatically that sub1_1's parent is sub1.
+		# I've checked this in the debug output, but it's better if the unit test does this.
+
+		subsub1_status = self.get_state(sub1_1.job_id)
+		sub1_status = self.get_state(sub1.job_id)
+		sub2_status = self.get_state(sub2.job_id)
+		root_status = self.get_state(root.job_id)
+
+		self.assertEquals(subsub1_status, constants.JOB.SUCCESS, "Sub Sub 1 should have succeeded.")
+		self.assertEquals(sub1_status, constants.JOB.SUCCESS, "Sub 1 should have succeeded.")
+		self.assertEquals(sub2_status, constants.JOB.SUCCESS, "Sub 2 should have succeeded.")
+		self.assertEquals(root_status, constants.JOB.SUCCESS, "Root should have succeeded.")
+
+		# Fetch out the jobs by tag.
+		self.manager.find_by_tag('test', self.stop)
+		result = self.wait()
+
+		self.assertEquals(len(result), 1, "Returned incorrect number of tagged jobs.")
+		self.assertEquals(result[0], root_id, "Wrong tagged job returned.")
