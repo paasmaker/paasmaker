@@ -33,7 +33,7 @@ class CurrentVersionContainerJob(BaseJob):
 		self.logger.info("Sub tasks complete.")
 		self.success({}, "Sub tasks completed.")
 
-class CurrentVersionRootJob(BaseJob, InstanceRootBase):
+class CurrentVersionRootJob(InstanceRootBase):
 
 	@staticmethod
 	def setup_version(configuration, application_version_id, callback):

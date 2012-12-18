@@ -1,7 +1,9 @@
 
 import paasmaker
 
-class InstanceRootBase(object):
+from ..base import BaseJob
+
+class InstanceRootBase(BaseJob):
 	@staticmethod
 	def get_instances_for(configuration, instance_type_id, states, instances=[]):
 		"""

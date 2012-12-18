@@ -464,6 +464,15 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			self.port_allocator.add_allocated_port(allocated_ports)
 
 		if self.get_flat('default_plugins'):
+			# COMMON PLUGINS
+			# Generic container job.
+			self.plugins.register(
+				'paasmaker.job.container',
+				'paasmaker.common.job.base.ContainerJob',
+				{},
+				'Container Job'
+			)
+
 			# HEART PLUGINS
 			# Register default plugins.
 			# HEART JOBS

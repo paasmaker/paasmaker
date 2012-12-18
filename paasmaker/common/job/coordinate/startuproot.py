@@ -5,7 +5,6 @@ import uuid
 
 import paasmaker
 from paasmaker.common.core import constants
-from ..base import BaseJob
 from ...testhelpers import TestHelpers
 from instancerootbase import InstanceRootBase
 
@@ -14,7 +13,7 @@ from pubsub import pub
 
 # TODO: Implement abort features for all of these jobs.
 
-class StartupRootJob(BaseJob, InstanceRootBase):
+class StartupRootJob(InstanceRootBase):
 	@staticmethod
 	def setup(configuration, instance_type_id, callback, instances=[], parent=None):
 		instance_list = InstanceRootBase.get_instances_for(

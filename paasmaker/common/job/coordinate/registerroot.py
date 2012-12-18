@@ -19,98 +19,65 @@ from pubsub import pub
 
 # TODO: Implement abort features for all of these jobs.
 
-class RegisterRootJob(BaseJob, InstanceRootBase):
-	@staticmethod
-	def setup(configuration, application_instance_type, callback, parent=None):
-		# Set up the parameters.
-		parameters = {}
-		parameters['application_instance_type_id'] = application_instance_type.id
+# What is this job and related jobs doing?
+# The tree ends up like this:
+# - Root (Contains all other jobs)
+#   - Register request queuer (this creates more jobs to let nodes know what they need to do)
+#     - Select locations (this job chooses locations for jobs)
+#   - Register Instance A on Node A (dynamically added)
+#   - Register Instance B on Node B (dynamically added)
+#   - ... and so forth.
 
-		tags = []
-		tags.append('workspace:%d' % application_instance_type.application_version.application.workspace.id)
-		tags.append('application:%d' % application_instance_type.application_version.application.id)
-		tags.append('application_version:%d' % application_instance_type.application_version.id)
-		tags.append('application_instance_type:%d' % application_instance_type.id)
-
-		def on_root_job_added(root_job_id):
-			def on_select_locations(select_locations_job_id):
-				# Done! Callback with the root ID.
-				callback(root_job_id)
-				# end on_select_locations
-
-			def on_registration_requests(registration_request_job_id):
-				# And select the locations for instance.
-				configuration.job_manager.add_job(
-					'paasmaker.job.coordinate.selectlocations',
-					parameters,
-					"Select instance locations",
-					on_select_locations,
-					parent=registration_request_job_id
-				)
-				# end on_registration_requests
-
-			# And a job to send register requests to nodes.
-			configuration.job_manager.add_job(
-				'paasmaker.job.coordinate.registerrequest',
-				parameters,
-				"Registration requests",
-				on_registration_requests,
-				parent=root_job_id
-			)
-			# end on_root_job_added
-
-		configuration.job_manager.add_job(
-			'paasmaker.job.coordinate.registerroot',
-			{},
-			"Select locations and register instances for %s" % application_instance_type.name,
-			on_root_job_added,
-			parent=parent,
-			tags=tags
-		)
-
+class RegisterRootJob(InstanceRootBase):
 	@staticmethod
 	def setup_version(configuration, application_version, callback):
 		# List all the instance types.
 		# Assume we have an open session on the application_version object.
-		destroyable_instance_type_list = []
-		for instance_type in application_version.instance_types:
-			destroyable_instance_type_list.append(instance_type)
-		destroyable_instance_type_list.reverse()
 
 		context = {}
 		context['application_version_id'] = application_version.id
 
-		def on_root_job_added(root_job_id):
-			# Now go through the list and add sub jobs.
-			def add_job(instance_type):
-				def job_added(job_id):
-					# Try the next one.
-					try:
-						add_job(destroyable_instance_type_list.pop())
-					except IndexError, ex:
-						callback(root_job_id)
+		tags = []
+		tags.append('workspace:%d' % application_version.application.workspace.id)
+		tags.append('application:%d' % application_version.application.id)
+		tags.append('application_version:%d' % application_version.id)
 
-				RegisterRootJob.setup(
-					configuration,
-					instance_type,
-					job_added,
-					parent=root_job_id
-				)
-
-			if len(destroyable_instance_type_list) > 0:
-				add_job(destroyable_instance_type_list.pop())
-			else:
-				# This is a bit of a bizzare condition... an
-				# application with no instance types.
-				callback(root_job_id)
-
-		configuration.job_manager.add_job(
+		# The root of this tree.
+		tree = configuration.job_manager.get_specifier()
+		tree.set_job(
 			'paasmaker.job.coordinate.registerroot',
 			{},
 			"Select locations and register instances for %s version %d" % (application_version.application.name, application_version.version),
-			on_root_job_added,
-			context=context
+			context=context,
+			tags=tags
 		)
+
+		for instance_type in application_version.instance_types:
+			parameters = {}
+			parameters['application_instance_type_id'] = instance_type.id
+
+			# The tag gets added here, but it's actually tagged on the root job.
+			type_tags = ['application_instance_type:%d' % instance_type.id]
+
+			registerer = tree.add_child()
+			registerer.set_job(
+				'paasmaker.job.coordinate.registerrequest',
+				parameters,
+				"Registration requests",
+				tags=type_tags
+			)
+
+			selectlocations = registerer.add_child()
+			selectlocations.set_job(
+				'paasmaker.job.coordinate.selectlocations',
+				parameters,
+				"Select instance locations",
+			)
+
+		def on_tree_added(root_id):
+			callback(root_id)
+
+		configuration.job_manager.add_tree(tree, on_tree_added)
 
 	def start_job(self, context):
 		self.update_version_from_context(context, constants.VERSION.READY)
