@@ -73,8 +73,6 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 		else:
 			self.logger.info("No current version of this application.")
 
-		tags = set()
-
 		# This is where we need to set the current version.
 		self.logger.info("Marking new version as current.")
 		new_version.make_current(session)
@@ -85,17 +83,17 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 		remove_container.set_job(
 			'paasmaker.job.container',
 			{},
-			"Remove old instances from routing",
-			tags=tags
+			"Remove old instances from routing"
 		)
 
 		add_container = remove_container.add_child()
 		add_container.set_job(
 			'paasmaker.job.container',
 			{},
-			"Add new instances to routing",
-			tags=tags
+			"Add new instances to routing"
 		)
+
+		tags = set()
 
 		# On the remove container, remove all of the current versions.
 		# This will actually execute after the add for the new instances.
@@ -146,6 +144,10 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 
 		def on_tree_added(root_id):
 			self.configuration.job_manager.allow_execution(self.job_metadata['root_id'], callback=on_tree_executable)
+
+		# Insert the tags into the remove container job.
+		# TODO: This uses private data to do this.
+		remove_container.parameters['tags'] = tags
 
 		# Add that entire tree into the job manager.
 		self.configuration.job_manager.add_tree(remove_container, on_tree_added, parent=self.job_metadata['root_id'])
