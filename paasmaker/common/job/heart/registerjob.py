@@ -79,7 +79,7 @@ class RegisterInstanceJob(BaseJob):
 			# It's hosted on another node - for the moment we're assuming the single master
 			# so go off and fetch it.
 			# TODO: Test this condition.
-			self.fetch_package(raw_url, parsed_url)
+			self.fetch_package(raw_url, parsed)
 		else:
 			self.failed("Unknown package scheme %s.", parsed.scheme)
 
@@ -99,8 +99,8 @@ class RegisterInstanceJob(BaseJob):
 	def _package_failed(self, error, exception=None):
 		self.logger.error(error)
 		if exception:
-			self.logger.error(exc_info=exception)
-		self.failed("Failed to download package: %s", error)
+			self.logger.error("Exception:", exc_info=exception)
+		self.failed("Failed to download package: %s" % error)
 
 	def _package_progress(self, size, total):
 		percent = 0.0

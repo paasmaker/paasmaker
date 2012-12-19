@@ -25,6 +25,7 @@ class PackageRootController(BaseController):
 		full_path = os.path.join(package_path, self.params['name'])
 
 		if not os.path.exists(full_path):
+			logger.debug("Couldn't find package at %s", full_path)
 			raise tornado.web.HTTPError(404, "No such package.")
 
 		return full_path
