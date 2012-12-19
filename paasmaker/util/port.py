@@ -11,11 +11,22 @@ class NoFreePortException(Exception):
 	pass
 
 class FreePortFinder(object):
+	"""
+	A class to locate free TCP ports on the system, and confirm
+	that they're not in use.
+	"""
+
 	def __init__(self):
 		self.last_allocated = None
 		self.preallocated = set()
 
 	def add_allocated_port(self, port):
+		"""
+		Add a pre-allocated port. This is used to avoid using
+		certain ports because they've already been assigned.
+
+		:arg int port: Port to mark as allocated.
+		"""
 		if isinstance(port, list):
 			self.preallocated.update(port)
 		else:
@@ -57,8 +68,11 @@ class FreePortFinder(object):
 
 	def in_use(self, port):
 		"""
-		Quickly check if a port is in use. This is not a way to allocate
-		ports.
+		Quickly check if a port is in use.
+
+		This is not intended to be used to allocate ports.
+
+		:arg int port: The port to test.
 		"""
 		output = self.fetch_netstat()
 		return (output.find(":%d " % port) != -1)
