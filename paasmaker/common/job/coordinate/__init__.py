@@ -5,4 +5,4 @@ from storeport import StorePortJob
 from startup import StartupRootJob, StartupRequestJob
 from shutdown import ShutdownRootJob, ShutdownRequestJob
 from deregister import DeRegisterRootJob, DeRegisterRequestJob
-from currentroot import CurrentVersionRootJob, CurrentVersionContainerJob
+from current import CurrentVersionRequestJob

@@ -12,7 +12,7 @@ from startup import StartupRootJob
 from shutdown import ShutdownRootJob
 from deregister import DeRegisterRootJob
 from instancerootbase import InstanceRootBase
-from currentroot import CurrentVersionRootJob
+from current import CurrentVersionRequestJob
 from paasmaker.util.plugin import MODE
 
 import tornado
@@ -301,7 +301,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# Make that version current.
 		# TODO: Test when it takes over another version - there is a large set of
 		# code paths here not tested.
-		CurrentVersionRootJob.setup_version(
+		CurrentVersionRequestJob.setup_version(
 			self.configuration,
 			instance_type.application_version.id,
 			self.stop
@@ -310,11 +310,6 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		current_version_root_id = self.wait()
 
 		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(current_version_root_id))
-
-		# At this stage, it should be marked as current.
-		# TODO: Figure out how to handle this if the job tree fails somehow.
-		session.refresh(our_version)
-		self.assertTrue(our_version.is_current, "Version is not current.")
 
 		# And make it work.
 		self.configuration.job_manager.allow_execution(current_version_root_id, self.stop)
@@ -331,6 +326,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		# Make sure the version is in the correct state.
 		session.refresh(our_version)
+		self.assertTrue(our_version.is_current, "Version is not current.")
 		self.assertEquals(our_version.state, constants.VERSION.RUNNING)
 
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
