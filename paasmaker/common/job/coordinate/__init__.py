@@ -4,5 +4,5 @@ from register import RegisterRootJob, RegisterRequestJob
 from storeport import StorePortJob
 from startup import StartupRootJob, StartupRequestJob
 from shutdown import ShutdownRootJob, ShutdownRequestJob
-from deregisterroot import DeRegisterRootJob
+from deregister import DeRegisterRootJob, DeRegisterRequestJob
 from currentroot import CurrentVersionRootJob, CurrentVersionContainerJob

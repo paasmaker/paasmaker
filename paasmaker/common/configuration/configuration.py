@@ -618,6 +618,12 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				'De Register Root Job'
 			)
 			self.plugins.register(
+				'paasmaker.job.coordinate.deregisterrequest',
+				'paasmaker.common.job.coordinate.DeRegisterRequestJob',
+				{},
+				'De Register Request Job'
+			)
+			self.plugins.register(
 				'paasmaker.job.coordinate.currentroot',
 				'paasmaker.common.job.coordinate.CurrentVersionRootJob',
 				{},

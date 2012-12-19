@@ -10,7 +10,7 @@ from ..base import BaseJob
 from ...testhelpers import TestHelpers
 from startup import StartupRootJob
 from shutdown import ShutdownRootJob
-from deregisterroot import DeRegisterRootJob
+from deregister import DeRegisterRootJob
 from instancerootbase import InstanceRootBase
 from currentroot import CurrentVersionRootJob
 from paasmaker.util.plugin import MODE
