@@ -75,20 +75,6 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 
 		tags = set()
 
-		# List all the instance types - new version.
-		instance_types_new = []
-		for instance_type in new_version.instance_types:
-			instance_types_new.append(instance_type.id)
-			tags = tags.union(set(self.get_tags_for(instance_type)))
-		instance_types_new.reverse()
-
-		instance_types_current = []
-		if current_version and current_version.id != new_version.id:
-			for instance_type in current_version.instance_types:
-				instance_types_current.append(instance_type.id)
-				tags = tags.union(set(self.get_tags_for(instance_type)))
-			instance_types_current.reverse()
-
 		# This is where we need to set the current version.
 		self.logger.info("Marking new version as current.")
 		new_version.make_current(session)
@@ -145,8 +131,8 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 			)
 
 			for instance in instances:
-				remover = remove_container.add_child()
-				remover.set_job(
+				adder = add_container.add_child()
+				adder.set_job(
 					'paasmaker.job.routing.update',
 					{
 						'instance_id': instance.id,
