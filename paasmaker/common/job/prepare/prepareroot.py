@@ -36,44 +36,37 @@ class ApplicationPrepareRootJob(BaseJob):
 		tags = []
 		tags.append('workspace:%d' % workspace_id)
 
-		def on_root_job_added(root_job_id):
-			def on_scm_job_added(scm_job_id):
-				# Ok, at this stage we're queued. The manifest reader will
-				# queue up more jobs for us as we go along.
-				callback(root_job_id)
-
-			def manfiest_reader_added(manifest_reader_job_id):
-				# Add the SCM.
-				configuration.job_manager.add_job(
-					'paasmaker.job.prepare.scm',
-					{
-						'scm_name': scm_name,
-						'scm_parameters': scm_parameters
-					},
-					'SCM export',
-					parent=manifest_reader_job_id,
-					callback=on_scm_job_added
-				)
-				# end of manifest_reader_added()
-
-			# Make a manifest reader job as a child of this root job.
-			configuration.job_manager.add_job(
-				'paasmaker.job.prepare.manifestreader',
-				{},
-				"Manifest reader",
-				manfiest_reader_added,
-				parent=root_job_id
-			)
-			# end of on_root_job_added()
-
-		configuration.job_manager.add_job(
+		# The root of this tree.
+		tree = configuration.job_manager.get_specifier()
+		tree.set_job(
 			'paasmaker.job.prepare.root',
 			{},
 			"Prepare source for %s" % name,
-			on_root_job_added,
 			context=context,
 			tags=tags
 		)
+
+		manifestreader = tree.add_child()
+		manifestreader.set_job(
+			'paasmaker.job.prepare.manifestreader',
+			{},
+			"Manifest reader",
+		)
+
+		scm = manifestreader.add_child()
+		scm.set_job(
+			'paasmaker.job.prepare.scm',
+			{
+				'scm_name': scm_name,
+				'scm_parameters': scm_parameters
+			},
+			'SCM export'
+		)
+
+		def on_tree_added(root_id):
+			callback(root_id)
+
+		configuration.job_manager.add_tree(tree, on_tree_added)
 
 	def start_job(self, context):
 		# In the context should be a 'package' attribute. Record and in future upload this.
