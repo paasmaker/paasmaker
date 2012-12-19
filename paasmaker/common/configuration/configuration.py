@@ -594,6 +594,12 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				'Startup Root Job'
 			)
 			self.plugins.register(
+				'paasmaker.job.coordinate.startuprequest',
+				'paasmaker.common.job.coordinate.StartupRequestJob',
+				{},
+				'Startup Root Job'
+			)
+			self.plugins.register(
 				'paasmaker.job.coordinate.shutdownroot',
 				'paasmaker.common.job.coordinate.ShutdownRootJob',
 				{},

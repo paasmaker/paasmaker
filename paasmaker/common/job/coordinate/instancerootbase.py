@@ -6,6 +6,42 @@ from ..base import BaseJob
 class InstanceRootBase(BaseJob):
 	@staticmethod
 	def get_instances_for(configuration, instance_type_id, states, instances=[]):
+		# TODO: remove this function when it's not required shortly.
+		"""
+		Find instances for the given application, in the given state,
+		and return a destroyable list of instances for queueing.
+		"""
+		# TODO: limit to the given list of instance IDs.
+		session = configuration.get_database_session()
+		instance_type = session.query(paasmaker.model.ApplicationInstanceType).get(instance_type_id)
+		instances = session.query(
+			paasmaker.model.ApplicationInstance
+		).filter(
+			paasmaker.model.ApplicationInstance.application_instance_type == instance_type,
+			paasmaker.model.ApplicationInstance.state.in_(states)
+		)
+		instance_list = []
+		for instance in instances:
+			instance_list.append(
+				{
+					'id': instance.id,
+					'instance_id': instance.instance_id,
+					'node_name': instance.node.name,
+					'node_uuid': instance.node.uuid
+				}
+			)
+		instance_list.reverse()
+
+		return instance_list
+
+	def get_instance_type(self, session):
+		instance_type = session.query(
+			paasmaker.model.ApplicatioNInstanceType
+		).get(self.parameters['application_instance_type_id'])
+
+		return instance_type
+
+	def get_instances(self, configuration, instance_type_id, states, instances=[]):
 		"""
 		Find instances for the given application, in the given state,
 		and return a destroyable list of instances for queueing.
