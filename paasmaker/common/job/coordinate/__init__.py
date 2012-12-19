@@ -1,7 +1,6 @@
 
 from selectlocations import SelectLocationsJob
-from registerrequest import RegisterRequestJob
-from registerroot import RegisterRootJob
+from register import RegisterRootJob, RegisterRequestJob
 from storeport import StorePortJob
 from startuproot import StartupRootJob
 from shutdownroot import ShutdownRootJob
