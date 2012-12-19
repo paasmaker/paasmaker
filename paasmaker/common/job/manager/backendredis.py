@@ -84,19 +84,27 @@ class RedisJobBackend(JobBackend):
 
 		# TODO: Handle parse failures and other related issues.
 		parsed = json.loads(str(message.body))
-		self.configuration.send_job_status(
-			parsed['job_id'],
-			state=parsed['state'],
-			source=parsed['source'],
-			summary=parsed['summary'],
-			parent_id=parsed['parent_id']
-		)
+
+		if parsed['source'] == self.configuration.get_node_uuid():
+			# It's a message from us. drop it.
+			logger.debug("Dropping status message %s because it originated from us.", str(message.body))
+		else:
+			logger.debug("Got job status message: %s", str(message.body))
+			self.configuration.send_job_status(
+				parsed['job_id'],
+				state=parsed['state'],
+				source=parsed['source'],
+				summary=parsed['summary'],
+				parent_id=parsed['parent_id']
+			)
 
 	def send_job_status(self, message):
-		# If we're the source for this message, don't forward it on.
-		if message.source == self.configuration.get_node_uuid():
-			logger.debug("Not sending message for job %s because it's from our node." % message.job_id)
-			return
+		if not hasattr(message, 'unittest_override'):
+			if message.source != self.configuration.get_node_uuid():
+				logger.debug("Not sending message for job %s because it's from some other node." % message.job_id)
+				return
+		else:
+			logger.debug("Unit test override - forcing send of message via pub sub.")
 
 		body = message.flatten()
 		encoded = json.dumps(body)
@@ -104,7 +112,7 @@ class RedisJobBackend(JobBackend):
 		try:
 			self.redis.publish('job.status', encoded)
 		except ValueError, ex:
-			# TODO: React to this situation.
+			# TODO: React to this situation. It's caused by the redis connection being closed.
 			# TODO: This will bite later!
 			logger.error("Unable to send job status via Redis: ", exc_info=ex)
 
@@ -679,18 +687,28 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 	def test_pubsub(self):
 		# Subscribe so we can catch the status update as it comes out.
+		nodeuuid = str(uuid.uuid4())
+		self.configuration.set_node_uuid(nodeuuid)
+
 		job_id = str(uuid.uuid4())
 		pub.subscribe(self.on_job_status_update, self.configuration.get_job_status_pub_topic(job_id))
 
-		# Now send off a job update. This shouldn't actually touch the pubsub system.
+		# Now send off a job update. This should exit via the pub/sub system, but be dropped
+		# on the incoming side.
 		self.configuration.send_job_status(job_id, state='TEST')
 		status = self.wait()
 		self.assertEquals(status.job_id, job_id, "Job ID was not as expected.")
 		self.assertEquals(status.state, 'TEST', "Job status was not as expected.")
 
-		# Now this time, force it to go through the pubsub and back out again.
+		# Now, manually send a status and force it to go via the pub/sub system and
+		# back out again.
+		job_id = str(uuid.uuid4())
+		pub.subscribe(self.on_job_status_update, self.configuration.get_job_status_pub_topic(job_id))
+
 		message = paasmaker.common.configuration.JobStatusMessage(job_id, 'ROUNDTRIP', 'BOGUS')
+		message.unittest_override = True
 		self.backend.send_job_status(message)
+
 		status = self.wait()
 		self.assertEquals(status.job_id, job_id, "Job ID was not as expected.")
 		self.assertEquals(status.state, 'ROUNDTRIP', "Job status was not as expected.")
