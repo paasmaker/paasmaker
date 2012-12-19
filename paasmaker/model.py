@@ -714,7 +714,7 @@ class Service(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False, index=True)
-	workspace = relationship("Workspace", backref=backref('workspace', order_by=id))
+	workspace = relationship("Workspace", backref=backref('services', order_by=id))
 	name = Column(String, nullable=False, index=True)
 	provider = Column(String, nullable=False, index=True)
 	_parameters = Column('parameters', Text, nullable=False)
@@ -741,7 +741,7 @@ class Service(OrmBase, Base):
 		return "<Service('%s'->'%s')>" % (self.provider, self.workspace)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['workspace', 'provider', 'credentials'])
+		return super(Service, self).flatten(['workspace_id', 'name', 'provider', 'credentials', 'state'])
 
 	@staticmethod
 	def get_or_create(session, workspace, name):

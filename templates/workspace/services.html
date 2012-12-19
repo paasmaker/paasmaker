@@ -1,0 +1,40 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Services List
+{% end %}
+
+{% block body %}
+	<table class="table table-striped table-bordered">
+		<tr>
+			<th>Name</th>
+			<th>Provider</th>
+			<th>Credentials</th>
+			<th>Applications</th>
+			<th>State</th>
+		</tr>
+		{% for service in services %}
+			<tr>
+				<td>
+					{{ service.name }}
+				</td>
+				<td>
+					{{ service.provider }}
+				</td>
+				<td>
+					<pre>{{ json.dumps(service.credentials, indent=2, sort_keys=True) }}</pre>
+				</td>
+				<td>
+					{% for version in service.application_versions %}
+						{{ version.application.name }}: v{{ version.version }}<br />
+					{% end %}
+				</td>
+				<td>
+					<span class="service-{{ service.state }}">{{ nice_state(service.state) }}</span>
+				</td>
+			</tr>
+		{% end %}
+	</table>
+
+	{% module Template("include/pagination.html", page_data=services_pagination) %}
+{% end %}

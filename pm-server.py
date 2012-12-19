@@ -82,6 +82,7 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.profile.ProfileResetAPIKeyController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceEditController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceListController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceServiceListController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.role.RoleEditController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.role.RoleListController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.role.RoleAllocationListController.get_routes(route_extras))
