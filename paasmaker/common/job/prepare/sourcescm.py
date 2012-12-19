@@ -34,9 +34,9 @@ class SourceSCMJob(BaseJob):
 		# TODO: Cleanup on failure/abort.
 		scm_plugin.create_working_copy(self.scm_success, self.scm_failure)
 
-	def scm_success(self, path, message):
+	def scm_success(self, path, message, parameters={}):
 		# Emit the path via the context.
-		self.success({'working_path': path}, message)
+		self.success({'working_path': path, 'scm_output': parameters}, message)
 
 	def scm_failure(self, message):
 		# Signal failure.

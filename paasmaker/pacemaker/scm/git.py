@@ -76,7 +76,16 @@ class GitSCM(BaseSCM):
 			self.logger.info("Command returned code %d", code)
 			#self.configuration.debug_cat_job_log(self.logger.job_id)
 			if code == 0:
-				self.callback(self.output_dir, "Successfully switched to the appropriate revision.")
+				# Build a few output parameters.
+				# TODO: Make this async.
+				git_version = subprocess.check_output(['git', 'version']).split(" ")[-1].strip()
+				this_revision = subprocess.check_output(['git', 'log', '-n', '1', '--format=oneline']).split(" ")[0].strip()
+				parameters = {
+					'revision': this_revision,
+					'tool_version': git_version
+				}
+
+				self.callback(self.output_dir, "Successfully switched to the appropriate revision.", parameters)
 			else:
 				self.error_callback("Unable to create a working output directory.")
 

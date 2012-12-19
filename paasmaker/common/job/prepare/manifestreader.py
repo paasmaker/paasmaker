@@ -54,11 +54,15 @@ class ManifestReaderJob(BaseJob):
 
 		self.logger.debug("Unpacking manifest into database...")
 		try:
+			scm_full_parameters = dict(context['scm_parameters'])
+			if context.has_key('scm_output'):
+				scm_full_parameters.update(context['scm_output'])
+
 			application_version = manifest.unpack_into_database(
 				session,
 				application,
 				context['scm_name'],
-				context['scm_parameters']
+				scm_full_parameters
 			)
 		except sqlalchemy.exc.IntegrityError, ex:
 			self.logger.error("Failed to unpack into database.", exc_info=True)

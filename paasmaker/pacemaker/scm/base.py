@@ -19,6 +19,13 @@ class BaseSCMParametersSchema(colander.MappingSchema):
 		title="Location of source",
 		description="The location to fetch the source code from - typically a URL of some kind.")
 
+# TODO: Document that SCM plugins should emit the following into the
+# context tree, and it will be stored along with the other SCM params:
+#  scm['revision']: the revision used.
+#  scm['tool_version']: the version of the tool used (eg, version of GIT)
+# This dict is merged with the SCM params supplied by the user, so you
+# can use this cleverly to store only a few extra details.
+
 class BaseSCM(paasmaker.util.plugin.Plugin):
 	# These are defaults - you should set your own.
 	MODES = {
@@ -72,7 +79,7 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 		From your input parameters, create a working copy that Paasmaker can
 		write to and mutate. If possible, cache whatever you can and just
 		make a copy of it for Paasmaker. Call the callback with
-		the new directory.
+		the new directory, and an optional dict of output parameters.
 		"""
 		raise NotImplementedError("You must implement create_working_copy().")
 
@@ -111,6 +118,7 @@ class BaseSCMTest(tornado.testing.AsyncTestCase):
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'], io_loop=self.io_loop)
 		self.registry = self.configuration.plugins
 		self.path = None
+		self.params = {}
 		self.success = None
 		self.message = None
 
@@ -118,10 +126,11 @@ class BaseSCMTest(tornado.testing.AsyncTestCase):
 		self.configuration.cleanup()
 		super(BaseSCMTest, self).tearDown()
 
-	def success_callback(self, path, message):
+	def success_callback(self, path, message, params={}):
 		self.success = True
 		self.message = message
 		self.path = path
+		self.params = params
 		self.stop()
 
 	def failure_callback(self, message):
