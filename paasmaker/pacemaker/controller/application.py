@@ -299,7 +299,7 @@ class ApplicationSetCurrentController(ApplicationRootController):
 			self.add_data('job_id', job_id)
 			self.configuration.job_manager.allow_execution(job_id, callback=job_started)
 
-		paasmaker.common.job.coordinate.currentroot.CurrentVersionRootJob.setup_version(
+		paasmaker.common.job.coordinate.current.CurrentVersionRequestJob.setup_version(
 			self.configuration,
 			version.id,
 			current_job_ready

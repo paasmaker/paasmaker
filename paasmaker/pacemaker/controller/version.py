@@ -84,6 +84,8 @@ class VersionRegisterController(VersionRootController):
 	def post(self, version_id):
 		version = self._get_version(version_id)
 
+		# TODO: This prevents us from being able to add new
+		# instances if the instances have errors. Rethink this.
 		if version.state != constants.VERSION.PREPARED:
 			self.add_error("Version must be in state PREPARED to be registered.")
 			raise tornado.web.HTTPError(400, "Incorrect state.")
@@ -97,7 +99,7 @@ class VersionRegisterController(VersionRootController):
 			self.add_data('job_id', job_id)
 			self.configuration.job_manager.allow_execution(job_id, callback=on_job_started)
 
-		paasmaker.common.job.coordinate.registerroot.RegisterRootJob.setup_version(
+		paasmaker.common.job.coordinate.register.RegisterRootJob.setup_version(
 			self.configuration,
 			version,
 			on_root_added
@@ -127,7 +129,7 @@ class VersionStartupController(VersionRootController):
 			self.add_data('job_id', job_id)
 			self.configuration.job_manager.allow_execution(job_id, callback=on_job_started)
 
-		paasmaker.common.job.coordinate.startuproot.StartupRootJob.setup_version(
+		paasmaker.common.job.coordinate.startup.StartupRootJob.setup_version(
 			self.configuration,
 			version,
 			on_root_added
@@ -157,7 +159,7 @@ class VersionShutdownController(VersionRootController):
 			self.add_data('job_id', job_id)
 			self.configuration.job_manager.allow_execution(job_id, callback=on_job_started)
 
-		paasmaker.common.job.coordinate.shutdownroot.ShutdownRootJob.setup_version(
+		paasmaker.common.job.coordinate.shutdown.ShutdownRootJob.setup_version(
 			self.configuration,
 			version,
 			on_root_added
@@ -187,7 +189,7 @@ class VersionDeRegisterController(VersionRootController):
 			self.add_data('job_id', job_id)
 			self.configuration.job_manager.allow_execution(job_id, callback=on_job_started)
 
-		paasmaker.common.job.coordinate.deregisterroot.DeRegisterRootJob.setup_version(
+		paasmaker.common.job.coordinate.deregister.DeRegisterRootJob.setup_version(
 			self.configuration,
 			version,
 			on_root_added

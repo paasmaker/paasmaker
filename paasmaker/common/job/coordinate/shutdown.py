@@ -91,7 +91,7 @@ class ShutdownRequestJob(InstanceJobHelper):
 		instances = self.get_instances(
 			session,
 			instance_type,
-			[constants.INSTANCE.RUNNING]
+			[constants.INSTANCE.RUNNING, constants.INSTANCE.STARTING]
 		)
 
 		tags = self.get_tags_for(instance_type)
@@ -112,7 +112,7 @@ class ShutdownRequestJob(InstanceJobHelper):
 				{
 					'instance_id': instance.instance_id
 				},
-				"Startup instance %s on node %s" % (instance.instance_id, instance.node.name),
+				"Shutdown instance %s on node %s" % (instance.instance_id, instance.node.name),
 				node=instance.node.uuid
 			)
 

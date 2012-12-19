@@ -25,6 +25,7 @@ class InstanceJobHelper(BaseJob):
 			paasmaker.model.ApplicationInstance.application_instance_type == instance_type,
 			paasmaker.model.ApplicationInstance.state.in_(states)
 		)
+		self.logger.info("Found %d instances.", instances.count())
 
 		return instances
 
