@@ -14,6 +14,7 @@
 			<th>Workspace</th>
 			<th>Applications</th>
 			<th>Jobs</th>
+			<th>Services</th>
 		</tr>
 		{% for workspace in workspaces %}
 			<tr>
@@ -25,6 +26,9 @@
 				</td>
 				<td>
 					<a href="/job/list/workspace/{{ workspace.id }}">Jobs</a>
+				</td>
+				<td>
+					<a href="/workspace/{{ workspace.id }}/services">{{ len(workspace.services) }} services</a>
 				</td>
 			</tr>
 		{% end %}
