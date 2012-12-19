@@ -17,15 +17,13 @@ import colander
 # TODO: Implement abort features for all of these jobs.
 
 # - Root
-#   - Startup Requester - queues up other jobs.
-#   - Routing - Instance A
-#     - Startup - Instance A
-#       - Pre-startup - Instance A
-#   - Routing - Instance B
-#     - Startup - Instance B
-#       - Pre-startup - Instance B
+#   - Shutdown Requester - queues up other jobs.
+#   - Shutdown - Instance A
+#     - Update Routing - Instance A
+#   - Shutdown - Instance B
+#     - Update Routing - Instance B
 
-class StartupRootJob(InstanceRootBase):
+class ShutdownRootJob(InstanceRootBase):
 	@staticmethod
 	def setup_version(configuration, application_version, callback):
 		# List all the instance types.
@@ -42,9 +40,9 @@ class StartupRootJob(InstanceRootBase):
 		# The root of this tree.
 		tree = configuration.job_manager.get_specifier()
 		tree.set_job(
-			'paasmaker.job.coordinate.startuproot',
+			'paasmaker.job.coordinate.shutdownroot',
 			{},
-			"Start up instances and alter routing for %s version %d" % (application_version.application.name, application_version.version),
+			"Shutdown up instances and alter routing for %s version %d" % (application_version.application.name, application_version.version),
 			context=context,
 			tags=tags
 		)
@@ -58,9 +56,9 @@ class StartupRootJob(InstanceRootBase):
 
 			registerer = tree.add_child()
 			registerer.set_job(
-				'paasmaker.job.coordinate.startuprequest',
+				'paasmaker.job.coordinate.shutdownrequest',
 				parameters,
-				"Startup requests",
+				"Shutdown requests",
 				tags=type_tags
 			)
 
@@ -71,17 +69,17 @@ class StartupRootJob(InstanceRootBase):
 
 	def start_job(self, context):
 		self.update_jobs_from_context(context)
-		self.update_version_from_context(context, constants.VERSION.RUNNING)
+		self.update_version_from_context(context, constants.VERSION.READY)
 
-		self.logger.info("Startup instances and alter routing.")
-		self.success({}, "Started up instances and altered routing.")
+		self.logger.info("Shutdown instances and alter routing.")
+		self.success({}, "Shut down instances and altered routing.")
 
-class StartupRequestJobParametersSchema(colander.MappingSchema):
+class ShutdownRequestJobParametersSchema(colander.MappingSchema):
 	application_instance_type_id = colander.SchemaNode(colander.Integer())
 
-class StartupRequestJob(InstanceJobHelper):
+class ShutdownRequestJob(InstanceJobHelper):
 	MODES = {
-		MODE.JOB: StartupRequestJobParametersSchema()
+		MODE.JOB: ShutdownRequestJobParametersSchema()
 	}
 
 	def start_job(self, context):
@@ -93,7 +91,7 @@ class StartupRequestJob(InstanceJobHelper):
 		instances = self.get_instances(
 			session,
 			instance_type,
-			constants.INSTANCE_CAN_START_STATES
+			[constants.INSTANCE.RUNNING]
 		)
 
 		tags = self.get_tags_for(instance_type)
@@ -103,24 +101,14 @@ class StartupRequestJob(InstanceJobHelper):
 		container.set_job(
 			'paasmaker.job.container',
 			{},
-			'Startup container for %s' % instance_type.name,
+			'Shutdown container for %s' % instance_type.name,
 			tags=tags
 		)
 
 		for instance in instances:
-			routing = container.add_child()
-			routing.set_job(
-				'paasmaker.job.routing.update',
-				{
-					'instance_id': instance.id,
-					'add': True
-				},
-				"Update routing for %s" % instance.instance_id
-			)
-
-			startup = routing.add_child()
-			startup.set_job(
-				'paasmaker.job.heart.startup',
+			shutdown = container.add_child()
+			shutdown.set_job(
+				'paasmaker.job.heart.shutdown',
 				{
 					'instance_id': instance.instance_id
 				},
@@ -128,18 +116,18 @@ class StartupRequestJob(InstanceJobHelper):
 				node=instance.node.uuid
 			)
 
-			prestartup = startup.add_child()
-			prestartup.set_job(
-				'paasmaker.job.heart.prestartup',
+			routing = shutdown.add_child()
+			routing.set_job(
+				'paasmaker.job.routing.update',
 				{
-					'instance_id': instance.instance_id
+					'instance_id': instance.id,
+					'add': False
 				},
-				"Pre startup instance %s on node %s" % (instance.instance_id, instance.node.name),
-				node=instance.node.uuid
+				"Update routing for %s" % instance.instance_id
 			)
 
 		def on_tree_executable():
-			self.success({}, "Created all startup jobs.")
+			self.success({}, "Created all shutdown jobs.")
 
 		def on_tree_added(root_id):
 			self.configuration.job_manager.allow_execution(self.job_metadata['root_id'], callback=on_tree_executable)

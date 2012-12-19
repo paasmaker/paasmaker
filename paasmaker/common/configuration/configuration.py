@@ -606,6 +606,12 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				'Shutdown Root Job'
 			)
 			self.plugins.register(
+				'paasmaker.job.coordinate.shutdownrequest',
+				'paasmaker.common.job.coordinate.ShutdownRequestJob',
+				{},
+				'Shutdown Request Job'
+			)
+			self.plugins.register(
 				'paasmaker.job.coordinate.deregisterroot',
 				'paasmaker.common.job.coordinate.DeRegisterRootJob',
 				{},

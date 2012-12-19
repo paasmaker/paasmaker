@@ -9,7 +9,7 @@ from paasmaker.common.core import constants
 from ..base import BaseJob
 from ...testhelpers import TestHelpers
 from startup import StartupRootJob
-from shutdownroot import ShutdownRootJob
+from shutdown import ShutdownRootJob
 from deregisterroot import DeRegisterRootJob
 from instancerootbase import InstanceRootBase
 from currentroot import CurrentVersionRootJob
