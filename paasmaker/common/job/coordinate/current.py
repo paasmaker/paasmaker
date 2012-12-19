@@ -86,7 +86,7 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 		if current_version and current_version.id != new_version.id:
 			for instance_type in current_version.instance_types:
 				instance_types_current.append(instance_type.id)
-				tags = tags.union(set(InstanceRootBase.get_tags_for(configuration, instance_type.id)))
+				tags = tags.union(set(self.get_tags_for(instance_type)))
 			instance_types_current.reverse()
 
 		# This is where we need to set the current version.

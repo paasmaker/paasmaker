@@ -4,36 +4,6 @@ import paasmaker
 from ..base import BaseJob
 
 class InstanceRootBase(BaseJob):
-	@staticmethod
-	def get_instances_for(configuration, instance_type_id, states, instances=[]):
-		# TODO: remove this function when it's not required shortly.
-		"""
-		Find instances for the given application, in the given state,
-		and return a destroyable list of instances for queueing.
-		"""
-		# TODO: limit to the given list of instance IDs.
-		session = configuration.get_database_session()
-		instance_type = session.query(paasmaker.model.ApplicationInstanceType).get(instance_type_id)
-		instances = session.query(
-			paasmaker.model.ApplicationInstance
-		).filter(
-			paasmaker.model.ApplicationInstance.application_instance_type == instance_type,
-			paasmaker.model.ApplicationInstance.state.in_(states)
-		)
-		instance_list = []
-		for instance in instances:
-			instance_list.append(
-				{
-					'id': instance.id,
-					'instance_id': instance.instance_id,
-					'node_name': instance.node.name,
-					'node_uuid': instance.node.uuid
-				}
-			)
-		instance_list.reverse()
-
-		return instance_list
-
 	def get_instance_type(self, session):
 		instance_type = session.query(
 			paasmaker.model.ApplicatioNInstanceType
@@ -68,22 +38,6 @@ class InstanceRootBase(BaseJob):
 		instance_list.reverse()
 
 		return instance_list
-
-	@staticmethod
-	def get_tags_for(configuration, instance_type_id):
-		"""
-		Return a set of job tags for the given instance type ID.
-		"""
-		session = configuration.get_database_session()
-		instance_type = session.query(paasmaker.model.ApplicationInstanceType).get(instance_type_id)
-
-		tags = []
-		tags.append('workspace:%d' % instance_type.application_version.application.workspace.id)
-		tags.append('application:%d' % instance_type.application_version.application.id)
-		tags.append('application_version:%d' % instance_type.application_version.id)
-		tags.append('application_instance_type:%d' % instance_type.id)
-
-		return tags
 
 	def update_jobs_from_context(self, context):
 		"""
