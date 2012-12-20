@@ -25,7 +25,7 @@ Complete this list. But all standard packages that can be apt-get installed.
 
 This is from and based on rbenv: https://github.com/sstephenson/rbenv
 
-	sudo apt-get install zlib1g-dev
+	sudo apt-get install zlib1g-dev libssl-dev libreadline-dev
 	git clone git://github.com/sstephenson/rbenv.git ~/.rbenv
 	git clone git://github.com/sstephenson/ruby-build.git ~/.rbenv/plugins/ruby-build
 	echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bash_profile
