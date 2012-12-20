@@ -26,19 +26,19 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		"""
 		raise NotImplementedError("You must implement environment().")
 
-	def start(self, instance_id, callback, error_callback):
+	def start(self, version, instance_id, callback, error_callback):
 		"""
 		Start the given instance of this application.
 		"""
 		raise NotImplementedError("You must implement start().")
 
-	def stop(self, instance_id, callback, error_callback):
+	def stop(self, version, instance_id, callback, error_callback):
 		"""
 		Stop the given instance of this application.
 		"""
 		raise NotImplementedError("You must implement stop().")
 
-	def status(self, instance_id, callback, error_callback):
+	def status(self, version, instance_id, callback, error_callback):
 		"""
 		Determine the status of this instance. Call the callback
 		with a message if it's ok, or the error_callback with
@@ -46,7 +46,7 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		"""
 		raise NotImplementedError("You must implement status().")
 
-	def statistics(self, instance_id, callback, error_callback):
+	def statistics(self, version, instance_id, callback, error_callback):
 		"""
 		Generate some application instance statistics.
 		You should at least return a dict containing:

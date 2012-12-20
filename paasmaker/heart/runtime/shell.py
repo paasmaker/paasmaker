@@ -47,7 +47,7 @@ class ShellRuntime(BaseRuntime):
 		# Nothing to set up - so just proceed.
 		callback("Ready.")
 
-	def start(self, instance_id, callback, error_callback):
+	def start(self, version, instance_id, callback, error_callback):
 		# Prepare the launch command.
 		instance = self.configuration.instances.get_instance(instance_id)
 		launch_params = {}
@@ -84,7 +84,7 @@ class ShellRuntime(BaseRuntime):
 			# us otherwise.
 			callback("Started successfully.")
 
-	def stop(self, instance_id, callback, error_callback):
+	def stop(self, version, instance_id, callback, error_callback):
 		# Issue the stop command.
 		try:
 			self.supervise_stop(instance_id)
@@ -111,7 +111,7 @@ class ShellRuntime(BaseRuntime):
 			# Assume that it's stopped.
 			callback("Started successfully.")
 
-	def status(self, instance_id, callback, error_callback):
+	def status(self, version, instance_id, callback, error_callback):
 		if self.supervise_is_running(instance_id):
 			callback("Instance is running.")
 		else:
@@ -164,13 +164,35 @@ class ShellRuntimeTest(BaseRuntimeTest):
 			{'launch_command': 'python app.py --port=%(port)d'}
 		)
 
+		# Should not be running.
+		runtime.status(
+			'1',
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+		self.wait()
+		self.assertFalse(self.success)
+
+		# Start it up.
 		runtime.start(
+			'1',
 			instance_id,
 			self.success_callback,
 			self.failure_callback
 		)
 
 		# Wait until it's started.
+		self.wait()
+		self.assertTrue(self.success)
+
+		# It should be running if we ask.
+		runtime.status(
+			'1',
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
 		self.wait()
 		self.assertTrue(self.success)
 
@@ -193,6 +215,7 @@ class ShellRuntimeTest(BaseRuntimeTest):
 
 		# Stop the instance.
 		runtime.stop(
+			'1',
 			instance_id,
 			self.success_callback,
 			self.failure_callback
@@ -201,6 +224,16 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		# Wait until that's complete.
 		self.wait()
 		self.assertTrue(self.success)
+
+		# Should not be running.
+		runtime.status(
+			'1',
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+		self.wait()
+		self.assertFalse(self.success)
 
 		# And see if it's really stopped.
 		request = tornado.httpclient.HTTPRequest(
