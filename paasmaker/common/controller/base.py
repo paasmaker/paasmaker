@@ -74,6 +74,11 @@ class BaseController(tornado.web.RequestHandler):
 		self.add_data_template('format_form_error', self.format_form_error)
 		self.add_data_template('nice_state', self.nice_state)
 
+		# Add a header that is our node's UUID.
+		uuid = self.configuration.get_node_uuid()
+		if uuid:
+			self.add_header('X-Paasmaker-Node', self.configuration.get_node_uuid())
+
 	def prepare(self):
 		self._set_format(self.get_argument('format', 'html'))
 
