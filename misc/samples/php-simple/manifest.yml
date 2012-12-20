@@ -1,0 +1,43 @@
+manifest:
+  format: 1
+
+application:
+  name: php-simple
+  tags:
+    tag: value
+  prepare:
+    runtime:
+      name: paasmaker.runtime.shell
+      version: 1
+    commands:
+      - plugin: paasmaker.prepare.shell
+        parameters:
+          commands:
+            - echo "foo" > web/prepare.txt
+
+instances:
+  web:
+    quantity: 1
+    runtime:
+      name: paasmaker.runtime.php
+      parameters:
+        document_root: web
+      version: 5.3
+    startup:
+      - plugin: paasmaker.startup.shell
+        parameters:
+          commands:
+            - echo "startup" > web/startup.txt
+    placement:
+      strategy: paasmaker.placement.default
+    hostnames:
+      - php-simple.local.paasmaker.net
+    crons:
+      - runspec: '* * * * *'
+        uri: /environ.php
+
+services:
+  - name: variables
+    provider: paasmaker.service.parameters
+    parameters:
+      one: two
