@@ -12,10 +12,29 @@ All these steps currently use Ubuntu 12.04.
 	sudo apt-get install git-core
 	sudo apt-get install build-essential
 
-## Tools - runtime
+## Tools - runtime generic
 
 	sudo apt-get install curl
-    sudo apt-get install zip
+	sudo apt-get install zip
+
+### PHP runtime
+
+Complete this list. But all standard packages that can be apt-get installed.
+
+### Ruby Runtime
+
+This is from and based on rbenv: https://github.com/sstephenson/rbenv
+
+	sudo apt-get install zlib1g-dev
+	git clone git://github.com/sstephenson/rbenv.git ~/.rbenv
+	git clone git://github.com/sstephenson/ruby-build.git ~/.rbenv/plugins/ruby-build
+	echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bash_profile
+	echo 'eval "$(rbenv init -)"' >> ~/.bash_profile
+	exec $SHELL -l
+	rbenv install 1.9.3-p327
+	rbenv rehash
+	gem install bundler
+	rbenv rehash
 
 ## Redis
 
@@ -53,3 +72,12 @@ be easily possible.
 The target version is 5.3, which ships with Ubuntu 12.04.
 
     sudo apt-get install php5-cli
+
+## Chef
+
+To install Chef, use the Opscode repository:
+
+http://wiki.opscode.com/display/chef/Installing+Chef+Client+on+Ubuntu+or+Debian
+
+This is intended to be a chef-solo setup. Depending on your environment,
+you might not need chef-solo at all.
