@@ -28,6 +28,11 @@ class PHPRuntimeOptionsSchema(colander.MappingSchema):
 		description="If true, this plugin will maintain a managed version of apache for it's use, starting and stopping as required.",
 		default=True,
 		missing=True)
+	shutdown = colander.SchemaNode(colander.Boolean(),
+		title="Shutdown Manage Apache",
+		description="If this plugin is managing an apache, it will shut it down when the server stops.",
+		default=False,
+		missing=False)
 
 class PHPRuntimeParametersSchema(colander.MappingSchema):
 	document_root = colander.SchemaNode(colander.String(),
@@ -37,7 +42,8 @@ class PHPRuntimeParametersSchema(colander.MappingSchema):
 class PHPRuntime(BaseRuntime):
 	MODES = {
 		paasmaker.util.plugin.MODE.RUNTIME_EXECUTE: PHPRuntimeParametersSchema(),
-		paasmaker.util.plugin.MODE.RUNTIME_VERSIONS: None
+		paasmaker.util.plugin.MODE.RUNTIME_VERSIONS: None,
+		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None
 	}
 	OPTIONS_SCHEMA = PHPRuntimeOptionsSchema()
 
@@ -243,6 +249,20 @@ Listen %(port)d
 
 	def statistics(self, instance_id, callback, error_callback):
 		raise NotImplementedError("You must implement statistics.")
+
+	def startup_async_prelisten(self, callback, error_callback):
+		# If we're managed, set up and start up the managed apache instance.
+		if self._is_managed():
+			self._get_managed_instance(callback, error_callback)
+
+	def shutdown_postnotify(self, callback, error_callback):
+		# If we're managed, and been asked to shutdown the managed server,
+		# do that.
+		if self._is_managed() and self.options['shutdown']:
+			def got_managed():
+				# Stop running the server.
+				self.apache_server.stop()
+			self._get_managed_instance(got_managed, error_callback)
 
 class PHPRuntimeTest(BaseRuntimeTest):
 

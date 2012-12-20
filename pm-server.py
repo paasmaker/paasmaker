@@ -201,43 +201,82 @@ def on_redis_started(redis):
 	# but mark this item as complete.
 	on_intermediary_started("Started a redis successfully.")
 
+@tornado.stack_context.contextlib.contextmanager
+def handle_startup_exception():
+	try:
+		yield
+	except Exception, ex:
+		# Log what happened.
+		logging.error("A startup task raised an exception.", exc_info=True)
+		logging.critical("Aborting startup due to failure.")
+		tornado.ioloop.IOLoop.instance().stop()
+
 def on_ioloop_started():
 	logger.debug("IO loop running. Launching other connections.")
 
-	# For the job manager startup.
-	on_intermediary_started.required += 1
-	# For the managed NGINX startup.
-	on_intermediary_started.required += 1
-	# For the possibly managed router table redis startup.
-	on_intermediary_started.required += 1
-	# For the possibly managed stats redis startup.
-	on_intermediary_started.required += 1
-
-	if configuration.is_heart():
-		# For checking instances.
+	with tornado.stack_context.StackContext(handle_startup_exception):
+		# For the job manager startup.
+		on_intermediary_started.required += 1
+		# For the managed NGINX startup.
+		on_intermediary_started.required += 1
+		# For the possibly managed router table redis startup.
+		on_intermediary_started.required += 1
+		# For the possibly managed stats redis startup.
 		on_intermediary_started.required += 1
 
-	# Job manager
-	configuration.startup_job_manager(on_intermediary_started, on_intermediary_failed)
+		if configuration.is_heart():
+			# For checking instances.
+			on_intermediary_started.required += 1
 
-	# Possibly managed routing table startup.
-	configuration.get_router_table_redis(on_redis_started, on_intermediary_failed)
+		# Any plugins that want to perform some async startup.
+		async_startup_plugins = configuration.plugins.plugins_for(
+			paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN
+		)
+		on_intermediary_started.required += len(async_startup_plugins)
 
-	# Possibly managed stats redis startup.
-	configuration.get_stats_redis(on_redis_started, on_intermediary_failed)
+		# Job manager
+		configuration.startup_job_manager(on_intermediary_started, on_intermediary_failed)
 
-	# Managed NGINX.
-	configuration.setup_managed_nginx(on_intermediary_started, on_intermediary_failed)
+		# Possibly managed routing table startup.
+		configuration.get_router_table_redis(on_redis_started, on_intermediary_failed)
 
-	# Check instances.
-	if configuration.is_heart():
-		configuration.instances.check_instances_startup(on_check_instances_complete)
+		# Possibly managed stats redis startup.
+		configuration.get_stats_redis(on_redis_started, on_intermediary_failed)
 
-	logger.debug("Launched all startup jobs.")
+		# Managed NGINX.
+		configuration.setup_managed_nginx(on_intermediary_started, on_intermediary_failed)
+
+		# Check instances.
+		if configuration.is_heart():
+			configuration.instances.check_instances_startup(on_check_instances_complete)
+
+		# Kick off all the async startup plugins.
+		for plugin in async_startup_plugins:
+			instance = configuration.plugins.instantiate(
+				plugin,
+				paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN
+			)
+			instance.startup_async_prelisten(
+				on_intermediary_started,
+				on_intermediary_failed
+			)
+
+		logger.debug("Launched all startup jobs.")
+
+@tornado.stack_context.contextlib.contextmanager
+def handle_shutdown_exception():
+	try:
+		yield
+	except Exception, ex:
+		# Log what happened.
+		# But let other things continue to shutdown.
+		logging.error("A shutdown task raised an exception.", exc_info=True)
 
 def on_exit_request():
 	# Check all instances for shutdown, if we're a heart.
-	configuration.node_register_periodic.stop()
+	if hasattr(configuration, 'node_register_periodic'):
+		configuration.node_register_periodic.stop()
+
 	if configuration.is_heart():
 		configuration.instances.check_instances_shutdown(on_exit_instances_checked)
 	else:
@@ -245,6 +284,46 @@ def on_exit_request():
 
 def on_exit_instances_checked(altered_list):
 	logger.info("Finished checking instances.")
+	on_exit_plugins_prenotify()
+
+def on_exit_plugins_prenotify():
+	# Store the count here.
+	on_exit_plugins_prenotify.required = 0
+
+	# Figure out what plugins want to run before we notify the master.
+	shutdown_plugins = configuration.plugins.plugins_for(
+		paasmaker.util.plugin.MODE.SHUTDOWN_PRENOTIFY
+	)
+	on_exit_plugins_prenotify.required += len(shutdown_plugins)
+
+	logger.info("Launching %d pre-notification shutdown plugins.", len(shutdown_plugins))
+
+	if len(shutdown_plugins) == 0:
+		# Continue directly.
+		on_exit_prenotify_complete("No pre-notification plugins to execute.")
+	else:
+		# Launch plugins.
+		with tornado.stack_context.StackContext(handle_shutdown_exception):
+			for plugin in shutdown_plugins:
+				instance = configuration.plugins.instantiate(
+					plugin,
+					paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN
+				)
+				instance.shutdown_prenotify(
+					on_exit_prenotify_complete,
+					on_exit_prenotify_complete
+				)
+
+def on_exit_prenotify_complete(message, exception=None):
+	on_exit_plugins_prenotify.required -= 1
+
+	if on_exit_plugins_prenotify.required <= 0:
+		# We're done. Report the shutdown.
+		report_shutdown()
+	else:
+		logger.info("%d prenotify plugins still waiting to run." % on_exit_plugins_prenotify.required)
+
+def report_shutdown():
 	# Report that we're shutting down.
 	# This also sends back all the instance statuses.
 	# If it fails, we exit anyway. TODO: Is this right?
@@ -264,7 +343,44 @@ def on_told_master_shutdown(response):
 	configuration.shutdown_managed_nginx()
 	configuration.shutdown_managed_redis()
 
-	on_actual_exit()
+	# Run any shutdown plugins, post notify.
+	on_exit_plugins_postnotify()
+
+def on_exit_plugins_postnotify():
+	# Store the count here.
+	on_exit_plugins_postnotify.required = 0
+
+	# Figure out what plugins want to run after we've notified the master.
+	shutdown_plugins = configuration.plugins.plugins_for(
+		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY
+	)
+	on_exit_plugins_postnotify.required += len(shutdown_plugins)
+
+	logger.info("Launching %d post-notification shutdown plugins.", len(shutdown_plugins))
+
+	if len(shutdown_plugins) == 0:
+		# Continue directly.
+		on_exit_postnotify_complete("No post-notification plugins to execute.")
+	else:
+		with tornado.stack_context.StackContext(handle_shutdown_exception):
+			for plugin in shutdown_plugins:
+				instance = configuration.plugins.instantiate(
+					plugin,
+					paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN
+				)
+				instance.shutdown_postnotify(
+					on_exit_postnotify_complete,
+					on_exit_postnotify_complete
+				)
+
+def on_exit_postnotify_complete(message, exception=None):
+	on_exit_plugins_postnotify.required -= 1
+
+	if on_exit_plugins_postnotify.required <= 0:
+		# We're done. Really shutdown now.
+		on_actual_exit()
+	else:
+		logger.info("%d postnotify plugins still waiting to run." % on_exit_plugins_postnotify.required)
 
 def on_actual_exit():
 	logging.info("Exiting.")

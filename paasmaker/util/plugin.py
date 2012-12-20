@@ -18,18 +18,37 @@ def get_class( kls ):
 MODE_REQUIRE_PARAMS = {
 	'TEST_PARAM': True,
 	'TEST_NOPARAM': False,
+
+	# Called before the HTTP server is listening.
+	'STARTUP_ASYNC_PRELISTEN': False,
+	# Called after the HTTP server is listening. Can't abort server startup.
+	'STARTUP_ASYNC_POSTLISTEN': False,
+	'STARTUP_ROUTES': False,
+
+	# Called before we've notified the master server that we're down.
+	'SHUTDOWN_PRENOTIFY': False,
+	# Called after we've notified the master server that we're down.
+	'SHUTDOWN_POSTNOTIFY': False,
+
 	'SERVICE_CREATE': True,
-	'SERVICE_STARTUP': False,
+
+	# This is for plugins that can run as startup commands for applications.
 	'RUNTIME_STARTUP': True,
+	 # This is for plugins that can actually execute applications.
 	'RUNTIME_EXECUTE': True,
 	'RUNTIME_VERSIONS': False,
 	'RUNTIME_ENVIRONMENT': True,
+
 	'SCM_EXPORT': True,
 	'SCM_FORM': False,
 	'SCM_LIST': False,
+
 	'PREPARE_COMMAND': True,
+
 	'PLACEMENT': True,
+
 	'USER_AUTHENTICATE_PLAIN': False,
+
 	'JOB': True
 }
 
