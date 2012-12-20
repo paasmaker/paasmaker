@@ -247,7 +247,7 @@ Listen %(port)d
 		config_location = self._config_location(instance_id)
 		if os.path.exists(config_location):
 			instance = self.configuration.instances.get_instance(instance_id)
-			in_use = self.config_location.port_allocator.in_use(instance['instance']['port'])
+			in_use = self.configuration.port_allocator.in_use(instance['instance']['port'])
 			if in_use:
 				callback("Still running.")
 			else:
@@ -341,6 +341,16 @@ class PHPRuntimeTest(BaseRuntimeTest):
 			}
 		)
 
+		# Should not be running.
+		runtime.status(
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+		self.wait()
+		self.assertFalse(self.success)
+
+		# Start it up.
 		runtime.start(
 			instance_id,
 			self.success_callback,
@@ -348,6 +358,15 @@ class PHPRuntimeTest(BaseRuntimeTest):
 		)
 
 		# Wait until it's started.
+		self.wait()
+		self.assertTrue(self.success)
+
+		# It should be running if we ask.
+		runtime.status(
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
 		self.wait()
 		self.assertTrue(self.success)
 
@@ -387,6 +406,15 @@ class PHPRuntimeTest(BaseRuntimeTest):
 		# Wait until that's complete.
 		self.wait()
 		self.assertTrue(self.success)
+
+		# Should not be running.
+		runtime.status(
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+		self.wait()
+		self.assertFalse(self.success)
 
 		# And see if it's really stopped.
 		request = tornado.httpclient.HTTPRequest(
