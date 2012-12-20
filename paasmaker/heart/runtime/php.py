@@ -117,7 +117,10 @@ Listen %(port)d
 			def on_apache_failed(message, exception=None):
 				error_callback(message, exception)
 
-			self.apache_server.start_if_not_running(on_apache_started, on_apache_failed)
+			try:
+				self.apache_server.start_if_not_running(on_apache_started, on_apache_failed)
+			except subprocess.CalledProcessError, ex:
+				error_callback("Failed to start apache server.", exception=ex)
 		else:
 			callback("No action to take.")
 
@@ -167,6 +170,8 @@ Listen %(port)d
 	def start(self, instance_id, callback, error_callback):
 		# First up, get our managed instance.
 		def managed_server_up(message):
+			instance = self.configuration.instances.get_instance(instance_id)
+
 			# Ok, write out a configuration file.
 			self._configuration_for_instance(instance_id)
 			config_location = self._config_location(instance_id)
@@ -192,10 +197,9 @@ Listen %(port)d
 				# Something went wrong. Remove our configuration file,
 				# and raise an error.
 				os.unlink(config_location)
-				error_callback("Failed to start up. Unknown error.", exception=exception)
+				error_callback("Failed to start up - port %d wasn't listening inside the timeout." % instance['instance']['port'])
 
 			# Wait for it to start listening.
-			instance = self.configuration.instances.get_instance(instance_id)
 			self.wait_until_port_used(
 				instance['instance']['port'],
 				2.0, # Should not need more than 2 seconds. TODO: Tweak.
