@@ -37,8 +37,9 @@ class MultiPaas(object):
 		self.cluster_params['cluster_hostname'] = 'local.paasmaker.net'
 
 		# TODO: Allow switching out database backends.
-		database_path = os.path.join(self.cluster_root, 'paasmaker.db')
-		self.cluster_params['dsn'] = "sqlite:///%s" % database_path
+		#database_path = os.path.join(self.cluster_root, 'paasmaker.db')
+		#self.cluster_params['dsn'] = "sqlite:///%s" % database_path
+		self.cluster_params['dsn'] = "sqlite:///:memory:"
 
 		self.cluster_params['jobs_redis_port'] = self.free_port()
 		self.cluster_params['stats_redis_port'] = self.free_port()
@@ -74,7 +75,12 @@ class MultiPaas(object):
 
 	def start_nodes(self):
 		for node in self.nodes:
-			node.start()
+			try:
+				node.start()
+			except subprocess.CalledProcessError, ex:
+				# Print out the error log.
+				print open(node.log_file, 'r').read()
+				raise ex
 
 	def stop_nodes(self):
 		# Kill off the nodes in reverse order.
@@ -195,7 +201,7 @@ pacemaker:
   super_token: %(super_token)s
   allow_supertoken: true
   cluster_hostname: %(cluster_hostname)s
-  dsn: %(dsn)s
+  dsn: "%(dsn)s"
 """
 
 	HEART = """
@@ -283,8 +289,8 @@ router:
 	def start(self):
 		# Start it up, blocking until it starts successfully.
 		# We allow it to fork into the background.
-		log_file = os.path.join(self.complete_params['cluster_root'], "%s.log" % self.params['node_name'])
-		log_fp = open(log_file, 'w')
+		self.log_file = os.path.join(self.complete_params['cluster_root'], "%s.log" % self.params['node_name'])
+		log_fp = open(self.log_file, 'w')
 		logging.info("Starting node %s...", self.params['node_name'])
 		subprocess.check_call(
 			[
