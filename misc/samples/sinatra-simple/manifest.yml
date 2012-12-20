@@ -1,0 +1,43 @@
+manifest:
+  format: 1
+
+application:
+  name: sinatra-simple
+  tags:
+    tag: value
+  prepare:
+    runtime:
+      name: paasmaker.runtime.ruby.rbenv
+      version: 1.9.3
+    commands:
+      - plugin: paasmaker.prepare.shell
+        parameters:
+          commands:
+            - ruby -v > ruby-prepare-version.txt
+
+instances:
+  web:
+    quantity: 1
+    runtime:
+      name: paasmaker.runtime.ruby.rbenv
+      parameters:
+        launch_command: "bundle exec ruby app.rb -p %(port)d"
+      version: 1.9.3
+    startup:
+      - plugin: paasmaker.startup.shell
+        parameters:
+          commands:
+            - ruby -v > ruby-startup-version
+    placement:
+      strategy: paasmaker.placement.default
+    hostnames:
+      - sinatra-simple.local.paasmaker.net
+    crons:
+      - runspec: '* * * * *'
+        uri: /environ
+
+services:
+  - name: variables
+    provider: paasmaker.service.parameters
+    parameters:
+      one: two
