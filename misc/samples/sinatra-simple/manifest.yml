@@ -27,6 +27,7 @@ instances:
       - plugin: paasmaker.startup.shell
         parameters:
           commands:
+            - bundle install
             - ruby -v > ruby-startup-version
     placement:
       strategy: paasmaker.placement.default
