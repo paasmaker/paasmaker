@@ -160,7 +160,8 @@ class BaseRuntimeTest(paasmaker.common.controller.BaseControllerTest):
 		self.message = message
 		self.stop()
 
-	def failure_callback(self, message):
+	def failure_callback(self, message, exception=None):
 		self.success = False
 		self.message = message
+		self.exception = exception
 		self.stop()

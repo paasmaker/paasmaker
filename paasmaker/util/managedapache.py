@@ -124,7 +124,8 @@ Include %(config_file_dir)s/
 				'-k',
 				'start'
 			],
-			stderr=subprocess.PIPE
+			stderr=subprocess.STDOUT,
+			stdout=subprocess.PIPE
 		)
 
 		# Wait for the port to come into use.
@@ -153,7 +154,7 @@ Include %(config_file_dir)s/
 		# Perform a graceful restart of the server.
 		# TODO: Make this call Async.
 		configfile = self.get_configuration_path(self.parameters['working_dir'])
-		subprocess.check_call(
+		output = subprocess.check_output(
 			[
 				# TODO: Don't hardcode this path.
 				'/usr/sbin/apache2',
@@ -162,8 +163,10 @@ Include %(config_file_dir)s/
 				'-k',
 				'graceful'
 			],
-			stderr=subprocess.PIPE
+			stderr=subprocess.STDOUT
 		)
+
+		return output
 
 class ManagedApacheTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):

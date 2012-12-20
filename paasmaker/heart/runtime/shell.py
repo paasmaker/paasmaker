@@ -118,7 +118,7 @@ class ShellRuntime(BaseRuntime):
 			error_callback("Instance is not running.", exception=None)
 
 	def statistics(self, instance_id, callback, error_callback):
-		raise NotImplementedError("You must implement stop.")
+		raise NotImplementedError("You must implement statistics.")
 
 class ShellRuntimeTest(BaseRuntimeTest):
 
