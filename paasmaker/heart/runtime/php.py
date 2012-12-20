@@ -11,6 +11,8 @@ import colander
 import tornado
 
 # TODO: Test the non-managed-apache code paths.
+# TODO: Add open base dir restrictions option.
+# TODO: Add APC enable/disable options.
 
 class PHPRuntimeOptionsSchema(colander.MappingSchema):
 	config_dir = colander.SchemaNode(colander.String(),
@@ -39,9 +41,14 @@ class PHPRuntimeParametersSchema(colander.MappingSchema):
 		title="Document root",
 		description="The subfolder under the application folder that is the document root.")
 
+class PHPEnvironmentParametersSchema(colander.MappingSchema):
+	# No options required, but the environment requires a schema.
+	pass
+
 class PHPRuntime(BaseRuntime):
 	MODES = {
 		paasmaker.util.plugin.MODE.RUNTIME_EXECUTE: PHPRuntimeParametersSchema(),
+		paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT: PHPEnvironmentParametersSchema(),
 		paasmaker.util.plugin.MODE.RUNTIME_VERSIONS: None,
 		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None,
 		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None
