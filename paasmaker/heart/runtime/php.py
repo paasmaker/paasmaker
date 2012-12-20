@@ -43,7 +43,8 @@ class PHPRuntime(BaseRuntime):
 	MODES = {
 		paasmaker.util.plugin.MODE.RUNTIME_EXECUTE: PHPRuntimeParametersSchema(),
 		paasmaker.util.plugin.MODE.RUNTIME_VERSIONS: None,
-		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None
+		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None,
+		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None
 	}
 	OPTIONS_SCHEMA = PHPRuntimeOptionsSchema()
 
@@ -259,10 +260,13 @@ Listen %(port)d
 		# If we're managed, and been asked to shutdown the managed server,
 		# do that.
 		if self._is_managed() and self.options['shutdown']:
-			def got_managed():
+			def got_managed(message):
 				# Stop running the server.
 				self.apache_server.stop()
+				callback("Stopped managed apache.")
 			self._get_managed_instance(got_managed, error_callback)
+		else:
+			callback("No managed apache to stop.")
 
 class PHPRuntimeTest(BaseRuntimeTest):
 
