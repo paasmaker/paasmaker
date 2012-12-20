@@ -140,6 +140,14 @@ application_settings = configuration.get_tornado_configuration()
 #print str(application_settings)
 application = tornado.web.Application(routes, **application_settings)
 
+@tornado.stack_context.contextlib.contextmanager
+def handle_runtime_exception():
+	try:
+		yield
+	except Exception, ex:
+		# Log what happened.
+		logging.error("Runtime exception:", exc_info=True)
+
 def on_completed_startup():
 	if not is_debug:
 		# Fork into the background.
@@ -154,9 +162,10 @@ def on_completed_startup():
 	fp.close()
 
 	# Start listening for HTTP requests, as everything is ready.
-	logging.info("Listening on port %d", configuration['http_port'])
-	application.listen(configuration['http_port'])
-	logging.info("All systems are go.")
+	with tornado.stack_context.StackContext(handle_runtime_exception):
+		logging.info("Listening on port %d", configuration['http_port'])
+		application.listen(configuration['http_port'])
+		logging.info("All systems are go.")
 
 	# Register the node with the server.
 	# This periodic manager will handle keeping it up to date.
