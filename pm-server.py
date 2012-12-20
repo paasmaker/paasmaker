@@ -122,7 +122,7 @@ if configuration.is_pacemaker():
 
 if configuration.is_heart():
 	# Heart setup.
-	pass
+	routes.extend(paasmaker.heart.controller.instance.InstanceExitController.get_routes(route_extras))
 
 if configuration.is_router():
 	# Router setup.

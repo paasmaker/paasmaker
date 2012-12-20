@@ -7,6 +7,7 @@ import os
 import datetime
 import signal
 import urllib2
+import time
 
 # Expected arguments:
 # 1: control file
@@ -107,7 +108,7 @@ class CommandSupervisor(object):
 			# Retry a few more times.
 			if depth < 10:
 				time.sleep(5)
-				self.announce_completion(port, instance_id, exit_key, code, depth + 1)
+				self.announce_completion(code, depth + 1)
 			else:
 				# Ok, give up. What we do instead now is write out a file for later,
 				# which the heart can read when it's available again.
