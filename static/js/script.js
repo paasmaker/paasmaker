@@ -531,6 +531,18 @@ JobDisplayHandler.prototype.setStateClass = function(element, state)
 JobDisplayHandler.prototype.setStateIcon = function(element, state)
 {
 	var icon = $('<i></i>');
+
+	var oldState = element.attr('data-state');
+	if( oldState )
+	{
+		element.removeClass('state-' + oldState);
+		var oldBootstrapClass = BOOTSTRAP_ICON_MAP[oldState];
+		if( oldBootstrapClass )
+		{
+			element.removeClass('label-' + oldBootstrapClass);
+		}
+	}
+
 	icon.addClass('icon-white');
 	icon.addClass(BOOTSTRAP_ICON_MAP[state]);
 
@@ -544,9 +556,9 @@ JobDisplayHandler.prototype.updateStatus = function(status)
 {
 	// Find the appropriate status element.
 	var el = $('.' + status.job_id + ' .state', this.container);
-	el.text(status.state);
-	this.setStateClass($('.state', this.container), status.state);
-	this.setStateIcon($('.state', this.container), status.state);
+	this.setStateClass(el, status.state);
+	this.setStateIcon(el, status.state);
+	el.attr('data-state', status.state);
 
 	if( status.state == 'SUCCESS' || status.state == 'FAILED' || status.state == 'ABORTED' )
 	{
