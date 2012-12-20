@@ -176,7 +176,13 @@ def on_intermediary_started(message):
 	on_intermediary_started.required -= 1
 	# See if everything is ready.
 	if on_intermediary_started.required == 0:
-		on_completed_startup()
+		# Check instances, if we're a heart.
+		# We don't do this until the intermediaries are started,
+		# as instances may depend on those intermediaries.
+		if configuration.is_heart():
+			configuration.instances.check_instances_startup(on_check_instances_complete)
+		else:
+			on_completed_startup()
 	else:
 		logger.debug("Still waiting on %d other things for startup.", on_intermediary_started.required)
 
@@ -190,11 +196,8 @@ def on_intermediary_failed(message, exception=None):
 	tornado.ioloop.IOLoop.instance().stop()
 
 def on_check_instances_complete(altered_instances):
-	if len(altered_instances) > 0:
-		# There were instances with errors.
-		on_intermediary_started("Instance checking complete, error found.")
-	else:
-		on_intermediary_started("Instance checking complete, no changes.")
+	logger.info("%d instances changed state on startup.", len(altered_instances))
+	on_completed_startup()
 
 def on_redis_started(redis):
 	# Well, we don't care about the redis client passed,
@@ -224,10 +227,6 @@ def on_ioloop_started():
 		# For the possibly managed stats redis startup.
 		on_intermediary_started.required += 1
 
-		if configuration.is_heart():
-			# For checking instances.
-			on_intermediary_started.required += 1
-
 		# Any plugins that want to perform some async startup.
 		async_startup_plugins = configuration.plugins.plugins_for(
 			paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN
@@ -245,10 +244,6 @@ def on_ioloop_started():
 
 		# Managed NGINX.
 		configuration.setup_managed_nginx(on_intermediary_started, on_intermediary_failed)
-
-		# Check instances.
-		if configuration.is_heart():
-			configuration.instances.check_instances_startup(on_check_instances_complete)
 
 		# Kick off all the async startup plugins.
 		for plugin in async_startup_plugins:
