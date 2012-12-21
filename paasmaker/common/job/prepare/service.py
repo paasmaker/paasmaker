@@ -50,9 +50,9 @@ class ServiceJob(BaseJob):
 
 		# Get this service plugin to create it's service.
 		if self.service.state == constants.SERVICE.NEW:
-			service_plugin.create(self.service_success, self.service_failure)
+			service_plugin.create(self.service.name, self.service_success, self.service_failure)
 		else:
-			service_plugin.update(self.service_success, self.service_failure)
+			service_plugin.update(self.service.name, self.service.credentials, self.service_success, self.service_failure)
 
 	def service_success(self, credentials, message):
 		self.session.refresh(self.service)

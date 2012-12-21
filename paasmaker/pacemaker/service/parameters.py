@@ -22,12 +22,12 @@ class ParametersService(BaseService):
 	}
 	OPTIONS_SCHEMA = ParametersServiceConfigurationSchema()
 
-	def create(self, callback, error_callback):
+	def create(self, name, callback, error_callback):
 		# Does the same thing as update.
 		self.logger.debug("Creating service with parameters: %s", str(self.raw_parameters))
-		self.update(callback, error_callback)
+		self.update(name, {}, callback, error_callback)
 
-	def update(self, callback, error_callback):
+	def update(self, name, existing_credentials, callback, error_callback):
 		"""
 		Update the service (if required) returning new credentials. In many
 		cases this won't make sense for a service, but is provided for a few
@@ -37,7 +37,7 @@ class ParametersService(BaseService):
 		self.logger.debug("Updating service with parameters: %s", str(self.raw_parameters))
 		callback(self.raw_parameters, "Successfully modified service.")
 
-	def remove(self, callback, error_callback):
+	def remove(self, name, existing_credentials, callback, error_callback):
 		"""
 		Remove the service, using the options supplied by the application,
 		and the credentials created when the service was created.
@@ -60,7 +60,7 @@ class ParametersServiceTest(BaseServiceTest):
 			{'test': 'bar'}
 		)
 
-		service.create(self.success_callback, self.failure_callback)
+		service.create('test', self.success_callback, self.failure_callback)
 
 		self.wait()
 

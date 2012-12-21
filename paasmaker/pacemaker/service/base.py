@@ -1,18 +1,21 @@
 
+import uuid
+import re
+
 import tornado.testing
 import paasmaker
 
 # Base service.
 class BaseService(paasmaker.util.plugin.Plugin):
 
-	def create(self, callback, error_callback):
+	def create(self, name, callback, error_callback):
 		"""
 		Create the service, using the parameters supplied by the application
 		in the request object.
 		"""
 		pass
 
-	def update(self, callback, error_callback):
+	def update(self, name, existing_credentials, callback, error_callback):
 		"""
 		Update the service (if required) returning new credentials. In many
 		cases this won't make sense for a service, but is provided for a few
@@ -20,12 +23,34 @@ class BaseService(paasmaker.util.plugin.Plugin):
 		"""
 		pass
 
-	def remove(self, callback, error_callback):
+	def remove(self, name, existing_credentials, callback, error_callback):
 		"""
 		Remove the service, using the options supplied by the application,
 		and the credentials created when the service was created.
 		"""
 		pass
+
+	def _safe_name(self, name, max_length=50):
+		unique = str(uuid.uuid4())[0:8]
+		clean_name = re.sub(r'[^A-Za-z0-9]', '', name)
+		clean_name = clean_name.lower()
+
+		if len(clean_name) + len(unique) > max_length:
+			# It'll be too long if we add the name + unique together.
+			# Clip the name.
+			clean_name = clean_name[0:max_length - len(unique)]
+
+		output_name = "%s%s" % (clean_name, unique)
+
+		return output_name
+
+	def _generate_password(self, max_length=50):
+		password = str(uuid.uuid4())
+
+		if len(password) > max_length:
+			password = password[0:max_length]
+
+		return password
 
 class BaseServiceTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
