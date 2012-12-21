@@ -70,6 +70,9 @@ class ManagedDaemon(object):
 			# No PID at all. Not running.
 			return False
 
+	def get_port(self):
+		return self.parameters['port']
+
 	def get_pid(self):
 		"""
 		Gets the PID of the running instance. This just reads the on disk
