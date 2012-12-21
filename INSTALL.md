@@ -44,6 +44,12 @@ This is from and based on rbenv: https://github.com/sstephenson/rbenv
 
 	sudo apt-get install rabbitmq-server
 
+## Postgres
+
+For the postgres service, you will need libpq-dev.
+
+	sudo apt-get install libpq-dev
+
 ## OpenResty
 
 * `sudo apt-get install libreadline-dev libncurses5-dev libpcre3-dev libssl-dev perl`
