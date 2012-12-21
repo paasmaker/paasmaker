@@ -64,6 +64,13 @@ class ManagedMySQL(ManagedDaemon):
 		# Fire up the server.
 		logging.info("Starting up MySQL server on port %d." % self.parameters['port'])
 
+		# TODO: Security.
+		initfile = os.path.join(self.parameters['working_dir'], 'mysql-init')
+		open(initfile, 'w').write(
+			"""UPDATE mysql.user SET Password=PASSWORD('%s') WHERE User='root';
+			FLUSH PRIVILEGES;""" % self.parameters['password']
+		)
+
 		command_line = [
 			'mysqld',
 			'--datadir=' + self.parameters['working_dir'],
@@ -71,7 +78,7 @@ class ManagedMySQL(ManagedDaemon):
 			'--port=' + str(self.parameters['port']),
 			'--socket=' + os.path.join(self.parameters['working_dir'], 'mysqld.sock'),
 			'--pid-file=' + os.path.join(self.parameters['working_dir'], 'mysqld.pid'),
-			'--skip-grant'
+			'--init-file=' + initfile
 		]
 		flat_command_line = " ".join(command_line)
 
