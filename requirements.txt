@@ -1,3 +1,4 @@
+# Core
 tornado
 sqlalchemy>=0.7.5
 pyyaml
@@ -6,7 +7,11 @@ ws4py
 pypubsub
 tornado-redis
 pika==0.9.5
-mock
 requests
-# TODO: This is only required for the documentation.
+
+# Testing.
+mock
+coverage
+
+# For documentation.
 sphinx
