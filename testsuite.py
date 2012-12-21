@@ -14,18 +14,18 @@ logging.basicConfig(level=logging.CRITICAL)
 
 # Define the tests to run. The keys are the modules to search
 # in for test cases, and the array is a set of tags that will
-# cause this test to be run. To keep the code as generic as possible,
-# 'all' is included in each one. 'all' is also the default.
+# cause this test to be run. They should have either 'all' or
+# 'slow' as a tag, but not both.
 test_sets = {
 	paasmaker.util.example: ['all', 'quick', 'example'],
 	paasmaker.util.jsonencoder: ['all', 'quick', 'util', 'jsonencoder'],
 	paasmaker.util.configurationhelper: ['all', 'quick', 'util', 'configuration'],
-	paasmaker.util.joblogging: ['all', 'slow', 'util', 'job'],
-	paasmaker.util.port: ['all', 'slow', 'util', 'network'],
+	paasmaker.util.joblogging: ['all', 'util', 'job'],
+	paasmaker.util.port: ['all', 'util', 'network'],
 	paasmaker.util.plugin: ['all', 'quick', 'util', 'configuration', 'plugin'],
-	paasmaker.util.commandsupervisor: ['all', 'slow', 'util', 'process'],
+	paasmaker.util.commandsupervisor: ['all', 'util', 'process'],
 	paasmaker.util.temporaryrabbitmq: ['slow', 'util', 'messaging', 'rabbitmq'],
-	paasmaker.util.popen: ['all', 'slow', 'util', 'process'],
+	paasmaker.util.popen: ['all', 'util', 'process'],
 	paasmaker.util.streamingchecksum: ['all', 'util', 'checksum'],
 	paasmaker.util.processcheck: ['all', 'util', 'process'],
 	paasmaker.util.managedrabbitmq: ['slow', 'util', 'messaging', 'managedservice', 'rabbitmq'],
@@ -34,62 +34,62 @@ test_sets = {
 	paasmaker.util.managedmysql: ['slow', 'util', 'mysql', 'managedservice'],
 	paasmaker.util.managednginx: ['slow', 'util', 'nginx', 'managedservice'],
 	paasmaker.util.managedapache: ['slow', 'util', 'apache', 'managedservice'],
-	paasmaker.util.asyncdns: ['all', 'slow', 'util', 'network'],
+	paasmaker.util.asyncdns: ['all', 'util', 'network'],
 
-	paasmaker.router.router: ['all', 'slow', 'router'],
+	paasmaker.router.router: ['all', 'router'],
 	paasmaker.pacemaker.cron.cronrunner: ['all', 'cron'],
 
-	paasmaker.common.configuration.configuration: ['all', 'quick', 'configuration'],
-	paasmaker.common.configuration.configurationstub: ['all', 'quick', 'configuration'],
-	paasmaker.common.application.configuration: ['all', 'quick', 'configuration'],
-	paasmaker.common.job.manager.backendredis: ['all', 'util', 'job', 'jobmanager', 'slow', 'jobmanagerbackend'],
+	paasmaker.common.configuration.configuration: ['all', 'configuration'],
+	paasmaker.common.configuration.configurationstub: ['all', 'configuration'],
+	paasmaker.common.application.configuration: ['all', 'configuration'],
+	paasmaker.common.job.manager.backendredis: ['all', 'util', 'job', 'jobmanager', 'jobmanagerbackend'],
 	paasmaker.common.job.manager.manager: ['slow', 'util', 'job', 'jobmanager'],
 
-	paasmaker.model: ['all', 'slow', 'model'],
+	paasmaker.model: ['all', 'model'],
 
-	paasmaker.common.controller.example: ['all', 'quick', 'controller', 'example'],
-	paasmaker.common.controller.information: ['all', 'quick', 'controller'],
-	paasmaker.common.controller.log: ['all', 'slow', 'controller', 'websocket', 'logstream'],
-	paasmaker.pacemaker.controller.user: ['all', 'slow', 'controller', 'user'],
-	paasmaker.pacemaker.controller.role: ['all', 'slow', 'controller', 'role'],
-	paasmaker.pacemaker.controller.login: ['all', 'slow', 'controller', 'login'],
-	paasmaker.pacemaker.controller.node: ['all', 'slow', 'controller', 'node'],
-	paasmaker.pacemaker.controller.profile: ['all', 'slow', 'controller', 'profile'],
-	paasmaker.pacemaker.controller.workspace: ['all', 'slow', 'controller', 'workspace'],
+	paasmaker.common.controller.example: ['all', 'controller', 'example'],
+	paasmaker.common.controller.information: ['all', 'controller'],
+	paasmaker.common.controller.log: ['all', 'controller', 'websocket', 'logstream'],
+	paasmaker.pacemaker.controller.user: ['all', 'controller', 'user'],
+	paasmaker.pacemaker.controller.role: ['all', 'controller', 'role'],
+	paasmaker.pacemaker.controller.login: ['all', 'controller', 'login'],
+	paasmaker.pacemaker.controller.node: ['all', 'controller', 'node'],
+	paasmaker.pacemaker.controller.profile: ['all', 'controller', 'profile'],
+	paasmaker.pacemaker.controller.workspace: ['all', 'controller', 'workspace'],
 	paasmaker.pacemaker.controller.upload: ['all', 'controller', 'files'],
-	paasmaker.pacemaker.controller.job: ['all', 'slow', 'jobmanager', 'websocket'],
-	paasmaker.pacemaker.controller.package: ['all', 'slow', 'package', 'controller'],
-	paasmaker.pacemaker.controller.scmlist: ['all', 'slow', 'scmlist', 'controller'],
-	paasmaker.heart.controller.instance: ['all', 'slow', 'controller', 'instance', 'heart'],
+	paasmaker.pacemaker.controller.job: ['all', 'jobmanager', 'websocket'],
+	paasmaker.pacemaker.controller.package: ['all', 'package', 'controller'],
+	paasmaker.pacemaker.controller.scmlist: ['all', 'scmlist', 'controller'],
+	paasmaker.heart.controller.instance: ['all', 'controller', 'instance', 'heart'],
 
-	paasmaker.heart.runtime: ['all', 'slow', 'heart', 'runtime'],
-	paasmaker.heart.runtime.php: ['all', 'slow', 'heart', 'runtime', 'php'],
-	paasmaker.heart.runtime.shell: ['all', 'slow', 'heart', 'runtime', 'shell'],
-	paasmaker.heart.runtime.rbenv: ['all', 'slow', 'heart', 'runtime', 'ruby'],
+	paasmaker.heart.runtime: ['all', 'heart', 'runtime'],
+	paasmaker.heart.runtime.php: ['slow', 'heart', 'runtime', 'php'],
+	paasmaker.heart.runtime.shell: ['slow', 'heart', 'runtime', 'shell'],
+	paasmaker.heart.runtime.rbenv: ['slow', 'heart', 'runtime', 'ruby'],
 
 	paasmaker.pacemaker.service.parameters: ['all', 'service', 'serviceparameters'],
-	paasmaker.pacemaker.service.mysql: ['all', 'service', 'servicemysql'],
-	paasmaker.pacemaker.service.postgres: ['all', 'service', 'servicepostgres'],
+	paasmaker.pacemaker.service.mysql: ['slow', 'service', 'servicemysql'],
+	paasmaker.pacemaker.service.postgres: ['slow', 'service', 'servicepostgres'],
 
-	paasmaker.pacemaker.prepare.shell: ['all', 'prepare', 'slow', 'shellprepare'],
+	paasmaker.pacemaker.prepare.shell: ['all', 'prepare', 'shellprepare'],
 
-	paasmaker.pacemaker.scm.zip: ['all', 'scm', 'slow'],
-	paasmaker.pacemaker.scm.tarball: ['all', 'scm', 'slow'],
-	paasmaker.pacemaker.scm.git: ['all', 'scm', 'slow'],
+	paasmaker.pacemaker.scm.zip: ['all', 'scm'],
+	paasmaker.pacemaker.scm.tarball: ['all', 'scm'],
+	paasmaker.pacemaker.scm.git: ['all', 'scm'],
 
 	paasmaker.pacemaker.scmlist.bitbucket: ['all', 'scmlist', 'slow'],
 
 	paasmaker.pacemaker.auth.internal: ['all', 'auth'],
 	paasmaker.pacemaker.auth.allowany: ['all', 'auth'],
 
-	paasmaker.common.job.prepare.prepareroot: ['all', 'slow', 'application', 'prepare'],
-	paasmaker.common.job.coordinate.selectlocations: ['all', 'slow', 'application', 'coordinate'],
-	paasmaker.common.job.coordinate.register: ['all', 'slow', 'application', 'coordinate'],
-	paasmaker.common.job.routing.routing: ['all', 'slow', 'application', 'coordinate', 'router'],
+	paasmaker.common.job.prepare.prepareroot: ['all', 'application', 'prepare'],
+	paasmaker.common.job.coordinate.selectlocations: ['all', 'application', 'coordinate'],
+	paasmaker.common.job.coordinate.register: ['all', 'application', 'coordinate'],
+	paasmaker.common.job.routing.routing: ['all', 'application', 'coordinate', 'router'],
 
-	paasmaker.pacemaker.controller.router: ['all', 'slow', 'controller', 'router'],
+	paasmaker.pacemaker.controller.router: ['all', 'controller', 'router'],
 
-	paasmaker.pacemaker.placement.default: ['all', 'slow', 'application', 'placement'],
+	paasmaker.pacemaker.placement.default: ['all', 'application', 'placement'],
 
 	paasmaker.heart.helper.instancemanager: ['all', 'application', 'heart']
 }
