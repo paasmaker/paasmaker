@@ -783,7 +783,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				for queued in meta['queue']:
 					self._connect_redis(queued[0], queued[1], queued[2])
 
-			def on_redis_startup_failure(message):
+			def on_redis_startup_failure(message, exception=None):
 				# TODO: Handle this.
 				pass
 
