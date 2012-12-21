@@ -9,6 +9,9 @@ tornado-redis
 pika==0.9.5
 requests
 
+# MySQL service.
+torndb
+
 # Testing.
 mock
 coverage

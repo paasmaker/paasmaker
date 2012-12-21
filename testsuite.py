@@ -68,6 +68,7 @@ test_sets = {
 	paasmaker.heart.runtime.rbenv: ['all', 'slow', 'heart', 'runtime', 'ruby'],
 
 	paasmaker.pacemaker.service.parameters: ['all', 'service', 'serviceparameters'],
+	paasmaker.pacemaker.service.mysql: ['all', 'service', 'servicemysql'],
 
 	paasmaker.pacemaker.prepare.shell: ['all', 'prepare', 'slow', 'shellprepare'],
 
