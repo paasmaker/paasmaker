@@ -1,6 +1,7 @@
 
 import uuid
 import re
+import time
 
 import tornado.testing
 import paasmaker
@@ -76,3 +77,7 @@ class BaseServiceTest(tornado.testing.AsyncTestCase):
 		self.message = message
 		self.credentials = None
 		self.stop()
+
+	def short_wait_hack(self, length=0.1):
+		self.io_loop.add_timeout(time.time() + length, self.stop)
+		self.wait()

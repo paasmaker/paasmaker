@@ -69,6 +69,7 @@ test_sets = {
 
 	paasmaker.pacemaker.service.parameters: ['all', 'service', 'serviceparameters'],
 	paasmaker.pacemaker.service.mysql: ['all', 'service', 'servicemysql'],
+	paasmaker.pacemaker.service.postgres: ['all', 'service', 'servicepostgres'],
 
 	paasmaker.pacemaker.prepare.shell: ['all', 'prepare', 'slow', 'shellprepare'],
 
