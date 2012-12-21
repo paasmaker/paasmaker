@@ -56,7 +56,10 @@ class OverviewController(BaseController):
 			self._done_workspaces()
 
 	def _done_workspaces(self):
-		self._get_router_stats_for('uncaught', 0, self._done, title="Uncaught Requests")
+		self._get_router_stats_for('uncaught', 0, self._done_uncaught, title="Uncaught Requests")
+
+	def _done_uncaught(self, result):
+		self._get_router_stats_for('pacemaker', 0, self._done, title="Pacemaker Requests", output_key="pacemaker")
 
 	def _done(self, result):
 		self.render("overview.html")

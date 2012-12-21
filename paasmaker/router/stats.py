@@ -353,6 +353,9 @@ class ApplicationStats(object):
 			# Pass back a suitable list.
 			callback(['null'])
 			return
+		elif name == 'pacemaker':
+			callback(['pacemaker'])
+			return
 		else:
 			raise ValueError("Unknown input name %s" % name)
 
@@ -361,6 +364,9 @@ class ApplicationStats(object):
 
 	def total_for_uncaught(self, callback, error_callback):
 		self.total_for_list(['null'], callback, error_callback)
+
+	def total_for_pacemaker(self, callback, error_callback):
+		self.total_for_list(['pacemaker'], callback, error_callback)
 
 	def total_for_list(self, idset, callback, error_callback):
 		def on_stats_fetched(stats):
