@@ -109,6 +109,11 @@ class PacemakerSchema(colander.MappingSchema):
 	cluster_hostname = colander.SchemaNode(colander.String(),
 		title="Cluster Hostname",
 		description="The hostname postfix used to automatically generate hostnames when required. Eg, each application version gets a URL - N.<applicatio>.cluster_hostname.")
+	pacemaker_prefix = colander.SchemaNode(colander.String(),
+		title="Pacemaker Prefix",
+		description="The prefix added to the cluster hostname to make a url for the pacemakers.",
+		missing="pacemaker",
+		default="pacemaker")
 
 	# TODO: Consider the security implications of this more.
 	allow_supertoken = colander.SchemaNode(colander.Boolean(),

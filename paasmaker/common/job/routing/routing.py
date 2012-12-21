@@ -229,6 +229,67 @@ class RouterTableUpdate(object):
 	def redis_failed(self, error_message):
 		self.error_callback(error_message)
 
+class RouterTablePacemakerUpdate(object):
+	def __init__(self, configuration, node, add, logger):
+		self.configuration = configuration
+		self.node = node
+		# Add is True to add, or False to remove.
+		self.add = add
+		self.logger = logger
+
+	def update(self, callback, error_callback):
+		self.callback = callback
+		self.error_callback = error_callback
+
+		# TODO: Replace this with an Async DNS lookup.
+		# TODO: IPv6 support!
+		self.node_address = '%s:%d' % (
+			socket.gethostbyname(self.node.route),
+			self.node.apiport
+		)
+
+		self.logger.debug("Resolved pacemaker address: %s", self.node_address)
+
+		self.hostname = "%s.%s" % (
+			self.configuration.get_flat('pacemaker.pacemaker_prefix'),
+			self.configuration.get_flat('pacemaker.cluster_hostname')
+		)
+
+		# Get the routing table redis.
+		self.configuration.get_router_table_redis(self.redis_ready, self.redis_failed)
+
+	def redis_ready(self, redis):
+		pipeline = redis.pipeline(True)
+
+		if self.add:
+			self.logger.info("Adding pacemaker to %s.", self.hostname)
+			pipeline.sadd("instances_" + self.hostname, self.node_address)
+			pipeline.sadd("instance_ids_" + self.hostname, self.node.uuid)
+			pipeline.set("logkey_" + self.hostname, 'pacemaker')
+		else:
+			self.logger.info("Removing pacemaker from %s.", self.hostname)
+			pipeline.srem("instances_" + self.hostname, self.node_address)
+			pipeline.srem("instance_ids_" + self.hostname, self.node.uuid)
+
+		# Add a serial number to the routing table.
+		# We just increment it. It's later used to check that the
+		# slaves match the master.
+		pipeline.incr("serial")
+
+		def save_redis(result):
+			# Ask Redis to save to disk. TODO: tweak the persistence
+			# options for Redis to be safer.
+			redis.bgsave(callback=self.redis_complete)
+
+		pipeline.execute(callback=save_redis)
+
+	def redis_complete(self, results):
+		# Completed the updates.
+		self.callback()
+
+	def redis_failed(self, error_message):
+		self.error_callback(error_message)
+
 class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		super(RoutingTableJobTest, self).setUp()
@@ -314,6 +375,13 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def not_in_redis(self, redis, set_name, value):
 		return not self.in_redis(redis, set_name, value)
 
+	def logkey(self, redis, keyname):
+		#print "Key:", keyname
+		redis.get(keyname, self.stop)
+		value = self.wait()
+		#print "Value:", value
+		return value
+
 	def test_simple(self):
 		# Set up the environment.
 		s = self.configuration.get_database_session()
@@ -342,6 +410,7 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		set_key_version_2_id = "instance_ids_%s" % instances[1].application_instance_type.version_hostname(self.configuration)
 		set_key_hostname = "instances_test.paasmaker.com"
 		set_key_hostname_id = "instance_ids_test.paasmaker.com"
+		logkey = "logkey_test.paasmaker.com"
 		first_version_instance = "%s:%d" % (socket.gethostbyname(instances[0].node.route), instances[0].port)
 		first_version_instance_id = instances[0].instance_id
 		second_version_instance = "%s:%d" % (socket.gethostbyname(instances[1].node.route), instances[1].port)
@@ -351,6 +420,7 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		redis.smembers(set_key_name, self.stop)
 		v = self.wait()
 		self.assertEquals(len(v), 0, "Already had something in Redis.")
+		self.assertEquals(self.logkey(redis, logkey), None, "Log key is already set.")
 
 		# Now insert the first version.
 		table_updater = RouterTableUpdate(self.configuration, instances[0], True, logging)
@@ -368,6 +438,7 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(self.not_in_redis(redis, set_key_version_2_id, first_version_instance_id), "First version version name found in second.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname, first_version_instance), "First version in hostname set.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version in hostname set.")
+		self.assertEquals(self.logkey(redis, logkey), None, "Log key is already set.")
 
 		# Add the second instance to the routing table. And make sure they're not
 		# overwriting each other.
@@ -383,6 +454,7 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(self.not_in_redis(redis, set_key_version_1_id, second_version_instance_id), "Second version version name found in first.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname, second_version_instance), "Second version in hostname set.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, second_version_instance_id), "Second version in hostname set.")
+		self.assertEquals(self.logkey(redis, logkey), None, "Log key is already set.")
 
 		# Now make the first version the current version. And check the keys again.
 		instances[0].application_instance_type.application_version.make_current(s)
@@ -398,6 +470,7 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(self.not_in_redis(redis, set_key_version_2_id, first_version_instance_id), "First version version name found in second.")
 		self.assertTrue(self.in_redis(redis, set_key_hostname, first_version_instance), "First version version name not found in hostname set.")
 		self.assertTrue(self.in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version version name not found in hostname set.")
+		self.assertEquals(self.logkey(redis, logkey), str(instances[0].id), "Log key is not set correctly.")
 
 		# Now update the second instance again. Nothing should have changed.
 		table_updater = RouterTableUpdate(self.configuration, instances[1], True, logging)
@@ -412,6 +485,7 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(self.not_in_redis(redis, set_key_version_1_id, second_version_instance_id), "Second version version name found in first.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname, second_version_instance), "Second version in hostname set.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, second_version_instance_id), "Second version in hostname set.")
+		self.assertEquals(self.logkey(redis, logkey), str(instances[0].id), "Log key is not set correctly.")
 
 		# Now switch the second version to be current. Update the new current instance first.
 		# So both instances should exist right now... this is correct, because otherwise
@@ -429,6 +503,7 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(self.in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version not in hostname set.")
 		self.assertTrue(self.in_redis(redis, set_key_hostname, second_version_instance), "Second version not in hostname set.")
 		self.assertTrue(self.in_redis(redis, set_key_hostname_id, second_version_instance_id), "Second version not in hostname set.")
+		self.assertEquals(self.logkey(redis, logkey), str(instances[1].id), "Log key is not set correctly.")
 
 		# Now update the first instance.
 		table_updater = RouterTableUpdate(self.configuration, instances[0], True, logging)
@@ -443,6 +518,7 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version in hostname set.")
 		self.assertTrue(self.in_redis(redis, set_key_hostname, second_version_instance), "Second version not in hostname set.")
 		self.assertTrue(self.in_redis(redis, set_key_hostname_id, second_version_instance_id), "Second version not in hostname set.")
+		self.assertEquals(self.logkey(redis, logkey), str(instances[1].id), "Log key is not set correctly.")
 
 		# Now that the first instance is out, remove it from the system.
 		table_updater = RouterTableUpdate(self.configuration, instances[0], False, logging)
@@ -457,6 +533,7 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(self.not_in_redis(redis, set_key_version_2_id, first_version_instance_id), "First version version name found in second.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname, first_version_instance), "First version in hostname set.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version in hostname set.")
+		self.assertEquals(self.logkey(redis, logkey), str(instances[1].id), "Log key is not set correctly.")
 
 		def got_table(table, serial):
 			got_table.table = table
@@ -474,3 +551,27 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertEquals(len(dump), 3, "Should have had three entries in the routing table.")
 		#print json.dumps(dump, indent=4, sort_keys=True, cls=paasmaker.util.JsonEncoder)
 		self.assertTrue(serial > 0, "Serial number was not incremented.")
+
+		pacemaker_route = "%s:%d" % (socket.gethostbyname(node.route), node.apiport)
+		pacemaker_hostname = "%s.%s" % (
+			self.configuration.get_flat('pacemaker.pacemaker_prefix'),
+			self.configuration.get_flat('pacemaker.cluster_hostname')
+		)
+		pacemaker_set = "instances_%s" % pacemaker_hostname
+		pacemaker_logkey = "logkey_%s" % pacemaker_hostname
+
+		self.assertTrue(self.not_in_redis(redis, pacemaker_set, pacemaker_route), "Pacemaker is listed in routing table.")
+		self.assertEquals(self.logkey(redis, pacemaker_logkey), None, "Pacemaker has a log key.")
+
+		pacemaker_updater = RouterTablePacemakerUpdate(self.configuration, node, True, logging)
+		pacemaker_updater.update(self.stop, None)
+		self.wait()
+
+		self.assertTrue(self.in_redis(redis, pacemaker_set, pacemaker_route), "Pacemaker not listed in routing table.")
+		self.assertEquals(self.logkey(redis, pacemaker_logkey), "pacemaker", "Pacemaker does not have a log key.")
+
+		pacemaker_updater = RouterTablePacemakerUpdate(self.configuration, node, False, logging)
+		pacemaker_updater.update(self.stop, None)
+		self.wait()
+
+		self.assertTrue(self.not_in_redis(redis, pacemaker_set, pacemaker_route), "Pacemaker listed in routing table.")

@@ -180,6 +180,32 @@ def on_completed_startup():
 	if configuration.is_pacemaker() and configuration.get_flat('pacemaker.run_crons'):
 		configuration.cron_periodic = paasmaker.pacemaker.cron.cronrunner.CronPeriodicManager(configuration)
 
+	# Add this pacemaker to the routing table.
+	if configuration.is_pacemaker():
+		session = configuration.get_database_session()
+		def success_insert():
+			session.close()
+			logger.info("Successfully inserted this pacemaker into the routing table.")
+		def failed_insert(message, exception=None):
+			session.close()
+			logger.error("Failed to place pacemaker into the routing table.")
+			logger.error(message)
+			if exception:
+				lgoger.error("Exception:", exc_info=exception)
+
+		node = session.query(
+			paasmaker.model.Node,
+		).filter(
+			paasmaker.model.Node.uuid == configuration.get_node_uuid()
+		).first()
+		pacemaker_updater = paasmaker.common.job.routing.routing.RouterTablePacemakerUpdate(
+			configuration,
+			node,
+			True,
+			logging
+		)
+		pacemaker_updater.update(success_insert, failed_insert)
+
 def on_intermediary_started(message):
 	logger.debug(message)
 	on_intermediary_started.required -= 1
@@ -294,6 +320,10 @@ def on_exit_plugins_prenotify():
 	# Store the count here.
 	on_exit_plugins_prenotify.required = 0
 
+	# Remove this pacemaker from the routing table.
+	if configuration.is_pacemaker():
+		on_exit_plugins_prenotify.required += 1
+
 	# Figure out what plugins want to run before we notify the master.
 	shutdown_plugins = configuration.plugins.plugins_for(
 		paasmaker.util.plugin.MODE.SHUTDOWN_PRENOTIFY
@@ -302,21 +332,45 @@ def on_exit_plugins_prenotify():
 
 	logger.info("Launching %d pre-notification shutdown plugins.", len(shutdown_plugins))
 
-	if len(shutdown_plugins) == 0:
-		# Continue directly.
-		on_exit_prenotify_complete("No pre-notification plugins to execute.")
-	else:
-		# Launch plugins.
-		with tornado.stack_context.StackContext(handle_shutdown_exception):
-			for plugin in shutdown_plugins:
-				instance = configuration.plugins.instantiate(
-					plugin,
-					paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN
-				)
-				instance.shutdown_prenotify(
-					on_exit_prenotify_complete,
-					on_exit_prenotify_complete
-				)
+	# Launch plugins.
+	with tornado.stack_context.StackContext(handle_shutdown_exception):
+		for plugin in shutdown_plugins:
+			instance = configuration.plugins.instantiate(
+				plugin,
+				paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN
+			)
+			instance.shutdown_prenotify(
+				on_exit_prenotify_complete,
+				on_exit_prenotify_complete
+			)
+
+	# Remove this pacemaker from the routing table.
+	if configuration.is_pacemaker():
+		session = configuration.get_database_session()
+		def success_remove():
+			session.close()
+			logger.info("Successfully removed this pacemaker from the routing table.")
+			on_exit_prenotify_complete("Pacemaker router table removal.")
+		def failed_remove(message, exception=None):
+			session.close()
+			logger.error("Failed to remove this pacemaker from the routing table.")
+			logger.error(message)
+			if exception:
+				lgoger.error("Exception:", exc_info=exception)
+			on_exit_prenotify_complete("Pacemaker router table removal.")
+
+		node = session.query(
+			paasmaker.model.Node,
+		).filter(
+			paasmaker.model.Node.uuid == configuration.get_node_uuid()
+		).first()
+		pacemaker_updater = paasmaker.common.job.routing.routing.RouterTablePacemakerUpdate(
+			configuration,
+			node,
+			False,
+			logging
+		)
+		pacemaker_updater.update(success_remove, failed_remove)
 
 def on_exit_prenotify_complete(message, exception=None):
 	on_exit_plugins_prenotify.required -= 1

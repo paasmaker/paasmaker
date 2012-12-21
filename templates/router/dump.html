@@ -37,6 +37,11 @@
 							Not Current)<br />
 						{% end %}
 					{% end %}
+					{% for node in entry['nodes'] %}
+						<code>{{ node.uuid[0:8] }}</code>
+						(Pacemaker {{ node.name }},
+						<span class="node-{{ node.state }}">{{ nice_state(node.state) }}</span>)
+					{% end %}
 				</td>
 				<td>
 					{% for route in entry['routes'] %}

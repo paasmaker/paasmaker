@@ -48,6 +48,13 @@ class RouterTableDump(object):
 				paasmaker.model.ApplicationInstance.instance_id.in_(instance_set)
 			).all()
 
+			# Or they could actually be nodes...
+			nodes = self.session.query(
+				paasmaker.model.Node
+			).filter(
+				paasmaker.model.Node.uuid.in_(instance_set)
+			).all()
+
 			# Fetch out the application IDs. We then reduce this to one.
 			# This is purely for sorting the table. TODO: This is really intensive.
 			application_ids = map(lambda x: x.application_instance_type.application_version.application_id, instances)
@@ -61,6 +68,7 @@ class RouterTableDump(object):
 			entry = {
 				'hostname': hostname,
 				'instances': instances,
+				'nodes': nodes,
 				'application_id': application_id,
 				'routes': sorted_routes
 			}
