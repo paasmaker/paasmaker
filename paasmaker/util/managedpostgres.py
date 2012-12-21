@@ -23,6 +23,7 @@ class ManagedPostgresError(ManagedDaemonError):
 class ManagedPostgres(ManagedDaemon):
 	# TODO: Don't hardcode this.
 	PG_CTL = "/usr/lib/postgresql/9.1/bin/pg_ctl"
+	INITDB = "/usr/lib/postgresql/9.1/bin/initdb"
 
 	def _eat_output(self):
 		return open("%s/%s" % (self.parameters['working_dir'], str(uuid.uuid4())), 'w')
@@ -41,19 +42,18 @@ class ManagedPostgres(ManagedDaemon):
 			os.makedirs(working_dir)
 
 		# Now, we actually need to run pg_ctl initdb to get it all set up.
-		command_line = "%s initdb -D %s -U postgres" % (
-			self.PG_CTL,
+		command_line = "%s -D %s --username=postgres" % (
+			self.INITDB,
 			working_dir
 		)
 
 		pwfile = None
 		if password:
-			# TODO: This is untested.
 			pwfile = tempfile.mkstemp()[1]
 			open(pwfile, 'w').write(password)
-			command_line += '-o "--auth=md5 --pwfile=' + pwfile + '"'
+			command_line += ' --auth=md5 --pwfile=' + pwfile
 
-		command_line += " > /dev/null 2>&1"
+		command_line += " > /tmp/initdb.log 2>&1"
 
 		# Go ahead and create it.
 		subprocess.check_call(
