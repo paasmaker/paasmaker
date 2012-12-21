@@ -49,6 +49,12 @@ textarea.example-configuration
 	display: none;
 }
 
+.icon-loading
+{
+	background-image: url('../img/loading.gif');
+	background-position: center center;
+}
+
 .job-status
 {
 	padding-left: 15px;

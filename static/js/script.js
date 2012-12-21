@@ -498,7 +498,7 @@ BOOTSTRAP_ICON_MAP = {
 	'ABORTED': 'icon-ban-circle',
 	'SUCCESS': 'icon-ok',
 	'WAITING': 'icon-time',
-	'RUNNING': 'icon-random',
+	'RUNNING': 'icon-loading',
 	'NEW': 'icon-certificate'
 }
 
