@@ -20,7 +20,9 @@
 					<code>{{ node.uuid[0:8] }}</code>
 				</td>
 				<td>
-					<a href="/node/{{ node.id }}">{{ node.name }}</a>
+					{% if has_permission(PERMISSION.NODE_DETAIL_VIEW) %}<a href="/node/{{ node.id }}">{% end %}
+						{{ node.name }}
+					{% if has_permission(PERMISSION.NODE_DETAIL_VIEW) %}</a>{% end %}
 				</td>
 				<td>
 					{{ node.route }}:{{ node.apiport }}

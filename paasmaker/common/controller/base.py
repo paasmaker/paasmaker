@@ -7,6 +7,7 @@ import math
 
 import paasmaker
 from ..testhelpers import TestHelpers
+from ..core import constants
 
 import tornado.testing
 import tornado.web
@@ -442,6 +443,8 @@ class BaseController(tornado.web.RequestHandler):
 			variables['warnings'] = self.warnings
 			variables.update(self.template)
 			variables.update(kwargs)
+			variables['PERMISSION'] = constants.PERMISSION
+			variables['has_permission'] = self.has_permission
 			super(BaseController, self).render(template, **variables)
 
 	def write_error(self, status_code, **kwargs):

@@ -6,7 +6,9 @@
 
 {% block body %}
 	<div class="btn-group btn-group-header">
-		<a class="btn" href="/workspace/create">Create Workspace</a>
+		{% if has_permission(PERMISSION.WORKSPACE_EDIT) %}
+			<a class="btn" href="/workspace/create">Create Workspace</a>
+		{% end %}
 	</div>
 
 	<table class="table table-striped table-bordered">
@@ -19,7 +21,9 @@
 		{% for workspace in workspaces %}
 			<tr>
 				<td>
-					<a href="/workspace/{{ workspace.id }}">{{ workspace.name }}</a>
+					{% if has_permission(PERMISSION.WORKSPACE_EDIT) %}<a href="/workspace/{{ workspace.id }}">{% end %}
+						{{ workspace.name }}
+					{% if has_permission(PERMISSION.WORKSPACE_EDIT) %}</a>{% end %}
 				</td>
 				<td>
 					<a href="/workspace/{{ workspace.id }}/applications">{{ len(workspace.applications) }} applications</a>
@@ -28,7 +32,9 @@
 					<a href="/job/list/workspace/{{ workspace.id }}">Jobs</a>
 				</td>
 				<td>
-					<a href="/workspace/{{ workspace.id }}/services">{{ len(workspace.services) }} services</a>
+					{% if has_permission(PERMISSION.WORKSPACE_SERVICE_DETAIL) %}<a href="/workspace/{{ workspace.id }}/services">{% end %}
+						{{ len(workspace.services) }} services
+					{% if has_permission(PERMISSION.WORKSPACE_SERVICE_DETAIL) %}</a>{% end %}
 				</td>
 			</tr>
 		{% end %}
