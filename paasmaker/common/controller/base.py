@@ -49,6 +49,10 @@ class BaseController(tornado.web.RequestHandler):
 	# You must override this in your subclass.
 	AUTH_METHODS = []
 
+	# Shared permissions cache for all controllers.
+	# Why no locking? Tornado fixes this for us.
+	PERMISSIONS_CACHE = {}
+
 	"""
 	Base class for all controllers in the system.
 	"""
@@ -248,6 +252,18 @@ class BaseController(tornado.web.RequestHandler):
 			user_allowed = self.get_current_user()
 			if user_allowed:
 				found_allowed_method = True
+
+				# Update their permissions cache. The idea is to do
+				# one SQL query per request to check it, and 2 if
+				# the permissions have changed - the second one is to
+				# update the permissions.
+				# TODO: The cache class is tested via the model unit tests,
+				# but add a few more unit tests to make sure that this works properly.
+				user_key = str(user_allowed.id)
+				if not self.PERMISSIONS_CACHE.has_key(user_key):
+					self.PERMISSIONS_CACHE[user_key] = paasmaker.model.WorkspaceUserRoleFlatCache(user_allowed)
+				self.PERMISSIONS_CACHE[user_key].check_cache(self.db())
+
 			logger.debug("User authentication: %s", user_allowed)
 
 		if not found_allowed_method:
@@ -352,11 +368,7 @@ class BaseController(tornado.web.RequestHandler):
 		# They're assigned permission by being able to authenticate
 		# to some controllers.
 
-		# TODO: Cache/speedup this result and lookup.
-		session = self.db()
-		allowed = paasmaker.model.WorkspaceUserRoleFlat.has_permission(
-			session,
-			user,
+		allowed = self.PERMISSIONS_CACHE[str(user.id)].has_permission(
 			permission,
 			workspace
 		)
