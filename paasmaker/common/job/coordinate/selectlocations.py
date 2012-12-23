@@ -57,10 +57,14 @@ class SelectLocationsJob(BaseJob):
 			).count()
 
 			quantity -= existing_quantity
-			if quantity <= 0:
+			if quantity == 0:
 				finish_message = "No more instances required. No action taken."
 				self.logger.info(finish_message)
 				self.success({}, finish_message)
+			elif quantity < 0:
+				# We have too many instances.
+				# TODO: Handle this case.
+				pass
 			else:
 				# Get it to choose the number of instances that we want.
 				# This will call us back when ready.

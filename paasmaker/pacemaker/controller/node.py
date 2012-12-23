@@ -481,6 +481,7 @@ class NodeControllerTest(BaseControllerTest):
 		instance.application_instance_type = instance_type
 		instance.node = node
 		instance.state = paasmaker.common.core.constants.INSTANCE.STARTING
+		instance.port = self.configuration.get_free_port()
 
 		session.add(instance)
 		session.commit()

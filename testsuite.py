@@ -88,7 +88,7 @@ test_sets = {
 	paasmaker.common.job.coordinate.register: ['all', 'application', 'coordinate'],
 	paasmaker.common.job.routing.routing: ['all', 'application', 'coordinate', 'router'],
 
-	paasmaker.pacemaker.controller.router: ['all', 'controller', 'router'],
+	paasmaker.pacemaker.controller.router: ['all', 'controller', 'router', 'routercontroller'],
 
 	paasmaker.pacemaker.placement.default: ['all', 'application', 'placement'],
 
