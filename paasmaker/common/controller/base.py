@@ -254,17 +254,6 @@ class BaseController(tornado.web.RequestHandler):
 			if user_allowed:
 				found_allowed_method = True
 
-				# Update their permissions cache. The idea is to do
-				# one SQL query per request to check it, and 2 if
-				# the permissions have changed - the second one is to
-				# update the permissions.
-				# TODO: The cache class is tested via the model unit tests,
-				# but add a few more unit tests to make sure that this works properly.
-				user_key = str(user_allowed.id)
-				if not self.PERMISSIONS_CACHE.has_key(user_key):
-					self.PERMISSIONS_CACHE[user_key] = paasmaker.model.WorkspaceUserRoleFlatCache(user_allowed)
-				self.PERMISSIONS_CACHE[user_key].check_cache(self.db())
-
 			logger.debug("User authentication: %s", user_allowed)
 
 		if not found_allowed_method:
@@ -334,7 +323,6 @@ class BaseController(tornado.web.RequestHandler):
 				# Make sure we have the user, and it's enabled and not deleted.
 				if user and user.enabled and not user.deleted:
 					self.user = user
-					return user
 
 		# Fetch their cookie.
 		raw = self.get_secure_cookie('user', max_age_days=self.configuration.get_flat('pacemaker.login_age'))
@@ -344,10 +332,20 @@ class BaseController(tornado.web.RequestHandler):
 			# Make sure we have the user, and it's enabled and not deleted.
 			if user and user.enabled and not user.deleted:
 				self.user = user
-				return user
 
-		# Otherwise, return None.
-		return None
+		# Update their permissions cache. The idea is to do
+		# one SQL query per request to check it, and 2 if
+		# the permissions have changed - the second one is to
+		# update the permissions.
+		# TODO: The cache class is tested via the model unit tests,
+		# but add a few more unit tests to make sure that this works properly.
+		if self.user:
+			user_key = str(self.user.id)
+			if not self.PERMISSIONS_CACHE.has_key(user_key):
+				self.PERMISSIONS_CACHE[user_key] = paasmaker.model.WorkspaceUserRoleFlatCache(user)
+			self.PERMISSIONS_CACHE[user_key].check_cache(self.db())
+
+		return self.user
 
 	def has_permission(self, permission, workspace=None, user=None):
 		if not user and self.super_auth:
