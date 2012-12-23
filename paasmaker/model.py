@@ -3,6 +3,7 @@ import json
 import datetime
 import uuid
 import hashlib
+import logging
 
 import paasmaker
 from paasmaker.common.core import constants
@@ -15,6 +16,9 @@ from sqlalchemy.orm.interfaces import MapperExtension
 from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func
 from sqlalchemy import or_
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 Base = declarative_base()
 
@@ -37,7 +41,7 @@ class OrmBase(object):
 	def flatten(self, field_list=None):
 		# If field_list is not None, return just those fields.
 		fields = {}
-		if self.__dict__.has_key('id'):
+		if self.__dict__.has_key('id') and self.__dict__['id']:
 			fields['id'] = self.__dict__['id']
 			fields['updated'] = self.__dict__['updated']
 			fields['created'] = self.__dict__['created']
@@ -374,6 +378,57 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 			WorkspaceUserRoleFlat.permission == constants.PERMISSION.WORKSPACE_VIEW
 		)
 		return query
+
+class WorkspaceUserRoleFlatCache(object):
+	def __init__(self, user):
+		# Build our cache.
+		self.cache = {}
+		self.cache_version = None
+		self.user = user
+
+	def _build_cache(self, session):
+		permissions = session.query(
+			WorkspaceUserRoleFlat.workspace_id,
+			WorkspaceUserRoleFlat.permission
+		).filter(
+			WorkspaceUserRoleFlat.user_id == self.user.id
+		).all()
+
+		self.cache.clear()
+		logger.debug("Cache has %d values for user %d.", len(permissions), self.user.id)
+		for permission in permissions:
+			key = self._key(permission[1], permission[0])
+			self.cache[key] = True
+
+	def check_cache(self, session):
+		updated = session.query(
+			func.max(WorkspaceUserRoleFlat.updated)
+		).scalar()
+		if updated:
+			comparevalue = updated.isoformat()
+		else:
+			comparevalue = str(uuid.uuid4())
+		logging.debug("Permissions cache compare value: %s / %s", self.cache_version, comparevalue)
+		if self.cache_version != comparevalue:
+			# It's changed.
+			self._build_cache(session)
+			self.cache_version = comparevalue
+
+	def _key(self, permission, workspace):
+		return "%s_%s" % (workspace, permission)
+
+	def has_permission(self, permission, workspace):
+		if workspace:
+			workspace_id = workspace.id
+		else:
+			workspace_id = None
+		key_normal = self._key(permission, workspace_id)
+		if self.cache.has_key(key_normal):
+			return True
+
+		# Now check with no workspace.
+		key_none = self._key(permission, None)
+		return self.cache.has_key(key_none)
 
 class Application(OrmBase, Base):
 	__tablename__ = 'application'
@@ -900,6 +955,10 @@ class TestModel(unittest.TestCase):
 		# Rebuild the permissions table.
 		WorkspaceUserRoleFlat.build_flat_table(s)
 
+		# Create a cache for the user.
+		cache = WorkspaceUserRoleFlatCache(user)
+		cache.check_cache(s)
+
 		# Do some basic tests.
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
@@ -907,34 +966,55 @@ class TestModel(unittest.TestCase):
 			constants.PERMISSION.WORKSPACE_VIEW,
 			workspace
 		)
+		cache_has_permission = cache.has_permission(
+			constants.PERMISSION.WORKSPACE_VIEW,
+			workspace
+		)
 		self.assertTrue(has_permission, "Unable to view workspace.")
+		self.assertTrue(cache_has_permission, "Unable to view workspace.")
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
 			user,
 			constants.PERMISSION.WORKSPACE_EDIT,
 			workspace
 		)
+		cache_has_permission = cache.has_permission(
+			constants.PERMISSION.WORKSPACE_EDIT,
+			workspace
+		)
 		self.assertFalse(has_permission, "Can create workspace.")
+		self.assertFalse(cache_has_permission, "Can create workspace.")
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
 			user,
 			constants.PERMISSION.WORKSPACE_VIEW,
 			None
 		)
+		cache_has_permission = cache.has_permission(
+			constants.PERMISSION.WORKSPACE_VIEW,
+			None
+		)
 		self.assertFalse(has_permission, "Can view workspace on global level.")
+		self.assertFalse(cache_has_permission, "Can view workspace on global level.")
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
 			user,
 			constants.PERMISSION.WORKSPACE_EDIT,
 			None
 		)
+		cache_has_permission = cache.has_permission(
+			constants.PERMISSION.WORKSPACE_EDIT,
+			None
+		)
 		self.assertFalse(has_permission, "Can create workspace.")
+		self.assertFalse(cache_has_permission, "Can create workspace.")
 
 		# Revoke permission, then try again.
 		role.remove_permission(constants.PERMISSION.WORKSPACE_VIEW)
 		s.add(role)
 		s.commit()
 		WorkspaceUserRoleFlat.build_flat_table(s)
+		cache.check_cache(s)
 
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
@@ -942,20 +1022,31 @@ class TestModel(unittest.TestCase):
 			constants.PERMISSION.WORKSPACE_VIEW,
 			workspace
 		)
+		cache_has_permission = cache.has_permission(
+			constants.PERMISSION.WORKSPACE_VIEW,
+			None
+		)
 		self.assertFalse(has_permission, "Can view workspace.")
+		self.assertFalse(cache_has_permission, "Can view workspace.")
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
 			user,
 			constants.PERMISSION.WORKSPACE_VIEW,
 			None
 		)
+		cache_has_permission = cache.has_permission(
+			constants.PERMISSION.WORKSPACE_VIEW,
+			None
+		)
 		self.assertFalse(has_permission, "Can view workspace on global level.")
+		self.assertFalse(cache_has_permission, "Can view workspace on global level.")
 
 		# Now set the permissions using the array whole set method.
 		role.permissions = [constants.PERMISSION.WORKSPACE_VIEW]
 		s.add(role)
 		s.commit()
 		WorkspaceUserRoleFlat.build_flat_table(s)
+		cache.check_cache(s)
 
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
@@ -963,7 +1054,12 @@ class TestModel(unittest.TestCase):
 			constants.PERMISSION.WORKSPACE_VIEW,
 			workspace
 		)
+		cache_has_permission = cache.has_permission(
+			constants.PERMISSION.WORKSPACE_VIEW,
+			workspace
+		)
 		self.assertTrue(has_permission, "Can't view workspace.")
+		self.assertTrue(cache_has_permission, "Can't view workspace.")
 
 		# Now assign a global permission.
 		role_global = Role()
@@ -980,6 +1076,7 @@ class TestModel(unittest.TestCase):
 
 		# Rebuild the permissions table.
 		WorkspaceUserRoleFlat.build_flat_table(s)
+		cache.check_cache(s)
 
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
@@ -987,14 +1084,24 @@ class TestModel(unittest.TestCase):
 			constants.PERMISSION.USER_EDIT,
 			workspace
 		)
+		cache_has_permission = cache.has_permission(
+			constants.PERMISSION.USER_EDIT,
+			workspace
+		)
 		self.assertTrue(has_permission, "Can't create user.")
+		self.assertTrue(cache_has_permission, "Can't create user.")
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
 			user,
 			constants.PERMISSION.USER_EDIT,
 			None
 		)
+		cache_has_permission = cache.has_permission(
+			constants.PERMISSION.USER_EDIT,
+			None
+		)
 		self.assertTrue(has_permission, "Can't create user.")
+		self.assertTrue(cache_has_permission, "Can't create user.")
 
 		user_two = User()
 		user_two.login = 'username_two'
@@ -1005,6 +1112,9 @@ class TestModel(unittest.TestCase):
 
 		# Rebuild the permissions table.
 		WorkspaceUserRoleFlat.build_flat_table(s)
+		cache.check_cache(s)
+		u2_cache = WorkspaceUserRoleFlatCache(user_two)
+		u2_cache.check_cache(s)
 
 		# And make sure that new user can't do anything.
 		has_permission = WorkspaceUserRoleFlat.has_permission(
@@ -1013,14 +1123,24 @@ class TestModel(unittest.TestCase):
 			constants.PERMISSION.USER_EDIT,
 			workspace
 		)
+		cache_has_permission = u2_cache.has_permission(
+			constants.PERMISSION.USER_EDIT,
+			workspace
+		)
 		self.assertFalse(has_permission, "Can create user.")
+		self.assertFalse(cache_has_permission, "Can create user.")
 		has_permission = WorkspaceUserRoleFlat.has_permission(
 			s,
 			user_two,
 			constants.PERMISSION.USER_EDIT,
 			None
 		)
+		cache_has_permission = u2_cache.has_permission(
+			constants.PERMISSION.USER_EDIT,
+			None
+		)
 		self.assertFalse(has_permission, "Can create user.")
+		self.assertFalse(cache_has_permission, "Can create user.")
 
 		# TODO: Think of more imaginitive ways that this
 		# very very simple permissions system can be broken,
