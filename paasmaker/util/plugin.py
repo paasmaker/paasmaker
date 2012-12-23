@@ -49,7 +49,9 @@ MODE_REQUIRE_PARAMS = {
 
 	'USER_AUTHENTICATE_PLAIN': False,
 
-	'JOB': True
+	'JOB': True,
+
+	'HEALTH_CHECK': False
 }
 
 # Mode constants.
