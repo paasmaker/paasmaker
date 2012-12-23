@@ -93,11 +93,13 @@ class RouterTableUpdate(object):
 		self.logger = logger
 
 		# TODO: Fail if the instance isn't running!
-		if self.instance.state == constants.INSTANCE.ALLOCATED:
-			# This instance won't have a port.
-			raise ValueError("Supplied instance does not yet have a port - can't insert into routing table.")
-		if self.instance.state != constants.INSTANCE.RUNNING and self.add:
-			raise ValueError("Supplied instance is not running, and you are trying to add it.")
+		# TODO: Requires more thinking; instance states are not updated until a little bit
+		# later...
+		#if self.instance.state == constants.INSTANCE.ALLOCATED:
+		#	# This instance won't have a port.
+		#	raise ValueError("Supplied instance does not yet have a port - can't insert into routing table.")
+		#if self.instance.state != constants.INSTANCE.RUNNING and self.add:
+		#	raise ValueError("Supplied instance is not running, and you are trying to add it.")
 
 	def update(self, callback, error_callback):
 		self.callback = callback
