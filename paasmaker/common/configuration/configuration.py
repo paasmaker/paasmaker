@@ -695,6 +695,15 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		if not self.is_heart():
 			raise ImNotAHeart("I'm not a heart, so I have no runtimes.")
 
+		# Use a cached version if present.
+		# The idea is that we don't do this expensive version determination each
+		# time we re-register with the master.
+		if hasattr(self, '_runtime_cache'):
+			logger.info("Using existing runtime cache.")
+			return self._runtime_cache
+		else:
+			logger.info("Generating runtime list...")
+
 		tags = {}
 		runtime_plugins = self.plugins.plugins_for(paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
 		for plugin in runtime_plugins:
@@ -703,7 +712,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 			tags[plugin] = versions
 
-		return tags
+		self._runtime_cache = tags
+		return self._runtime_cache
 
 	def setup_database(self):
 		if not self.is_pacemaker():
