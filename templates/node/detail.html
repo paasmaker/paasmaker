@@ -63,4 +63,7 @@
 			</tr>
 		{% end %}
 	</table>
+
+	<h2>Tags</h2>
+	<pre>{{ json.dumps(node.tags, indent=4, sort_keys=True) }}</pre>
 {% end %}

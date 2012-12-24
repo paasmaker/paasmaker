@@ -320,6 +320,7 @@ class NodeDetailController(BaseController):
 		node = self._get_node(node_id)
 
 		self.add_data('node', node)
+		self.add_data_template('json', json)
 
 		# Fetch the router stats.
 		self._get_router_stats_for('node', node.id, self._got_stats)
