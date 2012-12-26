@@ -1,3 +1,4 @@
+
 import subprocess
 import unittest
 import platform
@@ -8,15 +9,25 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 class NoFreePortException(Exception):
+	"""
+	Exception for when no free port could be found in the range
+	requested.
+	"""
 	pass
 
 class FreePortFinder(object):
 	"""
 	A class to locate free TCP ports on the system, and confirm
-	that they're not in use.
+	that they're not in use. On Linux, uses a call to the external
+	program ``netstat`` to perform its actions.
 	"""
 
 	def __init__(self):
+		"""
+		Create an instance of the free port finder. Some state
+		is retained between calls to ``free_in_range()`` to make
+		it faster and to allow it to make better choices.
+		"""
 		self.last_allocated = None
 		self.preallocated = set()
 
@@ -33,10 +44,29 @@ class FreePortFinder(object):
 			self.preallocated.add(port)
 
 	def remove_allocated_port(self, port):
+		"""
+		Remove a pre-allocated port. This is used to allow
+		the port to be chosen again when the system knows
+		it can be used again.
+
+		:arg int port: The port to remove.
+		"""
 		if port in self.preallocated:
 			self.preallocated.remove(port)
 
 	def free_in_range(self, lower, upper, complete_scan=False):
+		"""
+		Find a free port in the given range, inclusively.
+
+		This attempts to use ``netstat`` as few times as possible.
+
+		:arg int lower: The lower bound of ports to search through.
+		:arg int upper: The upper bound of ports to search through.
+		:arg bool complete_scan: Scan the entire range regardless of
+			the previous upper and lower bounds. This is intended to be
+			used internally by the function to scan the part of the range
+			that it may have missed due to previous port requests.
+		"""
 		start = lower
 		using_last_allocated = False
 		if self.last_allocated and not complete_scan:
@@ -47,7 +77,7 @@ class FreePortFinder(object):
 			else:
 				start = self.last_allocated + 1
 		# Fetch the current list of ports.
-		output = self.fetch_netstat()
+		output = self._fetch_netstat()
 		# Now begin the search.
 		port = start
 		free = (output.find(":%d " % port) == -1) and (port not in self.preallocated)
@@ -74,10 +104,10 @@ class FreePortFinder(object):
 
 		:arg int port: The port to test.
 		"""
-		output = self.fetch_netstat()
+		output = self._fetch_netstat()
 		return (output.find(":%d " % port) != -1)
 
-	def fetch_netstat(self):
+	def _fetch_netstat(self):
 		# TODO: This is HIGHLY platform specific, but it's fast.
 		# TODO: This will block the whole process... but only for ~20ms.
 		# NOTE: The docs say not to use subprocess.PIPE with the command
@@ -100,11 +130,30 @@ class FreePortFinder(object):
 		return output
 
 	def wait_until_port_used(self, io_loop, port, timeout, callback, timeout_callback):
-		self.wait_until_port_state(io_loop, port, True, timeout, callback, timeout_callback)
-	def wait_until_port_free(self, io_loop, port, timeout, callback, timeout_callback):
-		self.wait_until_port_state(io_loop, port, False, timeout, callback, timeout_callback)
+		"""
+		Wait until the given port is in use. Waits up to the supplied timeout,
+		calling the callback when it succeeds, or the timeout_callback if
+		it doesn't reach that state in the given timeout. Requires a tornado
+		IO loop to schedule callbacks to continue checking.
 
-	def wait_until_port_state(self, io_loop, port, state, timeout, callback, timeout_callback):
+		:arg IOloop io_loop: The Tornado IO loop to use.
+		:arg int port: The port to wait for.
+		:arg int timeout: The number of seconds to wait for before
+			calling the timeout_callback.
+		:arg callable callback: The callback function when it's in the appropriate
+			state. It is supplied a single string argument that is a message.
+		:arg callback timeout_callback: The callback function for when the timeout
+			has expired. It is supplied a single string argument that is a message.
+		"""
+		self._wait_until_port_state(io_loop, port, True, timeout, callback, timeout_callback)
+
+	def wait_until_port_free(self, io_loop, port, timeout, callback, timeout_callback):
+		"""
+		This is the inverse of ``wait_until_port_used()``.
+		"""
+		self._wait_until_port_state(io_loop, port, False, timeout, callback, timeout_callback)
+
+	def _wait_until_port_state(self, io_loop, port, state, timeout, callback, timeout_callback):
 		# Wait until the port is in a different state.
 		end_timeout = time.time() + timeout
 
