@@ -35,6 +35,7 @@ test_sets = {
 	paasmaker.util.managednginx: ['slow', 'util', 'nginx', 'managedservice'],
 	paasmaker.util.managedapache: ['slow', 'util', 'apache', 'managedservice'],
 	paasmaker.util.asyncdns: ['all', 'util', 'network'],
+	paasmaker.util.flattenizr: ['all', 'util', 'data'],
 
 	paasmaker.router.router: ['all', 'router'],
 	paasmaker.pacemaker.cron.cronrunner: ['all', 'cron'],
