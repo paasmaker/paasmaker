@@ -1,4 +1,5 @@
 
+from apirequest import APIRequest, APIResponse
 from information import InformationAPIRequest
 from noderegister import NodeRegisterAPIRequest, NodeUpdateAPIRequest, NodeUpdatePeriodicManager, NodeShutdownAPIRequest
 from nodelist import NodeListAPIRequest

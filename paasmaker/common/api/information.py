@@ -1,6 +1,8 @@
 
 import paasmaker
 
-class InformationAPIRequest(paasmaker.util.APIRequest):
+from apirequest import APIRequest, APIResponse
+
+class InformationAPIRequest(APIRequest):
 	def get_endpoint(self):
 		return '/information'

@@ -1,12 +1,14 @@
 
-import paasmaker
 import logging
+
+import paasmaker
+from apirequest import APIRequest, APIResponse
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 # NOTE: Only suitable for use by a Pacemaker.
-class InstanceRegisterAPIRequest(paasmaker.util.APIRequest):
+class InstanceRegisterAPIRequest(APIRequest):
 
 	def set_instance(self, instance):
 		self.instance = instance

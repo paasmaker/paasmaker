@@ -4,13 +4,14 @@ import os
 import urllib
 
 import paasmaker
+from apirequest import APIRequest, APIResponse
 
 import tornado
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-class PackageSizeAPIRequest(paasmaker.util.APIRequest):
+class PackageSizeAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(PackageSizeAPIRequest, self).__init__(*args, **kwargs)
 		self.package = None
@@ -24,7 +25,7 @@ class PackageSizeAPIRequest(paasmaker.util.APIRequest):
 
 # TODO: Can only download from the master at the moment. This requires
 # changes to the pacemaker to allow it to locate the correct location for the file.
-class PackageDownloadAPIRequest(paasmaker.util.APIRequest):
+class PackageDownloadAPIRequest(APIRequest):
 	def __init__(self, configuration):
 		self.configuration = configuration
 

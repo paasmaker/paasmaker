@@ -1,11 +1,13 @@
 
-import paasmaker
 import logging
+
+import paasmaker
+from apirequest import APIRequest, APIResponse
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-class ApplicationGetAPIRequest(paasmaker.util.APIRequest):
+class ApplicationGetAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(ApplicationGetAPIRequest, self).__init__(*args, **kwargs)
 		self.application_id = None
@@ -17,7 +19,7 @@ class ApplicationGetAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):
 		return '/application/%d' % self.application_id
 
-class ApplicationListAPIRequest(paasmaker.util.APIRequest):
+class ApplicationListAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(ApplicationListAPIRequest, self).__init__(*args, **kwargs)
 		self.workspace_id = None
@@ -29,7 +31,7 @@ class ApplicationListAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):
 		return '/workspace/%d/applications' % self.workspace_id
 
-class ApplicationNewAPIRequest(paasmaker.util.APIRequest):
+class ApplicationNewAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		self.params = {}
 		self.params['manifest_path'] = 'manifest.yml'
@@ -58,7 +60,7 @@ class ApplicationNewAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):
 		return '/workspace/%d/applications/new' % self.workspace_id
 
-class ApplicationNewVersionAPIRequest(paasmaker.util.APIRequest):
+class ApplicationNewVersionAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		self.params = {}
 		self.params['manifest_path'] = 'manifest.yml'

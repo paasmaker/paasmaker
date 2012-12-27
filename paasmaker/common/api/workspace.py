@@ -1,11 +1,13 @@
 
-import paasmaker
 import logging
+
+import paasmaker
+from apirequest import APIRequest, APIResponse
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-class WorkspaceGetAPIRequest(paasmaker.util.APIRequest):
+class WorkspaceGetAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(WorkspaceGetAPIRequest, self).__init__(*args, **kwargs)
 		self.workspace_id = None
@@ -17,7 +19,7 @@ class WorkspaceGetAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):
 		return '/workspace/%d' % self.workspace_id
 
-class WorkspaceCreateAPIRequest(paasmaker.util.APIRequest):
+class WorkspaceCreateAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		self.params = {}
 		super(WorkspaceCreateAPIRequest, self).__init__(*args, **kwargs)
@@ -65,7 +67,7 @@ class WorkspaceEditAPIRequest(WorkspaceCreateAPIRequest):
 	def get_endpoint(self):
 		return "/workspace/%d" % self.workspace_id
 
-class WorkspaceListAPIRequest(paasmaker.util.APIRequest):
+class WorkspaceListAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(WorkspaceListAPIRequest, self).__init__(*args, **kwargs)
 		self.method = 'GET'

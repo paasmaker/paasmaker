@@ -2,13 +2,14 @@
 import logging
 
 import paasmaker
+from apirequest import APIRequest, APIResponse
 
 import tornado
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-class NodeRegisterAPIRequest(paasmaker.util.APIRequest):
+class NodeRegisterAPIRequest(APIRequest):
 
 	# TODO: Override the appropriate functions to turn down the
 	# connect and request timeouts.

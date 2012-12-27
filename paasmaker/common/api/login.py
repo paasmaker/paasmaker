@@ -1,7 +1,8 @@
 
 import paasmaker
+from apirequest import APIRequest, APIResponse
 
-class LoginAPIRequest(paasmaker.util.APIRequest):
+class LoginAPIRequest(APIRequest):
 	def set_credentials(self, username, password):
 		self.username = username
 		self.password = password

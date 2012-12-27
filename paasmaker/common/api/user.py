@@ -1,11 +1,13 @@
 
-import paasmaker
 import logging
+
+import paasmaker
+from apirequest import APIRequest, APIResponse
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-class UserGetAPIRequest(paasmaker.util.APIRequest):
+class UserGetAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(UserGetAPIRequest, self).__init__(*args, **kwargs)
 		self.user_id = None
@@ -17,7 +19,7 @@ class UserGetAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):
 		return '/user/%d' % self.user_id
 
-class UserCreateAPIRequest(paasmaker.util.APIRequest):
+class UserCreateAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		self.params = {}
 		super(UserCreateAPIRequest, self).__init__(*args, **kwargs)
@@ -81,7 +83,7 @@ class UserEditAPIRequest(UserCreateAPIRequest):
 	def get_endpoint(self):
 		return "/user/%d" % self.user_id
 
-class UserListAPIRequest(paasmaker.util.APIRequest):
+class UserListAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(UserListAPIRequest, self).__init__(*args, **kwargs)
 		self.method = 'GET'

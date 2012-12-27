@@ -1,11 +1,13 @@
 
-import paasmaker
 import logging
+
+import paasmaker
+from apirequest import APIRequest, APIResponse
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-class VersionGetAPIRequest(paasmaker.util.APIRequest):
+class VersionGetAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(VersionGetAPIRequest, self).__init__(*args, **kwargs)
 		self.version_id = None
@@ -17,7 +19,7 @@ class VersionGetAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):
 		return '/version/%d' % self.version_id
 
-class VersionInstancesAPIRequest(paasmaker.util.APIRequest):
+class VersionInstancesAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(VersionInstancesAPIRequest, self).__init__(*args, **kwargs)
 		self.version_id = None
@@ -29,7 +31,7 @@ class VersionInstancesAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):
 		return '/version/%d/instances' % self.version_id
 
-class VersionActionRootAPIRequest(paasmaker.util.APIRequest):
+class VersionActionRootAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		self.version_id = None
 		super(VersionActionRootAPIRequest, self).__init__(*args, **kwargs)

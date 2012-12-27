@@ -2,11 +2,12 @@
 import logging
 
 import paasmaker
+from apirequest import APIRequest, APIResponse
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-class JobAbortAPIRequest(paasmaker.util.APIRequest):
+class JobAbortAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(JobAbortAPIRequest, self).__init__(*args, **kwargs)
 		self.method = 'GET'

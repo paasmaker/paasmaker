@@ -1,11 +1,13 @@
 
-import paasmaker
 import logging
+
+import paasmaker
+from apirequest import APIRequest, APIResponse
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-class RoleGetAPIRequest(paasmaker.util.APIRequest):
+class RoleGetAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(RoleGetAPIRequest, self).__init__(*args, **kwargs)
 		self.role_id = None
@@ -17,7 +19,7 @@ class RoleGetAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):
 		return '/role/%d' % self.role_id
 
-class RoleCreateAPIRequest(paasmaker.util.APIRequest):
+class RoleCreateAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		self.params = {}
 		super(RoleCreateAPIRequest, self).__init__(*args, **kwargs)
@@ -70,7 +72,7 @@ class RoleEditAPIRequest(RoleCreateAPIRequest):
 	def get_endpoint(self):
 		return "/role/%d" % self.role_id
 
-class RoleListAPIRequest(paasmaker.util.APIRequest):
+class RoleListAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(RoleListAPIRequest, self).__init__(*args, **kwargs)
 		self.method = 'GET'
@@ -78,7 +80,7 @@ class RoleListAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):
 		return '/role/list'
 
-class RoleAllocationListAPIRequest(paasmaker.util.APIRequest):
+class RoleAllocationListAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		super(RoleAllocationListAPIRequest, self).__init__(*args, **kwargs)
 		self.method = 'GET'
@@ -86,7 +88,7 @@ class RoleAllocationListAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):
 		return '/role/allocation/list'
 
-class RoleAllocationAPIRequest(paasmaker.util.APIRequest):
+class RoleAllocationAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		self.params = {}
 		super(RoleAllocationAPIRequest, self).__init__(*args, **kwargs)
@@ -106,7 +108,7 @@ class RoleAllocationAPIRequest(paasmaker.util.APIRequest):
 	def get_endpoint(self):
 		return '/role/allocation/assign'
 
-class RoleUnAllocationAPIRequest(paasmaker.util.APIRequest):
+class RoleUnAllocationAPIRequest(APIRequest):
 	def __init__(self, *args, **kwargs):
 		self.params = {}
 		super(RoleUnAllocationAPIRequest, self).__init__(*args, **kwargs)

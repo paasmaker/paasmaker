@@ -5,6 +5,7 @@ import json
 import urllib
 
 import paasmaker
+from apirequest import APIRequest, APIResponse
 
 import requests
 import tornado
@@ -14,7 +15,7 @@ logger.addHandler(logging.NullHandler())
 
 UPLOAD_CHUNK_SIZE = 1024 * 1024 # 1MB at once.
 
-class UploadFileAPIRequest(paasmaker.util.APIRequest):
+class UploadFileAPIRequest(APIRequest):
 	def get_endpoint(self):
 		return "/files/upload"
 
