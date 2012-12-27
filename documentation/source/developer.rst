@@ -9,4 +9,5 @@ working on the core of the system.
 .. toctree::
    :maxdepth: 2
 
+   developer-api
    developer-utils

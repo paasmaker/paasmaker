@@ -7,6 +7,20 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 class APIResponse(object):
+	"""
+	This class encapsulates the contents of an API response from the
+	server. It is supplied via a callback. Once you have the class,
+	the following instance attributes are available for you to read:
+
+	* **errors** - a list of errors from the remote server, or an empty
+	  list if there are no errors.
+	* **warnings** - a list of warnings from the remote server, or an empty
+	  list if there are no warnings.
+	* **data** - a dict containing the decoded response from the server.
+	* **success** - a boolean flag that indicates if the request was
+	  successful. It's considered successful if there were no errors
+	  and the response code was 200.
+	"""
 	def __init__(self, response):
 		self.errors = []
 		self.warnings = []
@@ -42,7 +56,24 @@ class APIResponse(object):
 				logger.error("- %s", error)
 
 class APIRequest(object):
-	def __init__(self, configuration):
+	"""
+	A base class for API requests. Provides helpers for other API request
+	classes.
+	"""
+
+	def __init__(self, configuration=None):
+		"""
+		Sets up a new APIRequest object. If overriding, be sure to call
+		the parent with the configuration object first, and then do your
+		setup. Most commonly you'll override this to change the HTTP
+		method that this class uses, as the default is POST.
+
+		:arg Configuration configuration: The configuration object to use,
+			or None if you don't have one. If you don't have one,
+			you must be sure to set a target and appropriate authentication
+			before making the request. Also, it will use the global Tornado
+			IO loop in this case.
+		"""
 		self.configuration = configuration
 		self.target = None
 		self.method = 'POST'
@@ -55,23 +86,46 @@ class APIRequest(object):
 			self.authvalue = None
 			self.io_loop = tornado.ioloop.IOLoop.instance()
 
-	def method_get(self):
-		self.method = 'GET'
-
 	def duplicate_auth(self, request):
+		"""
+		Duplicate the authentication details from the given request.
+		Useful when doing subrequests internally.
+
+		:arg APIRequest request: The request to copy the authentication
+			details from.
+		"""
 		self.authmethod = request.authmethod
 		self.authvalue = request.authvalue
 		self.target = request.target
 
 	def set_apikey_auth(self, key):
+		"""
+		Set this request to use a user-based API key,
+		with the supplied key.
+
+		:arg str key: The User API key to present to the
+			server.
+		"""
 		self.authmethod = 'tokenheader'
 		self.authvalue = key
 
 	def set_nodekey_auth(self, key):
+		"""
+		Set this request to use node-key authentication.
+
+		:arg str key: The Node API key to present to the server.
+		"""
 		self.authmethod = 'nodeheader'
 		self.authvalue = key
 
 	def set_superkey_auth(self, key=None):
+		"""
+		Set this request to use super-key authentication.
+		If no key is supplied, it will attempt to read the super
+		key from the configuration object.
+
+		:arg str key: The super key to present to the server.
+		"""
 		self.authmethod = 'superheader'
 		if key:
 			self.authvalue = key
@@ -80,18 +134,42 @@ class APIRequest(object):
 			self.authvalue = self.configuration.get_flat('pacemaker.super_token')
 
 	def build_payload(self):
-		# Override in your subclass.
+		"""
+		Build the payload of the request. Return a dict that contains
+		the payload that will be send to the server.
+
+		Your subclass should override this function.
+		"""
 		return {}
 
 	def get_master(self):
+		"""
+		Get the address to the master host. This is designed for nodes
+		to automatically contact the master without any other configuration.
+		"""
 		# TODO: SSL ?
-		return "http://%s:%d" % (self.configuration.get_flat('master.host'), self.configuration.get_flat('master.port'))
+		return "http://%s:%d" % (
+			self.configuration.get_flat('master.host'),
+			self.configuration.get_flat('master.port')
+		)
 
 	def get_endpoint(self):
+		"""
+		Get the endpoint - the URI on the remote end - for this request.
+		You must override this in your subclass.
+		"""
 		# Override in your subclass to change the URI.
 		raise NotImplementedError("You must implement get_endpoint().")
 
 	def set_target(self, target):
+		"""
+		Set the target for this request. The target can be either:
+
+		* A string, in the format http://hostname:port;
+		* A node object.
+
+		:arg str|Node target: The target for this request.
+		"""
 		if isinstance(target, basestring):
 			self.target = target
 		elif isinstance(target, paasmaker.model.Node):
@@ -100,11 +178,37 @@ class APIRequest(object):
 			raise ValueError("Target is not a string or Node object.")
 
 	def process_response(self, response):
+		"""
+		Process the response before calling the callback.
+
+		Some API requests can be self contained and do processing
+		just after the request (see the node registration API request
+		for an example).
+
+		If you override this function, the user supplied callback
+		will still be called with the original response, after this
+		has completed and returned.
+		"""
 		# For overriding in your subclasses, if it's all self contained.
 		# Note that the supplied callback, if provided, is called after this.
 		pass
 
 	def send(self, callback=None, **kwargs):
+		"""
+		Send the request to the remote server.
+
+		Calls the callback when done, with an APIResponse object.
+		The callback is called regardless of success; so you will
+		need to check the supplied APIResponse object to see if
+		the request succeeded.
+
+		Any remaining keyword arguments are passed to the underlying
+		Tornado HTTPRequest object, although some headers and other
+		attributes are modified by this function to set up the
+		appropriate authentication headers.
+
+		:arg callback callback: The callback to call when done.
+		"""
 		if self.method == 'GET' and self.authmethod in ['node', 'super', 'token']:
 			raise ValueError("Can't do a GET request with node, super, or token authentication methods.")
 
