@@ -5,6 +5,8 @@ import platform
 import time
 import logging
 
+import tornado.testing
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -173,7 +175,7 @@ class FreePortFinder(object):
 		logger.debug("Adding timeout waiting for port %d to be %s.", port, str(state))
 		io_loop.add_timeout(time.time() + 0.1, wait_for_state)
 
-class FreePortFinderTest(unittest.TestCase):
+class FreePortFinderTest(tornado.testing.AsyncTestCase):
 	def test_free(self):
 		finder = FreePortFinder()
 
@@ -235,6 +237,38 @@ class FreePortFinderTest(unittest.TestCase):
 
 		self.assertTrue(finder.in_use(22), "Found port 22 was free.")
 		self.assertFalse(finder.in_use(1), "Didn't find port 1 as free.")
+
+	def test_wait_for_in_use(self):
+		finder = FreePortFinder()
+
+		def success(message):
+			self.stop(True)
+
+		def failed(message):
+			self.stop(False)
+
+		# Test with a port that is already in use.
+		finder.wait_until_port_used(self.io_loop, 22, 0.2, success, failed)
+		result = self.wait()
+
+		self.assertTrue(result, "Port was not in use.")
+
+		# Test with a port that is not in use - should call the failed callback.
+		finder.wait_until_port_used(self.io_loop, 23, 0.2, success, failed)
+		result = self.wait()
+
+		self.assertFalse(result, "Port was in use.")
+
+		# Try the reverse.
+		finder.wait_until_port_free(self.io_loop, 22, 0.2, success, failed)
+		result = self.wait()
+
+		self.assertFalse(result, "Port was free.")
+
+		finder.wait_until_port_free(self.io_loop, 23, 0.2, success, failed)
+		result = self.wait()
+
+		self.assertTrue(result, "Port was not free.")
 
 if __name__ == '__main__':
 	unittest.main()
