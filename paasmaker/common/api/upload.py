@@ -16,10 +16,26 @@ logger.addHandler(logging.NullHandler())
 UPLOAD_CHUNK_SIZE = 1024 * 1024 # 1MB at once.
 
 class UploadFileAPIRequest(APIRequest):
+	"""
+	Upload a file to the remote server. Used for sending up a package
+	of files for a new version of an application.
+	"""
 	def get_endpoint(self):
 		return "/files/upload"
 
 	def send_file(self, filename, progress_callback, finished_callback, error_callback):
+		"""
+		Send the file to the remote server.
+
+		:arg str filename: The original filename of your local file.
+		:arg callable progress_callback: A callback that is called periodically
+			with upload status. It is supplied with two parameters; the first
+			is the number of bytes already transferred, and the second is the total
+			size of the file to transfer.
+		:arg callable finished_callback: The callback for when the transfer
+			is completed.
+		:arg callable error_callback: The callback used if an error occurs.
+		"""
 		# Split and send the file.
 		if self.authmethod == 'node':
 			raise ValueError("You can not upload files with node authentication. Use user authentication instead.")

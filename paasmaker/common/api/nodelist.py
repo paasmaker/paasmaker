@@ -8,6 +8,10 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 class NodeListAPIRequest(APIRequest):
+	"""
+	Fetch a list of nodes in the cluster.
+	"""
+
 	def __init__(self, *args, **kwargs):
 		super(NodeListAPIRequest, self).__init__(*args, **kwargs)
 		self.method = 'GET'

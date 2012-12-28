@@ -10,9 +10,10 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 class NodeRegisterAPIRequest(APIRequest):
-
-	# TODO: Override the appropriate functions to turn down the
-	# connect and request timeouts.
+	"""
+	This API call is used to register a node. It's intended for
+	internal use only, and you should not call it from your code.
+	"""
 
 	def build_payload(self):
 		# Build our payload.
@@ -59,6 +60,10 @@ class NodeRegisterAPIRequest(APIRequest):
 		return '/node/register'
 
 	def process_response(self, response):
+		"""
+		This overriden process_response() function stores the nodes
+		new UUID into our configuration.
+		"""
 		if response.success:
 			# Save our nodes UUID.
 			self.configuration.set_node_uuid(response.data['node']['uuid'])
@@ -68,6 +73,11 @@ class NodeRegisterAPIRequest(APIRequest):
 				logger.error(error)
 
 class NodeUpdateAPIRequest(NodeRegisterAPIRequest):
+	"""
+	Update our node record on the master. This is a subclass
+	of the NodeRegisterAPIRequest that sends along the existing
+	UUID.
+	"""
 	def build_payload(self):
 		payload = super(NodeUpdateAPIRequest, self).build_payload()
 		payload['uuid'] = self.configuration.get_node_uuid()
@@ -77,10 +87,19 @@ class NodeUpdateAPIRequest(NodeRegisterAPIRequest):
 		return '/node/update'
 
 class NodeShutdownAPIRequest(NodeUpdateAPIRequest):
+	"""
+	Notify the master that we're shutting down, and allow it
+	to take the appropriate shutdown actions.
+	"""
 	def get_endpoint(self):
 		return '/node/shutdown'
 
 class NodeUpdatePeriodicManager(object):
+	"""
+	A class to periodically contact the master node and let
+	that node know that we're still alive, and update it on
+	anything that it might have missed.
+	"""
 	def __init__(self, configuration):
 		self.configuration = configuration
 		# Create the periodic handler.
@@ -102,6 +121,11 @@ class NodeUpdatePeriodicManager(object):
 		self.trigger()
 
 	def trigger(self):
+		"""
+		Trigger off a report to the master. If a report
+		is already in progress, records that one must
+		occur as soon as this one finishes.
+		"""
 		if self.reporting:
 			# Already reporting, indicate that it should follow
 			# this report with another one immediately.
@@ -111,6 +135,10 @@ class NodeUpdatePeriodicManager(object):
 			self._node_report_in()
 
 	def stop(self):
+		"""
+		Stop periodically calling back to the master.
+		Generally only used before shutting down the node.
+		"""
 		self.periodic.stop()
 		self.started = False
 
