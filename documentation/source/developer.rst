@@ -6,8 +6,32 @@ Developers Manual
 This is the developers manual, aimed at developers writing plugins or
 working on the core of the system.
 
+API
+---
+
+Paasmaker ships with a complete set of Python classes to interact with
+the server. This API is used by the command line client. You are also
+able to use this client directly.
+
 .. toctree::
    :maxdepth: 2
 
    developer-api
+
+Plugins
+-------
+
+Paasmaker contains a plugin API for many components, that allow
+you to easily extend Paasmaker in specific ways.
+
+Internals
+---------
+
+These document the internals of Paasmaker, useful for if you are
+hacking the core or developing plugins that require advanced
+integration with Paasmaker.
+
+.. toctree::
+   :maxdepth: 2
+
    developer-utils

@@ -134,6 +134,27 @@ is unavailable, but no more jobs can be started. It is expected that a system
 administrator will be notified in this case and can take corrective action within
 a short period of time.
 
+Instances
+---------
+
+Each application is organised into instances. Instances are the actual running
+application on the cluster, that can service HTTP traffic (although instances
+can be standalone, meaning that they do not need to serve HTTP traffic).
+
+The core idea is that each instance should have its own, paasmaker-allocated
+TCP port that speaks HTTP. For many types of applications, this is an appropriate
+built in HTTP server for each application. For PHP, this is an Apache instance
+with a virtual host configured to listen on the assigned port. For Python Tornado
+applications, this is an instance of the application listening on a TCP port.
+For Ruby applications, this might be a Thin application server listening for
+requests.
+
+Instances can start and stop based on user requests, replacement for failed
+instances, or in response to load to scale up to meet demand, or scale down
+as demand subsides.
+
+Once instances are running, the routers can then route HTTP traffic to them.
+
 Routing
 -------
 

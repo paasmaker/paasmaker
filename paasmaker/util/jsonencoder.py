@@ -6,6 +6,22 @@ import paasmaker
 import sqlalchemy
 
 class JsonEncoder(json.JSONEncoder):
+	"""
+	Slightly enhanced JSON encoder that knows how to encode
+	a few additional types than the default Python JSON encoder.
+
+	The following types are handled by this encoder:
+
+	* **datetime**: returns the date in ISO8601 format, in UTC.
+	* **set**: Considers the set as a list.
+	* **OrmBase**: Flattens the ORM objects using their ``flatten()`` method, returning the results.
+	* **sqlalchemy.orm.query.Query**: flattens into a list, and then processes the results as above.
+
+	To use it, just specify it as the encoder when encoding::
+
+		result = json.dumps(data, cls=paasmaker.util.jsonencoder.JsonEncoder)
+
+	"""
 	def default(self, obj):
 		if isinstance(obj, datetime.datetime):
 			# Dates are returned in ISO 8601 format, always in UTC.

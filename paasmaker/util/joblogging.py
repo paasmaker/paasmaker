@@ -17,6 +17,16 @@ logger.addHandler(logging.NullHandler())
 JOB_LOG_FORMAT = '%(asctime)s %(levelname)s %(message)s'
 
 class JobLoggingFileHandler(logging.Handler):
+	"""
+	A log handler to write job logs to seperate files based
+	on the job ID.
+
+	This class basically sorts the incoming log entries
+	to write them to the appropriate JobLoggerAdapter.
+
+	:arg Configuration configuration: The configuration
+		object to use to get settings.
+	"""
 	def __init__(self, configuration):
 		logger.debug("Setting up JobLoggingFileHandler.")
 		self.configuration = configuration
@@ -25,13 +35,18 @@ class JobLoggingFileHandler(logging.Handler):
 		self.formatter = logging.Formatter(JOB_LOG_FORMAT)
 
 		# Subscribe to job updates, so we can close handlers as appropriate.
-		pub.subscribe(self.job_status_change, 'job.status')
+		pub.subscribe(self._job_status_change, 'job.status')
 		# And a takeover if we want to free the FD's for another purpose.
-		pub.subscribe(self.job_file_takeover, 'job.takeover')
+		pub.subscribe(self._job_file_takeover, 'job.takeover')
 
 		logger.debug("Completed __init__ of JobLoggingFileHandler.")
 
 	def emit(self, record):
+		"""
+		Overridden ``emit()`` function. If the incoming
+		record has a job ID, it is written to the appropriate
+		handler. Otherwise, the record is dropped.
+		"""
 		# This handler only logs if there is a job id.
 		if record.__dict__.has_key('job'):
 			job_id = record.job
@@ -40,6 +55,12 @@ class JobLoggingFileHandler(logging.Handler):
 			handler.emit(record)
 
 	def get_handler(self, job_id):
+		"""
+		For the given job ID, find a handler that can write it
+		to file. Creates a new handler if required.
+
+		:arg str job_id: The job ID to fetch the handler for.
+		"""
 		if self.handlers.has_key(job_id):
 			return self.handlers[job_id]
 		else:
@@ -49,18 +70,29 @@ class JobLoggingFileHandler(logging.Handler):
 			return handler
 
 	def close_handler(self, job_id):
+		"""
+		Explicitely close a job log handler, typically so it
+		can be taken over by another process for writing.
+		Or, because the job has finished, in which case it
+		saves memory.
+		"""
 		if self.handlers.has_key(job_id):
 			self.handlers[job_id].close()
 			del self.handlers[job_id]
 
-	def job_status_change(self, message):
-		logger.debug("Job status change: job_id %s, state %s, source %s", message.job_id, message.state, message.source)
+	def _job_status_change(self, message):
+		logger.debug(
+			"Job status change: job_id %s, state %s, source %s",
+			message.job_id,
+			message.state,
+			message.source
+		)
 		if message.state in constants.JOB_FINISHED_STATES:
 			# Pubsub callback for job status change.
 			# Close off that handler.
 			self.close_handler(message.job_id)
 
-	def job_file_takeover(self, job_id):
+	def _job_file_takeover(self, job_id):
 		# Close the handler for that job - freeing up the file.
 		self.close_handler(job_id)
 
@@ -69,20 +101,50 @@ class JobLoggingFileHandler(logging.Handler):
 # And if there is a lot of log output, it would make sense to batch
 # it up in 200ms batches. I'm open to suggestions here.
 class JobWatcher(object):
+	"""
+	Watch a job log file, publishing a message when the contents
+	of the file changes.
+
+	This is a poor-mans inotify handler. See the source code
+	for the justification for this purpose at this time.
+
+	Internally, it works by checking to see if the log file
+	has changed size every 200ms, and publishing an event if it has.
+
+	:arg Configuration configuration: The configuration object to
+		fetch settings from.
+	"""
 	def __init__(self, configuration):
 		self.configuration = configuration
 		self.watches = {}
 		# TODO: Allow this interval to be adjusted?
-		self.periodic = tornado.ioloop.PeriodicCallback(self.check_log_files, 200, io_loop=configuration.io_loop)
+		self.periodic = tornado.ioloop.PeriodicCallback(
+			self._check_log_files,
+			200,
+			io_loop=configuration.io_loop
+		)
 		self.active = False
 
 	def add_watch(self, job_id):
+		"""
+		Start watching the log file for the given job ID.
+
+		:arg str job_id: The job ID to start watching.
+		"""
 		if self.watches.has_key(job_id):
 			self.watches[job_id]['ref'] += 1
-			logger.debug("Incrementing reference count for %s - now %d.", job_id, self.watches[job_id]['ref'])
+			logger.debug(
+				"Incrementing reference count for %s - now %d.",
+				job_id,
+				self.watches[job_id]['ref']
+			)
 		else:
 			filename = self.configuration.get_job_log_path(job_id)
-			self.watches[job_id] = {'size': os.path.getsize(filename), 'filename': filename, 'ref': 1}
+			self.watches[job_id] = {
+				'size': os.path.getsize(filename),
+				'filename': filename,
+				'ref': 1
+			}
 			logger.debug("Adding watch on file %s for job %s", filename, job_id)
 			if not self.active:
 				logger.debug("Watch for job %s means we're starting the timer.", job_id)
@@ -90,10 +152,19 @@ class JobWatcher(object):
 				self.active = True
 
 	def remove_watch(self, job_id):
+		"""
+		Stop watching the log file for a given job ID.
+
+		:arg str job_id: The job ID to stop watching.
+		"""
 		filename = self.configuration.get_job_log_path(job_id)
 		if self.watches.has_key(job_id):
 			self.watches[job_id]['ref'] -= 1
-			logger.debug("Decrementing reference count for %s - now %d.", job_id, self.watches[job_id]['ref'])
+			logger.debug(
+				"Decrementing reference count for %s - now %d.",
+				job_id,
+				self.watches[job_id]['ref']
+			)
 			if self.watches[job_id]['ref'] < 1:
 				logger.debug("Removing watch of %s for job %s", filename, job_id)
 				del self.watches[job_id]
@@ -103,11 +174,19 @@ class JobWatcher(object):
 					self.active = False
 
 	def trigger_watch(self, job_id):
+		"""
+		Trigger a watch message for the given job ID.
+
+		You can call this manually if you need to.
+
+		:arg str job_id: The job ID to trigger a watch
+			on.
+		"""
 		logger.debug("Watched job %s has changes - notifying people.", job_id)
 		topic = self.configuration.get_job_message_pub_topic(job_id)
 		pub.sendMessage(topic, job_id=job_id)
 
-	def check_log_files(self):
+	def _check_log_files(self):
 		for job_id, meta in self.watches.iteritems():
 			size = os.path.getsize(meta['filename'])
 			#logger.debug("Checking file %s (old %d, new %d)", meta['filename'], meta['size'], size)
@@ -116,6 +195,22 @@ class JobWatcher(object):
 				self.trigger_watch(job_id)
 
 class JobLoggerAdapter(logging.LoggerAdapter):
+	"""
+	A job logging adapter that encapsulates the extra
+	context required to correctly route log entries
+	to the correct file.
+
+	You should not instantiate this directly - do so via
+	the ``get_job_logger()`` method of the ``Configuration`` object.
+
+	It supplies some extra methods that normal ``LoggerAdapter``
+	objects do not have for your convenience.
+
+	:arg LoggerAdapter logger: The original logger.
+	:arg str job_id: The job ID that this adapter is for.
+	:arg Configuration configuration: The configuration object.
+	:arg JobWatcher watcher: The job log file watcher.
+	"""
 	def __init__(self, logger, job_id, configuration, watcher):
 		self.job_id = job_id
 		self.configuration = configuration
@@ -123,11 +218,20 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 		super(JobLoggerAdapter, self).__init__(logger, {'job':job_id})
 
 	def complete(self, state, summary):
+		"""
+		Mark this job as complete.
+		"""
 		if self.watcher:
 			# Trigger a file watch.
 			self.watcher.trigger_watch(self.job_id)
 
 	def takeover_file(self):
+		"""
+		Close the associated log file, so another process can write
+		to it. Returns an open file pointer that you can write to.
+		You should store this file pointer and return it when
+		calling ``untakeover_file()``.
+		"""
 		# Close the file, if it's open.
 		pub.sendMessage('job.takeover', job_id=self.job_id)
 		# Open the file up again...
@@ -139,6 +243,12 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 		return open(job_file, 'ab')
 
 	def untakeover_file(self, fp):
+		"""
+		Undo the takeover of the log file.
+
+		:arg file fp: The file pointer object returned when calling
+			``takeover_file()``.
+		"""
 		# Undo the takeover.
 		fp.close()
 		if self.watcher:
@@ -149,6 +259,11 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 
 	@staticmethod
 	def setup_joblogger(configuration):
+		"""
+		Set up the job logging system.
+
+		You should call this when starting up the application.
+		"""
 		joblogger = logging.getLogger('job')
 		# TODO: This level should be adjustable, but how to make it
 		# adjustable per job?

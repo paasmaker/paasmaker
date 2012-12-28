@@ -6,6 +6,10 @@ import os
 import tempfile
 
 class NoConfigurationFileException(Exception):
+	"""
+	Exception thrown when unable to find a configuration file in
+	the supplied search paths.
+	"""
 	def __init__(self, paths):
 		self.paths = paths
 
@@ -13,6 +17,15 @@ class NoConfigurationFileException(Exception):
 		return "Can't find a configuration file in %s" % str(self.paths)
 
 class InvalidConfigurationException(Exception):
+	"""
+	Exception thrown when the configuration is invalid for
+	some reason.
+
+	:arg colander.Invalid colander_exception: The colander.Invalid
+		source exception, if this error originated from Colander.
+	:arg str raw_configuration: The raw configuration text.
+	:arg dict parsed_configuration: The parsed configuration, if available.
+	"""
 	def __init__(self, colander_exception, raw_configuration, parsed_configuration):
 		self.raw_configuration = raw_configuration
 		self.parsed_configuration = parsed_configuration
@@ -27,6 +40,13 @@ class InvalidConfigurationException(Exception):
 		pass
 
 class ConfigurationHelper(dict):
+	"""
+	A configuration helper base class. Provides helpers for other
+	configuration objects, to help with parsing and error handling.
+
+	:arg colander.Schema schema: The Schema used to validate the
+		incoming configuration.
+	"""
 	def __init__(self, schema):
 		self.filename = None
 		self.parsed = {}
@@ -35,6 +55,13 @@ class ConfigurationHelper(dict):
 		self.raw = None
 
 	def load(self, raw):
+		"""
+		Load the given raw configuration, and validate it against
+		the Colander schema. Raises an InvalidConfigurationException
+		on error.
+
+		:arg str raw: The raw configuration, in Yaml format.
+		"""
 		# Convert to Yaml.
 		# NOTE: We always use safe_load, the yaml should have no reason
 		# to make Python classes.
@@ -55,16 +82,30 @@ class ConfigurationHelper(dict):
 		self.post_load()
 
 	def update_flat(self):
+		"""
+		Update the internal flat representation of the configuration,
+		from the current dict of settings.
+
+		Intended to be used when the dict of settings changes.
+		"""
 		self.flat = self.schema.flatten(self)
 
 	def post_load(self):
 		"""
 		Overide this in your subclass to check the data that you loaded.
-		TODO: Figure out how exceptions should be handled.
+		This is called immediately after the data is parsed and flattened.
 		"""
 		pass
 
 	def load_from_file(self, search_path):
+		"""
+		Load the configuration from one of the paths supplied.
+		Raises a NoConfigurationFileException if it can not
+		find a file in the search path.
+
+		:arg list search_path: The paths to check for existence.
+			The first existing path is loaded.
+		"""
 		for path in search_path:
 			if os.path.exists(path):
 				# Load this file.
@@ -77,15 +118,38 @@ class ConfigurationHelper(dict):
 		raise NoConfigurationFileException(search_path)
 
 	def get_flat(self, key):
+		"""
+		Get a configuration entry by its flat key.
+
+		For example, 'pacemaker.enabled' returns
+		the value from self['pacemaker']['enabled'].
+
+		For full details on how this works, read up on
+		how Colander flattens data structures.
+		"""
 		return self.flat[key]
 
 	def dump(self):
+		"""
+		Dump the contents of this configuration object to the
+		debug log stream.
+		"""
 		keys = self.flat.keys()
 		keys.sort()
 		for key in keys:
 			logging.debug("%s: %s", key, str(self.flat[key]))
 
 	def load_plugins(self, registry, datasource):
+		"""
+		Load the plugins from the given data source,
+		into the given registry. This is used by the main
+		configuration to quickly load plugins.
+
+		:arg PluginRegistry registry: The plugin registry to load
+			plugins into.
+		:arg list datasource: The data source describing the
+			plugins.
+		"""
 		for entry in datasource:
 			name = entry['name']
 			klass = entry['class']

@@ -13,11 +13,34 @@ from processcheck import ProcessCheck
 import tornado
 
 class CommandSupervisorLauncher(object):
+	"""
+	Launch and handle the lifecycle of a command supervisor.
+
+	:arg Configuration configuration: The configuration object.
+	:arg str instance_id: The instance ID to launch or manage.
+	"""
 	def __init__(self, configuration, instance_id):
 		self.configuration = configuration
 		self.instance_id = instance_id
 
 	def launch(self, command, cwd, environment, exit_key, port):
+		"""
+		Launch the given command using the command supervisor.
+
+		This will return immediately, and the output will be piped
+		into a log file. If the supervised command exits, it will
+		report it back to the heart via the exit key supplied.
+
+		:arg str|list command: The command line to execute. Either
+			a list or string is allowed.
+		:arg str cwd: The working directory for the command.
+		:arg dict environment: The environment for the command.
+			Typically this will select the appropriate runtime.
+		:arg str exit_key: The exit key that the command will
+			use when it exits, to authenticate with the heart.
+		:arg int port: The TCP port that the instance should be
+			listening on. If standalone, you still require a port.
+		"""
 		if isinstance(command, basestring):
 			command = shlex.split(str(command))
 		payload = {}
@@ -28,9 +51,9 @@ class CommandSupervisorLauncher(object):
 		payload['exit_key'] = exit_key
 		payload['port'] = port
 		payload['log_file'] = self.configuration.get_job_log_path(self.instance_id)
-		payload['pidfile'] = self.get_pid_path()
+		payload['pidfile'] = self._get_pid_path()
 
-		payload_path = self.get_payload_path()
+		payload_path = self._get_payload_path()
 		fp = open(payload_path, 'w')
 		fp.write(json.dumps(payload))
 		fp.close()
@@ -43,22 +66,28 @@ class CommandSupervisorLauncher(object):
 		command_line = "%s %s > %s 2>&1 &" % (supervisor, payload_path, payload['log_file'])
 		subprocess.check_call(command_line, shell=True)
 
-	def get_supervisor_dir(self):
+	def _get_supervisor_dir(self):
 		path = self.configuration.get_scratch_path("supervisor")
 		if not os.path.exists(path):
 			os.makedirs(path)
 		return path
 
-	def get_pid_path(self):
-		root = self.get_supervisor_dir()
+	def _get_pid_path(self):
+		root = self._get_supervisor_dir()
 		return os.path.join(root, "%s.pid" % self.instance_id)
 
-	def get_payload_path(self):
-		root = self.get_supervisor_dir()
+	def _get_payload_path(self):
+		root = self._get_supervisor_dir()
 		return os.path.join(root, "%s.json" % self.instance_id)
 
 	def kill(self):
-		pidfile = self.get_pid_path()
+		"""
+		Kill the supervised command.
+
+		The command supervisor itself is sent the kill signal,
+		and that organises to kill the actual command itself.
+		"""
+		pidfile = self._get_pid_path()
 		if os.path.exists(pidfile):
 			fp = open(pidfile, 'r')
 			pid = int(fp.read())
@@ -66,7 +95,10 @@ class CommandSupervisorLauncher(object):
 			os.kill(pid, signal.SIGHUP)
 
 	def is_running(self):
-		pidfile = self.get_pid_path()
+		"""
+		Check to see if the supervisor is still running.
+		"""
+		pidfile = self._get_pid_path()
 		if os.path.exists(pidfile):
 			fp = open(pidfile, 'r')
 			pid = int(fp.read())
@@ -76,7 +108,14 @@ class CommandSupervisorLauncher(object):
 			return False
 
 	def get_unreported_exit_code(self):
-		root = self.get_supervisor_dir()
+		"""
+		Check to see if the supervised command exited, but was
+		unable to report it back due to the heart being down.
+
+		Returns None if there is no unreported code, or the
+		exit code otherwise.
+		"""
+		root = self._get_supervisor_dir()
 		path = os.path.join(root, "%s.exited" % self.instance_id)
 		if os.path.exists(path):
 			fp = open(path, 'r')
