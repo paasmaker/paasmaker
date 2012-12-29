@@ -12,15 +12,14 @@ class StreamingChecksum(object):
 	the IO loop so as not to grind the whole process to a halt. Also logs it's
 	progress to the supplied logger, to provide feedback for users as to what
 	it's up to.
+
+	:arg str target: The target file to calculate the checksum of.
+	:arg IOLoop io_loop: The IO loop to operate on.
+	:arg LoggerAdapter logger: The logger to log progress to (logs to
+		the INFO level).
+	:arg int chunk_size: How much of the file to read on each iteration.
 	"""
 	def __init__(self, target, io_loop, logger, chunk_size=204800):
-		"""
-		Set up a new checksummer.
-		target: the target file (must exist)
-		io_loop: the IO loop to schedule on.
-		logger: the logger to log progress to.
-		chunk_size: how much to read from the file each time.
-		"""
 		self.target = target
 		self.io_loop = io_loop
 		self.logger = logger
@@ -33,17 +32,18 @@ class StreamingChecksum(object):
 		"""
 		Kick off the checksumming process, and call back
 		the supplied callback once done.
+
+		:arg callable callback: The callback to call when completed.
+			The callback is called with a single string argument,
+			which is the checksum.
 		"""
 		self.callback = callback
 		self.fp = open(self.target, 'rb')
 		self.md5 = hashlib.md5()
-		self.io_loop.add_callback(self.loop)
+		self.io_loop.add_callback(self._loop)
 
-	def loop(self):
-		"""
-		Read the next section of file, updating the checksum
-		or returning the result as appropriate.
-		"""
+	def _loop(self):
+		# Read the next section of the file.
 		section = self.fp.read(self.chunk_size)
 		if section == '':
 			# End of file.
@@ -59,7 +59,7 @@ class StreamingChecksum(object):
 			if self.total_size > 0:
 				percent = (float(self.current_size) / float(self.total_size)) * 100
 			self.logger.info("Read %d/%d bytes (%0.1f%%)", self.current_size, self.total_size, percent)
-			self.io_loop.add_callback(self.loop)
+			self.io_loop.add_callback(self._loop)
 
 class StreamingChecksumTest(tornado.testing.AsyncTestCase):
 	def test_simple(self):

@@ -17,10 +17,7 @@ Process Utilities
 .. autoclass:: paasmaker.util.processcheck.ProcessCheck
     :members:
 
-JSON
-----
-
-.. autoclass:: paasmaker.util.jsonencoder.JsonEncoder
+.. autoclass:: paasmaker.util.popen.Popen
     :members:
 
 Configuration
@@ -46,4 +43,13 @@ Job Logging
 
 
 .. autoclass:: paasmaker.util.joblogging.JobLoggerAdapter
+    :members:
+
+Misc
+----
+
+.. autoclass:: paasmaker.util.jsonencoder.JsonEncoder
+    :members:
+
+.. autoclass:: paasmaker.util.streamingchecksum.StreamingChecksum
     :members:

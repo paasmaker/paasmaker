@@ -1,6 +1,14 @@
 # Based on https://gist.github.com/3492507.
 # Epic win.
 
+# This code is was written by Roey Berman and fetched from
+# the gist URL above. I have contacted the author to find
+# out what the licence is. His plan was to get this included in
+# Tornado's core. This has not yet occurred; but because of that
+# declaration, that would make this code licenced under the
+# Apache V2 licence, like Tornado.
+# Thanks for your incredible work.
+
 import logging
 import shlex
 import subprocess
@@ -20,6 +28,10 @@ from mock import patch
 import functools
 
 class Manager(object):
+    """
+    A manager helper class, to manage on_exit() callbacks for Popen
+    objects.
+    """
     def __init__(self, io_loop = None):
         self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
         self.children = dict()
@@ -46,6 +58,25 @@ class Manager(object):
                 child.join(rc)
 
 class Popen(subprocess.Popen):
+    """
+    An asynchronous version of Popen, designed to work
+    with Tornado. Allows subprocesses to be started asyncrhonously,
+    either capturing their output via callbacks, and more importantly,
+    being able to catch exit events asynchronously.
+
+    Other than the arguments listed below, the remaining arguments
+    are the same as for the standard ``subprocess.Popen`` class.
+
+    This class is here courtesy of Roey Berman.
+
+    :arg str|list cmd: The command to run.
+    :arg bool redirect_stderr: If true, redirect stderr to stdout.
+    :arg callable on_stdout: A callback to call with stdout output.
+    :arg callable on_stderr: A callback to call with stderr output.
+    :arg callable on_exit: A callback to call when the process exits.
+        The single argument is the exit code of the process.
+    :arg IOLoop io_loop: The tornado IO loop to use.
+    """
     _manager = None
 
     def __init__(self, cmd, uid = None, redirect_stderr = False, on_stdout = None, on_stderr = None, on_exit = None, io_loop = None, *args, **kwargs):

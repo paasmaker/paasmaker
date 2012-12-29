@@ -47,7 +47,13 @@ vm-enabled no
 
 	def configure(self, working_dir, port, bind_host, password=None):
 		"""
-		Configure this instance.
+		Configure this Redis instance.
+
+		:arg str working_dir: The working directory to store files.
+		:arg int port: The TCP port to listen on.
+		:arg str bind_host: The IP address to bind to.
+		:arg str|None password: If supplied, clients will require
+			this password to connect to the daemon.
 		"""
 		# TODO: Allow a memory limit.
 		# TODO: Allow custom configuration entries.
@@ -101,13 +107,20 @@ vm-enabled no
 	def get_client(self):
 		"""
 		Get a redis client object for this instance.
+
+		CAUTION: This should only be used for unit tests. It
+		returns a persistent connection that could cause some
+		weird behaviour with production use.
 		"""
 		if self.client:
 			return self.client
 
 		# Create a client for it.
-		self.client = tornadoredis.Client(host=self.parameters['host'],
-			port=self.parameters['port'], io_loop=self.configuration.io_loop)
+		self.client = tornadoredis.Client(
+			host=self.parameters['host'],
+			port=self.parameters['port'],
+			io_loop=self.configuration.io_loop
+		)
 		self.client.connect()
 
 		return self.client

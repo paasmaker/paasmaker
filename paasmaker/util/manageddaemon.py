@@ -11,23 +11,31 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 class ManagedDaemonError(Exception):
+	"""
+	Base error for exceptions raised by managed Daemons.
+	"""
 	pass
 
 class ManagedDaemon(object):
+	"""
+	Managed daemon base class, provding helpers to other managed daemons.
+	"""
 
 	def __init__(self, configuration):
 		self.configuration = configuration
 		self.parameters = {}
 		self.client = None
 
-	# Your subclass should supply a configure() method.
-	# And a few other things as well - a start() specifically.
+	# Your subclass should supply a configure() method and a start()
+	# method. And then override anything else it might need.
 
 	def load_parameters(self, working_dir):
 		"""
 		Load the parameters from the working directory.
 
 		Throws an exception if that directory is not configured.
+
+		:arg str working_dir: The working directory for this daemon.
 		"""
 		parameters_path = self.get_parameters_path(working_dir)
 		config_path = self.get_configuration_path(working_dir)
@@ -62,6 +70,9 @@ class ManagedDaemon(object):
 		return os.path.join(working_dir, 'service.conf')
 
 	def is_running(self, keyword=None):
+		"""
+		Check to see if this managed daemon is running or not.
+		"""
 		pid = self.get_pid()
 		if pid:
 			# Do an advanced check on pid.
@@ -71,6 +82,10 @@ class ManagedDaemon(object):
 			return False
 
 	def get_port(self):
+		"""
+		Get the TCP port that this managed daemon should be
+		listening on.
+		"""
 		return self.parameters['port']
 
 	def get_pid(self):
@@ -92,6 +107,13 @@ class ManagedDaemon(object):
 		raise NotImplementedError("You must implement get_pid_path().")
 
 	def start_if_not_running(self, callback, error_callback):
+		"""
+		Start up the managed daemon if it's not running.
+
+		:arg callable callback: The callback for when it is running.
+		:arg callback error_callback: The callback for when an error
+			occurs.
+		"""
 		if not self.is_running():
 			logging.debug("Starting up managed daemon as it's not currently running.")
 			self.start(callback, error_callback)
@@ -100,11 +122,17 @@ class ManagedDaemon(object):
 			callback("Already running.")
 
 	def destroy(self):
+		"""
+		Destroy this managed instance. Typically used for unit tests
+		to be able to remove all temporary files.
+		"""
 		raise NotImplementedError("You must implement destroy()")
 
 	def stop(self, sig=signal.SIGTERM):
 		"""
 		Stop this instance of the daemon, allowing for it to be restarted later.
+
+		Optionally, specify the signal to get the daemon to stop.
 		"""
 		pid = self.get_pid()
 		if pid:
