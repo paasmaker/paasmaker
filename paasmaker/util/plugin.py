@@ -6,7 +6,13 @@ import logging
 from paasmaker.common.core.constants import Enum
 
 # From http://stackoverflow.com/questions/452969/does-python-have-an-equivalent-to-java-class-forname
-def get_class( kls ):
+def get_class(kls):
+	"""
+	Helper function to get a class from its
+	fully qualified name.
+
+	:arg str kls: The class name to fetch.
+	"""
 	parts = kls.split('.')
 	module = ".".join(parts[:-1])
 	m = __import__( module )
@@ -61,7 +67,8 @@ class Plugin(object):
 	"""
 	A subclass for your classes to make them into plugins.
 	Note that you need the __init__ method supplied by this
-	class.
+	class, and should not override it.
+
 	To use, you will need to give your plugin metadata, that
 	indicate what modes it runs in, and also any options schema.
 	"""
@@ -83,11 +90,13 @@ class Plugin(object):
 			# Use the supplied logger. Subclasses should use this.
 			self.logger = logger
 
-	def check_options(self):
+	def _check_options(self):
 		"""
 		Helper function to validate the options supplied when instantiated,
 		and to throw an exception if it fails. This stores a flat version
 		of the options for your subclasses's convenience.
+
+		Typically this is only called by the plugin registry itself.
 		"""
 		try:
 			# Validate.
@@ -100,11 +109,13 @@ class Plugin(object):
 			# Because the default output is rather confusing...!
 			raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self.raw_options)
 
-	def check_parameters(self, mode):
+	def _check_parameters(self, mode):
 		"""
 		Helper function to validate the parameters supplied when instantiated,
 		and to throw an exception if it fails. This also stores a flat version
 		of the parameters for your subclasses's convenience.
+
+		Typically this is only called by the plugin registry itself.
 		"""
 		try:
 			# Validate.
@@ -118,13 +129,25 @@ class Plugin(object):
 			raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self.raw_parameters)
 
 	def get_flat_option(self, key):
+		"""
+		Get a flat option from the plugin's configured options.
+
+		:arg str key: The key to fetch.
+		"""
 		return self.options_flat[key]
+
 	def get_flat_parameter(self, key):
+		"""
+		Get a flat parameter from the plugin's parameters.
+
+		:arg str key: The key to fetch.
+		"""
 		return self.parameters_flat[key]
 
-class PluginRegistry:
+class PluginRegistry(object):
 	"""
 	A plugin registry.
+
 	This matches tag names (eg, "paasmaker.service.foo") to classes (which should
 	be an importable fully dotted class - doesn't have to be in the paasmaker module).
 	When prompted, it can instantiate them. Plugins should be a subclass of Plugin
@@ -134,10 +157,11 @@ class PluginRegistry:
 	people could instantiate Python objects directly. This requires the classes
 	to be set explicitly. It also seperates the names in configurations from
 	users, so sysadmins could switch out implementations if they needed to, or
-	have alternate versions for their needs with different configuration.
+	register multiple versions for their needs with different configuration.
 
 	Finally, the reason to use plugins is that it splits global configuration for
-	the plugins and the runtime parameters, which come from different sources.
+	the plugins and the runtime parameters, which come from different sources. Not
+	all plugins have runtime options, however.
 	"""
 
 	def __init__(self, configuration):
@@ -152,6 +176,16 @@ class PluginRegistry:
 		self.title_registry = {}
 
 	def register(self, plugin, klass, options, title):
+		"""
+		Register a plugin with this registry.
+
+		:arg str plugin: The symbolic name of the plugin.
+		:arg str klass: The fully dotted importable path to
+			the class that provides this plugin.
+		:arg dict options: The options for this plugin.
+		:arg str title: A title used when displaying this
+			plugin to the user.
+		"""
 		# Find the class object that matches the supplied string name.
 		former = get_class(klass)
 
@@ -191,20 +225,47 @@ class PluginRegistry:
 				raise ValueError("Supplied class does not have a parameter schema, but has a mode that accepts parameters.")
 
 	def exists(self, plugin, mode):
+		"""
+		Check to see if a plugin exists, for the given mode.
+
+		:arg str plugin: The plugin to test.
+		:arg str mode: The mode to test for.
+		"""
 		has_class = self.class_registry.has_key(plugin)
 		has_mode = self.mode_registry.has_key(mode) and (plugin in self.mode_registry[mode])
 		return has_class and has_mode
 
-	def class_for(self, plugin):
-		klass = get_class(self.class_registry[plugin])
-		return klass
-
 	def title(self, plugin):
+		"""
+		Return the title of the given plugin.
+
+		:arg str plugin: The plugin to fetch the title for.
+		"""
 		if not self.title_registry.has_key(plugin):
 			raise ValueError("No such plugin %s" % plugin)
 		return self.title_registry[plugin]
 
 	def instantiate(self, plugin, mode, parameters=None, logger=None):
+		"""
+		Instantiate a plugin and return the instance of the plugin.
+
+		If the plugin takes runtime parameters, pass those in to this
+		function. If you do not pass parameters and the plugin
+		requires them, a ValueError exception will be raised.
+
+		Where possible, pass in an appropriate job logger for the
+		logger parameter. This will allow the plugin to log to the
+		appropriate place. If you don't pass one in, the plugin
+		will choose one to write to on startup - but will probably
+		not be what you want.
+
+		:arg str plugin: The plugin to instantiate.
+		:arg str mode: The mode to put the plugin into.
+		:arg dict|None parameters: The runtime parameters
+			for the plugin, or None if it requires none.
+		:arg LoggerAdapter logger: The logging adapter, passed into
+			the plugin to allow it to log to the correct location.
+		"""
 		klass = get_class(self.class_registry[plugin])
 		if not klass.MODES.has_key(mode):
 			raise ValueError("Plugin %s does not have mode %s" % (plugin, mode))
@@ -212,7 +273,7 @@ class PluginRegistry:
 		instance = klass(self.configuration, mode, self.options_registry[plugin], parameters, plugin, logger)
 
 		# Get it to recheck options.
-		instance.check_options()
+		instance._check_options()
 
 		# And recheck parameters if it requires them.
 		if MODE_REQUIRE_PARAMS[mode]:
@@ -221,11 +282,20 @@ class PluginRegistry:
 			elif not instance.MODES.has_key(mode):
 				raise ValueError("Plugin %s does not have a paramters schema, but it should." % plugin)
 			else:
-				instance.check_parameters(mode)
+				instance._check_parameters(mode)
 
 		return instance
 
 	def plugins_for(self, mode):
+		"""
+		Fetch a list of plugins that can be instantiated in the given
+		mode. Used to build lists of available services, SCMs, or other
+		internal providers.
+
+		A list of only the symbolic plugin names is returned.
+
+		:arg str mode: The mode to search for.
+		"""
 		if not self.mode_registry.has_key(mode):
 			# No plugins match this mode.
 			return []
@@ -244,6 +314,14 @@ class PluginExampleParametersSchema(colander.MappingSchema):
 	parameter2 = colander.SchemaNode(colander.String(), default="Test", missing="Test")
 
 class PluginExample(Plugin):
+	"""
+	An example plugin, showing how to use the plugin API.
+
+	View the source code to get a full description of the code.
+
+	See above this class for example Colander schemas for options
+	and parameters.
+	"""
 	MODES = {
 		MODE.TEST_PARAM: PluginExampleParametersSchema(),
 		MODE.TEST_NOPARAM: None
@@ -251,7 +329,38 @@ class PluginExample(Plugin):
 	OPTIONS_SCHEMA = PluginExampleOptionsSchema()
 
 	def do_nothing(self):
-		pass
+		# Various base plugins will define the signatures of functions
+		# that you need to implement.
+
+		# You can get your called name - your symbolic name - with
+		# this parameter:
+		called_name = self.called_name
+		# This can be useful to create temporary or persistent files
+		# that won't conflict with other plugins.
+
+		# When logging - get the stored logger:
+		self.logger.info("This is an example message.")
+
+		# Every plugin is passed a Configuration object. This is the
+		# global configuration object. On it is also the Tornado
+		# IOLoop - you should always use this one rather than the global
+		# one, which makes your code unit testable easily.
+		global_config = self.configuration
+		# io_loop = self.configuration.io_loop
+
+		# To fetch out your configuration options:
+		opt = self.options['option1']
+		opt = self.get_flat_option('option1')
+
+		# Or if you have something special that Colander can't handle:
+		opt = self.raw_options['option1']
+
+		# For runtime parameters (if required/supplied):
+		runtime_opt = self.parameters['parameter1']
+		runtime_opt = self.get_flat_parameter('parameter1')
+
+		# Or if you have something special that Colander can't handle:
+		runtime_opt = self.raw_parameters['parameter1']
 
 class TestExample(unittest.TestCase):
 	def test_plugin_registration(self):
@@ -260,11 +369,20 @@ class TestExample(unittest.TestCase):
 
 		self.assertFalse(registry.exists('paasmaker.test', MODE.TEST_PARAM), "Plugin already exists?")
 
-		registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {'option1': 'test'}, "Test Plugin")
+		registry.register(
+			'paasmaker.test',
+			'paasmaker.util.PluginExample',
+			{'option1': 'test'},
+			"Test Plugin"
+		)
 
 		self.assertTrue(registry.exists('paasmaker.test', MODE.TEST_PARAM), "Plugin doesn't exist.")
 
-		instance = registry.instantiate('paasmaker.test', MODE.TEST_PARAM, {'parameter1': 'test'})
+		instance = registry.instantiate(
+			'paasmaker.test',
+			MODE.TEST_PARAM,
+			{'parameter1': 'test'}
+		)
 		instance.do_nothing()
 
 		self.assertTrue(isinstance(instance, PluginExample), "Instance is not a PluginExample")
@@ -275,7 +393,12 @@ class TestExample(unittest.TestCase):
 	def test_plugin_bad_options(self):
 		registry = PluginRegistry(2)
 		try:
-			registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {}, "Test Plugin")
+			registry.register(
+				'paasmaker.test',
+				'paasmaker.util.PluginExample',
+				{},
+				"Test Plugin"
+			)
 			self.assertTrue(False, "Should have thrown exception.")
 		except paasmaker.common.configuration.configuration.InvalidConfigurationException, ex:
 			self.assertTrue(True, "Didn't throw exception as expected.")
@@ -284,14 +407,23 @@ class TestExample(unittest.TestCase):
 		registry = PluginRegistry(2)
 		registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {'option1': 'test'}, "Test Plugin")
 		try:
-			instance = registry.instantiate('paasmaker.test', MODE.TEST_PARAM, {'foo': 'bar'})
+			instance = registry.instantiate(
+				'paasmaker.test',
+				MODE.TEST_PARAM,
+				{'foo': 'bar'}
+			)
 			self.assertTrue(False, "Should have thrown exception.")
 		except paasmaker.common.configuration.configuration.InvalidConfigurationException, ex:
 			self.assertTrue(True, "Didn't throw exception as expected.")
 
 	def test_plugin_no_parameters(self):
 		registry = PluginRegistry(2)
-		registry.register('paasmaker.test', 'paasmaker.util.PluginExample', {'option1': 'test'}, "Test Plugin")
+		registry.register(
+			'paasmaker.test',
+			'paasmaker.util.PluginExample',
+			{'option1': 'test'},
+			"Test Plugin"
+		)
 		try:
 			instance = registry.instantiate('paasmaker.test', MODE.TEST_PARAM)
 			self.assertTrue(False, "Should have thrown exception.")

@@ -24,6 +24,11 @@ Plugins
 Paasmaker contains a plugin API for many components, that allow
 you to easily extend Paasmaker in specific ways.
 
+.. toctree::
+   :maxdepth: 2
+
+   developer-plugins
+
 Internals
 ---------
 
