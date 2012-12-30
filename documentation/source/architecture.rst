@@ -192,3 +192,33 @@ with the performance of the router.
 * It then logs to result of that request to file with the appropriate logging
   key, so that request can be accounted to a specific instance type.
 
+Security and Mutli-tenancy
+--------------------------
+
+Paasmaker has (at this time) been designed to run in small clusters, with
+applications that you trust. In the default setup, all components of the system
+run as the same user; and applications do not have any specific restrictions
+on file access. So there is little to stop an application from reading your
+Paasmaker configuration file or meddling with other Paasmaker related files.
+
+User passwords are stored in the database with a per-user salt, which will
+make them difficult to crack even with the hash. Other access information,
+such as the super token, are stored in the configuration file in plain text.
+
+Only Pacemaker nodes need access to the SQL database. The Job Management
+system uses a seperate Redis, which does isolate other nodes somewhat.
+
+In the future, Paasmaker will likely be altered to have better protections
+for this. One way to do this would be to run the node with root permissions, and
+have it drop to a seperate non-privileged user for various application actions
+- although this will have it's own set of concerns and issues.
+
+For now, you can do several of the following things to work around this issue:
+
+* Seperate the Pacemaker and the heart nodes onto seperate hosts. Hearts do not
+  need to have or know the cluster's super token, and even with the Node token,
+  can only take a few specific cluster actions.
+* As an enhancement to the above, you can disable prepare commands by simply
+  not registering any plugins that are able to run prepare commands. You will
+  obviously lose this functionality in this case.
+* Don't run untrusted applications at this time.
