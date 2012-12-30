@@ -19,6 +19,16 @@ class ManagedApacheError(ManagedDaemonError):
 	pass
 
 class ManagedApache(ManagedDaemon):
+	"""
+	A managed Apache instance. Runs an Apache server
+	with a cut down configuration file.
+
+	Note that the server uses the system's module
+	configuration - eg, the contents of /etc/apache2/mods-enabled/
+	on Ubuntu systems - so the started Apache will mirror that setup.
+	However, all other configuration is seperate.
+	"""
+
 	# This configuration is based on the Debian default configuration,
 	# but cut down significantly.
 	# TODO: NOTE: It uses the system's module configuration for PHP
@@ -76,6 +86,9 @@ Include %(config_file_dir)s/
 	def configure(self, working_dir, port):
 		"""
 		Configure this instance.
+
+		:arg str working_dir: The working directory.
+		:arg int port: The port to listen on.
 		"""
 		self.parameters['working_dir'] = working_dir
 		self.parameters['port'] = port
@@ -142,7 +155,7 @@ Include %(config_file_dir)s/
 
 	def destroy(self):
 		"""
-		Destroy this instance of apache2, removing all assigned data.
+		Destroy this instance of apache2, removing all generated data.
 		"""
 		self.stop()
 		shutil.rmtree(self.parameters['working_dir'])
@@ -151,6 +164,13 @@ Include %(config_file_dir)s/
 		return self.parameters['config_file_dir']
 
 	def graceful(self):
+		"""
+		Perform a graceful restart of this Apache instance.
+
+		This works by calling the 'graceful' command. It will
+		return basically immediately on success, or raise an
+		exception on failure.
+		"""
 		# Perform a graceful restart of the server.
 		# TODO: Make this call Async.
 		configfile = self.get_configuration_path(self.parameters['working_dir'])

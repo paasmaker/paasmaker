@@ -4,6 +4,7 @@ import json
 import logging
 import uuid
 import sys
+import time
 
 import paasmaker
 
@@ -34,6 +35,8 @@ try:
 
 		# Start it up.
 		multipaas.start_nodes()
+
+		time.sleep(0.5)
 
 		summary = multipaas.get_summary()
 

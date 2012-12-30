@@ -29,6 +29,17 @@ you to easily extend Paasmaker in specific ways.
 
    developer-plugins
 
+Testing
+-------
+
+Paasmaker tries to be as tested as it can, to ensure that it works
+correctly and that any regressions or errors in future coding are caught.
+
+.. toctree::
+   :maxdepth: 2
+
+   developer-testing
+
 Internals
 ---------
 
@@ -40,3 +51,4 @@ integration with Paasmaker.
    :maxdepth: 2
 
    developer-utils
+   developer-managed

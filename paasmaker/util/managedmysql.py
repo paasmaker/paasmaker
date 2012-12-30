@@ -24,12 +24,26 @@ class ManagedMySQLError(ManagedDaemonError):
 	pass
 
 class ManagedMySQL(ManagedDaemon):
+	"""
+	A class to start and manage a MySQL daemon with a custom
+	data directory.
+
+	Note that this implementation currently does not work correctly.
+	MySQL's permissions are not set up correctly, so any user can
+	connect without a password.
+	"""
 	def _eat_output(self):
 		return open("%s/%s" % (self.parameters['working_dir'], str(uuid.uuid4())), 'w')
 
 	def configure(self, working_dir, port, bind_host, password=None):
 		"""
 		Configure this instance.
+
+		:arg str working_dir: The working directory for this instance.
+		:arg int port: The port to listen on.
+		:arg str bind_host: The address to bind to.
+		:arg str|None password: The optional password to
+			set as the root password.
 		"""
 		self.parameters['working_dir'] = working_dir
 		self.parameters['port'] = port

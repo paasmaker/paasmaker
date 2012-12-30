@@ -15,6 +15,16 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 class MultiPaas(object):
+	"""
+	Create a miniature Paasmaker cluster on a single machine,
+	for testing purposes.
+
+	:arg int port_min: The minimum port for temporary ports.
+	:arg int port_max: The maximum port for temporary ports.
+	:arg int app_min: The minimum port for applications.
+	:arg int app_max: The maximum port for applications.
+	"""
+
 	def __init__(self,
 			port_min=42800,
 			port_max=42899,
@@ -41,20 +51,28 @@ class MultiPaas(object):
 		#self.cluster_params['dsn'] = "sqlite:///%s" % database_path
 		self.cluster_params['dsn'] = "sqlite:///:memory:"
 
-		self.cluster_params['jobs_redis_port'] = self.free_port()
-		self.cluster_params['stats_redis_port'] = self.free_port()
-		self.cluster_params['router_redis_port'] = self.free_port()
+		self.cluster_params['jobs_redis_port'] = self._free_port()
+		self.cluster_params['stats_redis_port'] = self._free_port()
+		self.cluster_params['router_redis_port'] = self._free_port()
 
 		# Choose a port for the master.
-		self.cluster_params['master_port'] = self.free_port()
+		self.cluster_params['master_port'] = self._free_port()
 
-	def free_port(self):
+	def _free_port(self):
 		return self.port_allocator.free_in_range(self.port_min, self.port_max)
 
 	def add_node(self, pacemaker=False, heart=False, router=False):
+		"""
+		Add a node to this Multipaas cluster. Call this mulitple
+		times to add nodes to the cluster.
+
+		:arg bool pacemaker: If true, this node is a pacemaker.
+		:arg bool heart: If true, this node is a heart.
+		:arg bool router: If true, this node is a router.
+		"""
 		unique = str(uuid.uuid4())[0:8]
 		node_name = "node_%d_%s" % (len(self.nodes), unique)
-		node_port = self.free_port()
+		node_port = self._free_port()
 		node_dir = os.path.join(self.cluster_root, node_name)
 		node_config = os.path.join(self.cluster_root, "%s.yml" % node_name)
 		os.makedirs(node_dir)
@@ -74,6 +92,12 @@ class MultiPaas(object):
 		self.nodes.append(node)
 
 	def start_nodes(self):
+		"""
+		Start all the nodes that have been added to this cluster.
+
+		If a node fails to start before it forks, this will print
+		out the server log file, and then raise an exception.
+		"""
 		for node in self.nodes:
 			try:
 				node.start()
@@ -83,6 +107,10 @@ class MultiPaas(object):
 				raise ex
 
 	def stop_nodes(self):
+		"""
+		Stop all the started nodes. The last node is shut down first,
+		on the assumption that the first node is the pacemaker.
+		"""
 		# Kill off the nodes in reverse order.
 		cloned = list(self.nodes)
 		cloned.reverse()
@@ -100,10 +128,18 @@ class MultiPaas(object):
 		logger.info("All nodes stopped.")
 
 	def destroy(self):
+		"""
+		Destroy all on disk data for this cluster. It's assumed that the
+		cluster is shut down at this stage; otherwise you will have
+		difficuly shutting the nodes down after this has been called.
+		"""
 		logger.info("Destroying all node data...")
 		shutil.rmtree(self.cluster_root)
 
 	def get_summary(self):
+		"""
+		Get a summary of information for this cluster.
+		"""
 		summary = {}
 		summary['configuration'] = self.cluster_params
 		summary['nodes'] = []
@@ -113,6 +149,11 @@ class MultiPaas(object):
 		return summary
 
 	def get_executor(self):
+		"""
+		Return a new Executor object pointing to this
+		Multipaas cluster. This can be used to execute
+		command line commands against the cluster.
+		"""
 		return Executor(
 			'localhost',
 			self.cluster_params['master_port'],
@@ -121,6 +162,18 @@ class MultiPaas(object):
 		)
 
 class Executor(object):
+	"""
+	A class that allows running commands against the given
+	cluster. Designed to allow tests to be written and be
+	independant of being a Multipaas or a real test cluster.
+
+	:arg str target_host: The target pacemaker host.
+	:arg int target_port: The target pacemaker port.
+	:arg str auth_method: The authentication method to use. Only
+		'super' is currently supported.
+	:arg str auth_value: The appropriate value for the
+		authentication method.
+	"""
 	def __init__(self, target_host, target_port, auth_method, auth_value):
 		self.target = []
 		self.target.extend(['-r', target_host])
@@ -129,7 +182,25 @@ class Executor(object):
 			self.auth = '--superkey=' + auth_value
 
 	def run(self, arguments):
+		"""
+		Run the given command against the cluster.
+
+		This is the equivalent of running
+		``./pm-command.py <arguments>`` with suitable
+		target and authentication options inserted.
+
+		The supplied arguments are a list. Any argument
+		that isn't a string is converted to a string
+		using ``str()``.
+
+		The return value is a dict - the JSON decoded
+		output of the command. If the command fails,
+		it throws an exception.
+
+		:arg list arguments: The argments to pm-command.
+		"""
 		command_line = []
+		# TODO: Figure out the correct path to this command.
 		command_line.append('./pm-command.py')
 		command_line.extend(arguments)
 
@@ -144,6 +215,14 @@ class Executor(object):
 		return json.loads(result)
 
 class Paasmaker(object):
+	"""
+	A class that represents a Paasmaker server, for use
+	by the MultiPaas.
+
+	The MultiPaas knows how to instantiate these, so you
+	should not typically need to instantiate this class.
+	"""
+
 	# TODO: Automatically slaved managed routing table redis.
 	COMMON_CONFIGURATION = """
 http_port: %(node_port)d
@@ -255,7 +334,7 @@ router:
 			self.params['heart_working_dir'] = self._exists(node_dir, 'heart')
 
 		if self.router:
-			self.params['nginx_port'] = multipaas.free_port()
+			self.params['nginx_port'] = multipaas._free_port()
 
 		if master:
 			self.params['is_cluster_master'] = 'true'

@@ -21,6 +21,25 @@ class ManagedPostgresError(ManagedDaemonError):
 	pass
 
 class ManagedPostgres(ManagedDaemon):
+	"""
+	Start and manage a Postgres daemon in a custom data
+	directory.
+
+	This class is fully operational. If you set a password,
+	the user 'postgres' will have that password. From there,
+	you can interact with the daemon as normal.
+
+	You should use a port other than 5432 for it, so as to
+	not conflict with any system installation of Postgres.
+
+	The primary use of this is unit tests against a Postgres
+	database.
+
+	This class contains hard coded paths that are currently
+	Ubuntu 12.04 specific, and rely on having Postgres 9.1
+	installed.
+	"""
+
 	# TODO: Don't hardcode this.
 	PG_CTL = "/usr/lib/postgresql/9.1/bin/pg_ctl"
 	INITDB = "/usr/lib/postgresql/9.1/bin/initdb"
@@ -31,6 +50,12 @@ class ManagedPostgres(ManagedDaemon):
 	def configure(self, working_dir, port, bind_host, password=None):
 		"""
 		Configure this instance.
+
+		:arg str working_dir: The working directory.
+		:arg int port: The port to listen on.
+		:arg str bind_host: The address to bind to.
+		:arg str|None password: An optional password for the
+			postgres user.
 		"""
 		self.parameters['working_dir'] = working_dir
 		self.parameters['port'] = port
@@ -109,7 +134,7 @@ class ManagedPostgres(ManagedDaemon):
 
 	def stop(self, sig=signal.SIGTERM):
 		"""
-		Stop this instance of the postgres server, allowing for it to be restarted later.
+		Stop this instance of the Postgres server, allowing for it to be restarted later.
 		"""
 		command_line = [self.PG_CTL, 'status', '-D', self.parameters['working_dir']]
 		try:
@@ -123,7 +148,7 @@ class ManagedPostgres(ManagedDaemon):
 
 	def destroy(self):
 		"""
-		Destroy this instance of postgres, removing all assigned data.
+		Destroy this instance of Postgres, removing all assigned data.
 		"""
 		# Hard shutdown - we're about to delete the data anyway.
 		self.stop(signal.SIGKILL)

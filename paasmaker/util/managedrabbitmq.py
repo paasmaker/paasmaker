@@ -20,6 +20,22 @@ class ManagedRabbitMQError(ManagedDaemonError):
 	pass
 
 class ManagedRabbitMQ(ManagedDaemon):
+	"""
+	Start a managed instance of a RabbitMQ server.
+
+	No passwords or authentication details are set up on the new node.
+
+	If you plan to use multiple nodes, give each one a different
+	``nodepurpose`` argument when calling ``configure()``. This
+	prevents the RabbitMQ's from conflicting with each other.
+
+	Please note that it can take 5-7 seconds to start the daemon.
+
+	This was originally designed for unit tests, but later in
+	development the code was rearranged to not require RabbitMQ,
+	and as such this was no longer used.
+	"""
+
 	RABBITMQ_SERVER_CONFIG = """
 [
     {rabbit, [{tcp_listeners, [%(RABBITMQ_PORT)s]}]}
@@ -29,6 +45,12 @@ class ManagedRabbitMQ(ManagedDaemon):
 	def configure(self, working_dir, port, bind_host, nodepurpose=None):
 		"""
 		Configure this instance.
+
+		:arg str working_dir: The working directory.
+		:arg int port: The port to listen on.
+		:arg str bind_host: The address to bind to.
+		:arg str|None nodepurpose: An optional string to append
+			to the node name to make it unique.
 		"""
 		# TODO: Allow authentication.
 		self.parameters['working_dir'] = working_dir

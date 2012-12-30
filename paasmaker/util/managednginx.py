@@ -19,9 +19,23 @@ class ManagedNginxError(ManagedDaemonError):
 	pass
 
 class ManagedNginx(ManagedDaemon):
+	"""
+	Start a managed instance of the NGINX web server.
+
+	It is configured as appropriate for the Paasmaker
+	configuration it is started with, to be a router.
+	It is not a general purpose NGINX server.
+
+	The main design goal here is to allow Paasmaker to
+	start it's own managed routing servers.
+	"""
+
 	def configure(self, working_dir, port):
 		"""
 		Configure this instance.
+
+		:arg str working_dir: The working directory.
+		:arg int port: The port to listen on.
 		"""
 		self.parameters['working_dir'] = working_dir
 		self.parameters['port'] = port

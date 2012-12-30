@@ -19,6 +19,19 @@ class ManagedRedisError(ManagedDaemonError):
 	pass
 
 class ManagedRedis(ManagedDaemon):
+	"""
+	Start up a managed Redis daemon.
+
+	As Redis doesn't really allow for multiple databases in the
+	same instance, this class is an easy way to simulate that by
+	starting a seperate instance per required database.
+
+	Currently, it chooses some persistence options that match
+	the default Ubuntu/Debian configuration. In future it will
+	offer other canned persistence options to better suit
+	what the server is being used for.
+	"""
+
 	REDIS_SERVER_CONFIG = """
 daemonize yes
 pidfile %(working_dir)s/redis.pid
