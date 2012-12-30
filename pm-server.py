@@ -198,13 +198,17 @@ def on_completed_startup():
 		).filter(
 			paasmaker.model.Node.uuid == configuration.get_node_uuid()
 		).first()
-		pacemaker_updater = paasmaker.common.job.routing.routing.RouterTablePacemakerUpdate(
-			configuration,
-			node,
-			True,
-			logging
-		)
-		pacemaker_updater.update(success_insert, failed_insert)
+		# TODO: node is None if it's not yet registered - which
+		# may be the case if it's a new node. Handle this case better
+		# than this.
+		if node:
+			pacemaker_updater = paasmaker.common.job.routing.routing.RouterTablePacemakerUpdate(
+				configuration,
+				node,
+				True,
+				logging
+			)
+			pacemaker_updater.update(success_insert, failed_insert)
 
 def on_intermediary_started(message):
 	logger.debug(message)
