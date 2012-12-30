@@ -11,7 +11,6 @@ from managedpostgres import ManagedPostgres, ManagedPostgresError
 from managedmysql import ManagedMySQL, ManagedMySQLError
 from managednginx import ManagedNginx, ManagedNginxError
 from managedapache import ManagedApache, ManagedApacheError
-from memoryredis import MemoryRedis
 from temporaryrabbitmq import TemporaryRabbitMQ
 from commandsupervisor import CommandSupervisorLauncher
 from popen import Popen
