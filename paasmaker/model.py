@@ -33,12 +33,52 @@ class OrmExtension(MapperExtension):
 		instance.updated = now()
 
 class OrmBase(object):
+	"""
+	An ORM base class, that is the super class of all other
+	ORM objects.
+
+	Provides the following to all classes:
+
+	* Automatic created, deleted, and updated fields, and handles
+	  updating the updated field as appropriate.
+	* Provides a ``flatten()`` method for each ORM class.
+	* Provides a ``delete()`` helper method.
+	"""
 	__mapper_args__ = { 'extension': OrmExtension() }
 	created = Column(DateTime, nullable=False, default=now)
 	deleted = Column(DateTime, nullable=True, default=None, index=True)
 	updated = Column(DateTime, nullable=False, default=now, index=True)
 
 	def flatten(self, field_list=None):
+		"""
+		"Flatten" this ORM object into a dict, ready for
+		JSON encoding.
+
+		The idea is that not all fields should be returned. Some
+		will be private, or have internal meanings and thus not
+		required to be exposed externally.
+
+		Your class should override this function, calling
+		this function with a list of fields to return.
+
+		If you return a field that references another ORM object,
+		it will be flattened and returned as well. Be careful
+		of this as it will then propagate upwards.
+
+		The following additional fields are returned for each
+		object:
+
+		* The database ID.
+		* The created and updated timestamps, in iso format.
+		* An ``updated_age`` and ``created_age`` field, in seconds,
+		  that is the time since the record was updated or created.
+		* ``class`` - The name of the class that this record is
+		  from.
+
+		:arg list field_list: A list of fields to return in the
+			dict. If no fields are given, only the ID and timestamps
+			are returned.
+		"""
 		# If field_list is not None, return just those fields.
 		fields = {}
 		if self.__dict__.has_key('id') and self.__dict__['id']:
@@ -67,20 +107,49 @@ class OrmBase(object):
 		return fields
 
 	def delete(self):
-		"""Mark the object as deleted. You still need to save it."""
+		"""
+		Mark the object as deleted. You still need to save it for this
+		to take effect.
+		"""
 		self.deleted = now()
 
 	def updated_age(self, reference=None):
+		"""
+		Calculate the updated age, in seconds, of this object.
+
+		If supplied with a reference date time, the age is
+		calculated relative to that time.
+
+		:arg datetime reference: The reference time to calculate
+			against.
+		"""
 		if not reference:
 			reference = now()
 		return (reference - self.updated).total_seconds()
 
 	def created_age(self, reference=None):
+		"""
+		Calculate the created age, in seconds, of this object.
+
+		If supplied with a reference date time, the age is
+		calculated relative to that time.
+
+		:arg datetime reference: The reference time to calculate
+			against.
+		"""
 		if not reference:
 			reference = now()
 		return (reference - self.created).total_seconds()
 
 class Node(OrmBase, Base):
+	"""
+	Node - a node in the cluster.
+
+	Special fields:
+
+	* **tags**: takes a dict which is internally stored as
+	  a JSON encoded string.
+	"""
 	__tablename__ = 'node'
 
 	id = Column(Integer, primary_key=True)
@@ -123,6 +192,17 @@ class Node(OrmBase, Base):
 		self._tags = json.dumps(val)
 
 class User(OrmBase, Base):
+	"""
+	User - a user who can access the system.
+
+	Special Fields:
+
+	* **password**: When assigned, this is automatically hashed.
+	  Each user has a custom salt that is stored in the auth_meta
+	  dictionary.
+	* **auth_meta**: This is a dictionary, stored JSON encoded
+	  into a text field.
+	"""
 	__tablename__ = 'user'
 
 	id = Column(Integer, primary_key=True)
@@ -165,6 +245,11 @@ class User(OrmBase, Base):
 		return super(User, self).flatten(['login', 'email', 'auth_source', 'name', 'enabled'])
 
 	def password_hash(self, plain):
+		"""
+		Hash a plain text password.
+
+		:arg str plain: The plain text password.
+		"""
 		# Select a salt, if we don't already have one for this user.
 		meta = self.auth_meta
 		if not meta.has_key('salt'):
@@ -179,12 +264,34 @@ class User(OrmBase, Base):
 		return h.hexdigest()
 
 	def generate_api_key(self):
+		"""
+		Generate an API key for the user.
+
+		If the user already had an API key, this generates
+		a new one.
+		"""
 		self.apikey = str(uuid.uuid4())
 
 	def check_password(self, plain):
+		"""
+		Check the plain password to see if it matches the stored
+		hash.
+
+		:arg str plain: The plain text password.
+		"""
 		return self.password == self.password_hash(plain)
 
 class Role(OrmBase, Base):
+	"""
+	Role - a named set of permissions that a user might assume.
+
+	Special Fields:
+
+	* **permissions**: a relationship to the RolePermission class.
+	  Note that this class takes over handling all of the attached
+	  permission objects via it's methods - you should not manage
+	  these separately yourself.
+	"""
 	__tablename__ = 'role'
 
 	id = Column(Integer, primary_key=True)
@@ -192,6 +299,14 @@ class Role(OrmBase, Base):
 	_permissions = relationship("RolePermission", backref="role", cascade="all, delete, delete-orphan")
 
 	def add_permission(self, name):
+		"""
+		Add a specific permission to this role.
+
+		You still need to save the object after calling
+		this.
+
+		:arg str name: The permission name to add.
+		"""
 		if name not in self.permissions:
 			new = RolePermission()
 			new.role = self
@@ -199,6 +314,13 @@ class Role(OrmBase, Base):
 			self._permissions.append(new)
 
 	def remove_permission(self, name):
+		"""
+		Remove a specific permission from this role.
+
+		You still need to save the object after calling this.
+
+		:arg str name: The permission name to remove.
+		"""
 		# TODO: Is there a better way to do this?
 		index = 0
 		for perm in self.permissions:
@@ -207,6 +329,13 @@ class Role(OrmBase, Base):
 			index += 1
 
 	def only_permissions(self, permissions):
+		"""
+		Clear out all permissions on this role, and set them to be
+		just the ones specified in the supplied list.
+
+		:arg list permissions: The permissions to set for
+			this role.
+		"""
 		# TODO: Is there a better way to do this?
 		for i in range(len(self._permissions) - 1, -1, -1):
 			del self._permissions[i]
@@ -232,6 +361,13 @@ class Role(OrmBase, Base):
 		return super(Role, self).flatten(['name', 'permissions'])
 
 class RolePermission(OrmBase, Base):
+	"""
+	RolePermission - a single permission that is part
+	of a ``Role``.
+
+	Don't work with this directly - use the methods on
+	``Role`` itself.
+	"""
 	__tablename__ = 'role_permission'
 
 	id = Column(Integer, primary_key=True)
@@ -245,6 +381,14 @@ class RolePermission(OrmBase, Base):
 		return super(Node, self).flatten(['permission', 'role'])
 
 class Workspace(OrmBase, Base):
+	"""
+	Workspace - a workspace for applications.
+
+	Special Fields:
+
+	* **tags**: This field is a dict, stored JSON
+	  encoded in a text field.
+	"""
 	__tablename__ = 'workspace'
 
 	id = Column(Integer, primary_key=True)
@@ -270,6 +414,13 @@ class Workspace(OrmBase, Base):
 		self._tags = json.dumps(val)
 
 class WorkspaceUserRole(OrmBase, Base):
+	"""
+	WorkspaceUserRole - links a user and a role together,
+	and, confusingly, optionally a workspace as well.
+
+	If workspace_id is NULL, it's interpretted to mean
+	that the user assigned role is global to the system.
+	"""
 	__tablename__ = 'workspace_user_role'
 
 	id = Column(Integer, primary_key=True)
@@ -288,6 +439,16 @@ class WorkspaceUserRole(OrmBase, Base):
 		return super(WorkspaceUserRole, self).flatten(['workspace', 'user', 'role'])
 
 class WorkspaceUserRoleFlat(OrmBase, Base):
+	"""
+	WorkspaceUserRoleFlat - a denormalisation of WorkspaceUserRole,
+	Role, and RolePermission, designed to speed up permission
+	lookups. Functions on this class managed clearing and
+	rebuilding this table.
+
+	Why not implement it as a trigger? The plan is to support
+	as many RDBMS's as possible, and we'd need to write triggers
+	for each one... maybe in a future version.
+	"""
 	__tablename__ = 'workspace_user_role_flat'
 
 	# No backrefs here - this is primarily for lookup.
@@ -309,6 +470,15 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 
 	@staticmethod
 	def build_flat_table(session):
+		"""
+		Update the cache table from the current user role
+		assignments. The updates are done in the context
+		of the given session, and the session is committed
+		before this function returns control to the caller.
+
+		:arg Session session: The SQLAlchemy session to
+			perform these updates in.
+		"""
 		session.query(WorkspaceUserRoleFlat).delete()
 		links = session.query(
 			WorkspaceUserRole
@@ -331,6 +501,15 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 
 	@staticmethod
 	def has_permission(session, user, permission, workspace=None):
+		"""
+		Quickly, by using a single SQL query, determine if the
+		given user has the given permission on the given workspace.
+
+		:arg User user: The user object to check.
+		:arg str permission: The permission to check for.
+		:arg Workspace|None workspace: The optional workspace
+			to limit the permission to.
+		"""
 		# Figure out if the user has permission to do something.
 		# We can easily determine this via a count on the flat
 		# table, by matching a few parameters.
@@ -370,6 +549,17 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 
 	@staticmethod
 	def list_of_workspaces_for_user(session, user):
+		"""
+		Return a list of workspaces that the user can view,
+		based on their role assignments. Uses the flat
+		table to be able to return a list with a single SQL query.
+		The return of this is just a list of workspace ID's - you
+		will need to convert them into a list of Workspace objects
+		if required.
+
+		:arg Session session: The session to work in.
+		:arg User user: The user to work for.
+		"""
 		# Return a list of IDs of workspaces that the given user can view.
 		query = session.query(
 			WorkspaceUserRoleFlat.workspace_id
@@ -380,6 +570,24 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 		return query
 
 class WorkspaceUserRoleFlatCache(object):
+	"""
+	A helper object to cache the contents of the WorkspaceUserRoleFlat
+	table for a single user.
+
+	The idea of this is that each web request might make multiple
+	permission checks for a single user. Each one would normally
+	require a SQL query to check that permission. As permission
+	checks are used to determine what to display in the navigation,
+	this would quickly get slow.
+
+	Instead, this class, which can be shared between requests,
+	cached the entire permission set for a user. On request startup,
+	you can ask it to update itself - it then does a quick query to
+	see if the permissions table has changed, and if so, does another
+	single query to update the cached table.
+
+	:arg User user: The user that this cache is for.
+	"""
 	def __init__(self, user):
 		# Build our cache.
 		self.cache = {}
@@ -401,6 +609,12 @@ class WorkspaceUserRoleFlatCache(object):
 			self.cache[key] = True
 
 	def check_cache(self, session):
+		"""
+		Check the cache to see if it's up to date,
+		and if not, update the contents.
+
+		:arg Session session: The session to work in.
+		"""
 		updated = session.query(
 			func.max(WorkspaceUserRoleFlat.updated)
 		).scalar()
@@ -418,6 +632,16 @@ class WorkspaceUserRoleFlatCache(object):
 		return "%s_%s" % (workspace, permission)
 
 	def has_permission(self, permission, workspace):
+		"""
+		Determine if the user has the appropriate permission.
+
+		This works only on the cached values; if the cache
+		has not been initialized, then this will always return false.
+
+		The idea here is to call ``check_cache()`` on request startup,
+		and then ``has_permission()`` wherever required for the remainder
+		of the lifetime of the request.
+		"""
 		if workspace:
 			workspace_id = workspace.id
 		else:
@@ -431,6 +655,14 @@ class WorkspaceUserRoleFlatCache(object):
 		return self.cache.has_key(key_none)
 
 class Application(OrmBase, Base):
+	"""
+	Application - the top level of an application.
+
+	Special Features:
+
+	* There is a unique index on the name and workspace ID. This
+	  means application names are unique per workspace.
+	"""
 	__tablename__ = 'application'
 	__table_args__ = (Index('unique_app_per_workspace', "workspace_id", "name", unique=True),)
 
@@ -448,11 +680,22 @@ class Application(OrmBase, Base):
 		return super(Application, self).flatten(['name', 'workspace_id', 'health'])
 
 	def flatten_for_heart(self):
+		"""
+		Return the fields that are passed along to a heart in
+		the instance data.
+		"""
 		fields = ['name']
 		return super(Application, self).flatten(fields)
 
 	@property
 	def health(self):
+		"""
+		Do a basic health check on this application.
+
+		If this application has a current version, that version
+		is asked about it's health and the data from that
+		returned.
+		"""
 		current_version = self.versions.filter(ApplicationVersion.is_current == True).first()
 		if current_version:
 			status = current_version.health
@@ -462,12 +705,25 @@ class Application(OrmBase, Base):
 			return constants.HEALTH.WARNING
 
 # Joining table between Application Version and services.
+# There is no ORM object to represent this.
 application_version_services = Table('application_version_service', Base.metadata,
      Column('application_version_id', Integer, ForeignKey('application_version.id')),
      Column('service_id', Integer, ForeignKey('service.id'))
 )
 
 class ApplicationVersion(OrmBase, Base):
+	"""
+	ApplicationVersion - a version of an application.
+
+	Special Features:
+
+	* **scm_parameters**: this is a dictionary that is stored
+	  JSON encoded into a text field.
+	* **version**: This is an integer number that increments
+	  for each version. It's determined by querying the maximum
+	  previous version number and returning one more.
+	  ``get_next_version_number()`` handles this query.
+	"""
 	__tablename__ = 'application_version'
 
 	id = Column(Integer, primary_key=True)
@@ -507,12 +763,30 @@ class ApplicationVersion(OrmBase, Base):
 		return super(ApplicationVersion, self).flatten(['application_id', 'version', 'is_current', 'health', 'scm_name', 'scm_parameters'])
 
 	def flatten_for_heart(self):
+		"""
+		Flatten data that a heart will need to execute this version.
+		"""
 		fields = ['version', 'source_path', 'source_checksum']
 		return super(ApplicationVersion, self).flatten(fields)
 
 	@staticmethod
 	def get_next_version_number(session, application):
-		query = session.query(func.max(ApplicationVersion.version)).filter_by(application=application)
+		"""
+		For the given application, determine the next
+		version number.
+
+		:arg Session session: The session to use for this
+			query.
+		:arg Application application: The application to get
+			the next version of.
+		"""
+		query = session.query(
+			func.max(
+				ApplicationVersion.version
+			)
+		).filter_by(
+			application=application
+		)
 		value = query[0][0]
 		if value:
 			return value + 1
@@ -520,6 +794,11 @@ class ApplicationVersion(OrmBase, Base):
 			return 1
 
 	def get_service_credentials(self):
+		"""
+		Fetch all the service credentials for this version
+		of the application. Returns a dict, keyed
+		by the service name.
+		"""
 		credentials = {}
 		for service in self.services:
 			credentials[service.name] = service.credentials
@@ -528,7 +807,10 @@ class ApplicationVersion(OrmBase, Base):
 
 	def get_current(self, session):
 		"""
-		From any given version, get the current version.
+		From any given version of the application,
+		get the current version.
+
+		:arg Session session: The session to work in.
 		"""
 		current = session.query(ApplicationVersion).filter(
 			ApplicationVersion.application == self.application,
@@ -538,6 +820,14 @@ class ApplicationVersion(OrmBase, Base):
 		return current
 
 	def make_current(self, session):
+		"""
+		Disable all other versions of this application,
+		and make this version the current version. Before
+		returning control to the caller, this will commit
+		the session and refresh this object.
+
+		:arg Session session: The session to work in.
+		"""
 		# Disable all versions.
 		session.query(ApplicationVersion).filter(
 			ApplicationVersion.application == self.application
@@ -555,6 +845,10 @@ class ApplicationVersion(OrmBase, Base):
 
 	@property
 	def health(self):
+		"""
+		Determine the health of this version. Returns a dict that
+		describes the health of this version, by instance type.
+		"""
 		health = {'types': {}, 'overall': constants.HEALTH.OK}
 		seen_statuses = set(constants.HEALTH.OK)
 		# So, to be healthy, we need to have the right number of
@@ -606,6 +900,17 @@ class ApplicationVersion(OrmBase, Base):
 		return health
 
 class ApplicationInstanceType(OrmBase, Base):
+	"""
+	ApplicationInstanceType - a class to represent each different
+	instance type for a version of an application.
+
+	Special Features:
+
+	* Unique index on application version ID and name. This
+	  prevents multiple instance types with the same name.
+	* **runtime_parameters**, **startup**, and **placement_parameters**
+	  are all dicts, stored JSON encoded in text fields.
+	"""
 	__tablename__ = 'application_instance_type'
 	__table_args__ = (Index('unique_instance_type_per_version', "application_version_id", "name", unique=True),)
 
@@ -630,12 +935,28 @@ class ApplicationInstanceType(OrmBase, Base):
 		return super(ApplicationInstanceType, self).flatten(['name', 'application_version_id', 'quantity', 'runtime_name', 'runtime_version', 'placement_provider', 'exclusive', 'standalone'])
 
 	def flatten_for_heart(self):
+		"""
+		Return a flattened version ready for a heart to execute.
+		"""
 		fields = ['name', 'runtime_name', 'runtime_parameters', 'runtime_version', 'startup', 'exclusive', 'standalone']
 		return super(ApplicationInstanceType, self).flatten(fields)
 
 	def version_hostname(self, configuration):
+		"""
+		Return a hostname that uniquely identifies this version
+		of the application. This takes into account the version,
+		instance type, application, workspace, and cluster hostname.
+
+		The output format is::
+
+			<version>.<type>.<application>.<workspace>.<cluster hostname>
+			Eg: 1.web.tornado-simple.test.local.paasmaker.net
+
+		:arg Configuration configuration: The configuration object,
+			which is used to determine the cluster hostname.
+		"""
 		# Format: <version>.<type>.<application>.<workspace>.<cluster hostname>
-		# Eg: 1.web.tornado-simple.test.local.passmaker.net
+		# Eg: 1.web.tornado-simple.test.local.paasmaker.net
 		type_hostname = self.type_hostname(configuration)
 		instance_version_hostname = "%d.%s" % (
 			self.application_version.version,
@@ -645,6 +966,19 @@ class ApplicationInstanceType(OrmBase, Base):
 		return instance_version_hostname
 
 	def type_hostname(self, configuration):
+		"""
+		Return a hostname that uniquely identifies this instance
+		type of the application. This takes into account the type,
+		application, workspace, and cluster hostname.
+
+		The output format is::
+
+			<type>.<application>.<workspace>.<cluster hostname>
+			Eg: web.tornado-simple.test.local.paasmaker.net
+
+		:arg Configuration configuration: The configuration object,
+			which is used to determine the cluster hostname.
+		"""
 		# Format: <type>.<application>.<workspace>.<cluster hostname>
 		# Eg: web.tornado-simple.test.local.paasmaker.net
 		type_hostname = "%s.%s.%s.%s" % (
@@ -690,6 +1024,15 @@ class ApplicationInstanceType(OrmBase, Base):
 		self._startup = json.dumps(val)
 
 class ApplicationInstance(OrmBase, Base):
+	"""
+	ApplicationInstance - a known instance of an instance type on
+	the cluster. Binds a node and an application instance type together,
+	along with it's state and other related data.
+
+	Special Features:
+
+	* **statistics**: a dict stored as a JSON encoded string in a text field.
+	"""
 	__tablename__ = 'application_instance'
 
 	id = Column(Integer, primary_key=True)
@@ -709,6 +1052,11 @@ class ApplicationInstance(OrmBase, Base):
 		return super(ApplicationInstance, self).flatten(['application_instance_type_id', 'node_id', 'state', 'port'])
 
 	def flatten_for_heart(self):
+		"""
+		Gather all the data required to pass to a heart to allow
+		it to be able to execute the instance. This is done because
+		a heart will likely not have access to the SQL database.
+		"""
 		data = {}
 		fields = ['instance_id', 'state']
 		data['instance'] = super(ApplicationInstance, self).flatten(fields)
@@ -730,6 +1078,11 @@ class ApplicationInstance(OrmBase, Base):
 		self._statistics = json.dumps(val)
 
 class ApplicationInstanceTypeHostname(OrmBase, Base):
+	"""
+	ApplicationInstanceTypeHostname - a class to encapsulate
+	a hostname that is assigned to the current version of an
+	application instance type.
+	"""
 	__tablename__ = 'application_instance_type_hostname'
 
 	id = Column(Integer, primary_key=True)
@@ -746,6 +1099,10 @@ class ApplicationInstanceTypeHostname(OrmBase, Base):
 		return super(Node, self).flatten(['application_instance_type', 'hostname'])
 
 class ApplicationInstanceTypeCron(OrmBase, Base):
+	"""
+	ApplicationInstanceTypeCron - a class to record a cron job
+	to be run against an application instance type.
+	"""
 	__tablename__ = 'application_instance_type_cron'
 
 	id = Column(Integer, primary_key=True)
@@ -764,6 +1121,17 @@ class ApplicationInstanceTypeCron(OrmBase, Base):
 		return super(Node, self).flatten(['application_instance_type_id', 'runspec', 'uri'])
 
 class Service(OrmBase, Base):
+	"""
+	Service - a class to store the details of a service,
+	including it's state and the workspace that it belongs to.
+
+	Special Features:
+
+	* The name of a service is unique per workspace, to allow
+	  applications to share services.
+	* **parameters** and **credentials** are dicts, stored JSON
+	  encoded as text fields.
+	"""
 	__tablename__ = 'service'
 	__table_args__ = (Index('unique_service_per_workspace', "workspace_id", "name", unique=True),)
 
@@ -800,6 +1168,12 @@ class Service(OrmBase, Base):
 
 	@staticmethod
 	def get_or_create(session, workspace, name):
+		"""
+		Get an existing service with the given name in the given
+		workspace, or create a new one and return it. New services
+		are given the state NEW - it's expected that the job
+		that asked for this service will handle changing it's state.
+		"""
 		# Find an existing one.
 		service = session.query(Service).filter(Service.workspace == workspace, Service.name == name).first()
 		if service:
