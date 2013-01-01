@@ -1,4 +1,5 @@
 
+-- Paasmaker NGINX LUA router script.
 
 -- Include the relevant libraries.
 local redis = require("resty.redis")

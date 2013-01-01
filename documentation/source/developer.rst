@@ -53,3 +53,4 @@ integration with Paasmaker.
    developer-utils
    developer-managed
    developer-model
+   developer-router

@@ -8,6 +8,12 @@ def pairwise(iterable):
 	return izip(a, a)
 
 class RouterTableDump(object):
+	"""
+	Dump the contents of the router table, by reading it directly
+	from the Redis instance. This is designed to detect errors
+	in the routing table, or show the system administrator the state
+	of the system as it is.
+	"""
 	def __init__(self, configuration, callback, error_callback):
 		self.configuration = configuration
 		self.callback = callback
@@ -16,6 +22,10 @@ class RouterTableDump(object):
 		self.all_roots = []
 
 	def dump(self):
+		"""
+		Dump the table. The callback used to instantiate the object will
+		be called when the dump is ready.
+		"""
 		self.session = self.configuration.get_database_session()
 		self.configuration.get_router_table_redis(self._got_redis, self.error_callback)
 

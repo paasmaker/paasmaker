@@ -15,6 +15,13 @@ import tornado.testing
 # to make it's routing determinations.
 
 class NginxRouter(object):
+	"""
+	Generate a working NGINX configuration file based on the
+	current configuration of Paasmaker.
+
+	It is used by unit tests to generate a test NGINX instance,
+	and also by the managed NGINX server.
+	"""
 	NGINX_CONFIG = """
 worker_processes 1;
 error_log %(log_path)s/error.log %(log_level)s;
@@ -69,6 +76,39 @@ http {
 
 	@staticmethod
 	def get_nginx_config(configuration, managed_params=None):
+		"""
+		Create and return a NGINX configuration file based on
+		the supplied configuration object.
+
+		If you supply a dict for managed_params, it should
+		have the following keys:
+
+		* temp_path: The path to temporary files.
+		* port: The TCP port to listen on.
+		* log_path: The path to place log files at.
+		* pid_path: The full path to the pid.
+		* log_level: The NGINX error log level.
+
+		The return value is a dict, containing the following
+		keys:
+
+		* configuration: a string containing the NGINX
+		  configuration.
+		* temp_dir: The temporary directory for NGINX.
+		* listen_port: The port that the NGINX server will
+		  listen on.
+		* log_path: The path where log files will be placed.
+		* pid_path: The full path to the NGINX server PID.
+		* log_level: The NGINX log level.
+		* router_root: The path where the router LUA files
+		  are stored.
+
+		:arg Configuration configuration: The configuration
+			object to read from.
+		:arg dict|None managed_params: If this is a managed
+			NGINX service, the values in this dict control
+			some variables in the output configuration.
+		"""
 		parameters = {}
 
 		if managed_params:
@@ -99,6 +139,17 @@ http {
 		return parameters
 
 class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
+	"""
+	Test the NGINX routing system and stats collector.
+
+	This unit test starts up a NGINX server and matching Redis
+	server, connecting them together. It then tests that the router
+	lookups work correctly.
+
+	After that, it tests that the stats reader can read
+	the resulting log files.
+	"""
+
 	config_modules = ['pacemaker', 'router']
 
 	def get_app(self):

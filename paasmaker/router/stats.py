@@ -14,16 +14,33 @@ logger.addHandler(logging.NullHandler())
 READ_SIZE_BATCH = 8192 # Read this many bytes/lines in one go.
 
 class StatsLogReader(object):
+	"""
+	A class to read a specially formatted NGINX access log,
+	and write the results into a Redis instance. This is designed
+	to return real time data on applications running on the cluster.
+	"""
 	def __init__(self, configuration):
 		self.configuration = configuration
 		self.reading = False
 		self.records = {}
 		self.hashrecords = {}
 
-	def get_position_key(self):
+	def _get_position_key(self):
 		return "position_%s" % self.configuration.get_node_uuid()
 
 	def read(self, callback, error_callback):
+		"""
+		Read the log file from the last position it was read from,
+		and insert the records into the stats redis.
+
+		When done, it will call the callback with a message.
+		If it fails, it will call the error_callback instead.
+
+		:arg callable callback: The callback to invoke upon
+			success.
+		:arg callable error_callback: The callback to invoke
+			upon an error.
+		"""
 		if self.reading:
 			# Already reading, so don't start reading again.
 			callback("Still reading.")
@@ -41,7 +58,7 @@ class StatsLogReader(object):
 	def _got_redis(self, redis):
 		# First query the last position we were up to.
 		self.redis = redis
-		self.redis.get(self.get_position_key(), self._got_position)
+		self.redis.get(self._get_position_key(), self._got_position)
 
 	def _got_position(self, position):
 		if not position:
@@ -147,6 +164,9 @@ class StatsLogReader(object):
 		self.configuration.io_loop.add_callback(self._read_batch)
 
 	def _store_value(self, key, metric, value):
+		# Helper function to store a value in the records
+		# set, for insertion later. Adds the current value
+		# if it doesn't exist, or creates the key otherwise.
 		final_key = "stat_%s_%s" % (key, metric)
 		if self.records.has_key(final_key):
 			self.records[final_key] += value
@@ -154,6 +174,9 @@ class StatsLogReader(object):
 			self.records[final_key] = value
 
 	def _store_hash_value(self, bucket, key, value):
+		# Helper function to store the key in the given
+		# bucket, creating that bucket or key if needed,
+		# or otherwise summing previous results.
 		if not self.hashrecords.has_key(bucket):
 			self.hashrecords[bucket] = {}
 		if not self.hashrecords[bucket].has_key(key):
@@ -162,6 +185,8 @@ class StatsLogReader(object):
 		self.hashrecords[bucket][key] += value
 
 	def _finalize_batch(self):
+		# Finalize the batch, by inserting it into the Redis
+		# instance.
 		position = self.fp.tell()
 		logger.debug("Completed reading up to position %d", position)
 		logger.debug("Recording %d stats.", len(self.records))
@@ -171,7 +196,7 @@ class StatsLogReader(object):
 		for bucket, keyset in self.hashrecords.iteritems():
 			for key, value in keyset.iteritems():
 				pipeline.hincrby(bucket, key, amount=value)
-		pipeline.set(self.get_position_key(), position)
+		pipeline.set(self._get_position_key(), position)
 		pipeline.execute(self._batch_finalized)
 
 	def _batch_finalized(self, result):
@@ -181,6 +206,10 @@ class StatsLogReader(object):
 		self.callback("Completed reading file.")
 
 class StatsLogPeriodicManager(object):
+	"""
+	A helper class to manage periodically reading the access log
+	and invoking the log reader to write to Redis.
+	"""
 	def __init__(self, configuration):
 		# First, the log reader.
 		self.log_reader = StatsLogReader(configuration)
@@ -192,9 +221,15 @@ class StatsLogPeriodicManager(object):
 		)
 
 	def start(self):
+		"""
+		Start the periodic manager to read stats.
+		"""
 		self.periodic.start()
 
 	def read_stats(self):
+		"""
+		Read the stats right now.
+		"""
 		# Attempt to read the stats.
 		self.log_reader.read(self._on_complete, self._on_error)
 
@@ -210,6 +245,20 @@ class StatsLogPeriodicManager(object):
 			lgoger.error(exc_info=exception)
 
 class ApplicationStats(object):
+	"""
+	Read out the router stats for applications.
+
+	The core goal of this class is to aggregate where it
+	needs to. Stats are recorded down to the application version
+	type level. However, it is often desirable to then show
+	all stats for an application version, application, or workspace,
+	and this class is primary responsible for handling that aggregation.
+
+	In the code and the documentation, the abbreviation "vtset" refers
+	to a set of version type IDs that should be aggregated to give the
+	result. The stats redis already stores sets of version type IDs for
+	various containers; such as the workspace.
+	"""
 	METRICS = [
 		'bytes',
 		'1xx',
@@ -327,6 +376,16 @@ class ApplicationStats(object):
 		self.configuration = configuration
 
 	def setup(self, callback, error_callback):
+		"""
+		Set up this stats object so it can fetch
+		stats. Calls the callback when it is ready
+		to be used.
+
+		:arg callable callback: The callback to call
+			when ready.
+		:arg callable error_callback: The callback to
+			call when unable to get ready.
+		"""
 		self.ready_callback = callback
 		self.configuration.get_stats_redis(
 			self._redis_ready,
@@ -338,6 +397,37 @@ class ApplicationStats(object):
 		self.ready_callback()
 
 	def vtset_for_name(self, name, input_id, callback):
+		"""
+		Fetch a version type ID list for the given
+		input. This returns a list with the named aggregation.
+
+		Name is one of a few options of aggregated sets
+		to return. ``input_id`` then selects the specific
+		aggregation.
+
+		Name can be one of the following:
+
+		* **workspace**: all the version type IDs in the
+		  specified workspace.
+		* **application**: all the version type IDs in the
+		  specified application.
+		* **version**: all the version type IDs in the specified
+		  version.
+		* **node**: all the version type IDs for instances on
+		  the given node ID.
+		* **version_type**: just the version type ID specified.
+		* **uncaught**: a special case that returns stats on
+		  all requests that were unable to be routed to any instance.
+		  ``input_id`` is ignored.
+		* **pacemaker**: a special case that returns stats on
+		  pacemaker activity (if that activity passes through
+		  a router). ``input_id`` is ignored.
+
+		:arg str name: The name of the set to return.
+		:arg int input_id: The ID to match the set.
+		:arg callable callback: The callback to call with the list
+			of version type IDs.
+		"""
 		def got_set(vtids):
 			callback(list(vtids))
 
@@ -363,12 +453,34 @@ class ApplicationStats(object):
 		self.redis.smembers(set_key, callback=got_set)
 
 	def total_for_uncaught(self, callback, error_callback):
+		"""
+		Helper to return a list of stats for uncaught requests.
+		"""
 		self.total_for_list(['null'], callback, error_callback)
 
 	def total_for_pacemaker(self, callback, error_callback):
+		"""
+		Helper to return a list of stats for pacemaker requests.
+		"""
 		self.total_for_list(['pacemaker'], callback, error_callback)
 
 	def total_for_list(self, idset, callback, error_callback):
+		"""
+		Return the stats for the given version type ID list set.
+
+		A dict with all the possible stats is returned, which is
+		an aggregate of all the version type IDs supplied.
+
+		If an empty list of IDs is supplied, the error callback is
+		called.
+
+		:arg list idset: A list of version type IDs to fetch
+			the stats for.
+		:arg callable callback: A callback to call with the stats.
+			Passed a single argument which is a dict of stats.
+		:arg callable error_callback: A callback used if an error
+			occurs.
+		"""
 		def on_stats_fetched(stats):
 			# Parse the result from Redis into something more manageable.
 			metric_totals = {}
@@ -427,6 +539,28 @@ class ApplicationStats(object):
 		callback(totals)
 
 	def history_for_list(self, idset, metric, callback, error_callback, start, end=None):
+		"""
+		Return the history for a given metric and version type ID set,
+		in the given time frame.
+
+		* This can return up to one value per second in the range;
+		  keep your ranges as small as you need them.
+		* ``start`` and ``end`` are unix timestamps, in UTC.
+		* The output looks as follows::
+
+			[
+				[time, value],
+				[time, value],
+				...
+			]
+
+		:arg list idset: The list of version type IDs to aggregate.
+		:arg str metric: One of the metrics for which the system records
+			history.
+		:arg callable callback: The callback to call with the history. This
+			is called with a single argument which is a list. Each list element
+			contains another list, in the format ``[time, value]``.
+		"""
 		# CAUTION: Returns up to 1 value per second in the given range.
 		# Use very carefully!
 		# 1. Build list of history sets required from redis.
