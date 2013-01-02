@@ -41,6 +41,21 @@ class APIRequestSchema(colander.MappingSchema):
 	data = colander.SchemaNode(colander.Mapping(unknown='preserve'))
 
 class BaseController(tornado.web.RequestHandler):
+	"""
+	Base controller class, that all other HTTP controllers should
+	decend from.
+
+	Provides the following services:
+
+	* Access control, specifying what methods of authentication
+	  are valid for the controller.
+	* Input parsing, transparently converting standard form encoded
+	  POST requests and JSON encoded POST requests in the same way.
+	* Output transformations, returning either JSON or HTML as
+	  requested.
+
+	The ExampleController shows basic ways to use the base controller.
+	"""
 	# Allowed authentication methods.
 	ANONYMOUS = 0
 	NODE = 1
@@ -51,12 +66,10 @@ class BaseController(tornado.web.RequestHandler):
 	AUTH_METHODS = []
 
 	# Shared permissions cache for all controllers.
-	# Why no locking? Tornado fixes this for us.
+	# Why no locking? We're relying on the Python GIL to sort
+	# this out for us.
 	PERMISSIONS_CACHE = {}
 
-	"""
-	Base class for all controllers in the system.
-	"""
 	def initialize(self, configuration=None, io_loop=None):
 		# This is defined here so controllers can change it per-request.
 		self.DEFAULT_PAGE_SIZE = 10
@@ -85,6 +98,18 @@ class BaseController(tornado.web.RequestHandler):
 			self.add_header('X-Paasmaker-Node', self.configuration.get_node_uuid())
 
 	def prepare(self):
+		"""
+		Called to prepare the request, before the method that will
+		handle the request itself.
+
+		Performs several actions:
+
+		* Parses and stores a JSON POST body if present.
+		* Sets the format flag based on the query string.
+		* Checks that the user is authenticated with a valid
+		  authentication method, and terminates the request
+		  with a 403 if it can't find a suitable method.
+		"""
 		self._set_format(self.get_argument('format', 'html'))
 
 		if self.request.method == 'POST':
@@ -117,8 +142,17 @@ class BaseController(tornado.web.RequestHandler):
 		Validate the supplied POST data with the given schema.
 		In the case of JSON requests, terminate the request immediately
 		if the data is invalid. In the case of HTML requests,
-		return a validation failed error message, and then
-		proceed.
+		set a validation failed error message, and then
+		return False - it's up to the caller to check this
+		value and handle it as appropriate. The reason that HTML
+		requests return False is that it then gives the controller
+		the ability to redisplay the form with the users data in it,
+		ready for another attempt.
+
+		:arg SchemaNode api_schema: The API schema to validate against.
+		:arg SchemaNode html_schema: The optional HTML schema to validate
+			against. If not supplied, the API schema is used regardless of
+			the request mode.
 		"""
 		# Select the real schema to use.
 		schema = api_schema
@@ -211,6 +245,14 @@ class BaseController(tornado.web.RequestHandler):
 		return True
 
 	def redirect(self, target, **kwargs):
+		"""
+		Perform a redirect to the given target URL.
+
+		If the request is a JSON formatted request, this immediately
+		returns JSON and returns a 200 code, instead of a redirect.
+
+		:arg str target: The target URI.
+		"""
 		if self.format == 'html':
 			# Only actually redirect in HTML mode - we don't need to redirect API requests.
 			super(BaseController, self).redirect(target, **kwargs)
@@ -219,6 +261,11 @@ class BaseController(tornado.web.RequestHandler):
 			self.render("api/apionly.html")
 
 	def require_authentication(self, methods):
+		"""
+		Check the authentication methods until one is found that
+		can be satisfied. In HTML mode, redirects to the login page.
+		In JSON mode, it returns a 403 error and terminates the request.
+		"""
 		if len(methods) == 0:
 			# No methods provided.
 			raise tornado.web.HTTPError(403, 'Access is denied. No authentication methods supplied. This is a server side coding error.')
@@ -348,6 +395,16 @@ class BaseController(tornado.web.RequestHandler):
 		return self.user
 
 	def has_permission(self, permission, workspace=None, user=None):
+		"""
+		Determine if the currently logged in user has the named
+		permission. Returns True if they do, or False otherwise.
+
+		:arg str permission: The permission to check for.
+		:arg Workspace workspace: The optional workspace to limit
+			the scope to.
+		:arg User user: The optional user to compare for, rather
+			than the logged in user.
+		"""
 		if not user and self.super_auth:
 			# If authenticated with the super token,
 			# you can do anything. With great power comes
@@ -374,43 +431,123 @@ class BaseController(tornado.web.RequestHandler):
 		return allowed
 
 	def require_permission(self, permission, workspace=None, user=None):
+		"""
+		Require the given permission to continue. Stops the request
+		with a 403 if the user is not granted the given permission.
+
+		:arg str permission: The permission to check for.
+		:arg Workspace workspace: The optional workspace to limit the
+			scope to.
+		:arg User user: The optional user to check the permission for.
+		"""
 		allowed = self.has_permission(permission, workspace, user)
 		if not allowed:
 			self.add_error("You require permission %s to access." % permission)
 			raise tornado.web.HTTPError(403, "Access denied.")
 
-	def add_data(self, key, name):
-		self.data[key] = name
+	def add_data(self, key, value):
+		"""
+		Add a named data key to this request, that will then appear
+		in the output. If the request is JSON, it forms a key in the
+		dict that is generated for it's output. If the request is HTML,
+		then it is available in the template with the supplied name.
 
-	def add_data_template(self, key, name):
-		self.template[key] = name
+		If key already exists, it's value is overwritten.
+
+		:arg str key: The name of the value.
+		:arg object value: The value.
+		"""
+		self.data[key] = value
+
+	def add_data_template(self, key, value):
+		"""
+		Add a named data key to this request. Keys added with this
+		method will only be available to the template, and never returned
+		to clients requesting via JSON. This allows you to add data for
+		the template that might be privileged, which would be undesirable
+		to add to the JSON output. Also, it can be used to add functions
+		for use in templates, for which it would make no sense to return as
+		JSON.
+		"""
+		self.template[key] = value
 
 	def get_data(self, key):
+		"""
+		Get an existing data key previously added with ``add_data()``. Raises
+		a ``KeyError`` if not found.
+		"""
 		return self.data[key]
 
 	def get_data_template(self, key):
+		"""
+		Get an existing template data key previously added with
+		``add_data_template()``. Raises a ``KeyError`` if not found.
+		"""
 		return self.template[key]
 
 	def format_form_error(self, field):
+		"""
+		Helper function supplied to the templates that format errors
+		for a named form field.
+
+		Assumes that the data has an 'input_errors' key,
+		that maps to a list of errors for that field.
+
+		:arg str field: The field to display the errors for.
+		"""
 		if self.data.has_key('input_errors') and self.data['input_errors'].has_key(field):
 			return '<ul class="error"><li>%s</li></ul>' % tornado.escape.xhtml_escape(self.data['input_errors'][field])
 		else:
 			return ''
 
 	def nice_state(self, state):
+		"""
+		Helper function supplied to templates that formats a state
+		string a little bit nicer. Basically, converts it to lower case
+		and capitalizes only the first letter.
+
+		:arg str state: The state to format.
+		"""
 		return state[0] + state[1:].lower()
 
 	def add_error(self, error):
+		"""
+		Add an error to the request.
+
+		:arg str error: The error message.
+		"""
 		self.errors.append(error)
 	def add_errors(self, errors):
+		"""
+		Add several errors to the request.
+
+		:arg list errors: The errors to add.
+		"""
 		self.errors.extend(errors)
 
 	def add_warning(self, warning):
+		"""
+		Add a warning to this request.
+
+		:arg str warning: The warning to add.
+		"""
 		self.warnings.append(warning)
 	def add_warnings(self, warnings):
+		"""
+		Add several warnings to this request.
+
+		:arg list warnings: The list of warnings to add.
+		"""
 		self.warnings.extend(warnings)
 
 	def db(self):
+		"""
+		Fetch a SQLAlchemy database session.
+
+		Each request returns only one Session object. If you call
+		``db()`` several times during a request, each one will be
+		the same Session object.
+		"""
 		if self.session:
 			return self.session
 		self.session = self.configuration.get_database_session()
@@ -422,6 +559,14 @@ class BaseController(tornado.web.RequestHandler):
 		self.format = format
 
 	def render(self, template, **kwargs):
+		"""
+		Render the response to the client, and finish the request.
+
+		The template supplied is the name of the template file
+		to use when in HTML mode. If the request is in JSON
+		mode, the template is ignored and instead JSON is output to
+		the client.
+		"""
 		# Prepare our variables.
 		if self.format == 'json':
 			variables = {}
@@ -446,6 +591,16 @@ class BaseController(tornado.web.RequestHandler):
 			super(BaseController, self).render(template, **variables)
 
 	def write_error(self, status_code, **kwargs):
+		"""
+		Write an error and terminate the request. You can use this
+		to finish your request early, although flow continues past
+		this function.
+
+		This renders an error template with error data. It discards
+		all other data added with ``add_data()``.
+
+		:arg int status_code: The HTTP status code to send.
+		"""
 		# Reset the data queued up until now.
 		# Except for input_errors.
 		if self.data.has_key('input_errors'):
@@ -462,6 +617,20 @@ class BaseController(tornado.web.RequestHandler):
 		self.application.log_request(self)
 
 	def _get_router_stats_for(self, name, input_id, callback, output_key='router_stats', title=None):
+		"""
+		Helper function to get the aggregated router stats for
+		the named aggregation group. Places the result automatically
+		into the given output key, with the given title.
+
+		:arg str name: The aggregation name.
+		:arg int input_id: The aggregation input ID.
+		:arg callable callback: The callback to call when it's done.
+			It's single argument is the stats data.
+		:arg str output_key: The output key name to insert the data
+			as. If None, does not add the data at all, and only
+			calls the callback with the data.
+		:arg str title: The optional title to give this set of data.
+		"""
 		router_stats = paasmaker.router.stats.ApplicationStats(
 			self.configuration
 		)
@@ -506,6 +675,14 @@ class BaseController(tornado.web.RequestHandler):
 		)
 
 	def _redirect_job(self, job_id, url):
+		"""
+		Helper function to redirect to the job detail page
+		for the given job ID. The supplied URL is used as
+		the return URL.
+
+		:arg str job_id: The job ID to list for.
+		:arg str url: The return URL shown on the detail page.
+		"""
 		self.redirect("/job/detail/%s?ret=%s" % (
 				job_id,
 				tornado.escape.url_escape(url)
@@ -513,6 +690,38 @@ class BaseController(tornado.web.RequestHandler):
 		)
 
 	def _paginate(self, key, data, page_size=None):
+		"""
+		Simple paginator for lists of data.
+
+		Using this is as simple as this::
+
+			data = [1, 2, 3]
+			self._paginate('data', data)
+
+		In your templates, you can then include the pagination
+		template, which will set up links for you to page
+		between the data. In JSON requests, it will by default
+		return all results. However, if you pass the ``pagesize``
+		query parameter, it will paginate the data in pages
+		of that size.
+
+		This will read the query string parameter ``page`` to
+		determine what page to show. For this reason, you'll
+		only want to use one call to ``_paginate()`` per request
+		handler.
+
+		Your controller can change the default page size for
+		by setting the class variable DEFAULT_PAGE_SIZE.
+
+		The key that is added to the data has several sub
+		keys, used to show information about the data.
+
+		* total: The total number of entries.
+		* pages: The total number of pages.
+		* page: This page, starting at 1.
+		* start: The first record number (starting at 1).
+		* end: The last record number (ending at total).
+		"""
 		page = 1
 		page_size = self.DEFAULT_PAGE_SIZE
 
@@ -575,6 +784,9 @@ class WebsocketMessageSchemaNormal(WebsocketMessageSchemaCookie):
 class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 	"""
 	Base class for WebsocketHandlers.
+
+	This base class handles authentication, parsing incoming messages,
+	and sending back messages and errors.
 	"""
 	# Allowed authentication methods.
 	ANONYMOUS = 0
