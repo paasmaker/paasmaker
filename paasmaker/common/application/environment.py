@@ -4,12 +4,22 @@ import copy
 import json
 
 class ApplicationEnvironment(object):
+	"""
+	A helper class that contains methods to build the environment
+	variables that an application will require at runtime.
+	"""
+
 	@staticmethod
 	def get_instance_environment(version):
 		"""
 		Fetch only the instance environment that is not node specific.
 		Intended only to capture data that can be seralized and passed to
-		a different node.
+		a different node, during registration of instances with heart nodes.
+
+		Returns a dict of the additional environment variables.
+
+		:arg ApplicationVersion version: The version of the application to
+			prepare the environment for.
 		"""
 		environment = {}
 
@@ -39,7 +49,14 @@ class ApplicationEnvironment(object):
 	def merge_local_environment(configuration, other_environment):
 		"""
 		Merge an application's environment with this nodes environment -
-		that means this nodes's tags and local environment.
+		that means this nodes's tags and local environment. This should
+		then form a complete set of environment variables for an application
+		to start up.
+
+		:arg Configuration configuration: The configuration object, to read
+			in any other appropriate data.
+		:arg dict other_environment: The environment passed from the
+			pacemaker.
 		"""
 		environment = copy.deepcopy(other_environment)
 
@@ -62,6 +79,11 @@ class ApplicationEnvironment(object):
 		Get the entire environment required for a version, including the local
 		environment. The results of this function are for use only on the
 		calling node, and should not be sent to another node.
+
+		:arg Configuration configuration: The configuration object
+			to read additional data from.
+		:arg ApplicationVersion version: The version ORM object to
+			fetch everything from.
 		"""
 		# Helper to get the instance environment and our local environment in one go.
 		environment = ApplicationEnvironment.get_instance_environment(version)

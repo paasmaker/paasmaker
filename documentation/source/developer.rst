@@ -50,6 +50,7 @@ integration with Paasmaker.
 .. toctree::
    :maxdepth: 2
 
+   developer-configuration
    developer-utils
    developer-managed
    developer-model

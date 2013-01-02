@@ -21,8 +21,15 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 class ConfigurationStub(configuration.Configuration):
-	"""A test version of the configuration object, for unit tests."""
-	default_config = """
+    """
+    A test version of the configuration object, for unit tests.
+
+    This class can handle generating a default configuration, using
+    temporary paths, and behaves just like the normal Configuration object -
+    except that it can also clean up after itself once the unit test is complete.
+    """
+
+    default_config = """
 # The port to this test instance is the master port, for testing purposes.
 http_port: %(master_port)d
 node_token: %(node_token)s
@@ -96,7 +103,7 @@ plugins:
   #    baz: bar
 """
 
-	pacemaker_config = """
+    pacemaker_config = """
 pacemaker:
   enabled: true
   super_token: %(super_token)s
@@ -109,91 +116,100 @@ pacemaker:
         - paasmaker.scmlist.dummy
 """
 
-	heart_config = """
+    heart_config = """
 heart:
   enabled: true
   working_dir: %(heart_working_dir)s
 """
 
-	router_config = """
+    router_config = """
 router:
   enabled: true
   stats_log: %(stats_log)s
 """
 
-	def __init__(self, port=42600, modules=[], io_loop=None):
-		# Choose filenames and set up example configuration.
-		configfile = tempfile.mkstemp()
-		self.params = {}
+    def __init__(self, port=42600, modules=[], io_loop=None):
+        # Choose filenames and set up example configuration.
+        configfile = tempfile.mkstemp()
+        self.params = {}
 
-		allocator = paasmaker.util.port.FreePortFinder()
+        allocator = paasmaker.util.port.FreePortFinder()
 
-		self.params['log_dir'] = tempfile.mkdtemp()
-		self.params['node_token'] = str(uuid.uuid4())
-		self.params['super_token'] = str(uuid.uuid4())
-		self.params['heart_working_dir'] = tempfile.mkdtemp()
-		self.params['scratch_dir'] = tempfile.mkdtemp()
-		self.params['master_port'] = port
-		self.params['router_table_port'] = allocator.free_in_range(42710, 42799)
-		self.params['router_stats_port'] = allocator.free_in_range(42710, 42799)
-		self.params['jobs_port'] = allocator.free_in_range(42710, 42799)
-		self.params['broker_port'] = allocator.free_in_range(42710, 42799)
-		self.params['stats_log'] = "%s/access.log.paasmaker" % self.params['log_dir']
+        self.params['log_dir'] = tempfile.mkdtemp()
+        self.params['node_token'] = str(uuid.uuid4())
+        self.params['super_token'] = str(uuid.uuid4())
+        self.params['heart_working_dir'] = tempfile.mkdtemp()
+        self.params['scratch_dir'] = tempfile.mkdtemp()
+        self.params['master_port'] = port
+        self.params['router_table_port'] = allocator.free_in_range(42710, 42799)
+        self.params['router_stats_port'] = allocator.free_in_range(42710, 42799)
+        self.params['jobs_port'] = allocator.free_in_range(42710, 42799)
+        self.params['broker_port'] = allocator.free_in_range(42710, 42799)
+        self.params['stats_log'] = "%s/access.log.paasmaker" % self.params['log_dir']
 
-		# Create the configuration file.
-		configuration = self.default_config % self.params
+        # Create the configuration file.
+        configuration = self.default_config % self.params
 
-		if 'pacemaker' in modules:
-			configuration += self.pacemaker_config % self.params
-		if 'heart' in modules:
-			configuration += self.heart_config % self.params
-		if 'router' in modules:
-			configuration += self.router_config % self.params
+        if 'pacemaker' in modules:
+            configuration += self.pacemaker_config % self.params
+        if 'heart' in modules:
+            configuration += self.heart_config % self.params
+        if 'router' in modules:
+            configuration += self.router_config % self.params
 
-		self.configname = configfile[1]
-		open(self.configname, 'w').write(configuration)
+        self.configname = configfile[1]
+        open(self.configname, 'w').write(configuration)
 
-		# Call parent constructor.
-		super(ConfigurationStub, self).__init__()
+        # Call parent constructor.
+        super(ConfigurationStub, self).__init__()
 
-		# Replace the IO loop.
-		self.io_loop = io_loop
+        # Replace the IO loop.
+        self.io_loop = io_loop
 
-		# And then load the config.
-		super(ConfigurationStub, self).load_from_file([self.configname])
+        # And then load the config.
+        super(ConfigurationStub, self).load_from_file([self.configname])
 
-		# Choose a UUID for ourself.
-		#self.set_node_uuid(str(uuid.uuid4()))
+        # Choose a UUID for ourself.
+        #self.set_node_uuid(str(uuid.uuid4()))
 
-		# And if we're a pacemaker, create the DB.
-		if 'pacemaker' in modules:
-			self.setup_database()
+        # And if we're a pacemaker, create the DB.
+        if 'pacemaker' in modules:
+            self.setup_database()
 
-	def cleanup(self):
-		# Unsubscribe any listeners, to prevent leaks between tests.
-		# This doesn't stop all leaks, but certainly helps.
-		pub.unsubAll()
+    def cleanup(self):
+        """
+        Clean up anything set up during this unit tests. This means
+        stopping any redis servers that were started, and deleting
+        all files and directories that were created.
+        """
+        # Unsubscribe any listeners, to prevent leaks between tests.
+        # This doesn't stop all leaks, but certainly helps.
+        pub.unsubAll()
 
-		# Shut down any services we used.
-		if hasattr(self, 'redis_meta'):
-			for key, meta in self.redis_meta.iteritems():
-				if meta['state'] == 'STARTED':
-					logger.info("Killing off test redis instance.")
-					meta['manager'].destroy()
+        # Shut down any services we used.
+        if hasattr(self, 'redis_meta'):
+            for key, meta in self.redis_meta.iteritems():
+                if meta['state'] == 'STARTED':
+                    logger.info("Killing off test redis instance.")
+                    meta['manager'].destroy()
 
-		# Remove files that we created.
-		shutil.rmtree(self.params['log_dir'])
-		shutil.rmtree(self.params['heart_working_dir'])
-		shutil.rmtree(self.params['scratch_dir'])
-		os.unlink(self.configname)
+        # Remove files that we created.
+        shutil.rmtree(self.params['log_dir'])
+        shutil.rmtree(self.params['heart_working_dir'])
+        shutil.rmtree(self.params['scratch_dir'])
+        os.unlink(self.configname)
 
-	def get_tornado_configuration(self):
-		settings = super(ConfigurationStub, self).get_tornado_configuration()
-		# Force debug mode on.
-		settings['debug'] = True
-		return settings
+    def get_tornado_configuration(self):
+        """
+        Overridden tornado settings for unit tests. Forces
+        debug mode to be on regardless of any other settings.
+        """
+        settings = super(ConfigurationStub, self).get_tornado_configuration()
+        # Force debug mode on.
+        settings['debug'] = True
+        return settings
 
 class TestConfigurationStub(unittest.TestCase):
-	def test_simple(self):
-		stub = ConfigurationStub(modules=['pacemaker', 'heart', 'router'])
-		# And I guess we shouldn't have any exceptions...
+    def test_simple(self):
+        stub = ConfigurationStub(modules=['pacemaker', 'heart', 'router'])
+        # And I guess we shouldn't have any exceptions...

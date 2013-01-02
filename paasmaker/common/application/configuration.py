@@ -145,10 +145,23 @@ class ConfigurationSchema(colander.MappingSchema):
 	manifest = Manifest()
 
 class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationHelper):
+	"""
+	A class to load, validate, and work with application manifest files.
+
+	This is a subclass of ``ConfigurationHelper`` which provides some helpers
+	when working with the application schemas.
+	"""
+
 	def __init__(self):
 		super(ApplicationConfiguration, self).__init__(ConfigurationSchema())
 
 	def post_load(self):
+		"""
+		Perform additional validation of the schema once loaded.
+
+		In particular, it valides the schema of the instance types
+		listed in the manifest.
+		"""
 		# Check the schema of nodes in the instances map.
 		# Because there doesn't seem to be a way to get colander to do so.
 		schema = Instance()
@@ -167,6 +180,18 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 				raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self['instance']['instances'])
 
 	def create_application(self, session, workspace):
+		"""
+		Create a new application, based on this manifest,
+		in the given workspace.
+
+		The new Application object is returned. Nothing is saved
+		or committed - you will need to add it to the session
+		yourself.
+
+		:arg Session session: The session to work in.
+		:arg Workspace workspace: The workspace to attach
+			the application to.
+		"""
 		application = paasmaker.model.Application()
 		application.workspace = workspace
 		application.name = self.get_flat('application.name')
@@ -174,6 +199,21 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 		return application
 
 	def unpack_into_database(self, session, application, scm_name, scm_parameters):
+		"""
+		Unpack a new version of the application into the database.
+
+		This generates all the relevant ORM objects for a new
+		version of the supplied application, based on the settings
+		contained in the manifest.
+
+		:arg Session session: The session to work in.
+		:arg Application application: The application to make a new
+			version of.
+		:arg str scm_name: The name of the SCM plugin - this is
+			simply recorded and not otherwise used.
+		:arg dict scm_parameters: The SCM parameters. This is simply
+			stored in the new version data.
+		"""
 		# Figure out the new version number.
 		new_version_number = paasmaker.model.ApplicationVersion.get_next_version_number(session, application)
 

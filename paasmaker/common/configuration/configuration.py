@@ -400,18 +400,45 @@ class ConfigurationSchema(colander.MappingSchema):
 		missing="/usr/local/openresty/nginx/sbin/nginx")
 
 class ImNotA(Exception):
+	"""
+	Base exception thrown when a configuration method
+	is called that is not supported by the node type.
+	"""
 	pass
 
 class ImNotAHeart(ImNotA):
+	"""
+	Thrown when a heart-only method is called from a non-heart node.
+	"""
 	pass
 
 class ImNotAPacemaker(ImNotA):
+	"""
+	Thrown when a pacemaker-only method is called from a non-pacemaker
+	node.
+	"""
 	pass
 
 class ImNotARouter(ImNotA):
+	"""
+	Thrown when a router-only method is called from a non-router node.
+	"""
 	pass
 
 class JobStatusMessage(object):
+	"""
+	A job status message object that is passed to any subscribers to
+	the internal job status notification.
+
+	:arg str job_id: The job ID.
+	:arg str state: One of the state constants for a job.
+	:arg str source: The UUID of the node that originated this
+		message.
+	:arg str|None parent_id: The parent ID of this job. Typically
+		only set when the job is NEW.
+	:arg str|None summary: The summary of the job. Only set when
+		the job enters a finished state.
+	"""
 	def __init__(self, job_id, state, source, parent_id=None, summary=None):
 		self.job_id = job_id
 		self.state = state
@@ -420,6 +447,9 @@ class JobStatusMessage(object):
 		self.summary = summary
 
 	def flatten(self):
+		"""
+		Flatten the internal variables into a dict.
+		"""
 		return {
 			'job_id': self.job_id,
 			'state': self.state,
@@ -429,6 +459,48 @@ class JobStatusMessage(object):
 		}
 
 class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
+	"""
+	The main configuration object for the Paasmaker system.
+
+	This object contains the configuration and context for the entire
+	application. Most components in the system accept an instance of
+	this object, and use that to look up shared resources such as database
+	sessions, Redis instances, or other information.
+
+	This class also handles loading the configuration file as well,
+	and validating it's contents. Additionally, it also handles plugins.
+
+	Instance variables that are available for public use:
+
+	* **plugins**: The plugin registry instance for the system. You
+	  can call this to instantiate plugins. For example::
+
+	  	self.configuration.plugins.instantiate( ... )
+
+	* **io_loop**: The tornado IO loop. Use the IO loop from this
+	  object directly wherever you need one. This is because the
+	  ``ConfigurationStub()`` class will have this set correctly,
+	  meaning your production code and unit test code are identical.
+	* **job_manager**: You can acces the job manager directly from
+	  here when needed.
+
+	Other instance variables, whilst not prefixed with an underscore,
+	should be considered protected. Only use the instance variables
+	documented above in your code.
+
+	To access the configuration options, you have two options:
+
+	* Use the configuration object as a dict, checking for keys
+	  as nessecary before trying to access keys that may or may not
+	  be present. For example::
+
+	  	pacemaker = configuration['pacemaker']['enabled']
+
+	* Use the ``get_flat()`` method with a path. For example::
+
+		pacemaker = configuration.get_flat('pacemaker.enabled')
+
+	"""
 	def __init__(self, io_loop=None):
 		super(Configuration, self).__init__(ConfigurationSchema())
 		self.port_allocator = paasmaker.util.port.FreePortFinder()
@@ -439,6 +511,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
 
 	def load_from_file(self, search_path):
+		"""
+		Load the configuration from file. If a specific configuration
+		file was specified on the command line, attempt to load
+		from that file.
+		"""
 		# If we were supplied a configuration file on the command line,
 		# insert that into the search path.
 		new_search_path = list(search_path)
@@ -447,6 +524,13 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		super(Configuration, self).load_from_file(new_search_path)
 
 	def post_load(self):
+		"""
+		Perform post configuration loading tasks.
+
+		This creates directories as needed, determines things like
+		the hostname and route (if required), registers plugins,
+		including default plugins.
+		"""
 		# Make sure directories exist.
 		if not os.path.exists(self.get_flat('scratch_directory')):
 			raise InvalidConfigurationException("Scratch directory does not exist.")
@@ -685,13 +769,29 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.update_flat()
 
 	def is_pacemaker(self):
+		"""
+		Determine if this node is a pacemaker.
+		"""
 		return self.get_flat('pacemaker.enabled')
 	def is_heart(self):
+		"""
+		Determine if this node is a heart.
+		"""
 		return self.get_flat('heart.enabled')
 	def is_router(self):
+		"""
+		Determine if this node is a router.
+		"""
 		return self.get_flat('router.enabled')
 
 	def get_runtimes(self):
+		"""
+		Get a list of runtimes and their associated versions.
+
+		Once the list is generated, it is cached for the lifetime
+		of the server. Subsequent calls return the same list generated
+		the first time.
+		"""
 		if not self.is_heart():
 			raise ImNotAHeart("I'm not a heart, so I have no runtimes.")
 
@@ -716,6 +816,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		return self._runtime_cache
 
 	def setup_database(self):
+		"""
+		Set up the database; creating tables on the first startup,
+		or otherwise doing nothing on subsequent operations.
+		"""
 		if not self.is_pacemaker():
 			raise ImNotAPacemaker("I'm not a pacemaker, so I have no database.")
 
@@ -728,6 +832,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		paasmaker.model.Base.metadata.create_all()
 
 	def get_free_port(self):
+		"""
+		Get a free TCP port in the misc ports range.
+		"""
 		return self.port_allocator.free_in_range(self.get_flat('misc_ports.minimum'), self.get_flat('misc_ports.maximum'))
 
 	def get_database_session(self):
@@ -744,6 +851,15 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		"""
 		Internal function to connect to the given redis server, calling
 		the callback when it's ready with the client object.
+
+		You should not call this externally.
+
+		:arg dict credentials: A dict containing three keys, ``host``,
+			``port``, and ``password``.
+		:arg callable callback: The callback to call when completed. The
+			callback is passed the client object, an instance of
+			``tornadoredis.Client``.
+		:arg callable error_callback: A callback called if an error occurs.
 		"""
 		client = tornadoredis.Client(
 			host=credentials['host'],
@@ -759,12 +875,12 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def _get_redis(self, name, credentials, callback, error_callback):
 		"""
 		Internal helper to get a redis connection.
-		- Not a managed redis? Proceed to fetching a connection.
-		- A managed redis? And not started? Start it, and then
+		* Not a managed redis? Proceed to fetching a connection.
+		* A managed redis? And not started? Start it, and then
 		  return a client to it.
-		- A managed redis? And still starting up? Queue up the incoming
+		* A managed redis? And still starting up? Queue up the incoming
 		  requests.
-		- A managed redis that's started? Proceed to fetching a connection.
+		* A managed redis that's started? Proceed to fetching a connection.
 		"""
 		if not credentials['managed']:
 			# It's not managed. Just attempt to connect to it.
@@ -824,15 +940,41 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				self._connect_redis(credentials, callback, error_callback)
 
 	def get_router_table_redis(self, callback, error_callback):
+		"""
+		Get a redis client pointing to the router table Redis instance.
+
+		On router nodes, this will return a connection to the slave
+		redis. On pacemaker nodes, this will instead be the master.
+		This is dependant on the server configuration.
+		"""
 		self._get_redis('table', self['redis']['table'], callback, error_callback)
 
 	def get_stats_redis(self, callback, error_callback):
+		"""
+		Get a redis client pointing to the stats Redis instance.
+
+		For multi node setups, this will generally point to the same
+		instance of Redis, on a single host.
+		"""
 		self._get_redis('stats', self['redis']['stats'], callback, error_callback)
 
 	def get_jobs_redis(self, callback, error_callback):
+		"""
+		Get a redis client pointing to the jobs Redis instance.
+
+		For multi node setups, this will generally point to the same
+		instance of Redis, on a single host.
+		"""
 		self._get_redis('jobs', self['redis']['jobs'], callback, error_callback)
 
 	def shutdown_managed_redis(self):
+		"""
+		Shutdown any managed redis instances for which we've been
+		configured to shutdown on exit.
+
+		This has no action if no Redis instances have been configured
+		to shutdown on exit.
+		"""
 		if hasattr(self, 'redis_meta'):
 			for key, meta in self.redis_meta.iteritems():
 				if meta['state'] == 'STARTED' and meta['shutdown']:
@@ -843,6 +985,12 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 						pass
 
 	def setup_managed_nginx(self, callback, error_callback):
+		"""
+		Setup, and start if nessecary a managed NGINX instance
+		for this node, calling the callback when this task is complete.
+
+		Has no action if this node is not managing an NGINX instance.
+		"""
 		if self.get_flat('router.nginx.managed'):
 			# Fire up the managed version, if it's not already running.
 			self.nginx_server = paasmaker.util.managednginx.ManagedNginx(self)
@@ -873,12 +1021,21 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			callback("NGINX not managed - no action taken.")
 
 	def shutdown_managed_nginx(self):
+		"""
+		If configured, shutdown an associated managed NGINX instance
+		on exit.
+		"""
 		if self.get_flat('router.nginx.managed') and self.get_flat('router.nginx.shutdown'):
 			# Shut down the managed nginx, if it's running.
 			if self.nginx_server.is_running():
 				self.nginx_server.stop()
 
 	def get_tornado_configuration(self):
+		"""
+		Return a dict of settings that are passed to Tornado's HTTP
+		listener, to configure various framework options. The
+		returned settings are based on the configuration of the system.
+		"""
 		settings = {}
 		# If we're a pacemaker, the cookie secret is the cluster name
 		# and the super token combined.
@@ -897,29 +1054,79 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			settings['gzip'] = True
 		return settings
 
-	def get_scratch_path(self, filename):
-		return os.path.join(self.get_flat('scratch_directory'), filename)
+	def get_scratch_path(self, *args):
+		"""
+		Get a absolute path to a filename in the scratch directory.
+
+		The filename is joined onto the scratch directory and then
+		returned. The path may not exist; use ``get_scratch_path_exists()``
+		to handle this case.
+		"""
+		return os.path.join(self.get_flat('scratch_directory'), *args)
 
 	def get_scratch_path_exists(self, *args):
+		"""
+		This is the same as ``get_scratch_path()`` except it makes
+		sure the directories including and leading up to it exist
+		before returning the path.
+		"""
 		path = os.path.join(self.get_flat('scratch_directory'), *args)
 		if not os.path.exists(path):
 			os.makedirs(path)
 		return path
 
 	def get_supervisor_path(self):
+		"""
+		Get the path to the pm-supervisor.py command, determined relative
+		to this installation or copy of Paasmaker.
+		"""
 		return os.path.normpath(os.path.dirname(__file__) + '/../../../pm-supervisor.py')
 
 	#
 	# JOB HELPERS
 	#
 	def startup_job_manager(self, callback=None, error_callback=None):
+		"""
+		Set up the job manager.
+
+		This should be called before working with the job manager.
+		This asks the job manager to set up any database connections
+		it may need to work.
+		"""
 		self.job_manager.prepare(callback, error_callback)
 
 	def start_jobs(self):
+		"""
+		Evaluate any pending jobs, and begin executing any that
+		can be run now.
+		"""
 		self.job_manager.evaluate()
 	def get_job_logger(self, job_id):
-		return paasmaker.util.joblogging.JobLoggerAdapter(logging.getLogger('job'), job_id, self, self.get_job_watcher())
+		"""
+		Get a JobLoggingAdapter for the given job ID.
+		:arg str job_id: The job ID to fetch the logger for.
+		"""
+		return paasmaker.util.joblogging.JobLoggerAdapter(
+			logging.getLogger('job'),
+			job_id,
+			self,
+			self.get_job_watcher()
+		)
 	def get_job_log_path(self, job_id, create_if_missing=True):
+		"""
+		Get the absolute path to a job log file.
+
+		Useful if the job log file is to be used outside of
+		the normal logging system, or for checking if it
+		exists or otherwise working with it.
+
+		:arg str job_id: The job ID to fetch the path for.
+		:arg bool create_if_missing: If true, ensure that
+			the file exists before returning. This works
+			around some issues in unit tests, but should be
+			set to false if determining the existence of log
+			files.
+		"""
 		# TODO: Make this safer, but maintain the job id's relating to their on disk
 		# filenames.
 		if job_id.find('.') != -1 or job_id.find('/') != -1:
@@ -942,31 +1149,72 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			fp.close()
 		return path
 	def debug_cat_job_log(self, job_id):
+		"""
+		For debugging, directly print the entire contents of a job
+		log file to screen by using print.
+
+		:arg str job_id: The job ID to dump.
+		"""
 		path = self.get_job_log_path(job_id)
 		fp = open(path, 'r')
 		print fp.read()
 		fp.close()
 	def get_job_message_pub_topic(self, job_id):
+		"""
+		Fetch the pub-sub topic for a new-messages-available
+		topic, for a specific job ID.
+
+		:arg str job_id: The job ID to fetch the topic for.
+		"""
 		# Why add the 'j' to the job name? It seems a topic name
 		# can't start with a number.
 		return ('job', 'message', 'j' + job_id)
 	def get_job_status_pub_topic(self, job_id):
+		"""
+		Fetch the pub-sub topic for a job-status
+		topic, for a specific job ID.
+
+		:arg str job_id: The job ID to fetch the topic for.
+		"""
 		# Why add the 'j' to the job name? It seems a topic name
 		# can't start with a number.
 		return ('job', 'status', 'j' + job_id)
 	def job_exists_locally(self, job_id):
+		"""
+		Check to see if a log file exists for the given
+		job on this node.
+
+		:arg str job_id: The job ID to check for.
+		"""
 		path = self.get_job_log_path(job_id, create_if_missing=False)
 		return os.path.exists(path)
 	def setup_job_watcher(self):
+		"""
+		Set up the job log watcher helper class.
+		"""
 		if not self.job_watcher:
 			self.job_watcher = paasmaker.util.joblogging.JobWatcher(self)
 	def get_job_watcher(self):
+		"""
+		Get the job watcher instance.
+		"""
 		return self.job_watcher
 	def send_job_status(self, job_id, state, source=None, parent_id=None, summary=None):
 		"""
-		Propagate the status of a job to listeners who care inside our
+		Propagate the status of a job to listeners inside our
 		instance, and also likely to other nodes as well. The Job manager
-		is responsible for getting it to other nodes.
+		is responsible for getting the status to other nodes.
+
+		:arg str job_id: The job ID that this status update is for.
+		:arg str state: The state of the job.
+		:arg str|None source: The source of the job. This is for internal
+			use, to track the node who sent the status update in the
+			first place. Unless you know what you're doing, leave this as None.
+		:arg str|None parent_id: The parent ID of a new job. The job manager
+			should handle notifications of new jobs, so leave this as None.
+		:arg str|None summary: The summary of a job, sent when the job changes
+			into a finished state. The job manager handles suppling this when
+			needed.
 		"""
 		# If source is not supplied, send along our own UUID.
 		send_source = source
@@ -986,7 +1234,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	#
 	def set_node_uuid(self, uuid):
 		"""
-		Save our UUID to the scratch directory.
+		Set our nodes UUID, saving it to an appropriate location.
+
+		:arg str uuid: The node's UUID.
 		"""
 		path = os.path.join(self.get_flat('scratch_directory'), 'UUID')
 		fp = open(path, 'w')
@@ -1020,6 +1270,13 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	# HEART HELPERS
 	#
 	def get_instance_path(self, instance_id):
+		"""
+		Heart nodes - get the path to the working directory
+		for a given instance ID. Creates the directory if
+		it does not already exist.
+
+		:arg str instance_id: The instance ID.
+		"""
 		path = os.path.join(
 			self.get_flat('heart.working_dir'),
 			'instance',
@@ -1032,6 +1289,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		return path
 
 	def get_instance_package_path(self):
+		"""
+		Get the path where packed applications are stored.
+		Creates the path if required.
+		"""
 		path = os.path.join(
 			self.get_flat('heart.working_dir'),
 			'packages'
@@ -1042,6 +1303,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		return path
 
 	def instance_status_trigger(self):
+		"""
+		Heart nodes - trigger an instance status report to the master
+		right now. Used when you know that the instance statuses have changed.
+		"""
 		if hasattr(self, 'node_register_periodic'):
 			# Trigger a call to update the master with instance statuses.
 			# This will do one at a time, but stack them to it's always up
