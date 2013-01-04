@@ -12,6 +12,12 @@ logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
 class InstanceManager(object):
+	"""
+	A class to manage instance data, for each heart node.
+
+	Instance data is written out to a flat file on each node. This is so
+	each heart doesn't require a database or other special storage system.
+	"""
 	def __init__(self, configuration):
 		self.configuration = configuration
 		# Mapping of instance id -> data.
@@ -20,12 +26,16 @@ class InstanceManager(object):
 		# Reload our catalog from disk, if it exists.
 		self.load()
 
-	def get_catalog_path(self):
+	def _get_catalog_path(self):
 		return os.path.join(self.configuration.get_flat('scratch_directory'), 'heart_catalog.json')
 
 	def load(self):
+		"""
+		Load the heart catalog from disk. Starts with an empty
+		catalog if this is the first time.
+		"""
 		# Load the catalog from the disk.
-		path = self.get_catalog_path()
+		path = self._get_catalog_path()
 		logger.debug("Heart catalog path: %s", path)
 		if os.path.exists(path):
 			logger.debug("Using existing catalog, as it exists.")
@@ -44,9 +54,17 @@ class InstanceManager(object):
 				self.catalog = {}
 
 	def save(self, report_to_master=True):
+		"""
+		Save the heart catalog to disk. This should be called
+		after any change to the instance data. If the report_to_master
+		flag is set, it triggers an update report to the master.
+
+		:arg bool report_to_master: If true, triggers an update
+			of instance status to the master.
+		"""
 		# Save the catalog to disk, writing a new one out and then
 		# renaming it, to make it atomic.
-		path = self.get_catalog_path()
+		path = self._get_catalog_path()
 		path_temp = path + ".temp"
 		fp = open(path_temp, 'w')
 		fp.write(json.dumps(self.catalog, cls=paasmaker.util.jsonencoder.JsonEncoder))
@@ -58,6 +76,16 @@ class InstanceManager(object):
 			self.configuration.instance_status_trigger()
 
 	def add_instance(self, instance_id, data):
+		"""
+		Add an instance to this catalog.
+
+		Raise an exception if the instance already exists.
+
+		The catalog is automatically saved.
+
+		:arg str instance_id: The instance ID to add.
+		:arg dict data: The instance data.
+		"""
 		if self.catalog.has_key(instance_id):
 			raise KeyError("We already have an instance for instance id %s" % instance_id)
 
@@ -73,6 +101,10 @@ class InstanceManager(object):
 	def remove_instance(self, instance_id):
 		"""
 		Remove the instance from our catalog.
+
+		The catalog is automatically saved.
+
+		:arg str instance_id: The instance ID to remove.
 		"""
 		if not self.catalog.has_key(instance_id):
 			raise KeyError("We do not have an instance for %s" % instance_id)
@@ -81,12 +113,27 @@ class InstanceManager(object):
 		self.save()
 
 	def get_state(self, instance_id):
+		"""
+		Get the last known state of the given instance ID.
+
+		Does not actively check the instance's state.
+
+		:arg str instance_id: The instance ID to return the
+			state of.
+		"""
 		if not self.catalog.has_key(instance_id):
 			raise KeyError("Unknown instance %s" % instance_id)
 
 		return self.catalog[instance_id]['instance']['state']
 
 	def change_state(self, instance_id, state):
+		"""
+		Change the given instance ID's state. The catalog
+		is saved automatically.
+
+		:arg str instance_id: The instance ID to change.
+		:arg str state: The state to change to.
+		"""
 		if not self.catalog.has_key(instance_id):
 			raise KeyError("Unknown instance %s" % instance_id)
 
@@ -95,15 +142,34 @@ class InstanceManager(object):
 		self.save()
 
 	def get_instance(self, instance_id):
+		"""
+		Get all instance data for the given instance ID.
+
+		:arg str instance_id: The instance ID to fetch data for.
+		"""
 		if not self.catalog.has_key(instance_id):
 			raise KeyError("Unknown instance %s" % instance_id)
 
 		return self.catalog[instance_id]
 
 	def has_instance(self, instance_id):
+		"""
+		Determine if our catalog has an instance.
+
+		:arg str instance_id: The instance ID to check.
+		"""
 		return self.catalog.has_key(instance_id)
 
 	def get_instance_list(self):
+		"""
+		Return a list of instance IDs and their states.
+		The result is a dict like so::
+
+			{
+				'<instance id 1>': 'STATE',
+				...
+			}
+		"""
 		result = {}
 		for instance_id, data in self.catalog.iteritems():
 			result[instance_id] = data['instance']['state']
@@ -111,6 +177,15 @@ class InstanceManager(object):
 		return result
 
 	def generate_exit_key(self, instance_id):
+		"""
+		Generate an exit token for the given instance ID, storing the token
+		along with the instance's data, and saving the catalog.
+
+		This does not replace an existing exit key; it generates a new one
+		and adds it to the list of valid exit keys.
+
+		:arg str instance_id: The instance ID to generate the key for.
+		"""
 		instance = self.get_instance(instance_id)
 		exit_key = str(uuid.uuid4())
 		instance['runtime']['exit']['keys'].append(exit_key)
@@ -118,6 +193,14 @@ class InstanceManager(object):
 		return exit_key
 
 	def get_used_ports(self):
+		"""
+		Get a list of ports already assigned to instances from the catalog.
+
+		This is designed to pre-seed the port allocator upon startup,
+		to speed up locating free ports.
+
+		The return value is a list of ports.
+		"""
 		ports = []
 		for instance_id, data in self.catalog.iteritems():
 			if data.has_key('instance') and data['instance'].has_key('port'):
@@ -126,6 +209,17 @@ class InstanceManager(object):
 		return ports
 
 	def check_instances_startup(self, callback):
+		"""
+		Check all instances in the catalog.
+
+		This is designed to be run on startup. It goes over all instances
+		in the catalog, checking their state matches what is stored. Once
+		complete, it will call the supplied callback. The callback is supplied
+		a list of instance IDs that have changed state as a result of the
+		checks.
+
+		:arg callable callback: The callback to call when complete.
+		"""
 		# TODO: Add unit tests for this. Desperately required.
 		instances = self.catalog.keys()
 		altered_instances = []
@@ -198,6 +292,15 @@ class InstanceManager(object):
 		next_instance()
 
 	def check_instances_shutdown(self, callback):
+		"""
+		Check all registered instances on shutdown. May change
+		the state of instances as required.
+
+		Calls the supplied callback once done, with a list of instance
+		IDs that were altered.
+
+		:arg callable callback: The callback to call when complete.
+		"""
 		# TODO: Add unit tests for this. Desperately required.
 		instances = self.catalog.keys()
 		altered_instances = []
@@ -298,7 +401,7 @@ class InstanceManagerTest(unittest.TestCase):
 		self.assertEquals(len(manager.get_instance_list().keys()), 0, "Already has instances?")
 
 		# Check that the catalog file doesn't exist yet.
-		path = manager.get_catalog_path()
+		path = manager._get_catalog_path()
 		self.assertFalse(os.path.exists(path), "Catalog already exists...")
 
 		# Make sure it throws an exception if we try to fetch an invalid ID.
