@@ -798,10 +798,24 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 	AUTH_METHODS = []
 
 	def initialize(self, configuration):
+		"""
+		Called by Tornado when the connection is established.
+		"""
 		self.configuration = configuration
 		self.authenticated = False
 
 	def parse_message(self, message):
+		"""
+		Helper function to parse a message. This function
+		only validates it against the full schema, and then
+		attempts to check the user's authentication. If the
+		authentication fails or the message headers do not
+		validate, an error is sent back to the client.
+
+		Otherwise, the parsed message is returned.
+
+		:arg str message: The raw message from the client.
+		"""
 		parsed = json.loads(message)
 		schema = WebsocketMessageSchemaNormal()
 
@@ -840,6 +854,10 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 			return None
 
 	def check_authentication(self, auth, message):
+		"""
+		Check the authentication of the message. This is called
+		by ``parse_message()``.
+		"""
 		if len(self.AUTH_METHODS) == 0:
 			# No methods provided.
 			self.send_error('Access is denied. No authentication methods supplied. This is a server side coding error.', message)
@@ -882,6 +900,16 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 			self.authenticated = True
 
 	def validate_data(self, message, schema):
+		"""
+		Validate parsed data with the given schema. If this
+		succeeds, the resulting deserialized data is returned.
+		If it fails, an error is sent back to the client
+		and None is returned.
+
+		:arg dict message: The message body.
+		:arg SchemaNode schema: The colander schema to validate
+			against.
+		"""
 		try:
 			result = schema.deserialize(message['data'])
 		except colander.Invalid, ex:
@@ -891,14 +919,31 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 		return result
 
 	def send_error(self, error, message):
+		"""
+		Send an error back to the client, framing it
+		with the sequence number from the original message.
+
+		:arg str error: The error message.
+		:arg dict message: The parsed original message body.
+		"""
 		error_payload = self.make_error(error, message)
 		error_message = self.encode_message(error_payload)
 		self.write_message(error_message)
 
 	def send_success(self, typ, data):
+		"""
+		Send a successful response to the client, handling
+		encoding and framing.
+
+		:arg str typ: The type of the message returned.
+		:arg dict data: The data to return to the client.
+		"""
 		self.write_message(self.encode_message(self.make_success(typ, data)))
 
 	def make_error(self, error, message):
+		"""
+		Helper function to build an error frame.
+		"""
 		result = {
 			'type': 'error',
 			'data': { 'error': error, 'sequence': message['sequence'] }
@@ -906,6 +951,9 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 		return result
 
 	def make_success(self, typ, data):
+		"""
+		Helper function to build a successful data frame.
+		"""
 		message = {
 			'type': typ,
 			'data': data
@@ -913,6 +961,9 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 		return message
 
 	def encode_message(self, message):
+		"""
+		Helper function to encode a message.
+		"""
 		return json.dumps(message, cls=paasmaker.util.jsonencoder.JsonEncoder)
 
 class BaseControllerTest(tornado.testing.AsyncHTTPTestCase, TestHelpers):

@@ -13,10 +13,15 @@ Paasmaker ships with a complete set of Python classes to interact with
 the server. This API is used by the command line client. You are also
 able to use this client directly.
 
+However, if you are not using Python, you'll instead need to write your
+own code to interface with Paasmaker. It's not too diffcult and the server
+side tries to make this as easy as possible.
+
 .. toctree::
    :maxdepth: 2
 
    developer-api
+   developer-apiauth
 
 Plugins
 -------
@@ -55,3 +60,4 @@ integration with Paasmaker.
    developer-managed
    developer-model
    developer-router
+   developer-controller
