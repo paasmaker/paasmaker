@@ -15,24 +15,58 @@ class BaseJobParametersSchema(colander.MappingSchema):
 	pass
 
 class BaseJob(Plugin):
+	"""
+	A base class for Jobs. Provides helper and signalling function for jobs.
+	"""
 	MODES = {
 		MODE.JOB: BaseJobParametersSchema()
 	}
 	OPTIONS_SCHEMA = BaseJobOptionsSchema()
 
 	def configure(self, manager, job_id, metadata):
+		"""
+		Configure this job. This is an internal method called by
+		the job manager after instantiating the job.
+
+		:arg JobManager manager: The job manager instance.
+		:arg str job_id: This job's ID.
+		:arg dict metadata: Other job metadata.
+		"""
 		self.job_manager = manager
 		self.job_id = job_id
 		self.job_metadata = metadata
 
 	# Helper signalling functions.
 	def success(self, context, summary):
+		"""
+		Indicate that this job has succeeded. Stores the context
+		passed to this function in the job tree. Also records the
+		string summary passed for the job.
+
+		:arg dict context: The output context to attach to the
+			job tree.
+		:arg str summary: The string summary of the job - a short
+			message to say what happened.
+		"""
 		self._complete_job(constants.JOB.SUCCESS, context, summary)
 
 	def failed(self, summary):
+		"""
+		Indicate that this job has failed. Supply a summary that
+		describes why the job failed.
+
+		:arg str summary: A short summary of why the job failed.
+		"""
 		self._complete_job(constants.JOB.FAILED, None, summary)
 
 	def aborted(self, summary):
+		"""
+		Indicate that the abort sequence for this job is complete.
+		You should supply a short summary of anything relevant
+		to how the job was aborted.
+
+		:arg str summary: A short summary.
+		"""
 		self._complete_job(constants.JOB.ABORTED, None, summary)
 
 	def _complete_job(self, state, context, summary):
@@ -46,6 +80,9 @@ class BaseJob(Plugin):
 		updates and a summary of the job, or you will call self.failed()
 		with a short summary of the failure. You should make use of the
 		self.logger attribute to log anything as well.
+
+		:arg dict context: A dict containing context values for this
+			job tree.
 		"""
 		cls = str(self.__class__)
 		raise NotImplementedError("You must implement start_job() - in %s" % cls)
@@ -71,6 +108,8 @@ class BaseJob(Plugin):
 		alter the job tree, as it's already failed. You should also not
 		call success(), failed(), or aborted(). Basically, do what you
 		need to do and then finish up.
+
+		:arg dict context: The context for this job tree.
 		"""
 		pass
 
