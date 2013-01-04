@@ -6,6 +6,14 @@
 # code overhead, but in terms of a more reliable system long term, this should
 # cut down on code errors, as it will fail when you try to reference them.
 class Enum(set):
+	"""
+	A simple Enum class, to confirm that any requested attributes
+	actually are part of the Enum, and also return the entire set if
+	asked.
+
+	This is based on `a stack overflow question <http://stackoverflow.com/questions/36932/whats-the-best-way-to-implement-an-enum-in-python>`_,
+	with a modification to make it able to return all values.
+	"""
 	def __getattr__(self, name):
 		if name == 'ALL':
 			# TODO: Optimise...

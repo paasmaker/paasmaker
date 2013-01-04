@@ -53,3 +53,6 @@ Misc
 
 .. autoclass:: paasmaker.util.streamingchecksum.StreamingChecksum
     :members:
+
+.. autoclass:: paasmaker.common.core.constants.Enum
+    :members:
