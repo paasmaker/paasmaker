@@ -99,7 +99,7 @@ class DeRegisterRequestJob(InstanceJobHelper):
 		container.set_job(
 			'paasmaker.job.container',
 			{},
-			'Shutdown container for %s' % instance_type.name,
+			'Deregister container for %s' % instance_type.name,
 			tags=tags
 		)
 

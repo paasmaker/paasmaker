@@ -66,7 +66,7 @@ class RegisterRootJob(InstanceRootBase):
 			registerer.set_job(
 				'paasmaker.job.coordinate.registerrequest',
 				parameters,
-				"Registration requests",
+				"Registration requests for %s" % instance_type.name,
 				tags=type_tags
 			)
 
@@ -74,7 +74,7 @@ class RegisterRootJob(InstanceRootBase):
 			selectlocations.set_job(
 				'paasmaker.job.coordinate.selectlocations',
 				parameters,
-				"Select instance locations",
+				"Select instance locations for %s" % instance_type.name,
 			)
 
 		def on_tree_added(root_id):

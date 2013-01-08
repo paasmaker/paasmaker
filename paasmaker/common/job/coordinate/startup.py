@@ -50,19 +50,25 @@ class StartupRootJob(InstanceRootBase):
 		)
 
 		for instance_type in application_version.instance_types:
-			parameters = {}
-			parameters['application_instance_type_id'] = instance_type.id
+			# Don't start up exclusive instance types here, unless
+			# this version is current.
+			exclusive = instance_type.exclusive
+			current = application_version.is_current
 
-			# The tag gets added here, but it's actually tagged on the root job.
-			type_tags = ['application_instance_type:%d' % instance_type.id]
+			if not exclusive or current:
+				parameters = {}
+				parameters['application_instance_type_id'] = instance_type.id
 
-			registerer = tree.add_child()
-			registerer.set_job(
-				'paasmaker.job.coordinate.startuprequest',
-				parameters,
-				"Startup requests",
-				tags=type_tags
-			)
+				# The tag gets added here, but it's actually tagged on the root job.
+				type_tags = ['application_instance_type:%d' % instance_type.id]
+
+				registerer = tree.add_child()
+				registerer.set_job(
+					'paasmaker.job.coordinate.startuprequest',
+					parameters,
+					"Startup requests for %s" % instance_type.name,
+					tags=type_tags
+				)
 
 		def on_tree_added(root_id):
 			callback(root_id)

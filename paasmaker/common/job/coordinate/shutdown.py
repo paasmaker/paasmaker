@@ -58,7 +58,7 @@ class ShutdownRootJob(InstanceRootBase):
 			registerer.set_job(
 				'paasmaker.job.coordinate.shutdownrequest',
 				parameters,
-				"Shutdown requests",
+				"Shutdown requests for %s" % instance_type.name,
 				tags=type_tags
 			)
 

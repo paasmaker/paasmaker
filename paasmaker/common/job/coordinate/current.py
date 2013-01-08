@@ -13,25 +13,24 @@ from paasmaker.util.plugin import MODE
 
 import tornado
 
-# TODO: This comment is wrong. Update it and enhance it.
 # We're trying to build a job tree like this:
 # - Root
 #   - Job Builder
 # - Update database to have right version current.
-#   - Remove old instances
+#   - Remove old instances container
 #     - Remove A
 #     - Remove B
-#     - Add new current instances.
+#     - Add new current instances container.
 #       - Add A
 #       - Add B
-#         - TODO: Startup exclusive instances.
-#           - Start A
-#           - Start B
-#             - TODO: Shutdown exclusive instances.
-#               - Stop A
-#               - Stop B
-# TODO: Extend this to start/stop exclusive instances,
-# as shown by the TODO jobs in the list above.
+#       - Optional: Exclusive Startup/Shutdown Container
+#         - Exclusive startup container
+#           - Start A + routing
+#           - Start B + routing
+#           - Exclusive shutdown container
+#             - Stop A + routing
+#             - Stop B + routing
+# TODO: Thoroughly test the exclusive instance handling.
 
 class CurrentVersionRequestJob(InstanceJobHelper):
 
@@ -93,6 +92,10 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 			"Add new instances to routing"
 		)
 
+		exclusive_container = None
+		exclusive_shutdown_container = None
+		exclusive_startup_container = None
+
 		tags = set()
 
 		# On the remove container, remove all of the current versions.
@@ -122,22 +125,126 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 		for instance_type in new_version.instance_types:
 			tags = tags.union(set(self.get_tags_for(instance_type)))
 
-			instances = self.get_instances(
-				session,
-				instance_type,
-				[constants.INSTANCE.RUNNING]
-			)
+			if instance_type.exclusive:
+				# This is an exclusive instance. Therefore, we need to
+				# shut down existing versions first, then start up the new
+				# versions.
+				if not exclusive_container:
+					# Create a container for all the jobs, only when
+					# encountering the first exclusive instance type.
+					exclusive_container = add_container.add_child()
+					exclusive_container.set_job(
+						'paasmaker.job.container',
+						{},
+						"Start and stop exclusive instances"
+					)
+					exclusive_startup_container = exclusive_container.add_child()
+					exclusive_startup_container.set_job(
+						'paasmaker.job.container',
+						{},
+						"Start exclusive instances"
+					)
+					exclusive_shutdown_container = exclusive_startup_container.add_child()
+					exclusive_shutdown_container.set_job(
+						'paasmaker.job.container',
+						{},
+						"Shutdown exclusive instances"
+					)
 
-			for instance in instances:
-				adder = add_container.add_child()
-				adder.set_job(
-					'paasmaker.job.routing.update',
-					{
-						'instance_id': instance.id,
-						'add': True
-					},
-					"Update routing for %s" % instance.instance_id[0:8],
+				# Now, shutdown instances of the current version.
+				if current_version and current_version.id != new_version.id:
+					output_current_version_instance_type = None
+					# Find the matching instance type in the current version.
+					# It might not exist, because that version may not have
+					# an instance type with the same name.
+					for current_version_instance_type in current_version.instance_types:
+						if current_version_instance_type.name == instance_type.name:
+							output_current_version_instance_type = current_version_instance_type
+
+					if output_current_version_instance_type:
+						instances = self.get_instances(
+							session,
+							output_current_version_instance_type,
+							[constants.INSTANCE.RUNNING, constants.INSTANCE.STARTING]
+						)
+
+						for instance in instances:
+							shutdown = exclusive_shutdown_container.add_child()
+							shutdown.set_job(
+								'paasmaker.job.heart.shutdown',
+								{
+									'instance_id': instance.instance_id
+								},
+								"Shutdown instance %s on node %s" % (instance.instance_id, instance.node.name),
+								node=instance.node.uuid
+							)
+
+							routing = shutdown.add_child()
+							routing.set_job(
+								'paasmaker.job.routing.update',
+								{
+									'instance_id': instance.id,
+									'add': False
+								},
+								"Update routing for %s" % instance.instance_id
+							)
+
+				# Startup instances of the new version.
+				instances = self.get_instances(
+					session,
+					instance_type,
+					constants.INSTANCE_CAN_START_STATES
 				)
+
+				for instance in instances:
+					routing = exclusive_startup_container.add_child()
+					routing.set_job(
+						'paasmaker.job.routing.update',
+						{
+							'instance_id': instance.id,
+							'add': True
+						},
+						"Update routing for %s" % instance.instance_id
+					)
+
+					startup = routing.add_child()
+					startup.set_job(
+						'paasmaker.job.heart.startup',
+						{
+							'instance_id': instance.instance_id
+						},
+						"Startup instance %s on node %s" % (instance.instance_id, instance.node.name),
+						node=instance.node.uuid
+					)
+
+					prestartup = startup.add_child()
+					prestartup.set_job(
+						'paasmaker.job.heart.prestartup',
+						{
+							'instance_id': instance.instance_id
+						},
+						"Pre startup instance %s on node %s" % (instance.instance_id, instance.node.name),
+						node=instance.node.uuid
+					)
+
+			else:
+				# Non-exclusive instance type.
+				instances = self.get_instances(
+					session,
+					instance_type,
+					[constants.INSTANCE.RUNNING]
+				)
+
+				for instance in instances:
+					adder = add_container.add_child()
+					adder.set_job(
+						'paasmaker.job.routing.update',
+						{
+							'instance_id': instance.id,
+							'add': True
+						},
+						"Update routing for %s" % instance.instance_id[0:8],
+					)
 
 		def on_tree_executable():
 			self.success({}, "Created all current switchover jobs.")
