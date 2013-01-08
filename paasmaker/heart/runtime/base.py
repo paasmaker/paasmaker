@@ -138,6 +138,29 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		supervisor = paasmaker.util.CommandSupervisorLauncher(self.configuration, instance_id)
 		return supervisor.is_running()
 
+	def wait_until_supervisor_running(self, instance_id, timeout, callback, timeout_callback):
+		self.wait_until_supervisor_state(instance_id, True, timeout, callback, timeout_callback)
+	def wait_until_supervisor_shutdown(self, instance_id, timeout, callback, timeout_callback):
+		self.wait_until_supervisor_state(instance_id, False, timeout, callback, timeout_callback)
+
+	def wait_until_supervisor_state(self, instance_id, state, timeout, callback, timeout_callback):
+		# TODO: This only checks that the supervisor started, not that it's child
+		# process started. Figure out how to better work this one.
+		end_timeout = time.time() + timeout
+
+		def wait_for_state():
+			if self.supervise_is_running(instance_id) == state:
+				# And say that we're done.
+				callback("In appropriate state.")
+			else:
+				if time.time() > end_timeout:
+					timeout_callback("Failed to end up in appropriate state in time.")
+				else:
+					# Wait a little bit longer.
+					self.configuration.io_loop.add_timeout(time.time() + 0.1, wait_for_state)
+
+		self.configuration.io_loop.add_timeout(time.time() + 0.1, wait_for_state)
+
 class BaseRuntimeTest(paasmaker.common.controller.BaseControllerTest):
 	config_modules = ['heart']
 

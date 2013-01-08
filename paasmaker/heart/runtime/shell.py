@@ -62,17 +62,17 @@ class ShellRuntime(BaseRuntime):
 			instance['environment']
 		)
 
+		# TODO: Handle the case where the instance id gets a stop signal
+		# because the subprocess terminated.
+		def abort_result(message):
+			error_callback("Failed to start up instance inside timeout.")
+
+		def abort_startup(message):
+			# Failed to start up in time. Stop the instance.
+			self.stop(instance_id, abort_result, abort_result)
+
 		# If it's not standalone, wait for it to assume it's TCP port.
 		if not instance['instance_type']['standalone']:
-			# TODO: Handle the case where the instance id gets a stop signal
-			# because the subprocess terminated.
-			def abort_result(message):
-				error_callback("Failed to start up instance inside timeout.")
-
-			def abort_startup(message):
-				# Failed to start up in time. Stop the instance.
-				self.stop(instance_id, abort_result, abort_result)
-
 			self.wait_until_port_used(
 				instance['instance']['port'],
 				self.parameters['start_timeout'],
@@ -80,9 +80,12 @@ class ShellRuntime(BaseRuntime):
 				abort_startup
 			)
 		else:
-			# Assume that it's running, until the instance tells
-			# us otherwise.
-			callback("Started successfully.")
+			self.wait_until_supervisor_running(
+				instance_id,
+				self.parameters['start_timeout'],
+				callback,
+				abort_startup
+			)
 
 	def stop(self, instance_id, callback, error_callback):
 		# Issue the stop command.
@@ -96,11 +99,13 @@ class ShellRuntime(BaseRuntime):
 		# Wait for it to free up the port, if it's not standalone.
 		# If it's not standalone, wait for it to assume it's TCP port.
 		instance = self.configuration.instances.get_instance(instance_id)
-		if not instance['instance_type']['standalone']:
-			def timeout(message):
-				# Failed to stop listening, so it's not responding.
-				error_callback(message)
 
+		def timeout(message):
+			# Failed to stop listening, so it's not responding.
+			# TODO: Handle this better.
+			error_callback(message)
+
+		if not instance['instance_type']['standalone']:
 			self.wait_until_port_free(
 				instance['instance']['port'],
 				self.parameters['start_timeout'],
@@ -108,8 +113,12 @@ class ShellRuntime(BaseRuntime):
 				timeout
 			)
 		else:
-			# Assume that it's stopped.
-			callback("Started successfully.")
+			self.wait_until_supervisor_shutdown(
+				instance_id,
+				self.parameters['start_timeout'],
+				callback,
+				timeout
+			)
 
 	def status(self, instance_id, callback, error_callback):
 		if self.supervise_is_running(instance_id):
@@ -241,3 +250,86 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		self.assertNotEquals(response.code, 200)
 
 		#print open(log_path, 'r').read()
+
+	def test_standalone(self):
+		# Put together the barest of possible information to start up the system.
+		instance_id = str(uuid.uuid4())
+		instance = {}
+		instance['instance'] = {'instance_id': instance_id}
+		instance['instance']['port'] = self.configuration.get_free_port()
+		instance['instance_type'] = {'standalone': True}
+		start_environment = {'PM_METADATA': '{}'}
+		instance['environment'] = paasmaker.common.application.environment.ApplicationEnvironment.merge_local_environment(self.configuration, start_environment)
+
+		# Register the instance, and then configure the runtime parameters.
+		self.configuration.instances.add_instance(instance_id, instance)
+		instance['runtime']['path'] = os.path.normpath(os.path.dirname(__file__) + '/../../../misc/samples/standalone-simple')
+
+		# Now add the plugin, and instantiate.
+		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {}, 'Shell Runtime')
+		runtime = self.configuration.plugins.instantiate(
+			'paasmaker.runtime.shell',
+			paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
+			{'launch_command': 'python standalone.py'}
+		)
+
+		# For debugging, print out the log.
+		log_path = self.configuration.get_job_log_path(instance_id)
+
+		# Should not be running.
+		runtime.status(
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+		self.wait()
+		self.assertFalse(self.success)
+
+		# Start it up.
+		runtime.start(
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+
+		# Wait until it's started.
+		self.wait()
+		self.assertTrue(self.success)
+
+		# It should be running if we ask.
+		runtime.status(
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+		self.wait()
+		self.assertTrue(self.success)
+
+		#print open(log_path, 'r').read()
+
+		# And see if it's really working.
+		# TODO: This doesn't work - in the command
+		# supervisor there are too many processes trying
+		# to write to the same log file, which is causing issues.
+		#log_contents = open(log_path, 'r').read()
+		#self.assertIn("Starting standalone instance.", log_contents)
+
+		# Stop the instance.
+		runtime.stop(
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+
+		# Wait until that's complete.
+		self.wait()
+		self.assertTrue(self.success)
+
+		# Should not be running.
+		runtime.status(
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+		self.wait()
+		self.assertFalse(self.success)
