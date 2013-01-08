@@ -167,17 +167,17 @@ class RbenvRuntime(BaseRuntime):
 				instance['environment']
 			)
 
+			# TODO: Handle the case where the instance id gets a stop signal
+			# because the subprocess terminated.
+			def abort_result(message):
+				error_callback("Failed to start up instance inside timeout.")
+
+			def abort_startup(message):
+				# Failed to start up in time. Stop the instance.
+				self.stop(instance_id, abort_result, abort_result)
+
 			# If it's not standalone, wait for it to assume it's TCP port.
 			if not instance['instance_type']['standalone']:
-				# TODO: Handle the case where the instance id gets a stop signal
-				# because the subprocess terminated.
-				def abort_result(message):
-					error_callback("Failed to start up instance inside timeout.")
-
-				def abort_startup(message):
-					# Failed to start up in time. Stop the instance.
-					self.stop(instance_id, abort_result, abort_result)
-
 				self.wait_until_port_used(
 					instance['instance']['port'],
 					self.parameters['start_timeout'],
@@ -185,9 +185,12 @@ class RbenvRuntime(BaseRuntime):
 					abort_startup
 				)
 			else:
-				# Assume that it's running, until the instance tells
-				# us otherwise.
-				callback("Started successfully.")
+				self.wait_until_supervisor_running(
+					instance_id,
+					self.parameters['start_timeout'],
+					callback,
+					abort_startup
+				)
 
 			# end of environment_prepared()
 
@@ -208,14 +211,14 @@ class RbenvRuntime(BaseRuntime):
 			error_callback(str(ex), ex)
 			return
 
+		def timeout(message):
+			# Failed to stop listening, so it's not responding.
+			error_callback(message)
+
 		# Wait for it to free up the port, if it's not standalone.
 		# If it's not standalone, wait for it to assume it's TCP port.
 		instance = self.configuration.instances.get_instance(instance_id)
 		if not instance['instance_type']['standalone']:
-			def timeout(message):
-				# Failed to stop listening, so it's not responding.
-				error_callback(message)
-
 			self.wait_until_port_free(
 				instance['instance']['port'],
 				self.parameters['start_timeout'],
@@ -223,8 +226,12 @@ class RbenvRuntime(BaseRuntime):
 				timeout
 			)
 		else:
-			# Assume that it's stopped.
-			callback("Started successfully.")
+			self.wait_until_supervisor_shutdown(
+				instance_id,
+				self.parameters['start_timeout'],
+				callback,
+				timeout
+			)
 
 	def status(self, instance_id, callback, error_callback):
 		if self.supervise_is_running(instance_id):
