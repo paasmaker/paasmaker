@@ -51,7 +51,8 @@ class ShellRuntime(BaseRuntime):
 		# Prepare the launch command.
 		instance = self.configuration.instances.get_instance(instance_id)
 		launch_params = {}
-		launch_params['port'] = instance['instance']['port']
+		if instance['instance'].has_key('port'):
+			launch_params['port'] = instance['instance']['port']
 		launch_command = self.parameters['launch_command'] % launch_params
 
 		# Launch it.
@@ -256,7 +257,6 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		instance_id = str(uuid.uuid4())
 		instance = {}
 		instance['instance'] = {'instance_id': instance_id}
-		instance['instance']['port'] = self.configuration.get_free_port()
 		instance['instance_type'] = {'standalone': True}
 		start_environment = {'PM_METADATA': '{}'}
 		instance['environment'] = paasmaker.common.application.environment.ApplicationEnvironment.merge_local_environment(self.configuration, start_environment)
