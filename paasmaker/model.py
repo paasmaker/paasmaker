@@ -802,6 +802,7 @@ class ApplicationVersion(OrmBase, Base):
 		credentials = {}
 		for service in self.services:
 			credentials[service.name] = service.credentials
+			credentials[service.name]['provider'] = service.provider
 
 		return credentials
 
