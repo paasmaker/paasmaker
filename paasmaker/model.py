@@ -873,15 +873,22 @@ class ApplicationVersion(OrmBase, Base):
 			# For each instance type...
 			for instance_type in self.instance_types:
 				# Find the instances.
+				# TODO: Write unit tests for this code.
 				instances = instance_type.instances.filter(ApplicationInstance.state == constants.INSTANCE.RUNNING)
 				qty = instances.count()
-				if qty == 0:
+				if qty > 0 and instance_type.exclusive and not self.is_current:
+					health['types'][instance_type.name] = {
+						'state': constants.HEALTH.ERROR,
+						'message': 'Exclusive instance that is not current is running.'
+					}
+					seen_statuses.add(constants.HEALTH.ERROR)
+				elif qty == 0 and not instance_type.exclusive:
 					health['types'][instance_type.name] = {
 						'state': constants.HEALTH.ERROR,
 						'message': 'No running instances'
 					}
 					seen_statuses.add(constants.HEALTH.ERROR)
-				elif qty < instance_type.quantity:
+				elif qty < instance_type.quantity and not instance_type.exclusive:
 					health['types'][instance_type.name] = {
 						'state': constants.HEALTH.WARNING,
 						'message': 'Not enough running instances - only %d of %d' % (qty, instance_type.quantity)
