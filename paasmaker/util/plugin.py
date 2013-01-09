@@ -172,6 +172,8 @@ class PluginRegistry(object):
 		self.options_registry = {}
 		# Map mode to a list of plugins.
 		self.mode_registry = {}
+		# A flat set of modes supported by a plugin.
+		self.class_modes = {}
 		# Map plugin name to it's title.
 		self.title_registry = {}
 
@@ -223,6 +225,7 @@ class PluginRegistry(object):
 			self.mode_registry[mode].append(plugin)
 			if MODE_REQUIRE_PARAMS[mode] and not former.MODES[mode]:
 				raise ValueError("Supplied class does not have a parameter schema, but has a mode that accepts parameters.")
+		self.class_modes[plugin] = former.MODES.keys()
 
 	def exists(self, plugin, mode):
 		"""
@@ -302,6 +305,26 @@ class PluginRegistry(object):
 		else:
 			# Return the list of them. A copy.
 			return list(self.mode_registry[mode])
+
+	def plugin_information(self):
+		"""
+		Return a dict of information about registered plugins.
+
+		This includes the configuration of plugins, and as such
+		may contain sensitive information.
+		"""
+		result = {}
+
+		for name in self.class_registry:
+			this_plugin = {}
+			this_plugin['name'] = name
+			this_plugin['options'] = self.options_registry[name]
+			this_plugin['modes'] = self.class_modes[name]
+			this_plugin['title'] = self.title_registry[name]
+
+			result[name] = this_plugin
+
+		return result
 
 class PluginExampleOptionsSchema(colander.MappingSchema):
 	# Required key.

@@ -1,0 +1,25 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Plugins
+{% end %}
+
+{% block body %}
+	{% for name, plugin in plugins.iteritems() %}
+		{% if not 'JOB' in plugin['modes'] %}
+			<h2>{{ plugin['title'] }} ({{ name }})</h2>
+
+			<p>Modes:</p>
+			<ul>
+				{% for mode in plugin['modes'] %}
+					<li>{{ mode }}</li>
+				{% end %}
+			</ul>
+
+			{% if len(plugin['options']) > 0 %}
+				<p>Configuration:</p>
+				<pre>{{ json.dumps(plugin['options'], indent=4, sort_keys=True) }}</pre>
+			{% end %}
+		{% end %}
+	{% end %}
+{% end %}

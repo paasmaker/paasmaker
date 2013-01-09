@@ -1,0 +1,9 @@
+{% extends "../layout/main.html" %}
+
+{% block pagetitle %}
+	Configuration Dump
+{% end %}
+
+{% block body %}
+	<pre>{{ json.dumps(configuration, indent=4, sort_keys=True) }}</pre>
+{% end %}

@@ -95,6 +95,9 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.application.ApplicationSetCurrentController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.scmlist.ScmListController.get_routes(route_extras))
 
+	routes.extend(paasmaker.pacemaker.controller.configuration.ConfigurationDumpController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.configuration.PluginInformationController.get_routes(route_extras))
+
 	routes.extend(paasmaker.pacemaker.controller.job.JobListController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.job.JobAbortController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.job.JobStreamHandler.get_routes(route_extras))
