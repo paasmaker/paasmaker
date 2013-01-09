@@ -42,21 +42,25 @@ import unittest
 
 class Flattenizr(object):
 
-	def flatten(self, structure):
+	def flatten(self, structure, flat_arrays=False):
 		result = []
-		self._flatten_into('', structure, result)
+		self._flatten_into('', structure, result, flat_arrays)
 		return result
 
-	def _flatten_into(self, prefix, structure, result):
+	def _flatten_into(self, prefix, structure, result, flat_arrays=False):
 		real_prefix = ''
 		if prefix != "":
 			real_prefix = "%s." % prefix
 		if isinstance(structure, dict):
 			for k, v in structure.iteritems():
-				self._flatten_into("%s%s" % (real_prefix, k), v, result)
+				self._flatten_into("%s%s" % (real_prefix, k), v, result, flat_arrays)
 		elif isinstance(structure, list):
 			for i in range(len(structure)):
-				self._flatten_into("%s%d" % (real_prefix, i), structure[i], result)
+				if flat_arrays:
+					index_key = "[]"
+				else:
+					index_key = "%d" % i
+				self._flatten_into("%s%s" % (real_prefix, index_key), structure[i], result, flat_arrays)
 		else:
 			# Convert to string, and it belongs in this prefix.
 			result.append((prefix, str(structure)))
@@ -102,3 +106,9 @@ class FlatterizrTest(unittest.TestCase):
 
 		#print json.dumps(flat, indent=4, sort_keys=True)
 		self.assertEquals(len(flat), 7, "Not the expected number of entries.")
+
+		# Flatten with no array indexes.
+		flat = ftzr.flatten(struct, True)
+		#print json.dumps(flat, indent=4, sort_keys=True)
+		self.assertEquals(len(flat), 7, "Not the expected number of entries.")
+		self.assertIn('[]', flat[0][0])
