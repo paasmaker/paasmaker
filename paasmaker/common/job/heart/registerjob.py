@@ -127,7 +127,10 @@ class RegisterInstanceJob(BaseJob):
 		#self.configuration.debug_cat_job_log(logger.job_id)
 		if code == 0:
 			self.instance_data['runtime']['path'] = self.instance_path
+			self.instance_data['instance']['state'] = constants.INSTANCE.REGISTERED
 			self.configuration.instances.save()
 			self.success(self.output_context, "Completed successfully.")
 		else:
+			self.instance_data['instance']['state'] = constants.INSTANCE.ERROR
+			self.configuration.instances.save()
 			self.failed("Failed to extract files.")

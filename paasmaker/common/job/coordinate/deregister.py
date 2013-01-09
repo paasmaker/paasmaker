@@ -89,7 +89,7 @@ class DeRegisterRequestJob(InstanceJobHelper):
 		instances = self.get_instances(
 			session,
 			instance_type,
-			[constants.INSTANCE.STOPPED, constants.INSTANCE.ERROR]
+			[constants.INSTANCE.ALLOCATED, constants.INSTANCE.STOPPED, constants.INSTANCE.ERROR]
 		)
 
 		tags = self.get_tags_for(instance_type)
