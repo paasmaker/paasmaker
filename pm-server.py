@@ -76,7 +76,7 @@ for plugin in routes_plugins:
 	)
 	instance.add_routes(
 		routes,
-		routes_extras
+		route_extras
 	)
 
 if configuration.is_pacemaker():

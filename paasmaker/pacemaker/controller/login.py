@@ -24,7 +24,24 @@ class LoginSchema(colander.MappingSchema):
 class LoginController(BaseController):
 	AUTH_METHODS = [BaseController.ANONYMOUS]
 
+	def _external_logins_list(self):
+		# Fetch a list of other external login sources.
+		external_plugins = self.configuration.plugins.plugins_for(
+			paasmaker.util.plugin.MODE.USER_AUTHENTICATE_EXTERNAL
+		)
+		external_metadata = []
+		for plugin in external_plugins:
+			instance = self.configuration.plugins.instantiate(
+				plugin,
+				paasmaker.util.plugin.MODE.USER_AUTHENTICATE_EXTERNAL
+			)
+			external_metadata.append(
+				instance.get_login_metadata()
+			)
+		self.add_data_template('external_logins', external_metadata)
+
 	def get(self):
+		self._external_logins_list()
 		self.render("login/login.html")
 
 	@tornado.web.asynchronous
@@ -48,6 +65,7 @@ class LoginController(BaseController):
 				self.redirect(self.params['rt'])
 			else:
 				self.add_error("Unable to authenticate you.")
+				self._external_logins_list()
 				self.render("login/login.html")
 
 		def try_plugin(plugin):
@@ -58,7 +76,7 @@ class LoginController(BaseController):
 
 			def success_login(user, message):
 				# Success! Record that user.
-				self.allow_user(user)
+				self._allow_user(user)
 				complete_request(True)
 
 			def failed_login(reason, message):
@@ -86,14 +104,6 @@ class LoginController(BaseController):
 			complete_request(False)
 		else:
 			try_plugin(plugins.pop())
-
-	def allow_user(self, user):
-		self.set_secure_cookie("user", unicode("%d" % user.id))
-		self.add_data('success', True)
-		# Token is not for use with the auth token authentication method - because
-		# it expires. Instead, it's supplied back as a cookie and in the data for
-		# unit tests or other short lived systems.
-		self.add_data('token', self.create_signed_value('user', unicode(user.id)))
 
 	@staticmethod
 	def get_routes(configuration):

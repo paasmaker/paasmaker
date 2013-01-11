@@ -707,6 +707,14 @@ class BaseController(tornado.web.RequestHandler):
 		self.add_data('%s_pagination' % key, page_data)
 		self.add_data(key, data[start:end])
 
+	def _allow_user(self, user):
+		self.set_secure_cookie("user", unicode("%d" % user.id))
+		self.add_data('success', True)
+		# Token is not for use with the auth token authentication method - because
+		# it expires. Instead, it's supplied back as a cookie and in the data for
+		# unit tests or other short lived systems.
+		self.add_data('token', self.create_signed_value('user', unicode(user.id)))
+
 # A schema for websocket incoming messages, to keep them consistent.
 class WebsocketMessageSchemaCookie(colander.MappingSchema):
 	request = colander.SchemaNode(colander.String(),
