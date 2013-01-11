@@ -32,7 +32,15 @@ class Flattenizr(object):
 	of Colander's flatten, and as such a little bit harder to work with
 	on the client side; especially if you're creating form elements
 	with JavaScript.
+
+	This class also contains a method to compare two data structures.
+	Internally, it does that by flattening them, and then testing their
+	keys. This is an easy way to test arbitrarily nested data structures.
 	"""
+
+	# Method constants for the comparison.
+	EXACT = 1
+	NORMAL = 2
 
 	def flatten(self, structure, flat_arrays=False):
 		"""
@@ -252,6 +260,82 @@ class Flattenizr(object):
 			return True
 		return key.isdigit()
 
+	def compare(self, a, b, method=NORMAL):
+		"""
+		Compare the two data structures. Internally works
+		by flattening the data structures and then comparing
+		the keys. The method controls how the comparison is
+		done.
+
+		Caution: arrays are flattened into anonymous arrays. This
+		means that these two structures will be considered equal::
+
+			TODO: Generate sample data structures.
+
+		When using the normal method, the structures are
+		considered equal if all the keys in ``b`` exist in ``a``
+		and the values are the same. ``a`` can have more keys
+		than ``b``. If ``b`` has no keys, it's considered a match
+		regardless of what's in ``a``.
+
+		When using the exact method, the structures are considered
+		equal if they both have exactly the same number of keys,
+		and all keys and values are identical.
+
+		:arg dict a: The structure to compare against.
+		:arg dict b: The other structure to compare.
+		"""
+
+		flat_a = self.flatten(a, flat_arrays=True)
+		flat_b = self.flatten(b, flat_arrays=True)
+
+		# Now flatten into key=value strings.
+		flat_kv_a = self._to_key_equals_value(flat_a)
+		flat_kv_b = self._to_key_equals_value(flat_b)
+
+		if method == Flattenizr.EXACT:
+			return self._compare_exact(flat_kv_a, flat_kv_b)
+		elif method == Flattenizr.NORMAL:
+			return self._compare_normal(flat_kv_a, flat_kv_b)
+		else:
+			raise ValueError("Invalid comparison method supplied.")
+
+	def _to_key_equals_value(self, flat):
+		# Further flatten [key, value] pairs into an array
+		# of key=value strings.
+		output = []
+		for key, value in flat:
+			output.append("%s=%s" % (key, value))
+
+		return output
+
+	def _compare_exact(self, flat_a, flat_b):
+		# Short circuit: if the number of keys doesn't match,
+		# then it won't match.
+		if len(flat_a) != len(flat_b):
+			return False
+
+		# Check ALL the keys.
+		for kv in flat_a:
+			if kv not in flat_b:
+				return False
+
+		return True
+
+	def _compare_normal(self, flat_a, flat_b):
+		# Short circuit: if B is empty, it matches.
+		if len(flat_b) == 0:
+			return True
+
+		# Check that all the keys in B exist in A.
+		match = True
+		for kv in flat_b:
+			if kv not in flat_a:
+				match = False
+
+		return match
+
+
 class FlattenizrTest(unittest.TestCase):
 	def test_unflatten(self):
 		#return
@@ -345,3 +429,141 @@ class FlattenizrTest(unittest.TestCase):
 		#print json.dumps(flat, indent=4, sort_keys=True)
 		self.assertEquals(len(flat), 7, "Not the expected number of entries.")
 		self.assertIn('[]', flat[0][0])
+
+	def test_compare_normal(self):
+		example_a = {
+			"node": {},
+			"roles": {
+				"heart": True,
+				"pacemaker": True,
+				"router": True
+			},
+			"runtimes": {
+				"paasmaker.runtime.ruby.rbenv": [
+					"1.9.3",
+					"1.9.3-p327"
+				],
+				"paasmaker.runtime.shell": [
+					"1"
+				]
+			}
+		}
+
+		example_b_match_list = {
+			"runtimes": {
+				"paasmaker.runtime.ruby.rbenv": [
+					"1.9.3",
+					"1.9.3-p327"
+				]
+			}
+		}
+
+		example_b_nomatch_list = {
+			"runtimes": {
+				"paasmaker.runtime.ruby.rbenv": [
+					"1.9.2"
+				]
+			}
+		}
+
+		example_b_nomatch_list_2 = {
+			"runtimes": {
+				"paasmaker.runtime.ruby.rbenv": [
+					"1.9.2",
+					"1.9.3-p327"
+				]
+			}
+		}
+
+		example_b_match_tag = {
+			"roles": {
+				"heart": True
+			}
+		}
+
+		example_b_nomatch_tag = {
+			"roles": {
+				"foo": True
+			}
+		}
+
+		example_b_empty = {}
+
+		ftzr = Flattenizr()
+
+		self.assertTrue(
+			ftzr.compare(example_a, example_b_match_list),
+			"Couldn't match a list."
+		)
+		self.assertFalse(
+			ftzr.compare(example_a, example_b_nomatch_list),
+			"Incorrectly matched a list."
+		)
+		self.assertFalse(
+			ftzr.compare(example_a, example_b_nomatch_list_2),
+			"Incorrectly matched a list."
+		)
+
+		self.assertTrue(
+			ftzr.compare(example_a, example_b_match_tag),
+			"Couldn't match a tag."
+		)
+		self.assertFalse(
+			ftzr.compare(example_a, example_b_nomatch_tag),
+			"Incorrectly matched a tag."
+		)
+
+		self.assertTrue(
+			ftzr.compare(example_a, example_b_empty),
+			"Didn't match an empty target set."
+		)
+		self.assertFalse(
+			ftzr.compare(example_b_empty, example_a),
+			"Matched tags in B when A is empty."
+		)
+
+	def test_compare_exact(self):
+		example_a = {
+			"test": "bar"
+		}
+
+		example_b_match = {
+			"test": "bar"
+		}
+
+		example_b_nomatch = {
+			"test": "baz"
+		}
+
+		example_b_nomatch_2 = {
+			"foo": "bar"
+		}
+
+		example_b_empty = {}
+
+		ftzr = Flattenizr()
+
+		self.assertTrue(
+			ftzr.compare(example_a, example_b_match, method=Flattenizr.EXACT),
+			"Should have matched."
+		)
+
+		self.assertFalse(
+			ftzr.compare(example_a, example_b_nomatch, method=Flattenizr.EXACT),
+			"Should not have matched."
+		)
+
+		self.assertFalse(
+			ftzr.compare(example_a, example_b_nomatch_2, method=Flattenizr.EXACT),
+			"Should not have matched."
+		)
+
+		self.assertFalse(
+			ftzr.compare(example_a, example_b_empty, method=Flattenizr.EXACT),
+			"Should not have matched."
+		)
+
+		self.assertFalse(
+			ftzr.compare(example_b_empty, example_a, method=Flattenizr.EXACT),
+			"Should not have matched."
+		)
