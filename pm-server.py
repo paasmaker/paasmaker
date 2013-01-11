@@ -120,8 +120,8 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.package.PackageSizeController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.package.PackageDownloadController.get_routes(route_extras))
 
-	# TODO: This might be disabled by the configuration.
-	routes.extend(paasmaker.pacemaker.controller.upload.UploadController.get_routes(route_extras))
+	if configuration.get_flat('pacemaker.allow_uploads'):
+		routes.extend(paasmaker.pacemaker.controller.upload.UploadController.get_routes(route_extras))
 
 if configuration.is_heart():
 	# Heart setup.

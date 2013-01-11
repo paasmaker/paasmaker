@@ -131,6 +131,12 @@ class PacemakerSchema(colander.MappingSchema):
 		missing=True,
 		default=True)
 
+	allow_uploads = colander.SchemaNode(colander.Boolean(),
+		title="Enable file uploads",
+		description="Allow file uploads to this node.",
+		missing=True,
+		default=True)
+
 	@staticmethod
 	def default():
 		return {'enabled': False, 'scmlisters': []}
