@@ -65,6 +65,20 @@ routes = []
 paasmaker.util.joblogging.JobLoggerAdapter.setup_joblogger(configuration)
 configuration.setup_job_watcher()
 
+# Add any routes defined by plugins first. This makes them override internal routes.
+routes_plugins = configuration.plugins.plugins_for(
+	paasmaker.util.plugin.MODE.STARTUP_ROUTES
+)
+for plugin in routes_plugins:
+	instance = configuration.plugins.instantiate(
+		plugin,
+		paasmaker.util.plugin.MODE.STARTUP_ROUTES
+	)
+	instance.add_routes(
+		routes,
+		routes_extras
+	)
+
 if configuration.is_pacemaker():
 	# Pacemaker setup.
 	# Connect to the database.
