@@ -129,10 +129,17 @@ class BaseController(tornado.web.RequestHandler):
 
 		# Unpack the request arguments into raw params.
 		# This is so it behaves just like an API request as well.
-		# Later on, when it's validated, it gets deflattened according
-		# to the schema.
+		# We also unflatten it here, to make it into a data structure.
+		# TODO: Properly unit test this.
+		pairs = []
 		for k, v in self.request.arguments.iteritems():
-			self.raw_params[k] = v[-1]
+			for value in v:
+				pairs.append((k, value))
+		ftzr = paasmaker.util.flattenizr.Flattenizr()
+		structure = ftzr.unflatten(pairs)
+		# TODO: This could allow GET variables to replace POST variables...
+		# TODO: This means GET variables can override values in the JSON structure.
+		self.raw_params.update(structure)
 
 		# Must be one of the supported auth methods.
 		self.require_authentication(self.AUTH_METHODS)
@@ -158,68 +165,6 @@ class BaseController(tornado.web.RequestHandler):
 		schema = api_schema
 		if self.format == 'html' and html_schema:
 			schema = html_schema
-
-		if self.format == 'html':
-			# Use the colander schema to unflatten the incoming
-			# raw_parameters data into a data structure.
-			# What are we trying to do here? Colander has the ability
-			# to unflatten this:
-			# foo: bar
-			# bar.baz: foo
-			# bar.foo: baz
-			# ... assuming that the schema knows about it. So
-			# we're extracting the keys that match the schema
-			# at the top level, then unflattening it, and then later
-			# validating it. This only applies for HTML form POSTS,
-			# to allow them to work without having to send back JSON.
-			# This is a little slow unfortunately, but this isn't
-			# a common use case for this system.
-			# TODO: If you have a child mapping schema that is unknown=preserve,
-			# the unflatten won't recognize and import the keys. So this
-			# is done manually below, but will only work for the first
-			# level. Sigh. Think about how we're going to fix this.
-			schema_keys = {}
-			for child in schema.children:
-				schema_keys[child.name] = child
-			found_subkeys = set()
-			input_keys = {}
-			hacked_maps = {}
-			for key in self.raw_params.keys():
-				value = self.raw_params[key]
-				if schema_keys.has_key(key):
-					input_keys[key] = value
-					continue # Short circuit this for loop.
-				for skey in schema_keys.keys():
-					if key.startswith("%s." % skey):
-						if type(schema_keys[skey].typ) == colander.Mapping and schema_keys[skey].typ._unknown == 'preserve':
-							# Hack to undo mappings.
-							if not hacked_maps.has_key(skey):
-								hacked_maps[skey] = {}
-							hacked_maps[skey][key.split(".")[-1]] = value
-						elif type(schema_keys[skey].typ) == colander.Sequence:
-							# Hack to undo sequences.
-							if not hacked_maps.has_key(skey):
-								hacked_maps[skey] = []
-							hacked_maps[skey].append(key.split(".")[-1])
-						else:
-							found_subkeys.add(skey)
-							input_keys[key] = value
-							break # Short circuit this for loop.
-			# Add in missing keys for this schema. This is because empty
-			# values don't make it in here (eg, blank strings).
-			# TODO: Investigate if this is Tornado not passing empty string
-			# values into self.request.arguments, or something else.
-			for child in schema.children:
-				if not input_keys.has_key(child.name) and child.name not in found_subkeys:
-					if child.default == colander.null:
-						# Assume it's a string...
-						input_keys[child.name] = ''
-					else:
-						input_keys[child.name] = child.default
-
-			# Unflatten, ready for validation shortly.
-			self.raw_params.update(schema.unflatten(input_keys))
-			self.raw_params.update(hacked_maps)
 
 		try:
 			self.params.update(schema.deserialize(self.raw_params))

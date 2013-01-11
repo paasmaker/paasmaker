@@ -1,5 +1,6 @@
 import unittest
 import json
+import urllib
 
 from base import BaseController
 from base import BaseControllerTest
@@ -20,6 +21,8 @@ class ExampleController(BaseController):
 	def get(self):
 		self.add_data("test", "Hello")
 		self.add_data_template("template", "Template")
+		self.add_data_template("json", json)
+		self.add_data("raw", self.raw_params)
 		self.render("example/index.html")
 
 	@staticmethod
@@ -34,6 +37,8 @@ class ExampleFailController(BaseController):
 	def get(self):
 		self.add_data("test", "Hello")
 		self.add_data_template("template", "Template")
+		self.add_data_template("json", json)
+		self.add_data("raw", self.raw_params)
 		raise Exception('Oh Hai!')
 		self.render("example/index.html")
 
@@ -48,11 +53,13 @@ class ExamplePostController(BaseController):
 
 	def post(self):
 		if not self.validate_data(ExampleDataSchema()):
-			raise tornado.HTTPError(400, "Invalid request data.")
+			raise tornado.web.HTTPError(400, "Invalid request data.")
 
 		self.add_data("test", "Hello")
 		self.add_data("output", int(self.params["more"]))
+		self.add_data("raw", self.raw_params)
 		self.add_data_template("template", "Template")
+		self.add_data_template("json", json)
 		self.render("example/index.html")
 
 	@staticmethod
@@ -154,6 +161,28 @@ class ExampleControllerTest(BaseControllerTest):
 		self.assertTrue(decoded['data'].has_key('test'), "Missing test key.")
 		self.assertFalse(decoded['data'].has_key('template'), 'Includes template data key.')
 		self.assertEquals(decoded['data']['output'], more, 'Value was not retained.')
+
+	def test_post_http(self):
+		body_parts = []
+		body_parts.append(("test", "bar"))
+		body_parts.append(("more", "2"))
+		body_parts.append(("foo.bar", "test"))
+		body_parts.append(("foo2.0", "list"))
+		body_parts.append(("foo2.1", "list"))
+		body_parts.append(("foo2.[]", "list"))
+
+		body = urllib.urlencode(body_parts)
+
+		request = tornado.httpclient.HTTPRequest(
+			"http://localhost:%d/example-post" % self.get_http_port(),
+			method="POST",
+			body=body)
+
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, self.stop)
+		response = self.wait()
+
+		self.failIf(response.error)
 
 	def test_example_websocket(self):
 		client = ExampleWebsocketHandlerTestClient("ws://localhost:%d/example-websocket" % self.get_http_port(), io_loop=self.io_loop)
