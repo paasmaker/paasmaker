@@ -51,6 +51,9 @@ Misc
 .. autoclass:: paasmaker.util.jsonencoder.JsonEncoder
     :members:
 
+.. autoclass:: paasmaker.util.flattenizr.Flattenizr
+    :members:
+
 .. autoclass:: paasmaker.util.streamingchecksum.StreamingChecksum
     :members:
 
