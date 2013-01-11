@@ -202,7 +202,6 @@ class BaseController(tornado.web.RequestHandler):
 			# Only actually redirect in HTML mode - we don't need to redirect API requests.
 			super(BaseController, self).redirect(target, **kwargs)
 		else:
-			# TODO: Don't assume that the request is ready for rendering.
 			self.render("api/apionly.html")
 
 	def require_authentication(self, methods):
@@ -255,7 +254,6 @@ class BaseController(tornado.web.RequestHandler):
 			if self.format == 'json':
 				raise tornado.web.HTTPError(403, 'Access is denied')
 			else:
-				# TODO: Don't hard code /login?
 				self.redirect('/login?rt=' + tornado.escape.url_escape(self.request.uri))
 
 	def check_node_auth(self):
@@ -302,8 +300,6 @@ class BaseController(tornado.web.RequestHandler):
 		auth_using_token = self.auth.has_key('method') and self.auth['method'] == 'token'
 		if auth_using_token and self.auth.has_key('value'):
 			test_token = self.auth['value']
-		# TODO: In tests, the headers dict below was case sensitive.
-		# Almost certainly a fail on my part...
 		auth_using_header = self.request.headers.has_key('User-Token')
 		if auth_using_header:
 			test_token = self.request.headers['user-token']
