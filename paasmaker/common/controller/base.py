@@ -327,6 +327,7 @@ class BaseController(tornado.web.RequestHandler):
 		# update the permissions.
 		# TODO: The cache class is tested via the model unit tests,
 		# but add a few more unit tests to make sure that this works properly.
+		# TODO: Constrain the size of this cache.
 		if self.user:
 			user_key = str(self.user.id)
 			if not self.PERMISSIONS_CACHE.has_key(user_key):
