@@ -45,6 +45,7 @@ class PostgresService(BaseService):
 			self.logger.info("Completed creating database.")
 			callback(
 				{
+					'protocol': 'pgsql',
 					'hostname': self.options['hostname'],
 					'username': username,
 					'database': database,
@@ -141,7 +142,7 @@ class PostgresServiceTest(BaseServiceTest):
 
 		#print str(self.credentials)
 		self.assertTrue(self.success, "Service creation was not successful.")
-		self.assertEquals(len(self.credentials), 5, "Service did not return expected number of keys.")
+		self.assertEquals(len(self.credentials), 6, "Service did not return expected number of keys.")
 
 		#delay = raw_input("Press enter to proceed.")
 

@@ -86,6 +86,7 @@ class ManagedRedisService(BaseService):
 			# Success! Emit the credentials.
 			self.logger.info("Successfully started. Returning the credentials.")
 			credentials = {}
+			credentials['protocol'] = 'redis'
 			credentials['hostname'] = self.configuration.get_flat('my_route')
 			credentials['port'] = port
 			if password:
@@ -199,7 +200,7 @@ class ManagedRedisServiceTest(BaseServiceTest):
 		self.wait()
 
 		self.assertTrue(self.success, "Service creation was not successful.")
-		self.assertEquals(len(self.credentials), 3, "Service did not return expected number of keys.")
+		self.assertEquals(len(self.credentials), 4, "Service did not return expected number of keys.")
 
 		client = tornadoredis.Client(
 			host=self.credentials['hostname'],

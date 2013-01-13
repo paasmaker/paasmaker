@@ -75,6 +75,7 @@ class MySQLService(BaseService):
 
 		callback(
 			{
+				'protocol': 'mysql',
 				'hostname': self.options['hostname'],
 				'username': username,
 				'database': database,
