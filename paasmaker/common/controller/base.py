@@ -70,11 +70,11 @@ class BaseController(tornado.web.RequestHandler):
 	# this out for us.
 	PERMISSIONS_CACHE = {}
 
-	def initialize(self, configuration=None, io_loop=None):
+	def initialize(self, **kwargs):
 		# This is defined here so controllers can change it per-request.
 		self.DEFAULT_PAGE_SIZE = 10
 
-		self.configuration = configuration
+		self.configuration = kwargs['configuration']
 		self.data = {}
 		self.template = {}
 		self.errors = []
@@ -87,7 +87,6 @@ class BaseController(tornado.web.RequestHandler):
 		self.params = {}
 		self.raw_params = {}
 		self.super_auth = False
-		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
 
 		self.add_data_template('format_form_error', self.format_form_error)
 		self.add_data_template('nice_state', self.nice_state)
