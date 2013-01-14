@@ -5,7 +5,7 @@ pyyaml
 colander>=0.9.9
 ws4py==0.2.2
 pypubsub
-tornado-redis
+tornado-redis==0.0.7
 pika==0.9.5
 requests==0.14.2
 virtualenv
