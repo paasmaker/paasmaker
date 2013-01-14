@@ -3,11 +3,11 @@ tornado
 sqlalchemy>=0.7.5
 pyyaml
 colander>=0.9.9
-ws4py
+ws4py==0.2.2
 pypubsub
 tornado-redis
 pika==0.9.5
-requests
+requests==0.14.2
 virtualenv
 python-dateutil>=1.5
 
