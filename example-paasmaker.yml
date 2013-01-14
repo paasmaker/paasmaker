@@ -21,6 +21,26 @@ redis:
     port: 42513
     managed: true
 
+plugins:
+  - name: paasmaker.scm.zip
+    class: paasmaker.pacemaker.scm.zip.ZipSCM
+    title: Zip file SCM
+  - name: paasmaker.scm.tarball
+    class: paasmaker.pacemaker.scm.tarball.TarballSCM
+    title: Tarball SCM
+  - name: paasmaker.scm.git
+    class: paasmaker.pacemaker.scm.git.GitSCM
+    title: Git SCM
+  - name: paasmaker.prepare.shell
+    class: paasmaker.pacemaker.prepare.shell.ShellPrepare
+    title: Shell preparer
+  - name: paasmaker.runtime.shell
+    class: paasmaker.heart.runtime.ShellRuntime
+    title: Shell Runtime
+  - name: paasmaker.service.parameters
+    class: paasmaker.pacemaker.service.parameters.ParametersService
+    title: Parameters Service
+
 heart:
   enabled: true
   working_dir: /path/to/scratch/scratch-paasmaker/heart
@@ -31,25 +51,6 @@ pacemaker:
   allow_supertoken: true
   cluster_hostname: local.paasmaker.net
   dsn: sqlite:///path/to/scratch/scratch-paasmaker/paasmaker.db
-  plugins:
-    - name: paasmaker.scm.zip
-      class: paasmaker.pacemaker.scm.zip.ZipSCM
-      title: Zip file SCM
-    - name: paasmaker.scm.tarball
-      class: paasmaker.pacemaker.scm.tarball.TarballSCM
-      title: Tarball SCM
-    - name: paasmaker.scm.git
-      class: paasmaker.pacemaker.scm.git.GitSCM
-      title: Git SCM
-    - name: paasmaker.prepare.shell
-      class: paasmaker.pacemaker.prepare.shell.ShellPrepare
-      title: Shell preparer
-    - name: paasmaker.runtime.shell
-      class: paasmaker.heart.runtime.ShellRuntime
-      title: Shell Runtime
-    - name: paasmaker.service.parameters
-      class: paasmaker.pacemaker.service.parameters.ParametersService
-      title: Parameters Service
 
 router:
   enabled: true
