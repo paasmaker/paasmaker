@@ -1,8 +1,4 @@
-# General imports.
-import paasmaker
-from paasmaker.util.configurationhelper import InvalidConfigurationException
-from paasmaker.util.configurationhelper import NoConfigurationFileException
-from paasmaker.common.core import constants
+
 import unittest
 import os
 import signal
@@ -14,9 +10,14 @@ import hashlib
 import logging
 import subprocess
 import socket
+import datetime
+
+import paasmaker
+from paasmaker.util.configurationhelper import InvalidConfigurationException
+from paasmaker.util.configurationhelper import NoConfigurationFileException
+from paasmaker.common.core import constants
 
 from pubsub import pub
-
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import colander
@@ -515,6 +516,14 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.job_watcher = None
 		self.job_manager = paasmaker.common.job.manager.manager.JobManager(self)
 		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
+		self.start_time = datetime.datetime.utcnow()
+
+	def uptime(self):
+		"""
+		Calculate the uptime of this configuration object, and return
+		a value in seconds.
+		"""
+		return (datetime.datetime.utcnow() - self.start_time).total_seconds()
 
 	def load_from_file(self, search_path):
 		"""

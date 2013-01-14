@@ -10,6 +10,9 @@ pika==0.9.5
 requests
 virtualenv
 
+# For database migrations.
+alembic
+
 # MySQL service.
 torndb
 

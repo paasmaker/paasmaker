@@ -159,6 +159,7 @@ class Node(OrmBase, Base):
 	uuid = Column(String, nullable=False, unique=True, index=True)
 	state = Column(String, nullable=False, index=True)
 	last_heard = Column(DateTime, nullable=False)
+	start_time = Column(DateTime, nullable=False)
 
 	heart = Column(Boolean, nullable=False, default=False)
 	pacemaker = Column(Boolean, nullable=False, default=False)
