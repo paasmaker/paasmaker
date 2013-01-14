@@ -23,7 +23,7 @@ Complete this list. But all standard packages that can be apt-get installed.
 
 ### Ruby Runtime
 
-This is from and based on rbenv: https://github.com/sstephenson/rbenv
+Optional for now. This is from and based on rbenv: https://github.com/sstephenson/rbenv
 
 	sudo apt-get install zlib1g-dev libssl-dev libreadline-dev
 	git clone git://github.com/sstephenson/rbenv.git ~/.rbenv
@@ -42,11 +42,13 @@ This is from and based on rbenv: https://github.com/sstephenson/rbenv
 
 ## Rabbitmq
 
+	(Optional for now.)
 	sudo apt-get install rabbitmq-server
 
 ## Postgres
 
 For the postgres service, you will need libpq-dev.
+(Not optional because momoko is in requirements.txt)
 
 	sudo apt-get install libpq-dev
 
@@ -75,13 +77,13 @@ be easily possible.
 
 ## PHP
 
-The target version is 5.3, which ships with Ubuntu 12.04.
+Optional for now. The target version is 5.3, which ships with Ubuntu 12.04.
 
     sudo apt-get install php5-cli
 
 ## Chef
 
-To install Chef, use the Opscode repository:
+Optional for now. To install Chef, use the Opscode repository:
 
 http://wiki.opscode.com/display/chef/Installing+Chef+Client+on+Ubuntu+or+Debian
 
