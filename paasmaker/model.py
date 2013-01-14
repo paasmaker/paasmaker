@@ -174,6 +174,7 @@ class Node(OrmBase, Base):
 		self.uuid = uuid
 		self.state = state
 		self.last_heard = datetime.datetime.utcnow()
+		self.start_time = datetime.datetime.utcnow()
 
 	def __repr__(self):
 		return "<Node('%s','%s')>" % (self.name, self.route)
