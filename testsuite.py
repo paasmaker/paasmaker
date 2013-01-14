@@ -85,6 +85,8 @@ test_sets = {
 	paasmaker.pacemaker.auth.internal: ['all', 'auth'],
 	paasmaker.pacemaker.auth.allowany: ['all', 'auth'],
 
+	paasmaker.pacemaker.health.downnodes: ['all', 'health', 'node'],
+
 	paasmaker.common.job.prepare.prepareroot: ['all', 'application', 'prepare'],
 	paasmaker.common.job.coordinate.selectlocations: ['all', 'application', 'coordinate'],
 	paasmaker.common.job.coordinate.register: ['all', 'application', 'coordinate'],

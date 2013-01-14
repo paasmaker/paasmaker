@@ -58,7 +58,7 @@ MODE_REQUIRE_PARAMS = {
 
 	'JOB': True,
 
-	'HEALTH_CHECK': False
+	'HEALTH_CHECK': True
 }
 
 # Mode constants.
