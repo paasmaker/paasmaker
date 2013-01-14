@@ -1,9 +1,10 @@
 import unittest
-import colander
-import yaml
 import logging
 import os
 import tempfile
+
+import yaml
+import colander
 
 class NoConfigurationFileException(Exception):
 	"""

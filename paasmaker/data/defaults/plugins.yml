@@ -1,0 +1,126 @@
+plugins:
+  # GENERIC JOBS
+  - name: paasmaker.job.container
+    class: paasmaker.common.job.base.ContainerJob
+    title: Container Job
+
+  # HEART PLUGINS - JOBS
+  - name: paasmaker.job.heart.registerinstance
+    class: paasmaker.common.job.heart.RegisterInstanceJob
+    title: Instance Registration Job
+  - name: paasmaker.job.heart.startup
+    class: paasmaker.common.job.heart.InstanceStartupJob
+    title: Instance Startup Job
+  - name: paasmaker.job.heart.prestartup
+    class: paasmaker.common.job.heart.PreInstanceStartupJob
+    title: Pre Instance Startup Job
+  - name: paasmaker.job.heart.shutdown
+    class: paasmaker.common.job.heart.InstanceShutdownJob
+    title: Instance Shutdown Job
+  - name: paasmaker.job.heart.deregisterinstance
+    class: paasmaker.common.job.heart.DeRegisterInstanceJob
+    title: De Register Instance Job
+
+  # HEART PLUGINS - STARTUP
+  - name: paasmaker.startup.shell
+    class: paasmaker.pacemaker.prepare.shell.ShellPrepare
+    title: Shell Prepare
+
+  # PACEMAKER PLUGINS - PREPARE JOBS
+  - name: paasmaker.job.prepare.root
+    class: paasmaker.common.job.prepare.ApplicationPrepareRootJob
+    title: Application Prepare Root Job
+
+  - name: paasmaker.job.prepare.manifestreader
+    class: paasmaker.common.job.prepare.ManifestReaderJob
+    title: Manifest Reader Job
+
+  - name: paasmaker.job.prepare.scm
+    class: paasmaker.common.job.prepare.SourceSCMJob
+    title: Source SCM Job
+
+  - name: paasmaker.job.prepare.service
+    class: paasmaker.common.job.prepare.ServiceJob
+    title: Service Management Job
+
+  - name: paasmaker.job.prepare.servicecontainer
+    class: paasmaker.common.job.prepare.ServiceContainerJob
+    title: Service Container Job
+
+  - name: paasmaker.job.prepare.packer
+    class: paasmaker.common.job.prepare.SourcePackerJob
+    title: Source Packer Job
+
+  - name: paasmaker.job.prepare.preparer
+    class: paasmaker.common.job.prepare.SourcePreparerJob
+    title: Source Preparer Job
+
+  # COORDINATION JOBS
+  - name: paasmaker.job.coordinate.selectlocations
+    class: paasmaker.common.job.coordinate.SelectLocationsJob
+    title: Select Locations Job
+
+  - name: paasmaker.job.coordinate.registerroot
+    class: paasmaker.common.job.coordinate.RegisterRootJob
+    title: Register Root Job
+
+  - name: paasmaker.job.coordinate.registerrequest
+    class: paasmaker.common.job.coordinate.RegisterRequestJob
+    title: Register Request Job
+
+  - name: paasmaker.job.coordinate.storeport
+    class: paasmaker.common.job.coordinate.StorePortJob
+    title: Store Port Job
+
+  - name: paasmaker.job.coordinate.startuproot
+    class: paasmaker.common.job.coordinate.StartupRootJob
+    title: Startup Root Job
+
+  - name: paasmaker.job.coordinate.startuprequest
+    class: paasmaker.common.job.coordinate.StartupRequestJob
+    title: Startup Root Job
+
+  - name: paasmaker.job.coordinate.shutdownroot
+    class: paasmaker.common.job.coordinate.ShutdownRootJob
+    title: Shutdown Root Job
+
+  - name: paasmaker.job.coordinate.shutdownrequest
+    class: paasmaker.common.job.coordinate.ShutdownRequestJob
+    title: Shutdown Request Job
+
+  - name: paasmaker.job.coordinate.deregisterroot
+    class: paasmaker.common.job.coordinate.DeRegisterRootJob
+    title: De Register Root Job
+
+  - name: paasmaker.job.coordinate.deregisterrequest
+    class: paasmaker.common.job.coordinate.DeRegisterRequestJob
+    title: De Register Request Job
+
+  - name: paasmaker.job.coordinate.currentrequest
+    class: paasmaker.common.job.coordinate.CurrentVersionRequestJob
+    title: Update Current Version Request Job
+
+  # CRON JOB PLUGIN
+  - name: paasmaker.job.cron
+    class: paasmaker.pacemaker.cron.cronrunner.CronRunJob
+    title: Cron Runner
+
+  # ROUTING
+  - name: paasmaker.job.routing.update
+    class: paasmaker.common.job.routing.RoutingUpdateJob
+    title: Routing Update Job
+
+  # PLACEMENT PLUGINS
+  - name: paasmaker.placement.default
+    class: paasmaker.pacemaker.placement.default.DefaultPlacement
+    title: Default Placement
+
+  # PREPARE PLUGINS
+  - name: paasmaker.prepare.shell
+    class: paasmaker.pacemaker.prepare.shell.ShellPrepare
+    title: Shell Prepare
+
+  # AUTHENTICATION PLUGINS
+  - name: paasmaker.auth.internal
+    class: paasmaker.pacemaker.auth.internal.InternalAuth
+    title: Internal Authentication
