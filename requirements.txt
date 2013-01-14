@@ -9,6 +9,7 @@ tornado-redis
 pika==0.9.5
 requests
 virtualenv
+python-dateutil>=1.5
 
 # For database migrations.
 alembic

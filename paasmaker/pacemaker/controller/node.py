@@ -10,6 +10,7 @@ from paasmaker.common.core import constants
 import tornado
 import tornado.testing
 import colander
+import dateutil.parser
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -27,6 +28,9 @@ class NodeRegisterSchema(colander.MappingSchema):
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="User tags",
 		description="A generic set of tags or information stored for the node. Can be used to write custom placement filters, or find nodes.")
+	start_time = colander.SchemaNode(colander.String(),
+		title="Node start time",
+		description="An ISO 8601 formatted string representing the time the node started. In UTC.")
 	instances = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="Instance status",
 		description="A map of instance statuses on the node.",
@@ -84,6 +88,7 @@ class NodeRegisterController(BaseController):
 			self.node.pacemaker = tags['roles']['pacemaker']
 			self.node.router = tags['roles']['router']
 			self.node.tags = tags
+			self.node.start_time = dateutil.parser.parse(self.params['start_time'])
 
 			# Attempt to connect to the node...
 			request = paasmaker.common.api.information.InformationAPIRequest(self.configuration)

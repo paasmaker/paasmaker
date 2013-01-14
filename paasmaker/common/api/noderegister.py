@@ -23,6 +23,7 @@ class NodeRegisterAPIRequest(APIRequest):
 		payload['name'] = self.configuration.get_flat('my_name')
 		payload['route'] = self.configuration.get_flat('my_route')
 		payload['apiport'] = self.configuration.get_flat('http_port')
+		payload['start_time'] = self.configuration.start_time
 
 		# Send along the node tags.
 		tags = {}

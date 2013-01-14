@@ -192,6 +192,20 @@ class Node(OrmBase, Base):
 	def tags(self, val):
 		self._tags = json.dumps(val)
 
+	def uptime(self, reference=None):
+		"""
+		Calculate the uptime of this node object.
+
+		If supplied with a reference date time, the uptime is
+		calculated relative to that time.
+
+		:arg datetime reference: The reference time to calculate
+			against.
+		"""
+		if not reference:
+			reference = now()
+		return (reference - self.start_time).total_seconds()
+
 class User(OrmBase, Base):
 	"""
 	User - a user who can access the system.
