@@ -5,6 +5,7 @@ import urllib
 from base import BaseController
 from base import BaseControllerTest
 from base import BaseWebsocketHandler
+from base import BaseLongpollController
 
 import colander
 import tornado
@@ -89,6 +90,38 @@ class ExampleWebsocketHandler(BaseWebsocketHandler):
 		routes.append((r"/example-websocket", ExampleWebsocketHandler, configuration))
 		return routes
 
+class ExampleLongPollController(BaseLongpollController):
+	AUTH_METHODS = [BaseController.ANONYMOUS]
+	LONGPOLL_MAX_TIME = 0.5
+
+	def poll(self):
+		# Based on the parameters...
+		if self.raw_params['action'] == 'expire':
+			# Just wait for the timeout to expire.
+			pass
+		elif self.raw_params['action'] == 'data':
+			# Return data immediately.
+			self.send_message({'test': 'bar'})
+		elif self.raw_params['action'] == 'queue':
+			# Return two items.
+			self.send_message({'test': 'baz'}, queue=True)
+			self.send_message({'second': 'test'})
+
+	def cleanup(self, callback, timeout_expired):
+		if timeout_expired:
+			self.send_message({'action': 'expired'}, queue=True)
+		callback()
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/example-longpoll", ExampleLongPollController, configuration))
+		return routes
+
+##
+## TEST CODE
+##
+
 class ExampleWebsocketHandlerTestClient(TornadoWebSocketClient):
 	events = []
 	def opened(self):
@@ -105,6 +138,7 @@ class ExampleControllerTest(BaseControllerTest):
 		routes.extend(ExampleFailController.get_routes({'configuration': self.configuration}))
 		routes.extend(ExamplePostController.get_routes({'configuration': self.configuration}))
 		routes.extend(ExampleWebsocketHandler.get_routes({'configuration': self.configuration}))
+		routes.extend(ExampleLongPollController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
@@ -198,3 +232,62 @@ class ExampleControllerTest(BaseControllerTest):
 
 		self.assertEquals(len(client.events), 3, "Missing events.")
 
+	def test_long_poll(self):
+		body_parts = []
+		body_parts.append(('action', 'data'))
+		body = urllib.urlencode(body_parts)
+
+		request = tornado.httpclient.HTTPRequest(
+			"http://localhost:%d/example-longpoll" % self.get_http_port(),
+			method="POST",
+			body=body)
+
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, self.stop)
+		response = self.wait()
+
+		self.failIf(response.error)
+		data = json.loads(response.body)
+		self.assertEquals(len(data), 3, "Unexpected number of return keys.")
+		self.assertTrue(data['data'].has_key('messages'))
+		self.assertEquals(len(data['data']['messages']), 1, "Wrong number of messages.")
+
+		# Try again, but get it to long poll and timeout.
+		body_parts = []
+		body_parts.append(('action', 'expire'))
+		body = urllib.urlencode(body_parts)
+
+		request = tornado.httpclient.HTTPRequest(
+			"http://localhost:%d/example-longpoll" % self.get_http_port(),
+			method="POST",
+			body=body)
+
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, self.stop)
+		response = self.wait()
+
+		self.failIf(response.error)
+		data = json.loads(response.body)
+		self.assertEquals(len(data), 3, "Unexpected number of return keys.")
+		self.assertTrue(data['data'].has_key('messages'))
+		self.assertEquals(len(data['data']['messages']), 1, "Wrong number of messages.")
+
+		# Again, but this time it returns two messages.
+		body_parts = []
+		body_parts.append(('action', 'queue'))
+		body = urllib.urlencode(body_parts)
+
+		request = tornado.httpclient.HTTPRequest(
+			"http://localhost:%d/example-longpoll" % self.get_http_port(),
+			method="POST",
+			body=body)
+
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, self.stop)
+		response = self.wait()
+
+		self.failIf(response.error)
+		data = json.loads(response.body)
+		self.assertEquals(len(data), 3, "Unexpected number of return keys.")
+		self.assertTrue(data['data'].has_key('messages'))
+		self.assertEquals(len(data['data']['messages']), 2, "Wrong number of messages.")

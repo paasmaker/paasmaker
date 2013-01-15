@@ -715,6 +715,109 @@ class BaseController(tornado.web.RequestHandler):
 		# unit tests or other short lived systems.
 		self.add_data('token', self.create_signed_value('user', unicode(user.id)))
 
+class BaseLongpollController(BaseController):
+	"""
+	A base controller for long-poll controllers.
+
+	The idea of long poll controllers is to wait for a while for information
+	to return to clients. We should be sending back data since the last
+	update, and then anything new.
+
+	To implement, subclass this class, and implement the poll() method.
+	You can also implement the poll_ended() method to send back a message
+	if the timeout expires.
+
+	You can use send_message() to queue up a few messages to go back,
+	if a few changes have occurred since the last poll - which makes
+	it a bit easier for your client side code to implement.
+
+	The default long poll timeout is 20 seconds, which is designed to be
+	inside the proxy's timeout.
+
+	You should not override get() and post() in these controllers.
+	"""
+	LONGPOLL_MAX_TIME = 20 # 20 seconds. TODO: Make this configurable.
+
+	@tornado.web.asynchronous
+	def get(self, *args, **kwargs):
+		# TODO: Detect when the connection is closed by the browser's end.
+		# This is to cleanup any resources (such as pubsub subscriptions)
+
+		# First thing we do is to set up a timeout to return a response.
+		self._longpoll_timer = self.configuration.io_loop.add_timeout(
+			time.time() + self.LONGPOLL_MAX_TIME,
+			self._longpoll_expire
+		)
+
+		# Force the format to be JSON.
+		self._set_format('json')
+
+		# Somewhere to store the messages.
+		self._messages = []
+
+		# Now allow the subclass to take over.
+		self.poll(*args, **kwargs)
+
+	def post(self, *args, **kwargs):
+		# Do the same thing as get(). The reason we implement
+		# this is because the request might contain a POST body
+		# with instructions on what to do.
+		self.get(*args, **kwargs)
+
+	def poll(self, *args, **kwargs):
+		"""
+		Override this in your subclass. Set up any listeners you
+		need, and then when a message comes in, call ``send_message()``
+		with a dict containing the message contents. By default,
+		``send_message()`` then ends the request.
+		"""
+		raise NotImplementedError("You should implement poll().")
+
+	def cleanup(self, callback, timeout_expired):
+		"""
+		Optionally override this in your subclass. This is called when
+		the timeout has expired and we're about to return a response to
+		the client. Call the callback when you're cleaned up and ready
+		for the request to end. You can queue messages in here if you
+		like, but be sure to pass ``queue=True`` to ``send_message()``.
+
+		:arg callable callback: Callback to call when you're done.
+		:arg bool timeout_expired: If True, the long poll timed out. Otherwise,
+			it finished because the user requested it.
+		"""
+		callback()
+
+	def send_message(self, message, queue=False):
+		"""
+		Send a message back to the client. This will end the request
+		if queue is False. Otherwise, you can call it a few times to
+		gather a few changes for the client.
+
+		:arg dict message: The message body to return.
+		:arg bool queue: If True, queues the message. Otherise,
+			it ends the request.
+		"""
+		# Call this to send a message.
+		self._messages.append(message)
+
+		if not queue:
+			self._finish_request(False)
+
+	def _longpoll_expire(self):
+		self._longpoll_timer = None
+		self._finish_request(True)
+
+	def _finish_request(self, timeout_expired):
+		if self._longpoll_timer:
+			self.configuration.io_loop.remove_timeout(self._longpoll_timer)
+
+		def finish():
+			self.add_data('messages', self._messages)
+			self.render('api/apionly.html')
+
+		# Call the cleanup.
+		self.cleanup(finish, timeout_expired)
+
 # A schema for websocket incoming messages, to keep them consistent.
 class WebsocketMessageSchemaCookie(colander.MappingSchema):
 	request = colander.SchemaNode(colander.String(),
@@ -915,6 +1018,10 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 		"""
 		return json.dumps(message, cls=paasmaker.util.jsonencoder.JsonEncoder)
 
+##
+## TEST CODE
+##
+
 class BaseControllerTest(tornado.testing.AsyncHTTPTestCase, TestHelpers):
 
 	config_modules = []
@@ -1012,3 +1119,10 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase, TestHelpers):
 		request = tornado.httpclient.HTTPRequest(resolved_url, **kwargs)
 		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
 		client.fetch(request, self.stop)
+
+class BaseLongpollControllerTest(BaseControllerTest):
+	def setUp(self):
+		super(BaseLongpollControllerTest, self).setUp()
+
+		# Turn down the long poll timeout to half a second.
+		BaseLongpollController.LONGPOLL_MAX_TIME = 0.5
