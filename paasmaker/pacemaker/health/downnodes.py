@@ -60,6 +60,17 @@ class DownNodesHealthCheck(BaseHealthCheck):
 
 		self.logger.info("Found %d down nodes.", bad_nodes_count)
 
+		if bad_nodes_count > 0:
+			full_node_list = session.query(
+				paasmaker.model.Node
+			).filter(
+				paasmaker.model.Node.id.in_(bad_nodes)
+			)
+
+			self.logger.info("Failed nodes:")
+			for node in full_node_list:
+				self.logger.info("- %s (%s:%d, %s)", node.name, node.route, node.apiport, node.uuid[0:8])
+
 		# Find any can-run instances on that node.
 		down_instances = session.query(
 			paasmaker.model.ApplicationInstance
@@ -67,6 +78,8 @@ class DownNodesHealthCheck(BaseHealthCheck):
 			paasmaker.model.ApplicationInstance.node_id.in_(bad_nodes),
 			paasmaker.model.ApplicationInstance.state.in_(constants.INSTANCE_ALLOCATED_STATES)
 		)
+
+		# TODO: Take these instances out of the routing table right now.
 
 		altered_instance_count = down_instances.count()
 
