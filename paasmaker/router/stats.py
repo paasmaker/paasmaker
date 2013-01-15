@@ -24,6 +24,7 @@ class StatsLogReader(object):
 		self.reading = False
 		self.records = {}
 		self.hashrecords = {}
+		self.position = None
 
 	def _get_position_key(self):
 		return "position_%s" % self.configuration.get_node_uuid()
@@ -49,6 +50,19 @@ class StatsLogReader(object):
 			self.reading = True
 			self.records = {}
 			self.hashrecords = {}
+
+		# Check quickly first if we can without hitting redis
+		# if the file has changed.
+		filename = self.configuration.get_flat('router.stats_log')
+		size = os.path.getsize(filename)
+		if size == self.position:
+			self.reading = False
+			callback("Not changed.")
+			return
+		else:
+			self.position = size
+
+		# Now continue.
 
 		# Fetch the stats redis instance.
 		self.callback = callback
@@ -197,12 +211,14 @@ class StatsLogReader(object):
 			for key, value in keyset.iteritems():
 				pipeline.hincrby(bucket, key, amount=value)
 		pipeline.set(self._get_position_key(), position)
+		self.position = position
 		pipeline.execute(self._batch_finalized)
 
 	def _batch_finalized(self, result):
 		logger.info("Completed writing stats to redis.")
 		self.fp.close()
 		self.reading = False
+		self.redis.disconnect()
 		self.callback("Completed reading file.")
 
 class StatsLogPeriodicManager(object):
