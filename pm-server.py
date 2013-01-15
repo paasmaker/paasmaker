@@ -437,10 +437,6 @@ def on_told_master_shutdown(response):
 	else:
 		logger.info("Successfully shutdown with master.")
 
-	# Now stop any managed daemons.
-	configuration.shutdown_managed_nginx()
-	configuration.shutdown_managed_redis()
-
 	# Run any shutdown plugins, post notify.
 	on_exit_plugins_postnotify()
 
@@ -481,6 +477,11 @@ def on_exit_postnotify_complete(message, exception=None):
 		logger.info("%d postnotify plugins still waiting to run." % on_exit_plugins_postnotify.required)
 
 def on_actual_exit():
+	# Now stop any managed daemons.
+	configuration.shutdown_managed_nginx()
+	configuration.shutdown_managed_redis()
+
+	# And really, really exit.
 	logging.info("Exiting.")
 	os.unlink(pid_path)
 	sys.exit(0)
