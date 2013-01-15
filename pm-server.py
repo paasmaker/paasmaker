@@ -266,7 +266,7 @@ on_intermediary_started.required = 0
 def on_intermediary_failed(message, exception=None):
 	logger.error(message)
 	if exception:
-		logger.error(exc_info=exception)
+		logger.error("Exception:", exc_info=exception)
 	logger.critical("Aborting startup due to failure.")
 	tornado.ioloop.IOLoop.instance().stop()
 
