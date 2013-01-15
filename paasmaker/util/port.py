@@ -4,6 +4,7 @@ import unittest
 import platform
 import time
 import logging
+import re
 
 import tornado.testing
 
@@ -32,6 +33,10 @@ class FreePortFinder(object):
 		"""
 		self.last_allocated = None
 		self.preallocated = set()
+		# looking for port numbers: search for hex, wildcard (* or ::),
+		# or IPv6 square bracket characters, followed by colon or dot
+		# (BSD / OS X netstat output), followed by some digits
+		self.netstat_wrangler = re.compile('[0-9a-f\*\:\]][\.\:](\d+)(?:\s|\Z)')
 
 	def add_allocated_port(self, port):
 		"""
@@ -79,13 +84,13 @@ class FreePortFinder(object):
 			else:
 				start = self.last_allocated + 1
 		# Fetch the current list of ports.
-		output = self._fetch_netstat()
+		ports_in_use = self._fetch_netstat()
 		# Now begin the search.
 		port = start
-		free = (output.find(":%d " % port) == -1) and (port not in self.preallocated)
+		free = (port not in ports_in_use) and (port not in self.preallocated)
 		while not free and port < upper:
 			port += 1
-			free = (output.find(":%d " % port) == -1) and (port not in self.preallocated)
+			free = (port not in ports_in_use) and (port not in self.preallocated)
 		if not free:
 			# If we were using the last allocated port,
 			# we might not have scanned the bottom of the range.
@@ -106,8 +111,8 @@ class FreePortFinder(object):
 
 		:arg int port: The port to test.
 		"""
-		output = self._fetch_netstat()
-		return (output.find(":%d " % port) != -1)
+		ports_in_use = self._fetch_netstat()
+		return (port in ports_in_use)
 
 	def _fetch_netstat(self):
 		# TODO: This is HIGHLY platform specific, but it's fast.
@@ -117,19 +122,24 @@ class FreePortFinder(object):
 		# fills up. However, I'm using this to prevent the stderr from
 		# being printed out - and relying on the fact that it won't
 		# print very much output to stderr.
+		# On Linux, -lt shows listening TCP ports
+		# On Mac OS X, -aL shows all open ports with a listening queue
+		# (in both cases -n shows numeric ports)
 		if platform.system() == 'Linux':
-			command = ['netstat', '-ltnp']
-		if platform.system() == 'Windows':
+			command = ['netstat', '-ltn']
+		if platform.system() == 'Darwin':
+			command = ['netstat', '-aLn']
+		if platform.system() == 'Windows':	# abandon all hope, ye who enter here
 			command = ['netstat', '-na', '-p', 'tcp']
 		output = subprocess.check_output(command, stderr=subprocess.PIPE)
-		# Post process the output a little bit.
-		raw_lines = output.split("\n")
-		lines = []
-		for line in raw_lines:
-			if line.find("LISTEN") != -1:
-				lines.append(line)
-		output = "\n".join(lines)
-		return output
+
+		# Run a regexp match to find open ports in the netstat output,
+		# then return the results as a dict of integers for quick lookups
+		mapped_ports = {}
+		ports = self.netstat_wrangler.findall(output)
+		for port in ports:
+			mapped_ports[int(port)] = True
+		return mapped_ports
 
 	def wait_until_port_used(self, io_loop, port, timeout, callback, timeout_callback):
 		"""
