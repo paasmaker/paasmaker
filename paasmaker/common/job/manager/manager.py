@@ -276,16 +276,26 @@ class JobManager(object):
 			# Now publish the fact that the job has reached the given state.
 			self.configuration.send_job_status(job_id, state, summary=summary)
 
+		def on_job_metadata(metadata):
+			# If the job was already in a finished state, DO NOT
+			# update it's state and summary. Otherwise SUCCESS/ERROR jobs
+			# turn into ABORTED jobs.
+			if metadata['state'] not in constants.JOB_FINISHED_STATES:
+				# Update the job state first.
+				self.backend.set_attrs(
+					job_id,
+					{
+						'state': state,
+						'summary': summary
+					},
+					on_state_updated
+				)
+			else:
+				on_state_updated(metadata)
+
 		def on_context_updated():
-			# Update the job state first.
-			self.backend.set_attrs(
-				job_id,
-				{
-					'state': state,
-					'summary': summary
-				},
-				on_state_updated
-			)
+			# Fetch the existing job metadata.
+			self.backend.get_job(job_id, on_job_metadata)
 
 		logger.debug("Job %s reports state %s.", job_id, state)
 		# Update the job context first. In case something
@@ -383,10 +393,9 @@ class JobManager(object):
 		)
 
 	def job_status(self, message):
-		# No need to do anything if we're not in an interesting state.
-		if message.state in constants.JOB_SUCCESS_STATES \
-			or message.state == constants.JOB.WAITING:
-			# Something succeeded. Let's evaluate our jobs again.
+		if message.state in constants.JOB_SUCCESS_STATES or message.state == constants.JOB.WAITING:
+			# If the message is a success state, or waiting, go
+			# ahead and evaluate the jobs.
 			self.configuration.io_loop.add_callback(self.evaluate)
 
 		if message.state in constants.JOB_ERROR_STATES:
@@ -723,7 +732,7 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		root_status = self.get_state(root_id)
 
 		self.assertEquals(subsub1_status, constants.JOB.SUCCESS, "Sub Sub 1 should have succeeded.")
-		self.assertEquals(sub1_status, constants.JOB.ABORTED, "Sub 1 should have aborted.")
+		self.assertEquals(sub1_status, constants.JOB.ABORTED, "Sub 1 should have been aborted.")
 		self.assertEquals(sub2_status, constants.JOB.FAILED, "Sub 2 should have failed.")
 		self.assertEquals(root_status, constants.JOB.ABORTED, "Root should have been aborted.")
 
