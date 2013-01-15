@@ -871,8 +871,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			settings['cookie_secret'] = "%s-%s" % (self.get_flat('pacemaker.cluster_hostname'), self.get_flat('pacemaker.super_token'))
 		else:
 			settings['cookie_secret'] = self['node_token']
-		settings['template_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../../templates')
-		settings['static_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../../static')
+		settings['template_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../templates')
+		settings['static_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../static')
 		settings['debug'] = (options.debug == 1)
 		settings['xheaders'] = True
 		if not settings['debug']:
