@@ -215,7 +215,9 @@ class HealthCheckRunJob(paasmaker.common.job.base.BaseJob):
 		)
 
 		if not exists:
-			self.failed("No such plugin %s" % self.parameters['plugin'])
+			error_message = "No such plugin %s" % self.parameters['plugin']
+			self.logger.error(error_message)
+			self.failed(error_message)
 			return
 
 		health = self.configuration.plugins.instantiate(
