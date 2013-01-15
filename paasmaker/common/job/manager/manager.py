@@ -302,6 +302,9 @@ class JobManager(object):
 		# supplied job ID, locate and fail the rest of the jobs on our node.
 		# Stop all the WAITING ones first.
 		def on_waiting_altered(jobs):
+			# Broadcast the fact that the job has been aborted.
+			for job in jobs:
+				self.configuration.send_job_status(job, constants.JOB.ABORTED, summary="Aborted due to a related job.")
 			logger.debug("Completed altering jobs.")
 
 		def on_running(jobs):
@@ -720,7 +723,7 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		root_status = self.get_state(root_id)
 
 		self.assertEquals(subsub1_status, constants.JOB.SUCCESS, "Sub Sub 1 should have succeeded.")
-		self.assertEquals(sub1_status, constants.JOB.SUCCESS, "Sub 1 should have succeeded.")
+		self.assertEquals(sub1_status, constants.JOB.ABORTED, "Sub 1 should have aborted.")
 		self.assertEquals(sub2_status, constants.JOB.FAILED, "Sub 2 should have failed.")
 		self.assertEquals(root_status, constants.JOB.ABORTED, "Root should have been aborted.")
 
@@ -755,6 +758,10 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertEquals(sub1_status, constants.JOB.SUCCESS, "Sub 1 should have succeeded.")
 		self.assertEquals(sub2_status, constants.JOB.ABORTED, "Sub 2 should have failed.")
 		self.assertEquals(root_status, constants.JOB.ABORTED, "Root should have been aborted.")
+
+		# And, to fix a bug - the jobs that were aborted should have broadcast that status.
+		self.assertEquals(self.statuses[sub2_id].state, constants.JOB.ABORTED)
+		self.assertEquals(self.statuses[root_id].state, constants.JOB.ABORTED)
 
 	def test_manager_exception_callback(self):
 		# Set up a simple exception job.
