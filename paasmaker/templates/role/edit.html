@@ -13,7 +13,7 @@
 		<p>Permissions:</p>
 		{% for permission in available_permissions %}
 			<label class="checkbox">
-				<input type="checkbox" name="permissions.{{ permission }}" {% if permission in role.permissions %}checked="checked"{% end %} />
+				<input type="checkbox" name="permissions.[]" {% if permission in role.permissions %}checked="checked"{% end %} value="{{ permission }}" />
 				{{ permission }}
 			</label>
 		{% end %}
