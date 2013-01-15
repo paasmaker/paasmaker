@@ -19,7 +19,10 @@ All these steps currently use Ubuntu 12.04.
 
 ### PHP runtime
 
-Complete this list. But all standard packages that can be apt-get installed.
+This will pull in Apache with the correct worker type. This list will need to be
+updated with more modules for PHP.
+
+	sudo apt-get install libapache2-mod-php5 php5-cli
 
 ### Ruby Runtime
 
@@ -74,12 +77,6 @@ be easily possible.
 	sudo apt-get install python-dev
 	sudo pip install -r requirements.txt
     sudo pip install coverage
-
-## PHP
-
-Optional for now. The target version is 5.3, which ships with Ubuntu 12.04.
-
-    sudo apt-get install php5-cli
 
 ## Chef
 
