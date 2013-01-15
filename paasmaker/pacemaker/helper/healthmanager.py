@@ -1,5 +1,6 @@
 
 import json
+import datetime
 
 import paasmaker
 from paasmaker.common.core import constants
@@ -138,7 +139,7 @@ class HealthManager(object):
 			{
 				'group': group
 			},
-			"Health checks for group %s" % group,
+			"Health checks for group %s, at %s" % (group, datetime.datetime.utcnow().isoformat()),
 			context=context,
 			tags=['health', 'health:%s' % group],
 			abort_handler=True
@@ -208,10 +209,20 @@ class HealthCheckRunJob(paasmaker.common.job.base.BaseJob):
 	def start_job(self, context):
 		# This job will start the health check plugin and manage
 		# the result of that.
+		exists = self.configuration.plugins.exists(
+			self.parameters['plugin'],
+			paasmaker.util.plugin.MODE.HEALTH_CHECK
+		)
+
+		if not exists:
+			self.failed("No such plugin %s" % self.parameters['plugin'])
+			return
+
 		health = self.configuration.plugins.instantiate(
 			self.parameters['plugin'],
 			paasmaker.util.plugin.MODE.HEALTH_CHECK,
-			self.parameters['parameters']
+			self.parameters['parameters'],
+			self.logger
 		)
 
 		def success(output_context, message):
@@ -226,6 +237,9 @@ class HealthCheckRunJob(paasmaker.common.job.base.BaseJob):
 
 		# Kick off the plugin.
 		health.check(self.job_metadata['root_id'], success, failure)
+
+	def abort_job(self):
+		self.aborted("Aborted due to request.")
 
 class HealthCheckMarkCompletedJobParametersSchema(colander.MappingSchema):
 	group = colander.SchemaNode(colander.String())
@@ -242,6 +256,9 @@ class HealthCheckMarkCompletedJob(paasmaker.common.job.base.BaseJob):
 	def abort_handler(self, context):
 		# Mark it as finished, otherwise it might hang.
 		self.configuration.health_manager.mark_finished(self.parameters['group'])
+
+	def abort_job(self):
+		self.aborted("Aborted due to request.")
 
 ##
 ## TESTING CODE
