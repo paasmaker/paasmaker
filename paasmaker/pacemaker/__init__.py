@@ -1,5 +1,6 @@
 # pacemaker module init
 
+import helper
 import auth
 import controller
 import service

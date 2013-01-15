@@ -44,7 +44,7 @@ test_sets = {
 	paasmaker.common.configuration.configurationstub: ['all', 'configuration'],
 	paasmaker.common.application.configuration: ['all', 'configuration'],
 	paasmaker.common.job.manager.backendredis: ['all', 'util', 'job', 'jobmanager', 'jobmanagerbackend'],
-	paasmaker.common.job.manager.manager: ['slow', 'util', 'job', 'jobmanager'],
+	paasmaker.common.job.manager.manager: ['all', 'util', 'job', 'jobmanager', 'jobmanagercore'],
 
 	paasmaker.model: ['all', 'model'],
 
@@ -85,6 +85,7 @@ test_sets = {
 	paasmaker.pacemaker.auth.internal: ['all', 'auth'],
 	paasmaker.pacemaker.auth.allowany: ['all', 'auth'],
 
+	paasmaker.pacemaker.helper.healthmanager: ['all', 'health', 'healthmanager'],
 	paasmaker.pacemaker.health.downnodes: ['all', 'health', 'node'],
 
 	paasmaker.common.job.prepare.prepareroot: ['all', 'application', 'prepare'],

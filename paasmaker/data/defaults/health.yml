@@ -1,0 +1,11 @@
+groups:
+  - name: default
+    title: Default Health Check
+    period: 60
+    plugins:
+      - plugin: paasmaker.health.downnodes
+        order: 10
+        parameters: {}
+      - plugin: paasmaker.health.adjustinstances
+        order: 20
+        parameters: {}

@@ -227,6 +227,11 @@ def on_completed_startup():
 			)
 			pacemaker_updater.update(success_insert, failed_insert)
 
+	# Set up the health checks.
+	if configuration.is_pacemaker() and configuration.get_flat('pacemaker.health.enabled'):
+		logger.info("Starting up health manager, because it's configured to run on this node.")
+		configuration.startup_health_manager()
+
 def on_intermediary_started(message):
 	logger.debug(message)
 	on_intermediary_started.required -= 1

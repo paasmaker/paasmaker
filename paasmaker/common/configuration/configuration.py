@@ -85,6 +85,67 @@ class ScmListerSchema(colander.MappingSchema):
 class ScmListersSchema(colander.SequenceSchema):
 	lister = ScmListerSchema()
 
+class HealthPluginSchema(colander.MappingSchema):
+	plugin = colander.SchemaNode(colander.String(),
+		title="Plugin name",
+		description="Plugin name for this particular health check.")
+	order = colander.SchemaNode(colander.Integer(),
+		title="Plugin order",
+		description="The order of execution for this particular plugin. Plugins with the same order are run at the same time. Plugins with lower order numbers are run first. Order numbers do not need to be consecutive.")
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Plugin Parameters",
+		description="Parameters for this particular plugin",
+		missing={},
+		default={})
+
+class HealthPluginsSchema(colander.SequenceSchema):
+	health = HealthPluginSchema()
+
+	@staticmethod
+	def default():
+		return {'plugins': []}
+
+class HealthGroupSchema(colander.MappingSchema):
+	name = colander.SchemaNode(colander.String(),
+		title="Symbolic name",
+		description="The symbolic name for this health check group.")
+	title = colander.SchemaNode(colander.String(),
+		title="Friendly name",
+		description="The friendly name for this health check group.")
+	period = colander.SchemaNode(colander.Integer(),
+		title="Group recheck period",
+		description="How often to run this health check group, in seconds.")
+	plugins = HealthPluginsSchema(
+		default=HealthPluginsSchema.default(),
+		missing=HealthPluginsSchema.default()
+	)
+
+class HealthGroupsSchema(colander.SequenceSchema):
+	group = HealthGroupSchema()
+
+class HealthGroupsOnlySchema(colander.MappingSchema):
+	groups = HealthGroupsSchema()
+
+class HealthCombinedSchema(colander.MappingSchema):
+	groups = HealthGroupsSchema(
+		missing=[],
+		default=[]
+	)
+	enabled = colander.SchemaNode(colander.Boolean(),
+		title="Run health checks",
+		description="If true, run health checks on this node. If you have multiple pacemakers, you will only want to run this on one node. However, you could configure two pacemakers to perform different health checks.",
+		missing=True,
+		default=True)
+	default = colander.SchemaNode(colander.Boolean(),
+		title="Include default health checks",
+		description="Include default health checks. These are added to any groups. If you do enable this, you should not define a 'default' group.",
+		missing=True,
+		default=True)
+
+	@staticmethod
+	def default():
+		return {'enabled': False, 'groups': []}
+
 class PacemakerSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
 		title="Pacemaker enabled",
@@ -139,9 +200,14 @@ class PacemakerSchema(colander.MappingSchema):
 		missing=True,
 		default=True)
 
+	health = HealthCombinedSchema(
+		missing=HealthCombinedSchema.default(),
+		default=HealthCombinedSchema.default()
+	)
+
 	@staticmethod
 	def default():
-		return {'enabled': False, 'scmlisters': []}
+		return {'enabled': False, 'scmlisters': [], 'health': HealthCombinedSchema.default()}
 
 class HeartSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -585,12 +651,24 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 			self.load_plugins(self.plugins, default_plugins_ready['plugins'])
 
+		if self.is_pacemaker() and self.get_flat('pacemaker.health.enabled'):
+			# Load the default health groups. We merge these with the others - although
+			# if you duplicate the default group in yours, the results will be undefined.
+			default_file = os.path.join(default_path, 'health.yml')
+			default_health_raw = open(default_file, 'r').read()
+			default_health_parsed = yaml.safe_load(default_health_raw)
+
+			default_health_ready = HealthGroupsOnlySchema().deserialize(default_health_parsed)
+
+			self['pacemaker']['health']['groups'].extend(default_health_ready['groups'])
+
 		# Plugins. Note that we load these after the defaults,
 		# so you can re-register the defaults with different options.
 		self.load_plugins(self.plugins, self['plugins'])
 
 		# TODO: validate the contents of scmlisters, that they all
 		# are relevant plugins.
+		# TODO: validate the health manager plugins exist.
 
 		self.update_flat()
 
@@ -920,6 +998,24 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		it may need to work.
 		"""
 		self.job_manager.prepare(callback, error_callback)
+
+	def startup_health_manager(self, start_checking=True):
+		"""
+		Set up the health manager.
+
+		This should be called on startup to set up the health manager.
+
+		:arg bool start_checking: If True, start checking according
+			to the configured schedule. This parameter is intended for
+			unit tests, to disable the default behaviour.
+		"""
+		if not self.is_pacemaker():
+			raise ImNotAPacemaker("Only pacemakers can run health checks.")
+
+		self.health_manager = paasmaker.pacemaker.helper.healthmanager.HealthManager(self)
+
+		if start_checking:
+			self.health_manager.start()
 
 	def start_jobs(self):
 		"""

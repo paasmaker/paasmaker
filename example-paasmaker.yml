@@ -52,6 +52,10 @@ pacemaker:
   cluster_hostname: local.paasmaker.net
   dsn: sqlite:///path/to/scratch/scratch-paasmaker/paasmaker.db
 
+  health:
+    enabled: true
+    default: true
+
 router:
   enabled: true
   stats_log: managed at runtime

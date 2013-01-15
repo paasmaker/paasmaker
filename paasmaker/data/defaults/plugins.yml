@@ -124,3 +124,12 @@ plugins:
   - name: paasmaker.auth.internal
     class: paasmaker.pacemaker.auth.internal.InternalAuth
     title: Internal Authentication
+
+  # HEALTH CHECK
+  - name: paasmaker.job.health.root
+    class: paasmaker.pacemaker.helper.healthmanager.HealthCheckMarkCompletedJob
+    title: Health Check root Job
+
+  - name: paasmaker.job.health.check
+    class: paasmaker.pacemaker.helper.healthmanager.HealthCheckRunJob
+    title: Health Check run Job
