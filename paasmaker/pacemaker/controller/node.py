@@ -2,6 +2,7 @@ import unittest
 import uuid
 import logging
 import json
+import datetime
 
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest
@@ -89,6 +90,7 @@ class NodeRegisterController(BaseController):
 			self.node.router = tags['roles']['router']
 			self.node.tags = tags
 			self.node.start_time = dateutil.parser.parse(self.params['start_time'])
+			self.node.last_heard = datetime.datetime.utcnow()
 
 			# Attempt to connect to the node...
 			request = paasmaker.common.api.information.InformationAPIRequest(self.configuration)
