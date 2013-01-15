@@ -165,37 +165,12 @@ def handle_runtime_exception():
 		# Log what happened.
 		logging.error("Runtime exception:", exc_info=True)
 
-def on_completed_startup():
-	if not is_debug:
-		# Fork into the background.
-		fork_result = os.fork()
-		if fork_result != 0:
-			# I'm the parent.
-			sys.exit(0)
-
-	# Write out our PID file.
-	fp = open(pid_path, 'w')
-	fp.write(str(os.getpid()))
-	fp.close()
-
-	# Start listening for HTTP requests, as everything is ready.
-	with tornado.stack_context.StackContext(handle_runtime_exception):
-		logging.info("Listening on port %d", configuration['http_port'])
-		application.listen(configuration['http_port'])
-		logging.info("All systems are go.")
-
-	# Register the node with the server.
-	# This periodic manager will handle keeping it up to date.
-	configuration.node_register_periodic = paasmaker.common.api.NodeUpdatePeriodicManager(configuration)
-
-	# Also, start up the periodic router log reader now as well, if configured to do so.
-	if configuration.is_router() and configuration.get_flat('router.process_stats'):
-		configuration.stats_reader_periodic = paasmaker.router.stats.StatsLogPeriodicManager(configuration)
-		configuration.stats_reader_periodic.start()
-
-	# Start up the cron manager.
-	if configuration.is_pacemaker() and configuration.get_flat('pacemaker.run_crons'):
-		configuration.cron_periodic = paasmaker.pacemaker.cron.cronrunner.CronPeriodicManager(configuration)
+# Some tasks to perform once we're registered with the master for the
+# first time this startup.
+def on_registered_with_master():
+	# Only called the first time we register with the master after startup.
+	# These tasks are delayed because new nodes won't have a UUID yet,
+	# which these tasks require.
 
 	# Add this pacemaker to the routing table.
 	if configuration.is_pacemaker():
@@ -215,17 +190,56 @@ def on_completed_startup():
 		).filter(
 			paasmaker.model.Node.uuid == configuration.get_node_uuid()
 		).first()
-		# TODO: node is None if it's not yet registered - which
-		# may be the case if it's a new node. Handle this case better
-		# than this.
-		if node:
-			pacemaker_updater = paasmaker.common.job.routing.routing.RouterTablePacemakerUpdate(
-				configuration,
-				node,
-				True,
-				logging
-			)
-			pacemaker_updater.update(success_insert, failed_insert)
+
+		pacemaker_updater = paasmaker.common.job.routing.routing.RouterTablePacemakerUpdate(
+			configuration,
+			node,
+			True,
+			logging
+		)
+		pacemaker_updater.update(success_insert, failed_insert)
+
+	# Redirect log output into a file based on the node UUID.
+	node_log_path = configuration.get_job_log_path(configuration.get_node_uuid())
+	root_logger = logging.getLogger()
+	log_handler = logging.FileHandler(node_log_path)
+	log_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+	root_logger.addHandler(log_handler)
+
+def on_completed_startup():
+	if not is_debug:
+		# Fork into the background.
+		fork_result = os.fork()
+		if fork_result != 0:
+			# I'm the parent.
+			sys.exit(0)
+
+	# Write out our PID file.
+	fp = open(pid_path, 'w')
+	fp.write(str(os.getpid()))
+	fp.close()
+
+	# Start listening for HTTP requests, as everything is ready.
+	with tornado.stack_context.StackContext(handle_runtime_exception):
+		logging.info("Listening on port %d", configuration['http_port'])
+		application.listen(configuration['http_port'])
+		logging.info("All systems are go.")
+
+	# Subscribe for when the node is registered.
+	pub.subscribe(on_registered_with_master, 'node.firstregistration')
+
+	# Register the node with the server.
+	# This periodic manager will handle keeping it up to date.
+	configuration.node_register_periodic = paasmaker.common.api.NodeUpdatePeriodicManager(configuration)
+
+	# Also, start up the periodic router log reader now as well, if configured to do so.
+	if configuration.is_router() and configuration.get_flat('router.process_stats'):
+		configuration.stats_reader_periodic = paasmaker.router.stats.StatsLogPeriodicManager(configuration)
+		configuration.stats_reader_periodic.start()
+
+	# Start up the cron manager.
+	if configuration.is_pacemaker() and configuration.get_flat('pacemaker.run_crons'):
+		configuration.cron_periodic = paasmaker.pacemaker.cron.cronrunner.CronPeriodicManager(configuration)
 
 	# Set up the health checks.
 	if configuration.is_pacemaker() and configuration.get_flat('pacemaker.health.enabled'):

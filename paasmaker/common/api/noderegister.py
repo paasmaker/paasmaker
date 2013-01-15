@@ -5,6 +5,7 @@ import paasmaker
 from apirequest import APIRequest, APIResponse
 
 import tornado
+from pubsub import pub
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -117,6 +118,9 @@ class NodeUpdatePeriodicManager(object):
 		# Flag to indicate that it should attempt to report in again
 		# immediately once it's done this report (because there is newer data).
 		self.followreport = False
+		# Flag to indicate if this is the first registration for this
+		# node (since server startup - not the first time ever).
+		self.firstregister = True
 
 		# Report in now.
 		self.trigger()
@@ -169,8 +173,16 @@ class NodeUpdatePeriodicManager(object):
 			for error in response.errors:
 				logger.error(error)
 			logger.info("Waiting until the next report interval and then we'll try again.")
+
+			pub.sendMessage('node.registrationerror')
 		else:
 			logger.info("Successfully registered or updated with master.")
+
+			if self.firstregister:
+				self.firstregister = False
+				pub.sendMessage('node.firstregistration')
+			else:
+				pub.sendMessage('node.registrationupdate')
 
 		self.reporting = False
 
