@@ -11,6 +11,7 @@ import logging
 import subprocess
 import socket
 import datetime
+import time
 
 import paasmaker
 from paasmaker.util.configurationhelper import InvalidConfigurationException
@@ -219,6 +220,12 @@ class HeartSchema(colander.MappingSchema):
 	working_dir = colander.SchemaNode(colander.String(),
 		title="Working directory",
 		description="Directory where heart working files are stored")
+
+	shutdown_on_exit = colander.SchemaNode(colander.Boolean(),
+		title="Shutdown applications on exit",
+		description="Shutdown all applications on exit, rather than leaving them running. This is designed for testing and development, and not for production.",
+		default=False,
+		missing=False)
 
 	@staticmethod
 	def default():
@@ -886,7 +893,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					meta['manager'].stop()
 					# Wait until it stops.
 					while meta['manager'].is_running():
-						pass
+						time.sleep(0.1)
 
 	def setup_managed_nginx(self, callback, error_callback):
 		"""

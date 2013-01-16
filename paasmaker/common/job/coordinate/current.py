@@ -107,7 +107,8 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 				instances = self.get_instances(
 					session,
 					instance_type,
-					[constants.INSTANCE.RUNNING]
+					[constants.INSTANCE.RUNNING],
+					context
 				)
 
 				for instance in instances:
@@ -165,7 +166,8 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 						instances = self.get_instances(
 							session,
 							output_current_version_instance_type,
-							[constants.INSTANCE.RUNNING, constants.INSTANCE.STARTING]
+							[constants.INSTANCE.RUNNING, constants.INSTANCE.STARTING],
+							context
 						)
 
 						for instance in instances:
@@ -193,7 +195,8 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 				instances = self.get_instances(
 					session,
 					instance_type,
-					constants.INSTANCE_CAN_START_STATES
+					constants.INSTANCE_CAN_START_STATES,
+					context
 				)
 
 				for instance in instances:
@@ -232,7 +235,8 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 				instances = self.get_instances(
 					session,
 					instance_type,
-					[constants.INSTANCE.RUNNING]
+					[constants.INSTANCE.RUNNING],
+					context
 				)
 
 				for instance in instances:

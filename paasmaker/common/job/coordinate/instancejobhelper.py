@@ -1,5 +1,6 @@
 
 import paasmaker
+from paasmaker.common.core import constants
 
 from ..base import BaseJob
 
@@ -11,20 +12,34 @@ class InstanceJobHelper(BaseJob):
 
 		return instance_type
 
-	def get_instances(self, session, instance_type, states, instances=[]):
+	def get_instances(self, session, instance_type, states, context):
 		"""
 		Find instances for the given application, in the given state,
 		and return a destroyable list of instances for queueing.
 		"""
-		# TODO: limit to the given list of instance IDs.
-		# This allows partials or targetting specific instances.
-		self.logger.info("Looking for instances in states %s", str(states))
+		self.logger.info("Looking for instances in states %s, on active nodes.", str(states))
+
+		active_nodes = session.query(
+			paasmaker.model.Node.id
+		).filter(
+			paasmaker.model.Node.state == constants.NODE.ACTIVE
+		)
+
 		instances = session.query(
 			paasmaker.model.ApplicationInstance
 		).filter(
 			paasmaker.model.ApplicationInstance.application_instance_type == instance_type,
-			paasmaker.model.ApplicationInstance.state.in_(states)
+			paasmaker.model.ApplicationInstance.state.in_(states),
+			paasmaker.model.ApplicationInstance.node_id.in_(active_nodes)
 		)
+
+		if context.has_key('limit_instances'):
+			# Limit the query to the given instance IDs.
+			self.logger.info("Limiting to instances %s", str(context['limit_instances']))
+			instances = instances.filter(
+				paasmaker.model.ApplicationInstance.instance_id.in_(context['limit_instances'])
+			)
+
 		self.logger.info("Found %d instances.", instances.count())
 
 		return instances

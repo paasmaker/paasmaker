@@ -83,6 +83,7 @@ class NodeRegisterController(BaseController):
 				raise tornado.web.HTTPError(400, "Invalid request.")
 
 		# If we're doing a connectivity check, also update the other attributes for the node.
+		self.node_adjustment_jobs = []
 		if do_connectivity_check:
 			tags = self.params['tags']
 			self.node.heart = tags['roles']['heart']
@@ -145,6 +146,15 @@ class NodeRegisterController(BaseController):
 	def _finished_response(self):
 		# Commit any changes to the database.
 		self.db().commit()
+		# Add a list of job IDs.
+		self.add_data('jobs', self.node_adjustment_jobs)
+		if len(self.node_adjustment_jobs) > 0:
+			# Make the adjustment jobs executable.
+			self.configuration.job_manager.allow_execution_list(self.node_adjustment_jobs, self._render)
+		else:
+			self._render()
+
+	def _render(self):
 		# Return the response.
 		self.render("api/apionly.html")
 
@@ -234,6 +244,26 @@ class NodeRegisterController(BaseController):
 								statuses[instance.instance_id],
 								state_change_complete
 							)
+						elif statuses[instance.instance_id] == constants.INSTANCE.SUSPENDED and \
+							instance.state == constants.INSTANCE.SUSPENDED:
+
+							# It was suspended, and we've left it in that state.
+							# Start it up again.
+
+							def on_job_submitted(job_id):
+								# Make a note of the job ID.
+								self.node_adjustment_jobs.append(job_id)
+								# And then move on.
+								process_instance_list()
+
+								# end on_job_submitted()
+
+							# Submit the job tree required to start up the instance.
+							paasmaker.common.job.coordinate.startup.StartupRootJob.setup_instances(
+								self.configuration,
+								[instance],
+								on_job_submitted
+							)
 						else:
 							# Just process the next one.
 							process_instance_list()
@@ -252,20 +282,9 @@ class NodeRegisterController(BaseController):
 			self._finished_response()
 
 	def _handle_state_change(self, instance, newstate, callback):
-		def update_job_executable():
-			# Done, call the callback.
-			callback()
-
 		def update_job_added(job_id):
-			try:
-				job_list = self.get_data('jobs')
-			except KeyError, ex:
-				job_list = []
-
-			job_list.append(job_id)
-			self.add_data('jobs', job_list)
-
-			self.configuration.job_manager.allow_execution(job_id, update_job_executable)
+			self.node_adjustment_jobs.append(job_id)
+			callback()
 
 		if newstate == constants.INSTANCE.RUNNING:
 			# It's now running. Insert a job to update the routing.
@@ -278,7 +297,8 @@ class NodeRegisterController(BaseController):
 			)
 		elif newstate == constants.INSTANCE.STOPPED or newstate == constants.INSTANCE.ERROR:
 			# It's no longer running (or should be removed).
-			# Update it's routing.
+			# Update it's routing. Don't attempt to start it; it's been stopped
+			# for a reason.
 			paasmaker.common.job.routing.routing.RoutingUpdateJob.setup_for_instance(
 				self.configuration,
 				self.db(),

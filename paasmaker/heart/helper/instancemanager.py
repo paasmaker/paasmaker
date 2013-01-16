@@ -242,11 +242,19 @@ class InstanceManager(object):
 				# end of on_success_instance()
 
 			def on_error_instance(message, exception=None):
-				# It's no longer running. Fail.
+				# It's no longer running. Mark it as SUSPENDED.
 				logger.error("Instance %s is no longer running!", instance_id)
 				logger.error(message)
+
+				# Record the error against the instance.
+				instance_logger = self.configuration.get_job_logger(instance_id)
+				instance_logger.error("Determined not to be running. Pacemaker will decide the fate now.")
+				instance_logger.error(message)
+				if exception:
+					instance_logger.error("Exception:", exc_info=exception)
+
 				data = self.get_instance(instance_id)
-				data['instance']['state'] = constants.INSTANCE.ERROR
+				data['instance']['state'] = constants.INSTANCE.SUSPENDED
 				self.save()
 				altered_instances.append(instance_id)
 				next_instance()
@@ -254,10 +262,15 @@ class InstanceManager(object):
 
 			data = self.get_instance(instance_id)
 			logger.info("Instance %s in state %s", instance_id, data['instance']['state'])
+			# The state of the instance will be RUNNING if the Heart crashed.
+			# The state of the instance will be SUSPENDED if the Heart shutdown and
+			# left the apps running. In these cases, check to see if it's still running.
+			# If it's not, it's state remains as SUSPENDED and the Pacemaker will decide
+			# what to do with it.
 			if data['instance']['state'] == constants.INSTANCE.RUNNING or \
-				data['instance']['state'] == constants.INSTANCE.STOPPED:
+				data['instance']['state'] == constants.INSTANCE.SUSPENDED:
 				# If it's marked as running, it's supposed to be running - check that it is.
-				# If it's marked as stopped, it might still be running, so check that state.
+				# If it's marked as suspended, it might still be running, so check that state.
 				# TODO: This suddenly ties the instance manager to the
 				# plugins system. This is probably ok, but consider this further.
 				plugin_exists = self.configuration.plugins.exists(
@@ -271,6 +284,10 @@ class InstanceManager(object):
 					self.save()
 					altered_instances.append(instance_id)
 					logger.error("Instance %s has a non existent runtime %s.", instance_id, data['instance_type']['runtime_name'])
+
+					instance_logger = self.configuration.get_job_logger(instance_id)
+					instance_logger.error("This heart node no longer has runtime %s.", data['instance_type']['runtime_name'])
+
 					next_instance()
 				else:
 					runtime = self.configuration.plugins.instantiate(
@@ -307,11 +324,12 @@ class InstanceManager(object):
 		logger.info("Checking %d instances on shutdown.", len(instances))
 
 		# What are we doing here? Basically, if it's running,
-		# mark it as STOPPED. We don't kill the instance, unless it
+		# mark it as SUSPENDED. We don't kill the instance, unless it
 		# is an exclusive instance. When the state change gets reported
 		# back to the master, it will be taken out of the routing table.
 		# On startup, we check all the instances, and if they're still
-		# running, they get their state updated.
+		# running, they get their state updated. If they're not running
+		# the pacemaker can make a decision based on it's recorded state.
 
 		def next_instance():
 			if len(instances) > 0:
@@ -320,34 +338,21 @@ class InstanceManager(object):
 				callback(altered_instances)
 
 		def check_instance(instance_id):
-			def on_success_shutdown(message):
-				# All good. It's shut down now.
-				logger.info("Instance %s is now shutdown.", instance_id)
-				data = self.get_instance(instance_id)
-				data['instance']['state'] = constants.INSTANCE.STOPPED
-				self.save(report_to_master=False)
-				next_instance()
-				# end of on_success_instance()
-
-			def on_error_shutdown(message, exception=None):
-				# Something went wrong... put it into error state.
-				logger.error("Instance %s is now in error.", instance_id)
-				logger.error(message)
-				data = self.get_instance(instance_id)
-				data['instance']['state'] = constants.INSTANCE.ERROR
-				self.save(report_to_master=False)
-				altered_instances.append(instance_id)
-				next_instance()
-				# end of on_error_instance()
-
 			data = self.get_instance(instance_id)
 			logger.info("Checking instance %s currently in state %s", instance_id, data['instance']['state'])
 			if data['instance']['state'] == constants.INSTANCE.RUNNING:
-				if data['instance_type']['exclusive']:
-					logger.info("Instance %s is exclusive, so really stopping.", instance_id)
+				always_shutdown = self.configuration.get_flat('heart.shutdown_on_exit')
+
+				# TODO: Document the caution below somewhere appropriate.
+				# CAUTION: the heart.shutdown_on_exit setting is NOT FOR PRODUCTION.
+				# The instance will likely be terminated BEFORE the routing table is
+				# updated resulting in dropped traffic. It's designed to allow nodes
+				# to clean up after themselves in the case of tests, development,
+				# or trials.
+
+				if always_shutdown or data['instance_type']['exclusive']:
+					logger.info("Instance %s is exclusive, or we're configured to shutdown, so really stopping.", instance_id)
 					# Needs to be stopped.
-					# TODO: This suddenly ties the instance manager to the
-					# plugins system. This is probably ok, but consider this further.
 					plugin_exists = self.configuration.plugins.exists(
 						data['instance_type']['runtime_name'],
 						paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
@@ -361,6 +366,41 @@ class InstanceManager(object):
 						logger.error("Instance %s has a non existent runtime %s.", instance_id, data['instance_type']['runtime_name'])
 						next_instance()
 					else:
+						def on_success_shutdown(message):
+							# All good. It's shut down now.
+							logger.info("Instance %s is now shutdown.", instance_id)
+							data = self.get_instance(instance_id)
+							if data['instance_type']['exclusive']:
+								# It's stopped. The Pacemaker will pick this up and take
+								# corrective actions based on this.
+								data['instance']['state'] = constants.INSTANCE.STOPPED
+							else:
+								# It's suspended. The pacemaker will ask us to start
+								# it back up later if needed.
+								data['instance']['state'] = constants.INSTANCE.SUSPENDED
+							self.save(report_to_master=False)
+							next_instance()
+							# end of on_success_instance()
+
+						def on_error_shutdown(message, exception=None):
+							# Something went wrong... put it into error state.
+							logger.error("Instance %s is now in error.", instance_id)
+							logger.error(message)
+
+							# Record the error against the instance.
+							instance_logger = self.configuration.get_job_logger(instance_id)
+							instance_logger.error("Instance %s is in error.")
+							instance_logger.error(message)
+							if exception:
+								instance_logger.error("Exception:", exc_info=exception)
+
+							data = self.get_instance(instance_id)
+							data['instance']['state'] = constants.INSTANCE.ERROR
+							self.save(report_to_master=False)
+							altered_instances.append(instance_id)
+							next_instance()
+							# end of on_error_instance()
+
 						runtime = self.configuration.plugins.instantiate(
 							data['instance_type']['runtime_name'],
 							paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
@@ -374,9 +414,9 @@ class InstanceManager(object):
 							on_error_shutdown
 						)
 				else:
-					# Mark it as stopped and move on.
-					logger.info("Marking instance %s as STOPPED, but not actually doing that.", instance_id)
-					data['instance']['state'] = constants.INSTANCE.STOPPED
+					# Mark it as suspended and move on.
+					logger.info("Marking instance %s as SUSPENDED.", instance_id)
+					data['instance']['state'] = constants.INSTANCE.SUSPENDED
 					self.save(report_to_master=False)
 					next_instance()
 			else:

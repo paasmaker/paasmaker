@@ -4,40 +4,25 @@ import paasmaker
 from ..base import BaseJob
 
 class InstanceRootBase(BaseJob):
-	def get_instance_type(self, session):
-		instance_type = session.query(
-			paasmaker.model.ApplicatioNInstanceType
-		).get(self.parameters['application_instance_type_id'])
+	@classmethod
+	def setup_instances(cls, configuration, instances, callback):
+		# Sanity check: Pass at least one instance object.
+		if len(instances) == 0:
+			raise ValueError("You must pass at least one instance object.")
 
-		return instance_type
-
-	def get_instances(self, configuration, instance_type_id, states, instances=[]):
-		"""
-		Find instances for the given application, in the given state,
-		and return a destroyable list of instances for queueing.
-		"""
-		# TODO: limit to the given list of instance IDs.
-		session = configuration.get_database_session()
-		instance_type = session.query(paasmaker.model.ApplicationInstanceType).get(instance_type_id)
-		instances = session.query(
-			paasmaker.model.ApplicationInstance
-		).filter(
-			paasmaker.model.ApplicationInstance.application_instance_type == instance_type,
-			paasmaker.model.ApplicationInstance.state.in_(states)
-		)
-		instance_list = []
+		# Sanity check: make sure all the instances
+		# are the same application instance type.
+		last_id = instances[0].application_instance_type_id
+		instance_id_list = []
 		for instance in instances:
-			instance_list.append(
-				{
-					'id': instance.id,
-					'instance_id': instance.instance_id,
-					'node_name': instance.node.name,
-					'node_uuid': instance.node.uuid
-				}
-			)
-		instance_list.reverse()
+			if instance.application_instance_type_id != last_id:
+				raise ValueError("Not all passed instances belong to the same instance type.")
+			instance_id_list.append(instance.instance_id)
 
-		return instance_list
+		version = instances[0].application_instance_type.application_version
+
+		# Now that we've done that, call setup_version.
+		cls.setup_version(configuration, version, callback, limit_instances=instance_id_list)
 
 	def update_jobs_from_context(self, context):
 		"""

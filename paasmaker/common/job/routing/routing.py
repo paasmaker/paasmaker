@@ -68,7 +68,7 @@ class RoutingUpdateJob(BaseJob):
 		tags.append('application_instance_type:%d' % instance_type.id)
 
 		update_title = "Update routing for '%s' for application %s, version %d" % (
-			instance.instance_id,
+			instance.instance_id[0:8],
 			instance_type.application_version.application.name,
 			instance_type.application_version.version
 		)

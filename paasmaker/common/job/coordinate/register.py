@@ -32,13 +32,16 @@ import sqlalchemy
 #   - ... and so forth.
 
 class RegisterRootJob(InstanceRootBase):
-	@staticmethod
-	def setup_version(configuration, application_version, callback):
+	@classmethod
+	def setup_version(cls, configuration, application_version, callback, limit_instances=None):
 		# List all the instance types.
 		# Assume we have an open session on the application_version object.
 
 		context = {}
 		context['application_version_id'] = application_version.id
+
+		if limit_instances:
+			context['limit_instances'] = limit_instances
 
 		tags = []
 		tags.append('workspace:%d' % application_version.application.workspace.id)
@@ -296,6 +299,51 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# Refresh the instance object that we have.
 		session.refresh(instance)
 
+		self.assertEquals(instance.state, constants.INSTANCE.RUNNING, "Instance not in correct state.")
+
+		# Test the setup_instances() code path here.
+		# Shutdown the instance, but instance ID.
+		ShutdownRootJob.setup_instances(
+			self.configuration,
+			[instance],
+			self.stop
+		)
+
+		stop_instances_job_id = self.wait()
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(stop_instances_job_id))
+
+		# And make it work.
+		self.configuration.job_manager.allow_execution(stop_instances_job_id, self.stop)
+		self.wait()
+
+		result = self.wait()
+		while result is None or result.state != constants.JOB.SUCCESS:
+			result = self.wait()
+
+		# Check it stopped.
+		session.refresh(instance)
+		self.assertEquals(instance.state, constants.INSTANCE.STOPPED, "Instance not in correct state.")
+
+		# Start it up again, as we can't make it current if it's not running.
+		StartupRootJob.setup_instances(
+			self.configuration,
+			[instance],
+			self.stop
+		)
+
+		start_instances_job_id = self.wait()
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(start_instances_job_id))
+
+		# And make it work.
+		self.configuration.job_manager.allow_execution(start_instances_job_id, self.stop)
+		self.wait()
+
+		result = self.wait()
+		while result is None or result.state != constants.JOB.SUCCESS:
+			result = self.wait()
+
+		# Check it started.
+		session.refresh(instance)
 		self.assertEquals(instance.state, constants.INSTANCE.RUNNING, "Instance not in correct state.")
 
 		# Make that version current.

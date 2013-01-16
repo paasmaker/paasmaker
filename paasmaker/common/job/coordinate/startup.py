@@ -26,13 +26,16 @@ import colander
 #       - Pre-startup - Instance B
 
 class StartupRootJob(InstanceRootBase):
-	@staticmethod
-	def setup_version(configuration, application_version, callback):
+	@classmethod
+	def setup_version(cls, configuration, application_version, callback, limit_instances=None):
 		# List all the instance types.
 		# Assume we have an open session on the application_version object.
 
 		context = {}
 		context['application_version_id'] = application_version.id
+
+		if limit_instances:
+			context['limit_instances'] = limit_instances
 
 		tags = []
 		tags.append('workspace:%d' % application_version.application.workspace.id)
@@ -99,7 +102,8 @@ class StartupRequestJob(InstanceJobHelper):
 		instances = self.get_instances(
 			session,
 			instance_type,
-			constants.INSTANCE_CAN_START_STATES
+			constants.INSTANCE_CAN_START_STATES,
+			context
 		)
 
 		tags = self.get_tags_for(instance_type)

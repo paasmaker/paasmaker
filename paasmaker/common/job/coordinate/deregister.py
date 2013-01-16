@@ -22,13 +22,16 @@ import colander
 #   - Deregister - Instance B
 
 class DeRegisterRootJob(InstanceRootBase):
-	@staticmethod
-	def setup_version(configuration, application_version, callback):
+	@classmethod
+	def setup_version(cls, configuration, application_version, callback, limit_instances=None):
 		# List all the instance types.
 		# Assume we have an open session on the application_version object.
 
 		context = {}
 		context['application_version_id'] = application_version.id
+
+		if limit_instances:
+			context['limit_instances'] = limit_instances
 
 		tags = []
 		tags.append('workspace:%d' % application_version.application.workspace.id)
@@ -89,7 +92,8 @@ class DeRegisterRequestJob(InstanceJobHelper):
 		instances = self.get_instances(
 			session,
 			instance_type,
-			[constants.INSTANCE.ALLOCATED, constants.INSTANCE.STOPPED, constants.INSTANCE.ERROR]
+			[constants.INSTANCE.ALLOCATED, constants.INSTANCE.STOPPED, constants.INSTANCE.ERROR],
+			context
 		)
 
 		tags = self.get_tags_for(instance_type)
