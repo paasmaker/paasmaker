@@ -27,7 +27,7 @@ class StatsLogReader(object):
 		self.position = None
 
 	def _get_position_key(self):
-		return "position_%s" % self.configuration.get_node_uuid()
+		return "position:%s" % self.configuration.get_node_uuid()
 
 	def read(self, callback, error_callback):
 		"""
@@ -119,52 +119,55 @@ class StatsLogReader(object):
 					# Bad key. Just reset it.
 					key = 'null'
 
+				basic_key = 'stat:%s' % key
+
 				# Basic stats.
-				self._store_value(key, 'requests', 1)
-				self._store_value(key, 'bytes', parsed['bytes'])
+				self._store_hash_value(basic_key, 'requests', 1)
+				self._store_hash_value(basic_key, 'bytes', parsed['bytes'])
 
 				# The upstream response time, if given.
 				if parsed['upstream_response_time'] != '-':
 					# Convert it into decimal milliseconds.
 					upstream_response_milliseconds = int(float(parsed['upstream_response_time']) * 1000)
-					self._store_value(key, 'time', upstream_response_milliseconds)
-					self._store_value(key, 'timecount', 1)
+
+					self._store_hash_value(basic_key, 'time', upstream_response_milliseconds)
+					self._store_hash_value(basic_key, 'timecount', 1)
 
 				# nginx's own time, converted into decimal milliseconds.
 				nginx_time_milliseconds = int(float(parsed['nginx_response_time']) * 1000)
-				self._store_value(key, 'nginxtime', nginx_time_milliseconds)
+				self._store_hash_value(basic_key, 'nginxtime', nginx_time_milliseconds)
 
 				# Split the response code into categories.
 				code_category = "%dxx" % (parsed['code'] / 100)
-				self._store_value(key, code_category, 1)
+				self._store_hash_value(basic_key, code_category, 1)
 
 				# But why not, let's store the exact code too! It's quite cheap.
-				self._store_value(key, parsed['code'], 1)
+				self._store_hash_value(basic_key, parsed['code'], 1)
 
 				# For graphs. The target keys are like this:
-				# history_<vtid>_NNNNNNNNN_requests
+				# history:<vtid>:NNNNNNNNN:requests
 				# Where NNNNNNN is the unix time in seconds at the top of the hour.
 				# The key type is a hash.
 				hour_top = parsed['timemsec'] - (parsed['timemsec'] % 3600)
-				history_prefix = "history_%s_%d" % (key, hour_top)
+				history_prefix = "history:%s:%d" % (key, hour_top)
 				# And co-orce this one into an int.
 				history_key = "%d" % parsed['timemsec']
 
 				# Basic stats.
-				self._store_hash_value("%s_requests" % history_prefix, history_key, 1)
-				self._store_hash_value("%s_bytes" % history_prefix, history_key, parsed['bytes'])
+				self._store_hash_value("%s:requests" % history_prefix, history_key, 1)
+				self._store_hash_value("%s:bytes" % history_prefix, history_key, parsed['bytes'])
 
 				# Upstream response time and count.
 				if parsed['upstream_response_time'] != '-':
 					# Convert it into decimal milliseconds.
-					self._store_hash_value("%s_time" % history_prefix, history_key, upstream_response_milliseconds)
-					self._store_hash_value("%s_timecount" % history_prefix, history_key, 1)
+					self._store_hash_value("%s:time" % history_prefix, history_key, upstream_response_milliseconds)
+					self._store_hash_value("%s:timecount" % history_prefix, history_key, 1)
 
 				# Response code.
-				self._store_hash_value("%s_%s" % (history_prefix, code_category), history_key, 1)
+				self._store_hash_value("%s:%s" % (history_prefix, code_category), history_key, 1)
 
 				# nginx's own time, converted into decimal milliseconds.
-				self._store_hash_value("%s_nginxtime" % history_prefix, history_key, nginx_time_milliseconds)
+				self._store_hash_value("%s:nginxtime" % history_prefix, history_key, nginx_time_milliseconds)
 
 			except ValueError, ex:
 				# Invalid line. Skip it.
@@ -181,7 +184,8 @@ class StatsLogReader(object):
 		# Helper function to store a value in the records
 		# set, for insertion later. Adds the current value
 		# if it doesn't exist, or creates the key otherwise.
-		final_key = "stat_%s_%s" % (key, metric)
+		# TODO: No longer in use...
+		final_key = "stat:%s:%s" % (key, metric)
 		if self.records.has_key(final_key):
 			self.records[final_key] += value
 		else:
@@ -503,14 +507,13 @@ class ApplicationStats(object):
 			# Reverse it, so we can pop entries off it.
 			stats.reverse()
 			for vtid in idset:
-				for metric in self.METRICS:
-					stat = stats.pop()
-					if stat == None:
-						# Didn't exist in redis. So start it at zero.
-						stat = 0
-					if not metric_totals.has_key(metric):
-						metric_totals[metric] = 0
-					metric_totals[metric] += int(stat)
+				row = stats.pop()
+				if row != None:
+					for metric in self.METRICS:
+						if not metric_totals.has_key(metric):
+							metric_totals[metric] = 0
+						if row.has_key(metric):
+							metric_totals[metric] += int(row[metric])
 
 			# Now hand it off to something else to finalize it.
 			self._finalize_stats(metric_totals, callback)
@@ -524,8 +527,7 @@ class ApplicationStats(object):
 			# query out all the relevant metrics.
 			pipeline = self.redis.pipeline(True)
 			for vtid in idset:
-				for metric in self.METRICS:
-					pipeline.get("stat_%s_%s" % (vtid, metric))
+				pipeline.hgetall("stat:%s" % vtid)
 			pipeline.execute(callback=on_stats_fetched)
 
 	def _finalize_stats(self, totals, callback):
@@ -626,7 +628,7 @@ class ApplicationStats(object):
 		pipeline = self.redis.pipeline(True)
 		for vtid in idset:
 			for boundary in hour_boundaries:
-				key = "history_%s_%s_%s" % (
+				key = "history:%s:%s:%s" % (
 					vtid,
 					boundary,
 					metric
