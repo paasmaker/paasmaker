@@ -465,7 +465,7 @@ class ApplicationStats(object):
 		else:
 			raise ValueError("Unknown input name %s" % name)
 
-		set_key = "%s_%d_vtids" % (name, input_id)
+		set_key = "%s:%d" % (name, input_id)
 		self.redis.smembers(set_key, callback=got_set)
 
 	def total_for_uncaught(self, callback, error_callback):

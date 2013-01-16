@@ -39,10 +39,10 @@ host = host:gsub("[:].*", "", 1)
 wildcard_host = host:gsub("(.-)[.]", "*.", 1)
 
 -- Set up all our redis keys now.
-local redis_host_key = "instances_" .. host
-local redis_wildcard_key = "instances_" .. wildcard_host
-local redis_log_key = "logkey_" .. host
-local redis_wildcard_log_key = "logkey_" .. wildcard_host
+local redis_host_key = "instances:" .. host
+local redis_wildcard_key = "instances:" .. wildcard_host
+local redis_log_key = "logkey:" .. host
+local redis_wildcard_log_key = "logkey:" .. wildcard_host
 
 ngx.log(ngx.DEBUG, "Host: " .. host)
 ngx.log(ngx.DEBUG, "Wildcard host: " .. wildcard_host)
@@ -66,11 +66,11 @@ if not results then
 	ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
--- ngx.log(ngx.DEBUG, "Raw results: ")
--- ngx.log(ngx.DEBUG, results[1])
--- ngx.log(ngx.DEBUG, results[2])
--- ngx.log(ngx.DEBUG, results[3])
--- ngx.log(ngx.DEBUG, results[4])
+ngx.log(ngx.DEBUG, "Raw results: ")
+ngx.log(ngx.DEBUG, results[1])
+ngx.log(ngx.DEBUG, results[2])
+ngx.log(ngx.DEBUG, results[3])
+ngx.log(ngx.DEBUG, results[4])
 
 -- Process the results.
 if results[1] ~= ngx.null then

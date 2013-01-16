@@ -31,16 +31,16 @@ class RouterTableDump(object):
 
 	def _got_redis(self, redis):
 		self.redis = redis
-		self.redis.keys('instances_*', self._got_instance_ids)
+		self.redis.keys('instances:*', self._got_instance_ids)
 
 	def _got_instance_ids(self, instance_ids):
 		self.all_roots = instance_ids
 		pipeline = self.redis.pipeline(True)
 		pipeline.get('serial')
 		for instance_set in instance_ids:
-			hostname = instance_set.replace("instances_", "")
+			hostname = instance_set.replace("instances:", "")
 			# Fetch the instance IDs for this.
-			pipeline.smembers("instance_ids_%s" % hostname)
+			pipeline.smembers("instance_ids:%s" % hostname)
 			# Also fetch the instance routes.
 			pipeline.smembers(instance_set)
 		pipeline.execute(self._got_set_members)
@@ -50,7 +50,7 @@ class RouterTableDump(object):
 		serial = members[0]
 		for instance_set, instance_routes in pairwise(members[1:]):
 			# Infer the hostname from the key name.
-			hostname = self.all_roots.pop().replace("instances_", "")
+			hostname = self.all_roots.pop().replace("instances:", "")
 			# Fetch out the instances. NOTE: This is quite intensive.
 			instances = self.session.query(
 				paasmaker.model.ApplicationInstance

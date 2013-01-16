@@ -256,20 +256,20 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# Inserted records MUST be IP addresses.
 		target = "127.0.0.1:%d" % self.get_http_port()
 		redis = self.get_redis_client()
-		redis.sadd('instances_foo.com', target, callback=self.stop)
+		redis.sadd('instances:foo.com', target, callback=self.stop)
 		self.wait()
 		logkey = 1
-		redis.set('logkey_foo.com', logkey, callback=self.stop)
+		redis.set('logkey:foo.com', logkey, callback=self.stop)
 		self.wait()
 		target = "127.0.0.1:%d" % self.get_http_port()
-		redis.sadd('instances_*.foo.com', target, callback=self.stop)
+		redis.sadd('instances:*.foo.com', target, callback=self.stop)
 		self.wait()
 		logkey = 1
-		redis.set('logkey_*.foo.com', logkey, callback=self.stop)
+		redis.set('logkey:*.foo.com', logkey, callback=self.stop)
 		self.wait()
 
 		# Fetch the set members.
-		redis.smembers('instances_foo.com', callback=self.stop)
+		redis.smembers('instances:foo.com', callback=self.stop)
 		members = self.wait()
 		self.assertIn(target, members, "Target is not in set.")
 
@@ -361,7 +361,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		stats_redis = self.wait()
 
 		# Insert those records, and then try again.
-		stats_redis.sadd('workspace_1_vtids', '1', callback=self.stop)
+		stats_redis.sadd('workspace:1', '1', callback=self.stop)
 		self.wait()
 
 		stats_output.vtset_for_name('workspace', 1, self.stop)

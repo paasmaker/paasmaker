@@ -183,10 +183,10 @@ class RouterTableUpdate(object):
 		aid = self.instance.application_instance_type.application_version.application.id
 		vid = self.instance.application_instance_type.application_version.id
 		nid = self.instance.node.id
-		pipeline.sadd('workspace_%d_vtids' % wid, vtid)
-		pipeline.sadd('application_%d_vtids' % aid, vtid)
-		pipeline.sadd('version_%d_vtids' % vid, vtid)
-		pipeline.sadd('node_%d_vtids' % nid, vtid)
+		pipeline.sadd('workspace:%d' % wid, vtid)
+		pipeline.sadd('application:%d' % aid, vtid)
+		pipeline.sadd('version:%d' % vid, vtid)
+		pipeline.sadd('node:%d' % nid, vtid)
 		pipeline.execute(self.on_stats_complete)
 
 	def on_stats_complete(self, result):
@@ -204,18 +204,18 @@ class RouterTableUpdate(object):
 		if self.add:
 			self.logger.info("Adding to %d sets, and removing from %d.", len(self.instance_sets_yes), len(self.instance_sets_no))
 			for key in self.instance_sets_yes:
-				pipeline.sadd("instances_" + key, self.instance_address)
-				pipeline.sadd("instance_ids_" + key, self.instance_id)
+				pipeline.sadd("instances:" + key, self.instance_address)
+				pipeline.sadd("instance_ids:" + key, self.instance_id)
 			for key in self.instance_sets_no:
-				pipeline.srem("instances_" + key, self.instance_address)
-				pipeline.srem("instance_ids_" + key, self.instance_id)
+				pipeline.srem("instances:" + key, self.instance_address)
+				pipeline.srem("instance_ids:" + key, self.instance_id)
 			for key, value in self.instance_log_keys.iteritems():
-				pipeline.set("logkey_" + key, value)
+				pipeline.set("logkey:" + key, value)
 		else:
 			self.logger.info("Removing from %d sets.", len(self.instance_sets_yes))
 			for key in self.instance_sets_yes:
-				pipeline.srem("instances_" + key, self.instance_address)
-				pipeline.srem("instance_ids_" + key, self.instance_id)
+				pipeline.srem("instances:" + key, self.instance_address)
+				pipeline.srem("instance_ids:" + key, self.instance_id)
 
 		# Add a serial number to the routing table.
 		# We just increment it. It's later used to check that the
@@ -270,13 +270,13 @@ class RouterTablePacemakerUpdate(object):
 
 		if self.add:
 			self.logger.info("Adding pacemaker to %s.", self.hostname)
-			pipeline.sadd("instances_" + self.hostname, self.node_address)
-			pipeline.sadd("instance_ids_" + self.hostname, self.node.uuid)
-			pipeline.set("logkey_" + self.hostname, 'pacemaker')
+			pipeline.sadd("instances:" + self.hostname, self.node_address)
+			pipeline.sadd("instance_ids:" + self.hostname, self.node.uuid)
+			pipeline.set("logkey:" + self.hostname, 'pacemaker')
 		else:
 			self.logger.info("Removing pacemaker from %s.", self.hostname)
-			pipeline.srem("instances_" + self.hostname, self.node_address)
-			pipeline.srem("instance_ids_" + self.hostname, self.node.uuid)
+			pipeline.srem("instances:" + self.hostname, self.node_address)
+			pipeline.srem("instance_ids:" + self.hostname, self.node.uuid)
 
 		# Add a serial number to the routing table.
 		# We just increment it. It's later used to check that the
@@ -409,15 +409,15 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		redis = self.wait()
 
 		# A few variables for later.
-		set_key_name = "instances_%s" % instances[0].application_instance_type.type_hostname(self.configuration)
-		set_key_name_id = "instance_ids_%s" % instances[0].application_instance_type.type_hostname(self.configuration)
-		set_key_version_1 = "instances_%s" % instances[0].application_instance_type.version_hostname(self.configuration)
-		set_key_version_1_id = "instance_ids_%s" % instances[0].application_instance_type.version_hostname(self.configuration)
-		set_key_version_2 = "instances_%s" % instances[1].application_instance_type.version_hostname(self.configuration)
-		set_key_version_2_id = "instance_ids_%s" % instances[1].application_instance_type.version_hostname(self.configuration)
-		set_key_hostname = "instances_test.paasmaker.com"
-		set_key_hostname_id = "instance_ids_test.paasmaker.com"
-		logkey = "logkey_test.paasmaker.com"
+		set_key_name = "instances:%s" % instances[0].application_instance_type.type_hostname(self.configuration)
+		set_key_name_id = "instance_ids:%s" % instances[0].application_instance_type.type_hostname(self.configuration)
+		set_key_version_1 = "instances:%s" % instances[0].application_instance_type.version_hostname(self.configuration)
+		set_key_version_1_id = "instance_ids:%s" % instances[0].application_instance_type.version_hostname(self.configuration)
+		set_key_version_2 = "instances:%s" % instances[1].application_instance_type.version_hostname(self.configuration)
+		set_key_version_2_id = "instance_ids:%s" % instances[1].application_instance_type.version_hostname(self.configuration)
+		set_key_hostname = "instances:test.paasmaker.com"
+		set_key_hostname_id = "instance_ids:test.paasmaker.com"
+		logkey = "logkey:test.paasmaker.com"
 		first_version_instance = "%s:%d" % (socket.gethostbyname(instances[0].node.route), instances[0].port)
 		first_version_instance_id = instances[0].instance_id
 		second_version_instance = "%s:%d" % (socket.gethostbyname(instances[1].node.route), instances[1].port)
@@ -564,8 +564,8 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 			self.configuration.get_flat('pacemaker.pacemaker_prefix'),
 			self.configuration.get_flat('pacemaker.cluster_hostname')
 		)
-		pacemaker_set = "instances_%s" % pacemaker_hostname
-		pacemaker_logkey = "logkey_%s" % pacemaker_hostname
+		pacemaker_set = "instances:%s" % pacemaker_hostname
+		pacemaker_logkey = "logkey:%s" % pacemaker_hostname
 
 		self.assertTrue(self.not_in_redis(redis, pacemaker_set, pacemaker_route), "Pacemaker is listed in routing table.")
 		self.assertEquals(self.logkey(redis, pacemaker_logkey), None, "Pacemaker has a log key.")
