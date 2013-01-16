@@ -173,7 +173,9 @@ class UploadControllerTest(BaseControllerTest):
 		testdata = "Hello" * 200000
 		open(uploadfile, 'w').write(testdata)
 		# Calculate the MD5 of the supplied file.
-		incoming_sum = subprocess.check_output(['md5sum', uploadfile]).split(' ')[0]
+		calc = paasmaker.util.streamingchecksum.StreamingChecksum(uploadfile, self.io_loop, logging)
+		calc.start(self.stop)
+		incoming_sum = self.wait()
 
 		# Now, attempt to upload a file.
 		request = paasmaker.common.api.upload.UploadFileAPIRequest(self.configuration)
@@ -191,5 +193,10 @@ class UploadControllerTest(BaseControllerTest):
 		self.assertTrue(os.path.exists(output_file), "Output path does not exist.")
 
 		# Check that it's the same file.
-		uploaded_sum = subprocess.check_output(['md5sum', output_file]).split(' ')[0]
+		calc = paasmaker.util.streamingchecksum.StreamingChecksum(output_file, self.io_loop, logging)
+		calc.start(self.stop)
+		uploaded_sum = self.wait()
+
 		self.assertEquals(incoming_sum, uploaded_sum, "Uploaded file is not the same.")
+		
+		
