@@ -12,6 +12,7 @@ import subprocess
 import socket
 import datetime
 import time
+from distutils.spawn import find_executable
 
 import paasmaker
 from paasmaker.util.configurationhelper import InvalidConfigurationParameterException
@@ -474,10 +475,10 @@ class ConfigurationSchema(colander.MappingSchema):
 	# per the installation instructions. Obviously, for other platforms
 	# this will need to be altered.
 	redis_binary = colander.SchemaNode(colander.String(),
-		title="Redis server binary",
-		description="The full path to the redis server binary.",
-		default="/usr/bin/redis-server",
-		missing="/usr/bin/redis-server")
+		title = "Redis server binary",
+		description = "The full path to the redis server binary.",
+		default = find_executable("redis-server"),
+		missing = find_executable("redis-server"))
 	rabbitmq_binary = colander.SchemaNode(colander.String(),
 		title="RabbitMQ server binary",
 		description="The full path to the RabbitMQ server binary.",
