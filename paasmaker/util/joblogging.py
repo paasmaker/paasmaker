@@ -36,8 +36,8 @@ class JobLoggingFileHandler(logging.Handler):
 
 		# Subscribe to job updates, so we can close handlers as appropriate.
 		pub.subscribe(self._job_status_change, 'job.status')
-		# And a takeover if we want to free the FD's for another purpose.
-		pub.subscribe(self._job_file_takeover, 'job.takeover')
+		# And a close if we want to free the FD's for another purpose.
+		pub.subscribe(self._job_file_close, 'job.close')
 
 		logger.debug("Completed __init__ of JobLoggingFileHandler.")
 
@@ -69,6 +69,15 @@ class JobLoggingFileHandler(logging.Handler):
 			self.handlers[job_id] = handler
 			return handler
 
+	def has_handler(self, job_id):
+		"""
+		Determine if we have a handler for the given job ID.
+		Designed for unit testing.
+
+		:arg str job_id: The job ID to check for.
+		"""
+		return self.handlers.has_key(job_id)
+
 	def close_handler(self, job_id):
 		"""
 		Explicitely close a job log handler, typically so it
@@ -92,7 +101,7 @@ class JobLoggingFileHandler(logging.Handler):
 			# Close off that handler.
 			self.close_handler(message.job_id)
 
-	def _job_file_takeover(self, job_id):
+	def _job_file_close(self, job_id):
 		# Close the handler for that job - freeing up the file.
 		self.close_handler(job_id)
 
@@ -233,7 +242,7 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 		calling ``untakeover_file()``.
 		"""
 		# Close the file, if it's open.
-		pub.sendMessage('job.takeover', job_id=self.job_id)
+		pub.sendMessage('job.close', job_id=self.job_id)
 		# Open the file up again...
 		job_file = self.configuration.get_job_log_path(self.job_id)
 		if self.watcher:
@@ -257,8 +266,17 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 			# Trigger a watch.
 			self.watcher.trigger_watch(self.job_id)
 
-	@staticmethod
-	def setup_joblogger(configuration):
+	def finished(self):
+		"""
+		Indicate that you won't be using this logger any more.
+		It frees up resources and file handles. Do this wherever
+		you can!
+		"""
+		# Close the file, if it's open.
+		pub.sendMessage('job.close', job_id=self.job_id)
+
+	@classmethod
+	def setup_joblogger(cls, configuration):
 		"""
 		Set up the job logging system.
 
@@ -269,6 +287,15 @@ class JobLoggerAdapter(logging.LoggerAdapter):
 		# adjustable per job?
 		joblogger.setLevel(logging.DEBUG)
 		joblogger.addHandler(JobLoggingFileHandler(configuration))
+
+	@classmethod
+	def finished_job(cls, job_id):
+		"""
+		Mark this job ID as finished, closing any open log handlers.
+
+		:arg str job_id: The job ID we're done with.
+		"""
+		pub.sendMessage('job.close', job_id=job_id)
 
 class JobLoggingTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
@@ -367,3 +394,65 @@ class JobLoggingTest(tornado.testing.AsyncTestCase):
 		# Wait for the watcher to catch up.
 		return_id = self.wait()
 		self.assertEquals(return_id, id1, "Another job id returned... ?")
+
+	def test_takeover(self):
+		# This test makes sure that we can take over a FP, and it closes everything cleanly.
+		job_id = str(uuid.uuid4())
+		log_file = self.configuration.get_job_log_path(job_id)
+
+		self.assertFalse(self.handler.has_handler(job_id), "Already has a handler for this job ID.")
+
+		joblogger = self.configuration.get_job_logger(job_id)
+		joblogger.debug('Test')
+
+		contents = open(log_file, 'r').read()
+		self.assertIn('Test', contents)
+
+		fp = joblogger.takeover_file()
+
+		self.assertFalse(self.handler.has_handler(job_id), "Still has a handler for this job ID.")
+
+		fp.write("External")
+
+		joblogger.untakeover_file(fp)
+
+		contents = open(log_file, 'r').read()
+		self.assertIn('External', contents)
+
+		self.assertFalse(self.handler.has_handler(job_id), "Has a handler for this job ID - shouldn't yet.")
+
+		joblogger.debug('Test 2')
+
+		self.assertTrue(self.handler.has_handler(job_id), "Doesn't have a handler for this job ID.")
+
+		contents = open(log_file, 'r').read()
+		self.assertIn('Test 2', contents)
+
+	def test_close_handler(self):
+		# This test checks that the handles can be closed via the two methods that allow it.
+		job_id = str(uuid.uuid4())
+		log_file = self.configuration.get_job_log_path(job_id)
+
+		self.assertFalse(self.handler.has_handler(job_id), "Already has a handler for this job ID.")
+
+		joblogger = self.configuration.get_job_logger(job_id)
+		joblogger.debug('Test')
+
+		contents = open(log_file, 'r').read()
+		self.assertIn('Test', contents)
+
+		self.assertTrue(self.handler.has_handler(job_id), "Doesn't have a handler for this job ID.")
+
+		joblogger.finished()
+
+		self.assertFalse(self.handler.has_handler(job_id), "Still has a handler for this job ID.")
+
+		# Open it again.
+		joblogger.debug('Test 2')
+		self.assertTrue(self.handler.has_handler(job_id), "Doesn't have a handler for this job ID.")
+
+		contents = open(log_file, 'r').read()
+		self.assertIn('Test 2', contents)
+
+		# Close it differently.
+		JobLoggerAdapter.finished_job(job_id)

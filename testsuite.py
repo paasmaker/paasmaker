@@ -20,7 +20,7 @@ test_sets = {
 	paasmaker.util.example: ['all', 'quick', 'example'],
 	paasmaker.util.jsonencoder: ['all', 'quick', 'util', 'jsonencoder'],
 	paasmaker.util.configurationhelper: ['all', 'quick', 'util', 'configuration'],
-	paasmaker.util.joblogging: ['all', 'util', 'job'],
+	paasmaker.util.joblogging: ['all', 'util', 'job', 'logging'],
 	paasmaker.util.port: ['all', 'util', 'network'],
 	paasmaker.util.plugin: ['all', 'quick', 'util', 'configuration', 'plugin'],
 	paasmaker.util.commandsupervisor: ['all', 'util', 'process'],
