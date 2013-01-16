@@ -86,6 +86,7 @@ class PackageDownloadController(PackageRootController):
 		return routes
 
 class PackageControllerTest(BaseControllerTest):
+	from paasmaker.util.streamingchecksum import StreamingChecksum
 	config_modules = ['pacemaker']
 
 	def get_app(self):
@@ -111,7 +112,9 @@ class PackageControllerTest(BaseControllerTest):
 
 		open(dummy_full, 'w').write("test" * 1024 * 1024) # 4MB of data.
 
-		source_checksum = subprocess.check_output(['md5sum', dummy_full]).split(' ')[0]
+		calc = paasmaker.util.streamingchecksum.StreamingChecksum(dummy_full, self.io_loop, logging)
+		calc.start(self.stop)
+		source_checksum = self.wait()
 
 		self.temp_output = tempfile.mkstemp()[1]
 
@@ -126,8 +129,10 @@ class PackageControllerTest(BaseControllerTest):
 
 		self.assertIn("Transferred", response, "Result was not successful.")
 
-		result_checksum = subprocess.check_output(['md5sum', self.temp_output]).split(' ')[0]
-
+		calc = paasmaker.util.streamingchecksum.StreamingChecksum(dummy_full, self.io_loop, logging)
+		calc.start(self.stop)
+		result_checksum = self.wait()
+		
 		self.assertEquals(source_checksum, result_checksum, "Downloaded file isn't the same.")
 
 		# Try again, with an invalid path.
@@ -138,5 +143,10 @@ class PackageControllerTest(BaseControllerTest):
 		self.assertIn("404", response, "Result was not an error.")
 
 		# Make sure it didn't clobber the output file.
-		result_checksum = subprocess.check_output(['md5sum', self.temp_output]).split(' ')[0]
+		calc = paasmaker.util.streamingchecksum.StreamingChecksum(self.temp_output, self.io_loop, logging)
+		calc.start(self.stop)
+		result_checksum = self.wait()
+
 		self.assertEquals(source_checksum, result_checksum, "Clobbered output file.")
+		
+		
