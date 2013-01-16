@@ -176,6 +176,25 @@ class JobManager(object):
 
 		self.backend.set_state_tree(job_id, constants.JOB.NEW, constants.JOB.WAITING, on_tree_updated)
 
+	def allow_execution_list(self, job_ids, callback=None, notify_others=True):
+		"""
+		Allow several trees of jobs to be executable in one go.
+		"""
+		jobs_copy = list(job_ids)
+		jobs_copy.reverse()
+
+		def process_job():
+			try:
+				job_id = jobs_copy.pop()
+
+				self.allow_execution(job_id, callback=process_job, notify_others=notify_others)
+			except IndexError, ex:
+				# No more entries.
+				if callback:
+					callback()
+
+		process_job()
+
 	def _start_job(self, job_id):
 		# Prevent trying to start the same job twice (race conditions around
 		# waiting for callbacks cause this - it can be kicked off twice until
@@ -644,6 +663,22 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		job_id = self.wait()
 
 		self.manager.allow_execution(job_id, callback=self.stop)
+		self.wait()
+
+		self.short_wait_hack()
+
+		#self.dump_job_tree(job_id, self.manager.backend)
+		#self.wait()
+
+		result = self.get_state(job_id)
+		self.assertEquals(result, constants.JOB.SUCCESS, 'Test job was not successful.')
+
+	def test_manager_success_simple_multiexecute(self):
+		# Set up a simple successful job.
+		self.manager.add_job('paasmaker.job.success', {}, "Example job.", self.stop)
+		job_id = self.wait()
+
+		self.manager.allow_execution_list([job_id], callback=self.stop)
 		self.wait()
 
 		self.short_wait_hack()
