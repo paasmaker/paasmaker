@@ -252,6 +252,7 @@ class InstanceManager(object):
 				instance_logger.error(message)
 				if exception:
 					instance_logger.error("Exception:", exc_info=exception)
+				instance_logger.finished()
 
 				data = self.get_instance(instance_id)
 				data['instance']['state'] = constants.INSTANCE.SUSPENDED
@@ -287,6 +288,7 @@ class InstanceManager(object):
 
 					instance_logger = self.configuration.get_job_logger(instance_id)
 					instance_logger.error("This heart node no longer has runtime %s.", data['instance_type']['runtime_name'])
+					instance_logger.finished()
 
 					next_instance()
 				else:
@@ -364,6 +366,11 @@ class InstanceManager(object):
 						self.save()
 						altered_instances.append(instance_id)
 						logger.error("Instance %s has a non existent runtime %s.", instance_id, data['instance_type']['runtime_name'])
+
+						instance_logger = self.configuration.get_job_logger(instance_id)
+						instance_logger.error("This heart node doesn't have runtime %s.", data['instance_type']['runtime_name'])
+						instance_logger.finished()
+
 						next_instance()
 					else:
 						def on_success_shutdown(message):
