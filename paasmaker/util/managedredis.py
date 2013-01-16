@@ -55,7 +55,6 @@ timeout 300
 loglevel notice
 logfile %(working_dir)s/redis.log
 appendonly no
-vm-enabled no
 """
 
 	def configure(self, working_dir, port, bind_host, password=None):
