@@ -72,7 +72,7 @@ class ShellPrepareTestTest(BasePrepareTest):
 		parameters = {
 			'commands': [
 				'echo "foo" > bar.txt',
-				'md5sum bar.txt > sum.txt'
+				'cat -n bar.txt > sum.txt'
 			]
 		}
 
@@ -97,3 +97,5 @@ class ShellPrepareTestTest(BasePrepareTest):
 		self.assertTrue(self.success, "Did not prepare properly.")
 		self.assertTrue(os.path.exists(os.path.join(self.tempdir, 'bar.txt')), "bar.txt does not exist.")
 		self.assertTrue(os.path.exists(os.path.join(self.tempdir, 'sum.txt')), "sum.txt does not exist.")
+		
+		
