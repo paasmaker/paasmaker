@@ -317,6 +317,12 @@ class JobManager(object):
 			self.backend.get_job(job_id, on_job_metadata)
 
 		logger.debug("Job %s reports state %s.", job_id, state)
+
+		if state in constants.JOB_FINISHED_STATES:
+			# Close off the log file. There is a fair chance that it
+			# won't be used again.
+			paasmaker.util.joblogging.JobLoggerAdapter.finished_job(job_id)
+
 		# Update the job context first. In case something
 		# swoops in and starts executing other jobs.
 		if context:
