@@ -1,9 +1,14 @@
 
 import unittest
-import paasmaker
-import colander
 import logging
+
+import paasmaker
+
 from paasmaker.common.core.constants import Enum
+from paasmaker.util.configurationhelper import InvalidConfigurationParameterException
+from paasmaker.util.configurationhelper import InvalidConfigurationFormatException
+
+import colander
 
 # From http://stackoverflow.com/questions/452969/does-python-have-an-equivalent-to-java-class-forname
 def get_class(kls):
@@ -108,7 +113,7 @@ class Plugin(object):
 			# Raise another exception that encapsulates more context.
 			# In future this can be used to print a nicer report.
 			# Because the default output is rather confusing...!
-			raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self.raw_options)
+			raise InvalidConfigurationFormatException(ex, '', self.raw_options)
 
 	def _check_parameters(self, mode):
 		"""
@@ -127,7 +132,7 @@ class Plugin(object):
 			# Raise another exception that encapsulates more context.
 			# In future this can be used to print a nicer report.
 			# Because the default output is rather confusing...!
-			raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self.raw_parameters)
+			raise InvalidConfigurationFormatException(ex, '', self.raw_parameters)
 
 	def get_flat_option(self, key):
 		"""
@@ -208,7 +213,7 @@ class PluginRegistry(object):
 			# Raise another exception that encapsulates more context.
 			# In future this can be used to print a nicer report.
 			# Because the default output is rather confusing...!
-			raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', options)
+			raise InvalidConfigurationFormatException(ex, '', options)
 
 		# Make sure it has some modes of operation.
 		if len(former.MODES) == 0:
@@ -424,7 +429,7 @@ class TestExample(unittest.TestCase):
 				"Test Plugin"
 			)
 			self.assertTrue(False, "Should have thrown exception.")
-		except paasmaker.common.configuration.configuration.InvalidConfigurationException, ex:
+		except paasmaker.common.configuration.configuration.InvalidConfigurationFormatException, ex:
 			self.assertTrue(True, "Didn't throw exception as expected.")
 
 	def test_plugin_bad_parameters(self):
@@ -437,7 +442,7 @@ class TestExample(unittest.TestCase):
 				{'foo': 'bar'}
 			)
 			self.assertTrue(False, "Should have thrown exception.")
-		except paasmaker.common.configuration.configuration.InvalidConfigurationException, ex:
+		except paasmaker.common.configuration.configuration.InvalidConfigurationFormatException, ex:
 			self.assertTrue(True, "Didn't throw exception as expected.")
 
 	def test_plugin_no_parameters(self):

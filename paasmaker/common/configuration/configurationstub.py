@@ -33,7 +33,6 @@ class ConfigurationStub(configuration.Configuration):
 # The port to this test instance is the master port, for testing purposes.
 http_port: %(master_port)d
 node_token: %(node_token)s
-log_directory: %(log_dir)s
 scratch_directory: %(scratch_dir)s
 master:
   host: localhost
@@ -119,7 +118,6 @@ pacemaker:
     heart_config = """
 heart:
   enabled: true
-  working_dir: %(heart_working_dir)s
 """
 
     router_config = """
@@ -135,17 +133,15 @@ router:
 
         allocator = paasmaker.util.port.FreePortFinder()
 
-        self.params['log_dir'] = tempfile.mkdtemp()
         self.params['node_token'] = str(uuid.uuid4())
         self.params['super_token'] = str(uuid.uuid4())
-        self.params['heart_working_dir'] = tempfile.mkdtemp()
         self.params['scratch_dir'] = tempfile.mkdtemp()
         self.params['master_port'] = port
         self.params['router_table_port'] = allocator.free_in_range(42710, 42799)
         self.params['router_stats_port'] = allocator.free_in_range(42710, 42799)
         self.params['jobs_port'] = allocator.free_in_range(42710, 42799)
         self.params['broker_port'] = allocator.free_in_range(42710, 42799)
-        self.params['stats_log'] = "%s/access.log.paasmaker" % self.params['log_dir']
+        self.params['stats_log'] = "%s/access.log.paasmaker" % self.params['scratch_dir']
 
         # Create the configuration file.
         configuration = self.default_config % self.params
@@ -194,8 +190,6 @@ router:
                     meta['manager'].destroy()
 
         # Remove files that we created.
-        shutil.rmtree(self.params['log_dir'])
-        shutil.rmtree(self.params['heart_working_dir'])
         shutil.rmtree(self.params['scratch_dir'])
         os.unlink(self.configname)
 

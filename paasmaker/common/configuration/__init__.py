@@ -1,5 +1,4 @@
 # configuration module initialization.
 from configuration import Configuration
-from configuration import InvalidConfigurationException
 from configuration import JobStatusMessage
 from configurationstub import ConfigurationStub

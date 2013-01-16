@@ -17,7 +17,14 @@ class NoConfigurationFileException(Exception):
 	def __str__(self):
 		return "Can't find a configuration file in %s" % str(self.paths)
 
-class InvalidConfigurationException(Exception):
+class InvalidConfigurationParameterException(Exception):
+	"""
+	Exception thrown when a parameter in the configuration is invalid.
+	You should supply as helpful a message as possible.
+	"""
+	pass
+
+class InvalidConfigurationFormatException(Exception):
 	"""
 	Exception thrown when the configuration is invalid for
 	some reason.
@@ -77,7 +84,7 @@ class ConfigurationHelper(dict):
 			# Raise another exception that encapsulates more context.
 			# In future this can be used to print a nicer report.
 			# Because the default output is rather confusing...!
-			raise InvalidConfigurationException(ex, raw, self.parsed)
+			raise InvalidConfigurationFormatException(ex, raw, self.parsed)
 
 		# Allow subclasses to run their post-load stuff.
 		self.post_load()
@@ -199,6 +206,6 @@ map_item:
 		try:
 			conf.load("")
 			self.assertTrue(False, "Exception should have been thrown.")
-		except InvalidConfigurationException, ex:
+		except InvalidConfigurationFormatException, ex:
 			self.assertTrue(True, "Exception was thrown.")
 

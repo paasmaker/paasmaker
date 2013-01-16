@@ -7,7 +7,8 @@ import yaml
 import paasmaker
 import tornado
 
-from paasmaker.util.configurationhelper import InvalidConfigurationException
+from paasmaker.util.configurationhelper import InvalidConfigurationParameterException
+from paasmaker.util.configurationhelper import InvalidConfigurationFormatException
 from paasmaker.common.controller import BaseControllerTest
 
 from paasmaker.common.core import constants
@@ -373,7 +374,7 @@ services:
 			config = ApplicationConfiguration()
 			config.load(self.bad_config)
 			self.assertTrue(False, "Should have thrown an exception.")
-		except InvalidConfigurationException, ex:
+		except InvalidConfigurationFormatException, ex:
 			self.assertTrue(True, "Threw exception correctly.")
 
 	def test_unpack_configuration(self):

@@ -14,7 +14,8 @@ import datetime
 import time
 
 import paasmaker
-from paasmaker.util.configurationhelper import InvalidConfigurationException
+from paasmaker.util.configurationhelper import InvalidConfigurationParameterException
+from paasmaker.util.configurationhelper import InvalidConfigurationFormatException
 from paasmaker.util.configurationhelper import NoConfigurationFileException
 from paasmaker.common.core import constants
 
@@ -219,7 +220,10 @@ class HeartSchema(colander.MappingSchema):
 
 	working_dir = colander.SchemaNode(colander.String(),
 		title="Working directory",
-		description="Directory where heart working files are stored")
+		description="Directory where heart working files are stored",
+		# None here means to automatically figure out the path.
+		missing=None,
+		default=None)
 
 	shutdown_on_exit = colander.SchemaNode(colander.Boolean(),
 		title="Shutdown applications on exit",
@@ -411,7 +415,10 @@ class ConfigurationSchema(colander.MappingSchema):
 
 	log_directory = colander.SchemaNode(colander.String(),
 		title="Log Directory",
-		description="Directory used to store log files")
+		description="Directory used to store log files",
+		# None here means to automatically figure out/generate the path.
+		default=None,
+		missing=None)
 
 	server_log_level = colander.SchemaNode(colander.String(),
 		title="Server log level",
@@ -421,7 +428,9 @@ class ConfigurationSchema(colander.MappingSchema):
 
 	scratch_directory = colander.SchemaNode(colander.String(),
 		title="Scratch Directory",
-		description="Directory used for random temporary files. Should be somewhere persistent between reboots, eg, not /tmp.")
+		description="Directory used for random temporary files. Should be somewhere persistent between reboots, eg, not /tmp.",
+		default="scratch",
+		missing="scratch")
 
 	pid_path = colander.SchemaNode(colander.String(),
 		title="PID path",
@@ -627,17 +636,48 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		the hostname and route (if required), registers plugins,
 		including default plugins.
 		"""
-		# Make sure directories exist.
-		if not os.path.exists(self.get_flat('scratch_directory')):
-			raise InvalidConfigurationException("Scratch directory does not exist.")
-		if not os.path.exists(self.get_flat('log_directory')):
-			raise InvalidConfigurationException("Log directory does not exist.")
+
+		# Convert the scratch directory into a fully qualified path.
+		self['scratch_directory'] = os.path.abspath(self['scratch_directory'])
+
+		# Now make sure it exists.
+		if not os.path.exists(self['scratch_directory']):
+			# Attempt to create it.
+			try:
+				os.mkdir(self['scratch_directory'])
+			except OSError, ex:
+				raise InvalidConfigurationParameterException("Scratch directory %s does not exist, and we were unable to create it: %s" % (self['scratch_directory'], str(ex)))
+
+		# Check the logs dir.
+		if self['log_directory'] is None:
+			self['log_directory'] = os.path.join(self['scratch_directory'], 'logs')
+
+		if not os.path.exists(self['log_directory']):
+			# Attempt to create it.
+			try:
+				os.mkdir(self['log_directory'])
+			except OSError, ex:
+				raise InvalidConfigurationParameterException("Logs directory %s does not exist, and we were unable to create it: %s" % (self['log_directory'], str(ex)))
+
+		if self['heart']['enabled']:
+			if self['heart']['working_dir'] is None:
+				self['heart']['working_dir'] = os.path.join(self['scratch_directory'], 'instances')
+
+			if not os.path.exists(self['heart']['working_dir']):
+				# Attempt to create it.
+				try:
+					os.mkdir(self['heart']['working_dir'])
+				except OSError, ex:
+					raise InvalidConfigurationParameterException("Heart working directory %s does not exist, and we were unable to create it: %s" % (self['log_directory'], str(ex)))
 
 		if self['my_name'] is None:
 			self['my_name'] = os.uname()[1]
 		if self['my_route'] is None:
 			# TODO: improve this detection and use.
 			self['my_route'] = socket.getfqdn()
+
+		# Update the flat representation again before proceeding.
+		self.update_flat()
 
 		# Heart initialisation.
 		if self.is_heart():
@@ -1063,7 +1103,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 		container = os.path.join(
 			self['log_directory'],
-			'job',
 			job_id[0:2]
 		)
 		if not os.path.exists(container) and create_if_missing:
@@ -1270,7 +1309,7 @@ master_host: localhost
 			config = Configuration()
 			config.load_from_file([self.tempnam])
 			self.assertTrue(False, "Configuration was considered valid, but it should not have been.")
-		except InvalidConfigurationException, ex:
+		except InvalidConfigurationFormatException, ex:
 			self.assertTrue(True, "Configuration did not pass the schema or was invalid.")
 
 	def test_simple_default(self):

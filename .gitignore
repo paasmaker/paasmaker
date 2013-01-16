@@ -1,6 +1,9 @@
 *.pyc
 *.*~
 *.swp
-.coverage
-paasmaker.pid
-documentation/build/
+/.coverage
+/paasmaker.pid
+/documentation/build/
+/scratch/
+/paasmaker-development.db
+/paasmaker.yml

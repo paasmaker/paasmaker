@@ -35,7 +35,7 @@ options.parse_command_line()
 # Load configuration
 logging.info("Loading configuration...")
 configuration = paasmaker.common.configuration.Configuration()
-configuration.load_from_file(['../paasmaker.yml', '/etc/paasmaker/paasmaker.yml'])
+configuration.load_from_file(['paasmaker.yml', '/etc/paasmaker/paasmaker.yml'])
 
 # Reset the log level.
 logging.info("Resetting server log level to %s.", configuration['server_log_level'])
@@ -83,6 +83,7 @@ if configuration.is_pacemaker():
 	# Pacemaker setup.
 	# Connect to the database.
 	logging.info("Database connection and table creation...")
+	logging.info("Please be patient, this can take a few moments on first run.")
 	configuration.setup_database()
 
 	logging.info("Setting up pacemaker routes...")
