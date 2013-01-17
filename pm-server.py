@@ -3,6 +3,7 @@
 # Python imports.
 import os
 import sys
+import platform
 
 # External library imports.
 import tornado.ioloop
@@ -208,7 +209,7 @@ def on_registered_with_master():
 	root_logger.addHandler(log_handler)
 
 def on_completed_startup():
-	if not is_debug:
+	if platform.system() != 'Darwin' and not is_debug:
 		# Fork into the background.
 		fork_result = os.fork()
 		if fork_result != 0:
