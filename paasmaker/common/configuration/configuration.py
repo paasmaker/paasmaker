@@ -76,6 +76,20 @@ class PluginSchema(colander.MappingSchema):
 class PluginsSchema(colander.SequenceSchema):
 	plugin = PluginSchema()
 
+class CleanerSchema(colander.MappingSchema):
+	plugin = colander.SchemaNode(colander.String(),
+		title="Cleaner Plugin",
+		description="The cleaner plugin to run.")
+	interval = colander.SchemaNode(colander.Integer(),
+		title="Cleaner Interval",
+		description="How often to run this cleaner plugin.")
+
+class CleanersSchema(colander.SequenceSchema):
+	cleaner = CleanerSchema()
+
+class CleanersOnlySchema(colander.MappingSchema):
+	cleaners = CleanersSchema()
+
 class ScmListerSchema(colander.MappingSchema):
 	for_name = colander.SchemaNode(colander.String(),
 		name="for",
@@ -472,6 +486,20 @@ class ConfigurationSchema(colander.MappingSchema):
 		missing=[],
 		default=[])
 
+	cleaners = CleanersSchema(
+		title="Cleaner tasks",
+		description="A list of cleaners to run on this node.",
+		missing=[],
+		default=[]
+	)
+
+	default_cleaners = colander.SchemaNode(colander.Boolean(),
+		title="Include default cleaners",
+		description="If true, use the default cleaners. These are merged with any cleaners that you supply.",
+		missing=True,
+		default=True
+	)
+
 	# Server related configuration. This is for an Ubuntu server, set up as
 	# per the installation instructions. Obviously, for other platforms
 	# this will need to be altered.
@@ -711,6 +739,16 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 			self['pacemaker']['health']['groups'].extend(default_health_ready['groups'])
 
+		if self.get_flat('default_cleaners'):
+			# Load the default cleaner plugins. We merge these with the others.
+			default_file = os.path.join(default_path, 'cleaners.yml')
+			default_cleaners_raw = open(default_file, 'r').read()
+			default_cleaners_parsed = yaml.safe_load(default_cleaners_raw)
+
+			default_cleaners_ready = CleanersOnlySchema().deserialize(default_cleaners_parsed)
+
+			self['cleaners'].extend(default_cleaners_ready['cleaners'])
+
 		# Plugins. Note that we load these after the defaults,
 		# so you can re-register the defaults with different options.
 		self.load_plugins(self.plugins, self['plugins'])
@@ -718,6 +756,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# TODO: validate the contents of scmlisters, that they all
 		# are relevant plugins.
 		# TODO: validate the health manager plugins exist.
+		# TODO: Validate that cleaner plugins exist.
 
 		self.update_flat()
 
@@ -1143,6 +1182,21 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 		if start_checking:
 			self.health_manager.start()
+
+	def startup_cleanup_manager(self, start_checking=True):
+		"""
+		Set up the cleanup manager.
+
+		This should be called on startup to set up the cleanup manager.
+
+		:arg bool start_checking: If True, start checking according
+			to the configured schedule. This parameter is intended for
+			unit tests, to disable the default behaviour.
+		"""
+		self.cleanup_manager = paasmaker.common.helper.cleanupmanager.CleanupManager(self)
+
+		if start_checking:
+			self.cleanup_manager.start()
 
 	def start_jobs(self):
 		"""

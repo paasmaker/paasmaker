@@ -153,3 +153,13 @@ plugins:
   - name: paasmaker.score.default
     class: paasmaker.common.score.default.DefaultScore
     title: Default Node Scoring
+
+  # CLEANUP JOB
+  - name: paasmaker.job.cleaner
+    class: paasmaker.common.helper.cleanupmanager.CleanerRunJob
+    title: Cleaner run Job
+
+  # CLEANUP PLUGINS
+  - name: paasmaker.cleaner.logs
+    class: paasmaker.common.cleaner.logs.LogsCleaner
+    title: Logs Cleaner

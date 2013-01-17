@@ -1,0 +1,3 @@
+cleaners:
+  - plugin: paasmaker.cleaner.logs
+    interval: 3600

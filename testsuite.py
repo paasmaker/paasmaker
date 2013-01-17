@@ -93,6 +93,9 @@ test_sets = {
 	paasmaker.pacemaker.helper.healthmanager: ['all', 'health', 'healthmanager'],
 	paasmaker.pacemaker.health.downnodes: ['all', 'health', 'node'],
 
+	paasmaker.common.helper.cleanupmanager: ['all', 'cleanup', 'cleanupmanager'],
+	paasmaker.common.cleaner.logs: ['all', 'cleanup'],
+
 	paasmaker.common.job.prepare.prepareroot: ['all', 'application', 'prepare'],
 	paasmaker.common.job.coordinate.selectlocations: ['all', 'application', 'coordinate'],
 	paasmaker.common.job.coordinate.register: ['all', 'application', 'coordinate'],
