@@ -84,6 +84,7 @@ test_sets = {
 
 	paasmaker.pacemaker.auth.internal: ['all', 'auth'],
 	paasmaker.pacemaker.auth.allowany: ['all', 'auth'],
+	paasmaker.pacemaker.miscplugins.devdatabase: ['all', 'auth'],
 
 	paasmaker.pacemaker.helper.healthmanager: ['all', 'health', 'healthmanager'],
 	paasmaker.pacemaker.health.downnodes: ['all', 'health', 'node'],
