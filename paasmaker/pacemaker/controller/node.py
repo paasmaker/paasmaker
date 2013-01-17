@@ -37,6 +37,12 @@ class NodeRegisterSchema(colander.MappingSchema):
 		description="A map of instance statuses on the node.",
 		default={},
 		missing={})
+	stats = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Node stats",
+		description="The stats of the node, as reported by the node.")
+	score = colander.SchemaNode(colander.Float(),
+		title="Node score",
+		description="The node's self evaluated load score.")
 
 class NodeUpdateSchema(NodeRegisterSchema):
 	uuid = colander.SchemaNode(colander.String(),
@@ -92,6 +98,8 @@ class NodeRegisterController(BaseController):
 			self.node.tags = tags
 			self.node.start_time = dateutil.parser.parse(self.params['start_time'])
 			self.node.last_heard = datetime.datetime.utcnow()
+			self.node.stats = self.params['stats']
+			self.node.score = self.params['score']
 
 			# Attempt to connect to the node...
 			request = paasmaker.common.api.information.InformationAPIRequest(self.configuration)

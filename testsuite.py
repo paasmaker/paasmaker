@@ -46,6 +46,10 @@ test_sets = {
 	paasmaker.common.job.manager.backendredis: ['all', 'util', 'job', 'jobmanager', 'jobmanagerbackend'],
 	paasmaker.common.job.manager.manager: ['all', 'util', 'job', 'jobmanager', 'jobmanagercore'],
 
+	paasmaker.common.dynamictags.default: ['all', 'dynamictags'],
+	paasmaker.common.stats.default: ['all', 'stats'],
+	paasmaker.common.score.default: ['all', 'score'],
+
 	paasmaker.model: ['all', 'model'],
 
 	paasmaker.common.controller.example: ['all', 'controller', 'example'],

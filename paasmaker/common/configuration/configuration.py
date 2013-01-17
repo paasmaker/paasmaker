@@ -12,6 +12,7 @@ import subprocess
 import socket
 import datetime
 import time
+import copy
 from distutils.spawn import find_executable
 
 import paasmaker
@@ -751,7 +752,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# The idea is that we don't do this expensive version determination each
 		# time we re-register with the master.
 		if hasattr(self, '_runtime_cache'):
-			logger.info("Using existing runtime cache.")
+			logger.debug("Using existing runtime cache.")
 			return self._runtime_cache
 		else:
 			logger.info("Generating runtime list...")
@@ -766,6 +767,84 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 		self._runtime_cache = tags
 		return self._runtime_cache
+
+	def get_dynamic_tags(self):
+		"""
+		Get a list of dynamic tags and their associated values.
+
+		This reaches out to plugins to generate the tags. Once run
+		the first time, this is not run again. Also note that this
+		is run synchronously, so you won't want to spend too much time
+		doing what you need to do.
+		"""
+
+		if hasattr(self, '_dynamic_tags_cache'):
+			logger.debug("Using existing dynamic tags cache.")
+			return self._dynamic_tags_cache
+		else:
+			logger.info("Generating dynamic tags...")
+
+		dynamic_tags = copy.deepcopy(self['tags'])
+		tags_plugins = self.plugins.plugins_for(
+			paasmaker.util.plugin.MODE.NODE_DYNAMIC_TAGS
+		)
+		for plugin in tags_plugins:
+			instance = self.plugins.instantiate(
+				plugin,
+				paasmaker.util.plugin.MODE.NODE_DYNAMIC_TAGS
+			)
+			instance.fetch(dynamic_tags)
+
+		self._dynamic_tags_cache = dynamic_tags
+		return dynamic_tags
+
+	def get_node_stats(self):
+		"""
+		Get a set of stats for the node. This can call out to
+		plugins to generate the stats. Note that in this implementation,
+		the calls are syncrhonous, so you won't want to spend long
+		doing what you're doing.
+		"""
+		# TODO: In post_load(), make sure there is at least one stats plugin.
+		stats = {}
+		stats_plugins = self.plugins.plugins_for(
+			paasmaker.util.plugin.MODE.NODE_STATS
+		)
+		for plugin in stats_plugins:
+			instance = self.plugins.instantiate(
+				plugin,
+				paasmaker.util.plugin.MODE.NODE_STATS
+			)
+			instance.stats(stats)
+
+		return stats
+
+	def get_node_score(self, stats):
+		"""
+		Generate a score for this node. This can call out to a set of
+		plugins, and the highest score from the plugins is used (as the
+		order of execution of plugins is not defined).
+
+		:arg dict stats: The node's stats.
+		"""
+		# TODO: In post_load(), make sure there is at least one score plugin.
+		scores = []
+		score_plugins = self.plugins.plugins_for(
+			paasmaker.util.plugin.MODE.NODE_SCORE
+		)
+		for plugin in score_plugins:
+			instance = self.plugins.instantiate(
+				plugin,
+				paasmaker.util.plugin.MODE.NODE_SCORE
+			)
+			scores.append(instance.score(stats))
+
+		if len(scores) == 0:
+			# No score plugins.
+			# TODO: Fix this.
+			scores.append(0.25)
+
+		return max(scores)
 
 	def setup_database(self):
 		"""

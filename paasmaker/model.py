@@ -9,7 +9,7 @@ import paasmaker
 from paasmaker.common.core import constants
 
 import sqlalchemy
-from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Table, Index
+from sqlalchemy import Column, Integer, String, DateTime, Boolean, ForeignKey, Text, Table, Index, Float
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship, backref
 from sqlalchemy.orm.interfaces import MapperExtension
@@ -166,6 +166,8 @@ class Node(OrmBase, Base):
 	router = Column(Boolean, nullable=False, default=False)
 
 	_tags = Column('tags', Text, nullable=False, default="{}")
+	_stats = Column('stats', Text, nullable=False, default="{}")
+	score = Column(Float, nullable=False, default=1.0, index=True)
 
 	def __init__(self, name, route, apiport, uuid, state):
 		self.name = name
@@ -180,7 +182,7 @@ class Node(OrmBase, Base):
 		return "<Node('%s','%s')>" % (self.name, self.route)
 
 	def flatten(self, field_list=None):
-		return super(Node, self).flatten(['name', 'route', 'apiport', 'uuid', 'state', 'last_heard', 'heart', 'pacemaker', 'router', 'tags'])
+		return super(Node, self).flatten(['name', 'route', 'apiport', 'uuid', 'state', 'last_heard', 'heart', 'pacemaker', 'router', 'tags', 'score', 'stats'])
 
 	@hybrid_property
 	def tags(self):
@@ -192,6 +194,17 @@ class Node(OrmBase, Base):
 	@tags.setter
 	def tags(self, val):
 		self._tags = json.dumps(val)
+
+	@hybrid_property
+	def stats(self):
+		if self._stats:
+			return json.loads(self._stats)
+		else:
+			return {}
+
+	@stats.setter
+	def stats(self, val):
+		self._stats = json.dumps(val)
 
 	def uptime(self, reference=None):
 		"""

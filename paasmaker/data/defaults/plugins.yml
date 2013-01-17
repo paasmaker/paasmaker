@@ -138,3 +138,18 @@ plugins:
   - name: paasmaker.health.downnodes
     class: paasmaker.pacemaker.health.downnodes.DownNodesHealthCheck
     title: Check for Down Nodes
+
+  # STATS PLUGINS
+  - name: paasmaker.stats.default
+    class: paasmaker.common.stats.default.DefaultStats
+    title: Default Node Stats
+
+  # DYNAMIC TAGS PLUGINS
+  - name: paasmaker.dynamictags.default
+    class: paasmaker.common.dynamictags.default.DefaultDynamicTags
+    title: Default Dynamic Tags
+
+  # SCORE PLUGINS
+  - name: paasmaker.score.default
+    class: paasmaker.common.score.default.DefaultScore
+    title: Default Node Scoring

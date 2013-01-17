@@ -43,11 +43,15 @@ class NodeRegisterAPIRequest(APIRequest):
 			tags['runtimes'] = runtimes
 
 		# Include node tags.
-		tags['node'] = self.configuration['tags']
+		tags['node'] = self.configuration.get_dynamic_tags()
 
 		payload['tags'] = tags
 
 		logger.debug("Sending node tags: %s", str(tags))
+
+		# Get the stats for the node.
+		payload['stats'] = self.configuration.get_node_stats()
+		payload['score'] = self.configuration.get_node_score(payload['stats'])
 
 		# For hearts, send along instance statuses.
 		if self.configuration.is_heart():

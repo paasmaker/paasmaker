@@ -63,7 +63,11 @@ MODE_REQUIRE_PARAMS = {
 
 	'JOB': True,
 
-	'HEALTH_CHECK': True
+	'HEALTH_CHECK': True,
+
+	'NODE_DYNAMIC_TAGS': False,
+	'NODE_STATS': False,
+	'NODE_SCORE': False
 }
 
 # Mode constants.
