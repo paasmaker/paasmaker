@@ -95,6 +95,7 @@ test_sets = {
 
 	paasmaker.common.helper.cleanupmanager: ['all', 'cleanup', 'cleanupmanager'],
 	paasmaker.common.cleaner.logs: ['all', 'cleanup'],
+	paasmaker.common.cleaner.jobs: ['all', 'cleanup'],
 
 	paasmaker.common.job.prepare.prepareroot: ['all', 'application', 'prepare'],
 	paasmaker.common.job.coordinate.selectlocations: ['all', 'application', 'coordinate'],

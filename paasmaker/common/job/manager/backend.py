@@ -121,6 +121,19 @@ class JobBackend(object):
 		"""
 		raise NotImplementedError("You must implement find_by_tag().")
 
+	def find_older_than(self, age, callback, limit=None):
+		"""
+		Return a set of root jobs that are older than the given unix timestamp.
+		Call the callback with a list of job IDs that match. If possible, you
+		should sort the list so the most recent of those jobs appears first.
+		This is designed to clean up old jobs from the system.
+
+		:arg int age: The unix timestamp that the jobs should be older than.
+		:arg callable callback: The callback to call with the jobs.
+		:arg int limit: Limit the return to a number of results.
+		"""
+		raise NotImplementedError("You must implement find_older_than().")
+
 	def get_ready_to_run(self, node, waiting_state, success_state, callback):
 		"""
 		Return a set of jobs that are ready to run for the given node.
@@ -146,3 +159,11 @@ class JobBackend(object):
 		just a flat list of the jobs - you don't need to nest or order them.
 		"""
 		raise NotImplementedError("You must implement get_tree().")
+
+	def delete_tree(self, job_id, callback):
+		"""
+		Delete the entire tree for the given job ID. The job should be resolved
+		to a root job internally before getting started. Call the callback with
+		no arguments when done.
+		"""
+		raise NotImplementedError("You must implement delete_tree().")

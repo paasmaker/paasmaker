@@ -163,3 +163,6 @@ plugins:
   - name: paasmaker.cleaner.logs
     class: paasmaker.common.cleaner.logs.LogsCleaner
     title: Logs Cleaner
+  - name: paasmaker.cleaner.jobs
+    class: paasmaker.common.cleaner.jobs.JobsCleaner
+    title: Jobs Cleaner

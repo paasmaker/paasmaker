@@ -474,6 +474,12 @@ class JobManager(object):
 	def find_by_tag(self, tag, callback, limit=None):
 		self.backend.find_by_tag(tag, callback, limit=limit)
 
+	def find_older_than(self, age, callback, limit=None):
+		self.backend.find_older_than(age, callback, limit=limit)
+
+	def delete_tree(self, job_id, callback):
+		self.backend.delete_tree(job_id, callback)
+
 	def get_jobs(self, jobs, callback):
 		self.backend.get_jobs(jobs, callback)
 

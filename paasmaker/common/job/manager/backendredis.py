@@ -56,7 +56,10 @@ class RedisJobBackend(JobBackend):
 		given tags.
 	<JOBID>:tags => SET
 		For the job ID, a set of tags that it has applied to it. Designed
-		for future use to be able to remove tags when a job is removed.
+		to be able to remove tags when a job is removed.
+	roots => ZSET
+		A set of all root jobs, sorted by their timestamp. Used to locate old
+		jobs for removal.
 	"""
 
 	def setup(self, callback, error_callback):
@@ -260,6 +263,8 @@ class RedisJobBackend(JobBackend):
 			pipeline.sadd("%s:tree" % root_id, job_id)
 			# TODO: This will cause issues if the job already exists.
 			pipeline.sadd("%s:tree:%s" % (root_id, state), job_id)
+			# Add the root job to the set of root jobs.
+			pipeline.zadd("roots", time.time(), root_id)
 
 			# Execute the pipeline.
 			pipeline.execute(on_complete)
@@ -364,6 +369,16 @@ class RedisJobBackend(JobBackend):
 
 		self.redis.zrevrangebyscore("tag:%s" % tag, "+inf", "-inf", offset=offset, limit=limit, callback=on_zrevrangebyscore)
 
+	def find_older_than(self, age, callback, limit=None):
+		def on_zrevrangebyscore(jobs):
+			callback(jobs)
+
+		offset = None
+		if limit:
+			offset = 0
+
+		self.redis.zrevrangebyscore("roots", age, "-inf", offset=offset, limit=limit, callback=on_zrevrangebyscore)
+
 	def get_ready_to_run(self, node, waiting_state, success_state, callback):
 		def on_count_sets(sets):
 			# The passed result will have three values for each job.
@@ -465,6 +480,52 @@ class RedisJobBackend(JobBackend):
 
 		self.get_root(job_id, on_found_root)
 
+	def delete_tree(self, job_id, callback):
+		def on_found_root(root_id):
+			def on_root_tags(root_tags):
+				def on_completed(result):
+					callback()
+					# end of on_completed()
+
+				def on_all_jobs(all_jobs):
+					# Start removing all entries.
+					pipeline = self.redis.pipeline(True)
+
+					for child_id, metadata in all_jobs.iteritems():
+						node_id = metadata['node']
+
+						pipeline.delete(child_id)
+						pipeline.delete("%s:context" % child_id)
+						pipeline.delete("%s:parent" % child_id)
+						pipeline.delete("%s:root" % child_id)
+						pipeline.delete("%s:children" % child_id)
+						pipeline.srem("node:%s" % node_id, child_id)
+						for state in constants.JOB.ALL:
+							pipeline.delete("%s:children:%s" % (child_id, state))
+							pipeline.srem("node:%s:%s" % (node_id, state), child_id)
+
+					# Now for the root job.
+					for tag in root_tags:
+						pipeline.zrem("tag:%s" % tag, root_id)
+
+					pipeline.zrem("roots", root_id)
+					pipeline.execute(on_completed)
+
+				def on_found_tree(tree):
+					# Find all metadata for the jobs.
+					self.get_jobs(tree, on_all_jobs)
+					# end of on_found_tree()
+
+				self.get_tree(root_id, on_found_tree)
+				# end of on_root_tags()
+
+			# Fetch the root node tags.
+			self.redis.smembers("%s:tags" % root_id, callback=on_root_tags)
+			# end of on_found_root()
+
+		# Find the root of the job.
+		self.get_root(job_id, on_found_root)
+
 class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		super(JobManagerBackendTest, self).setUp()
@@ -499,6 +560,17 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 		job = self.wait()
 
 		self.assertEquals(job['job_id'], 'child1', "Return job was not as expected.")
+
+		# Find all the jobs older than... the future.
+		self.backend.find_older_than(time.time() + 10, self.stop)
+		older = self.wait()
+
+		self.assertEquals(len(older), 1, "Not the right number of older jobs.")
+
+		self.backend.find_older_than(time.time() - 10, self.stop)
+		older = self.wait()
+
+		self.assertEquals(len(older), 0, "Not the right number of older jobs.")
 
 		# Fetch multiple jobs in a batch.
 		self.backend.get_jobs(['child1', 'child2'], self.stop)
@@ -623,6 +695,29 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 		jobs = self.wait()
 		self.assertEquals(len(jobs), 1, "Not the right number of ready jobs.")
 		self.assertIn('child1', jobs, "Child1 isn't ready.")
+
+		# Delete the tree.
+		self.backend.delete_tree('child1', self.stop)
+		self.wait()
+
+		# Make sure we can't find it by tag anymore.
+		self.backend.find_by_tag('workspace:1', self.stop)
+		tagged_jobs = self.wait()
+
+		self.assertEquals(len(tagged_jobs), 0, "Didn't delete the tags.")
+
+		# Try to fetch the tree.
+		for job_id in ['child1', 'child1_1', 'child2', 'root']:
+			self.backend.get_tree(job_id, self.stop)
+			tree = self.wait()
+
+			self.assertEquals(len(tree), 0, "Didn't delete the tree.")
+
+		# Try a different query.
+		self.backend.get_ready_to_run('here', constants.JOB.WAITING, constants.JOB.SUCCESS, self.stop)
+		jobs = self.wait()
+
+		self.assertEquals(len(jobs), 0 , "Should have returned no entries.")
 
 	def test_tree_change(self):
 		self.backend.add_job('here', 'root', None, self.stop, constants.JOB.NEW)

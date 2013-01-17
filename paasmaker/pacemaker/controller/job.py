@@ -332,7 +332,7 @@ class JobStreamHandlerTest(BaseControllerTest):
 		self.wait()
 
 		# Wait for it all to complete.
-		self.short_wait_hack(length=0.2)
+		self.short_wait_hack(length=0.4)
 
 		#print json.dumps(client.messages, indent=4, sort_keys=True)
 
