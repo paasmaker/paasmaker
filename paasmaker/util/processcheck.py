@@ -41,6 +41,8 @@ class ProcessCheck(object):
 
 		if platform.system() == 'Darwin':
 			# TODO: this method works on Linux too, but isn't performance-tested
+			# (not using check_output because that throws exception on non-zero
+			#  exit codes, and `ps` returns exit 1 if -p isn't matched)
 			ps = subprocess.Popen(["ps", "-p", str(pid), "-o", "command="], stderr=subprocess.PIPE, stdout=subprocess.PIPE)
 			output = ps.stdout.read().strip()
 			if output:
