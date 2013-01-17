@@ -24,16 +24,16 @@ class DefaultScore(BaseScore):
 
 		# A score for memory free.
 		# For this one, ignore buffers and cache.
-		memory_score = float(stats['memory']['adjusted_free']) / float(stats['memory']['total'])
-		self.logger.debug("Memory score: %0.2f (%d/%d)", memory_score, stats['memory']['adjusted_free'], stats['memory']['total'])
+		memory_score = float(stats['mem_adjusted_free']) / float(stats['mem_total'])
+		self.logger.debug("Memory score: %0.2f (%d/%d)", memory_score, stats['mem_adjusted_free'], stats['mem_total'])
 
-		# A score for swap used. If it's greater than 25%, automatically insert
-		# a score of 2.0 - because we'll want to stop using this node.
-		# TODO: This will probably bite someone in production.
-		swap_score = float(stats['memory']['swap_used']) / float(stats['memory']['swap_total'])
-		self.logger.debug("Swap score: %0.4f (%d/%d)", swap_score, stats['memory']['swap_used'], stats['memory']['swap_total'])
+		# A score for swap used. If it's greater than 25% of real memory,
+		# set score to 2.0 so we forcibly don't use this node.
+		# TODO: tweak this percentage / this might bite someone in production
+		swap_score = float(stats['swap_used']) / float(stats['mem_total'])
+		self.logger.debug("Swap score: %0.4f (%d/%d)", swap_score, stats['swap_used'], stats['mem_total'])
 		if swap_score > 0.25:
-			self.logger.info("Swap usage is above 25%, adjusting score so as to not use this node.")
+			self.logger.info("Swap usage is above 25% of physical RAM, adjusting score so as to not use this node.")
 			swap_score = 2.0
 
 		# Now find the highest score.

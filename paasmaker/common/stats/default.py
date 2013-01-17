@@ -3,11 +3,16 @@ import os
 import platform
 import ctypes
 import json
+import subprocess
 
 import paasmaker
 from base import BaseStats, BaseStatsTest
 
 import tornado.process
+
+def __init__(self):
+	self.uptime_wrangler = re.compile('load averages?\: ([0-9\.]+)[\, ]+([0-9\.]+)[\, ]+([0-9\.]+)')
+	self.darwin_page_count = re.compile('^\w+\:\s+(\d+)\.$')
 
 # These two functions are a mix of two things:
 # http://stackoverflow.com/questions/51658/cross-platform-space-remaining-on-volume-using-python
@@ -44,8 +49,13 @@ class DefaultStats(BaseStats):
 		# more informed decisions.
 		existing_stats['platform'] = platform.system()
 
-		# Calculate memory.
-		existing_stats['memory'] = self._linux_memory()
+		if platform.system() == 'Linux':
+			existing_stats['load'] = self._linux_loadavg()
+			existing_stats.update(self._linux_memory())
+		if platform.system() == 'Darwin':
+			existing_stats['load'] = self._darwin_loadavg()
+			existing_stats['swap_used'] = self._darwin_swap_used()
+			existing_stats.update(self._darwin_memory())
 
 		# Calculate the total bytes free. This ends up using figures
 		# from the disk that has the highest percent used. TODO: Figure out
@@ -82,8 +92,7 @@ class DefaultStats(BaseStats):
 
 		# TODO: CPU usage. This requires it to be async, as we need
 		# to wait to collect this data.
-
-		existing_stats.update(self._linux_loadavg())
+		existing_stats['cpus'] = tornado.process.cpu_count()
 
 	def _linux_memory(self):
 		# TODO: This is very crude. Fix it.
@@ -101,13 +110,13 @@ class DefaultStats(BaseStats):
 
 		for line in raw_memory:
 			if line.startswith("MemTotal:"):
-				result['total'] = extract(line)
-			if line.startswith("MemFree:"):
-				result['free'] = extract(line)
+				result['mem_total'] = extract(line)
+			#if line.startswith("MemFree:"):
+			#	result['mem_free'] = extract(line)
 			if line.startswith("Buffers:"):
-				result['buffers'] = extract(line)
+				result['mem_buffers'] = extract(line)
 			if line.startswith("Cached:"):
-				result['cached'] = extract(line)
+				result['mem_cached'] = extract(line)
 			if line.startswith("SwapTotal:"):
 				result['swap_total'] = extract(line)
 			if line.startswith("SwapFree:"):
@@ -115,26 +124,66 @@ class DefaultStats(BaseStats):
 
 		if result.has_key('swap_total') and result.has_key('swap_free'):
 			result['swap_used'] = result['swap_total'] - result['swap_free']
-		if result.has_key('total') and \
-			result.has_key('free') and \
-			result.has_key('buffers') and \
-			result.has_key('cached'):
-			result['adjusted_free'] = result['total'] - result['buffers'] - result['cached']
+		if result.has_key('mem_total') and \
+			result.has_key('mem_buffers') and \
+			result.has_key('mem_cached'):
+			result['mem_adjusted_free'] = result['mem_total'] - result['mem_buffers'] - result['mem_cached']
 
 		return result
 
 	def _linux_loadavg(self):
-		# TODO: This is very crude. Fix it.
-		result = {}
-
 		load_raw = open('/proc/loadavg', 'r').read()
 		bits = load_raw.split(' ')
+		return float(bits[0])
 
-		result['load'] = float(bits[0])
-		result['cpus'] = tornado.process.cpu_count()
+	def _darwin_memory(self):
+		result = {}
+		
+		# page size is also returned in vm_stat, but is basically always 4096
+		result['page_size'] = int(subprocess.check_output(['sysctl', '-n', 'hw.pagesize']))
+		result['mem_total'] = int(subprocess.check_output(['sysctl', '-n', 'hw.memsize']))
 
+		raw_memory = subprocess.check_output("vm_stat")
+		raw_memory = raw_memory.split("\n")
+
+		def extract(ln):
+			match = self.darwin_page_count.findall(ln)
+			return int(match[0]) * result['page_size']
+
+		for line in raw_memory:
+			#if line.startswith("Pages wired down:"):
+			#	result['mem_wired'] = extract(line)
+			#if line.startswith("Pages active:"):
+			#	result['mem_active'] = extract(line)
+			if line.startswith("Pages free:"):
+				result['mem_free'] = extract(line)
+			if line.startswith("Pages inactive:"):
+				result['mem_inactive'] = extract(line)
+		
+		result['mem_adjusted_free'] = result['mem_free'] + result['mem_inactive']
+		
 		return result
+		
+	def _darwin_swap_used(self):
+		raw_swap = subprocess.check_output(['du', '-ak', '/private/var/vm'])
+		raw_swap = raw_swap.split("\n")
+		swap_subtotal = 0;
 
+		for line in raw_swap:
+			if line.find('swapfile') != -1:
+				bits = line.split("\t")
+				swap_subtotal += int(bits[0]) * 1024
+		
+		return swap_subtotal
+		
+	def _darwin_loadavg(self):
+		# TODO: performance test me, since this also works on Linux
+		uptime_raw = subprocess.check_output("uptime")
+		averages = self.uptime_wrangler.findall(uptime_raw)
+
+		return float(averages[0])
+				
+		
 class DefaultStatsTest(BaseStatsTest):
 	def setUp(self):
 		super(DefaultStatsTest, self).setUp()
@@ -158,8 +207,8 @@ class DefaultStatsTest(BaseStatsTest):
 		#print json.dumps(stats, indent=4, sort_keys=True)
 
 		self.assertTrue(stats.has_key('platform'), "Missing platform value.")
-		self.assertTrue(stats.has_key('memory'), "Missing memory key.")
-		self.assertTrue(stats.has_key('load'), "Missing load key.")
-		self.assertTrue(stats.has_key('cpus'), "Missing CPUs key.")
-		self.assertTrue(stats['cpus'] > 0, "How is your computer working?")
+		self.assertTrue(stats.has_key('mem_total'), "Missing total memory value.")
+		self.assertTrue(stats.has_key('load'), "Missing 5-min load average value.")
+		self.assertTrue(stats.has_key('cpus'), "Missing number of CPUs value.")
+		self.assertTrue(stats['cpus'] > 0, "Weird number of CPUs (how is your computer working?!)")
 		self.assertTrue(stats['load'] > 0, "Load average seems unusually low.")
