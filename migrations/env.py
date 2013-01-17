@@ -55,7 +55,7 @@ def run_migrations_online():
 
     # TODO: Allow loading a configuration file from a different location.
     paasmaker_configuration = paasmaker.common.configuration.Configuration()
-    paasmaker_configuration.load_from_file(['../paasmaker.yml', '/etc/paasmaker/paasmaker.yml'])
+    paasmaker_configuration.load_from_file(['paasmaker.yml', '/etc/paasmaker/paasmaker.yml'])
     paasmaker_configuration.setup_database()
 
     engine = create_engine(paasmaker_configuration.get_flat('pacemaker.dsn'))
