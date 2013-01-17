@@ -110,8 +110,8 @@ class DefaultStats(BaseStats):
 		for line in raw_memory:
 			if line.startswith("MemTotal:"):
 				result['mem_total'] = extract(line)
-			#if line.startswith("MemFree:"):
-			#	result['mem_free'] = extract(line)
+			if line.startswith("MemFree:"):
+				result['mem_free'] = extract(line)
 			if line.startswith("Buffers:"):
 				result['mem_buffers'] = extract(line)
 			if line.startswith("Cached:"):
@@ -123,10 +123,12 @@ class DefaultStats(BaseStats):
 
 		if result.has_key('swap_total') and result.has_key('swap_free'):
 			result['swap_used'] = result['swap_total'] - result['swap_free']
-		if result.has_key('mem_total') and \
+		if result.has_key('mem_free') and \
 			result.has_key('mem_buffers') and \
 			result.has_key('mem_cached'):
-			result['mem_adjusted_free'] = result['mem_total'] - result['mem_buffers'] - result['mem_cached']
+			result['mem_adjusted_free'] = result['mem_free'] + result['mem_buffers'] + result['mem_cached']
+		else:
+			result['mem_adjusted_free'] = result['mem_free']
 
 		return result
 
