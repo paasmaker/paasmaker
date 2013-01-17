@@ -27,7 +27,7 @@ class DefaultPlacement(BasePlacement):
 	}
 	OPTIONS_SCHEMA = DefaultPlacementConfigurationSchema()
 
-	def fail_if_none(self, nodes, callback, reason):
+	def _fail_if_none(self, nodes, callback, reason):
 		if len(nodes) == 0:
 			callback(reason)
 			return True
@@ -40,7 +40,7 @@ class DefaultPlacement(BasePlacement):
 
 		self.logger.info("Stage 1: Found %d active nodes.", len(nodes))
 
-		if self.fail_if_none(nodes, error_callback, "No active nodes found to run this instance."):
+		if self._fail_if_none(nodes, error_callback, "No active nodes found to run this instance."):
 			return
 
 		physical_nodes = len(nodes)
@@ -52,7 +52,7 @@ class DefaultPlacement(BasePlacement):
 		nodes = self.filter_by_tags(nodes, {'runtimes': runtime_tags})
 		self.logger.info("Stage 2: Found %d nodes that can run this instance.", len(nodes))
 
-		if self.fail_if_none(nodes, error_callback, "No nodes can service the runtime %s, version %s." % (instance_type.runtime_name, instance_type.runtime_version)):
+		if self._fail_if_none(nodes, error_callback, "No nodes can service the runtime %s, version %s." % (instance_type.runtime_name, instance_type.runtime_version)):
 			return
 
 		runtime_nodes = len(nodes)
@@ -65,23 +65,22 @@ class DefaultPlacement(BasePlacement):
 		nodes = self.filter_by_tags(nodes, {'node': tags})
 		self.logger.info("Stage 3: Found %d nodes that match these tags.", len(nodes))
 
-		if self.fail_if_none(nodes, error_callback, "No nodes match the supplied tags: %s" % str(tags)):
+		if self._fail_if_none(nodes, error_callback, "No nodes match the supplied tags: %s" % str(tags)):
 			return
 
 		tagged_nodes = len(nodes)
 
 		if len(nodes) < quantity:
+			self.logger.warning("Not enough nodes for one instance per node.")
 			# We need duplicates to make this work.
-			# Pick random samples until we have enough.
-			# TODO: Don't be random... but we're in a difficult spot here.
-			output_nodes = []
-			for i in range(quantity):
-				output_nodes.extend(random.sample(nodes, 1))
-			nodes = output_nodes
+			# Use them in order and loop around.
+			multiples = (quantity / len(nodes)) + 1
+			nodes = nodes * multiples
+			nodes = nodes[0:quantity]
 		else:
 			# Now choose quantity number of nodes.
-			# TODO: Random for now - later make it based on the node stats.
-			nodes = random.sample(nodes, quantity)
+			# They're in order of score, so just grab the first few.
+			nodes = nodes[0:quantity]
 
 		self.logger.info("Stage 4: Successfully selected %d nodes." % len(nodes))
 

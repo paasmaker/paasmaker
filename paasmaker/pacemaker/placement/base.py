@@ -13,17 +13,19 @@ class BasePlacement(paasmaker.util.plugin.Plugin):
 	def get_active_nodes(self, session):
 		"""
 		Get a list of active nodes from the database that are hearts.
-		Returns a mutable list that you could then filter down.
+		Returns a mutable list that you could then filter down. They
+		are ordered by their score.
 		"""
-		nodes = session.query(Node).\
-			filter(Node.state == constants.NODE.ACTIVE, Node.heart == True)
-		# Hydrate them into a real list, so it can be mutated.
-		# This will be expensive. TODO: Optimise!
-		result_list = []
-		for node in nodes:
-			result_list.append(node)
+		nodes = session.query(
+			Node
+		).filter(
+			Node.state == constants.NODE.ACTIVE,
+			Node.heart == True
+		).order_by(
+			Node.score.asc()
+		).all()
 
-		return result_list
+		return nodes
 
 	def filter_by_tags(self, nodes, tags):
 		"""
