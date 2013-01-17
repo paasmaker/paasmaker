@@ -52,19 +52,23 @@
 					{{ instance_type.standalone }}
 				</td>
 				<td>
-					{% for hostname in instance_type.hostnames %}
-						{% if version.is_current %}
-							<a href="http://{{ hostname.hostname }}/" target="_blank">
+					{% if not instance_type.standalone %}
+						{% for hostname in instance_type.hostnames %}
+							{% if version.is_current %}
+								<a href="http://{{ hostname.hostname }}/" target="_blank">
+							{% end %}
+								{{ hostname.hostname }}
+							{% if version.is_current %}
+								</a>
+							{% end %}
+							<br />
 						{% end %}
-							{{ hostname.hostname }}
-						{% if version.is_current %}
-							</a>
-						{% end %}
-						<br />
+						<a href="http://{{ instance_type.version_hostname(configuration) }}" target="_blank">
+							{{ instance_type.version_hostname(configuration) }}
+						</a>
+					{% else %}
+						Standalone instance
 					{% end %}
-					<a href="http://{{ instance_type.version_hostname(configuration) }}" target="_blank">
-						{{ instance_type.version_hostname(configuration) }}
-					</a>
 				</td>
 			</tr>
 		{% end %}
