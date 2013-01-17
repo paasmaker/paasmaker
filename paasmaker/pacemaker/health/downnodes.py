@@ -79,13 +79,15 @@ class DownNodesHealthCheck(BaseHealthCheck):
 			paasmaker.model.ApplicationInstance.state.in_(constants.INSTANCE_ALLOCATED_STATES)
 		)
 
-		# TODO: Take these instances out of the routing table right now.
-
 		altered_instance_count = down_instances.count()
 
 		# Mark instances as down first. If we did nodes first, then this doesn't work
 		# as the matched set of bad nodes then changes.
 		if altered_instance_count > 0:
+			# Force it to generate a list now.
+			fix_down_instances = down_instances.all()
+
+			# Then update the instances.
 			self.logger.critical("Marked %d instances as DOWN.", altered_instance_count)
 			down_instances.update(
 				{
@@ -103,12 +105,43 @@ class DownNodesHealthCheck(BaseHealthCheck):
 		if bad_nodes_count > 0 or altered_instance_count > 0:
 			session.commit()
 
-		callback(
-			{
-				'bad_nodes': bad_nodes_count,
-				'down_instances': altered_instance_count
-			},
-			"Completed down nodes check. Found %d down nodes, and marked %d instances as down." % (bad_nodes_count, altered_instance_count)
+		self.return_context = {
+			'bad_nodes': bad_nodes_count,
+			'down_instances': altered_instance_count
+		}
+		self.return_message = "Completed down nodes check. Found %d down nodes, and marked %d instances as down." % (bad_nodes_count, altered_instance_count)
+		self.callback = callback
+
+		if altered_instance_count > 0:
+			# Queue up jobs to remove those instances from the routing table.
+			def add_fix_instance(job_id=None):
+				if job_id:
+					self.logger.info("Added job %s to fix routing for an instance.", job_id)
+				try:
+					instance = fix_down_instances.pop()
+
+					paasmaker.common.job.routing.routing.RoutingUpdateJob.setup_for_instance(
+						self.configuration,
+						session,
+						instance,
+						False,
+						add_fix_instance
+					)
+				except IndexError, ex:
+					# No more to process.
+					self._finish_check()
+
+				# end of add_fix_instance()
+
+			add_fix_instance()
+		else:
+			# No jobs to queue. We're done.
+			self._finish_check()
+
+	def _finish_check(self):
+		self.callback(
+			self.return_context,
+			self.return_message
 		)
 
 class DownNodesHealthCheckTest(BaseHealthCheckTest):

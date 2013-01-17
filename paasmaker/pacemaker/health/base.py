@@ -48,6 +48,9 @@ class BaseHealthCheckTest(tornado.testing.AsyncTestCase, paasmaker.common.testhe
 		self.context = {}
 		self.exception = None
 
+		self.configuration.job_manager.prepare(self.stop, self.stop)
+		self.wait()
+
 	def tearDown(self):
 		self.configuration.cleanup()
 		super(BaseHealthCheckTest, self).tearDown()
