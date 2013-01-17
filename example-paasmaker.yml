@@ -40,6 +40,10 @@ plugins:
     class: paasmaker.pacemaker.service.parameters.ParametersService
     title: Parameters Service
 
+  - name: paasmaker.misc.devdatabase
+    class: paasmaker.pacemaker.miscplugins.devdatabase.DevDatabasePlugin
+    title: Development Database bootstrap plugin
+
 heart:
   enabled: true
 
