@@ -911,7 +911,8 @@ class ApplicationVersion(OrmBase, Base):
 						'message': 'Exclusive instance that is not current is running.'
 					}
 					seen_statuses.add(constants.HEALTH.ERROR)
-				elif qty == 0 and not instance_type.exclusive:
+				elif (qty == 0 and not instance_type.exclusive) or \
+						(qty == 0 and self.is_current):
 					health['types'][instance_type.name] = {
 						'state': constants.HEALTH.ERROR,
 						'message': 'No running instances'
@@ -1059,6 +1060,42 @@ class ApplicationInstanceType(OrmBase, Base):
 	@startup.setter
 	def startup(self, val):
 		self._startup = json.dumps(val)
+
+	def adjustment_instances(self, session, states=constants.INSTANCE_ALLOCATED_STATES):
+		"""
+		Calculate and return the adjustment number of instances, taking into
+		account active instances on the cluster already. This may return
+		either 0, a positive number, or a negative number. If the number is
+		zero, we already have enough instances. If the number is positive,
+		we need more instances. If the number of negative, we have too many
+		instances.
+
+		:arg Session session: The session to do any queries in the context of.
+		:arg list states: Only consider instances in this state in the calculation.
+			Use this argument carefully.
+		"""
+		quantity = self.quantity
+
+		# Limit to active nodes.
+		active_nodes = session.query(
+			Node.id
+		).filter(
+			Node.state == constants.NODE.ACTIVE
+		)
+
+		# Find out how many instances already exist, and subtract that
+		# quantity.
+		existing_quantity = session.query(
+			ApplicationInstance
+		).filter(
+			ApplicationInstance.application_instance_type == self,
+			ApplicationInstance.state.in_(states),
+			ApplicationInstance.node_id.in_(active_nodes)
+		).count()
+
+		quantity -= existing_quantity
+
+		return quantity
 
 class ApplicationInstance(OrmBase, Base):
 	"""
