@@ -61,16 +61,30 @@ class DevDatabasePlugin(paasmaker.util.plugin.Plugin):
 		).filter(
 			paasmaker.model.User.login == self.options['login']
 		).first()
+		
+		self.logger.info("************************************************************")
+		self.logger.info("Running development bootstrap plugin")
+		self.logger.info("----------------")
 
 		if not user:
-			# Create the user.
+			# Create the user and set default name/password etc.
 			new_user = True
 			user = paasmaker.model.User()
+			
+			user.login = self.options['login']
+			user.email = self.options['email']
+			user.enabled = True
+			user.name = self.options['name']
+			user.password = self.options['password']
 
 			# Record that this plugin created it.
 			meta = user.auth_meta
 			meta['dev_user'] = self.called_name
 			user.auth_meta = meta
+			
+			self.logger.info("New user created for testing!")
+			self.logger.info("username: %s", self.options['login'])
+			self.logger.info("password: %s", self.options['password'])
 		else:
 			new_user = False
 
@@ -80,23 +94,12 @@ class DevDatabasePlugin(paasmaker.util.plugin.Plugin):
 				error_callback("Dev Database plugin is attempting to operate on a user that it did not create. This is not permitted.")
 				return
 
-		# Update the user, regardless of new/old.
-		user.login = self.options['login']
-		user.email = self.options['email']
-		user.enabled = True
-		user.name = self.options['name']
-		user.password = self.options['password']
-
 		session.add(user)
 		session.commit()
 
-		self.logger.info("********************************************************")
-		self.logger.info("DEVELOPMENT USER AND RELATED OBJECTS CREATED.")
 		self.logger.info("YOU SHOULD NOT BE SEEING THIS LOG MESSAGE IN PRODUCTION.")
-		self.logger.info("(If you are, disable the DevDatabasePluigin).")
-		self.logger.info("USERNAME: %s", self.options['login'])
-		self.logger.info("PASSWORD: %s", self.options['password'])
-		self.logger.info("********************************************************")
+		self.logger.info("(disable DevDatabasePlugin in paasmaker.yml to prevent this)")
+		self.logger.info("************************************************************")
 
 		if new_user:
 			# Create them a role with all permissions,
