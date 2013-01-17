@@ -247,7 +247,7 @@ class NodeRegisterController(BaseController):
 						elif statuses[instance.instance_id] == constants.INSTANCE.SUSPENDED and \
 							instance.state == constants.INSTANCE.SUSPENDED:
 
-							# It was suspended, and we've left it in that state.
+							# It was suspended, and the pacemaker has not altered that state.
 							# Start it up again.
 
 							def on_job_submitted(job_id):
@@ -295,7 +295,7 @@ class NodeRegisterController(BaseController):
 				True,
 				update_job_added
 			)
-		elif newstate == constants.INSTANCE.STOPPED or newstate == constants.INSTANCE.ERROR:
+		elif newstate in [constants.INSTANCE.STOPPED, constants.INSTANCE.ERROR, constants.INSTANCE.SUSPENDED]:
 			# It's no longer running (or should be removed).
 			# Update it's routing. Don't attempt to start it; it's been stopped
 			# for a reason.
