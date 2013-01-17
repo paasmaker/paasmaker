@@ -25,26 +25,38 @@ class RedisJobBackend(JobBackend):
 	Redis guarantees that everything happens in that section, which should cover
 	off any consistency issues.
 
-	Uppercase values in key are application supplied values.
-	Key => Type - Description
-	JOBID => HASH - Hold the job information, such as state and attributes.
-	JOBID_context => HASH - Holds the job context (JOBID is always the root job.)
-	JOBID_parent => STRING - Quick way to locate the parent of a job. Can be None.
-	JOBID_root => STRING - Quick way to locate the root job for a parent. Will return
-	  the same value as the JOBID if the job is a root job.
-	JOBID_children => SET - Set of job IDs of children of that job.
-	JOBID_children_STATE => SET - Set of job IDs that are children in that state. This
-	  is a subset of JOBID_children.
-	ROOTID_tree => SET - Set of all jobs under the root job.
-	ROOTID_tree_STATE => SET - Set of all jobs under the root job in the given state.
-	node_NODE => SET - Set of job IDs that are assigned to the given node.
-	node_NODE_STATE => SET - Set of job IDs that are assigned to the given node,
-	  in the given state. This is a subset of node_NODE.
-	tag_TAG => ZSET - Set of job IDs that match the given tag. This is a sorted set so
-	  we can quickly return the most recent jobs first. Note that only root jobs are
-	  given tags.
-	JOBID_tags => SET - for the job ID, a set of tags that it has applied to it. Designed
-	  for future use to be able to remove tags when a job is removed.
+	Key => Type
+		Description
+	<JOBID> => HASH
+		Hold the job information, such as state and attributes.
+	<JOBID>:context => HASH
+		Holds the job context (JOBID is always the root job.)
+	<JOBID>:parent => STRING
+		Quick way to locate the parent of a job. Can be None.
+	<JOBID>:root => STRING
+		Quick way to locate the root job for a parent. Will return
+		the same value as the JOBID if the job is a root job.
+	<JOBID>:children => SET
+		Set of job IDs of children of that job.
+	<JOBID>:children:<STATE> => SET
+		Set of job IDs that are children in that state. This
+		is a subset of <JOBID>:children.
+	<ROOTID>:tree => SET
+		Set of all jobs under the root job.
+	<ROOTID>:tree:<STATE> => SET
+		Set of all jobs under the root job in the given state.
+	node:<NODE> => SET
+		Set of job IDs that are assigned to the given node.
+	node:<NODE>:<STATE> => SET
+		Set of job IDs that are assigned to the given node,
+		in the given state. This is a subset of node:<NODE>.
+	tag:<TAG> => ZSET
+		Set of job IDs that match the given tag. This is a sorted set so
+		we can quickly return the most recent jobs first. Note that only root jobs are
+		given tags.
+	<JOBID>:tags => SET
+		For the job ID, a set of tags that it has applied to it. Designed
+		for future use to be able to remove tags when a job is removed.
 	"""
 
 	def setup(self, callback, error_callback):
@@ -136,7 +148,7 @@ class RedisJobBackend(JobBackend):
 			callback()
 
 		def on_found_root(root_id):
-			self.redis.hmset("%s_context" % root_id, self._to_json(context), on_stored)
+			self.redis.hmset("%s:context" % root_id, self._to_json(context), on_stored)
 
 		self.get_root(job_id, on_found_root)
 
@@ -145,7 +157,7 @@ class RedisJobBackend(JobBackend):
 			callback(self._from_json(values))
 
 		def on_found_root(root_id):
-			self.redis.hgetall("%s_context" % root_id, on_hgetall)
+			self.redis.hgetall("%s:context" % root_id, on_hgetall)
 
 		self.get_root(job_id, on_found_root)
 
@@ -157,13 +169,13 @@ class RedisJobBackend(JobBackend):
 			else:
 				callback(value)
 
-		self.redis.get("%s_parent" % job_id, on_get)
+		self.redis.get("%s:parent" % job_id, on_get)
 
 	def get_root(self, job_id, callback):
 		def on_get(value):
 			callback(value)
 
-		self.redis.get("%s_root" % job_id, on_get)
+		self.redis.get("%s:root" % job_id, on_get)
 
 	def get_children(self, job_id, callback, state=None):
 		if state:
@@ -181,7 +193,7 @@ class RedisJobBackend(JobBackend):
 
 			pipeline = self.redis.pipeline()
 			for s in sfilter:
-				pipeline.smembers("%s_children_%s" % (job_id, s))
+				pipeline.smembers("%s:children:%s" % (job_id, s))
 			pipeline.execute(on_state_results)
 
 		else:
@@ -189,7 +201,7 @@ class RedisJobBackend(JobBackend):
 			def on_smembers(jobs):
 				callback(jobs)
 
-			self.redis.smembers("%s_children" % job_id, on_smembers)
+			self.redis.smembers("%s:children" % job_id, on_smembers)
 
 	def exists(self, job_id, callback):
 		def on_exists(result):
@@ -229,25 +241,25 @@ class RedisJobBackend(JobBackend):
 			# The core job.
 			pipeline.hmset(job_id, values)
 			# Insert it into the node state list.
-			pipeline.sadd("node_%s" % node, job_id)
+			pipeline.sadd("node:%s" % node, job_id)
 			# TODO: This will cause issues if the job already exists.
-			pipeline.sadd("node_%s_%s" % (node, state), job_id)
+			pipeline.sadd("node:%s:%s" % (node, state), job_id)
 			# Handle parent related activities.
 			if parent_id:
 				# Set the parent ID mapping.
-				pipeline.set("%s_parent" % job_id, parent_id)
+				pipeline.set("%s:parent" % job_id, parent_id)
 				# Update the parent to have this as a child.
-				pipeline.sadd("%s_children" % parent_id, job_id)
+				pipeline.sadd("%s:children" % parent_id, job_id)
 				# Update the parent's state map.
 				# TODO: This will cause issues if the job already exists.
-				pipeline.sadd("%s_children_%s" % (parent_id, state), job_id)
+				pipeline.sadd("%s:children:%s" % (parent_id, state), job_id)
 
 			# And store the root ID.
-			pipeline.set("%s_root" % job_id, root_id)
+			pipeline.set("%s:root" % job_id, root_id)
 			# Store on the root job lists.
-			pipeline.sadd("%s_tree" % root_id, job_id)
+			pipeline.sadd("%s:tree" % root_id, job_id)
 			# TODO: This will cause issues if the job already exists.
-			pipeline.sadd("%s_tree_%s" % (root_id, state), job_id)
+			pipeline.sadd("%s:tree:%s" % (root_id, state), job_id)
 
 			# Execute the pipeline.
 			pipeline.execute(on_complete)
@@ -269,13 +281,13 @@ class RedisJobBackend(JobBackend):
 			# Now, start a transaction to update the appropriate maps.
 			pipeline = self.redis.pipeline(True)
 			# Remove from the old state sets and add to new ones.
-			pipeline.srem("node_%(node)s_%(state)s" % job, job_id)
-			pipeline.sadd("node_%s_%s" % (job['node'], new_state), job_id)
+			pipeline.srem("node:%(node)s:%(state)s" % job, job_id)
+			pipeline.sadd("node:%s:%s" % (job['node'], new_state), job_id)
 			if job['parent_id']:
-				pipeline.srem("%(parent_id)s_children_%(state)s" % job, job_id)
-				pipeline.sadd("%s_children_%s" % (job['parent_id'], new_state), job_id)
-			pipeline.srem("%(root_id)s_tree_%(state)s" % job, job_id)
-			pipeline.sadd("%s_tree_%s" % (job['root_id'], new_state), job_id)
+				pipeline.srem("%(parent_id)s:children:%(state)s" % job, job_id)
+				pipeline.sadd("%s:children:%s" % (job['parent_id'], new_state), job_id)
+			pipeline.srem("%(root_id)s:tree:%(state)s" % job, job_id)
+			pipeline.sadd("%s:tree:%s" % (job['root_id'], new_state), job_id)
 			encoded = self._to_json(attrs)
 			pipeline.hmset(job_id, encoded)
 			pipeline.hgetall(job_id)
@@ -336,8 +348,8 @@ class RedisJobBackend(JobBackend):
 
 			pipeline = self.redis.pipeline(True)
 			for tag in tags:
-				pipeline.zadd("tag_%s" % tag, time.time(), root_id)
-				pipeline.sadd("%s_tags" % root_id, tag)
+				pipeline.zadd("tag:%s" % tag, time.time(), root_id)
+				pipeline.sadd("%s:tags" % root_id, tag)
 			pipeline.execute(on_tagged)
 
 		self.get_root(job_id, on_found_root)
@@ -350,7 +362,7 @@ class RedisJobBackend(JobBackend):
 		if limit:
 			offset = 0
 
-		self.redis.zrevrangebyscore("tag_%s" % tag, "+inf", "-inf", offset=offset, limit=limit, callback=on_zrevrangebyscore)
+		self.redis.zrevrangebyscore("tag:%s" % tag, "+inf", "-inf", offset=offset, limit=limit, callback=on_zrevrangebyscore)
 
 	def get_ready_to_run(self, node, waiting_state, success_state, callback):
 		def on_count_sets(sets):
@@ -373,12 +385,12 @@ class RedisJobBackend(JobBackend):
 			pipeline = self.redis.pipeline()
 			for job in jobs:
 				pipeline.hmget(job, ['job_id'])
-				pipeline.scard("%s_children" % job)
-				pipeline.scard("%s_children_%s" %(job, success_state))
+				pipeline.scard("%s:children" % job)
+				pipeline.scard("%s:children:%s" %(job, success_state))
 			pipeline.execute(on_count_sets)
 
 		# First step, get all the jobs on the node in the waiting state.
-		self.redis.smembers("node_%s_%s" % (node, waiting_state), on_waiting_state)
+		self.redis.smembers("node:%s:%s" % (node, waiting_state), on_waiting_state)
 
 	def set_state_tree(self, job_id, from_state, to_state, callback, node=None):
 		def on_found_tree(tree):
@@ -400,12 +412,12 @@ class RedisJobBackend(JobBackend):
 		def on_found_root(root_id):
 			if not node:
 				# Get the whole root tree.
-				self.redis.smembers("%s_tree_%s" % (root_id, from_state), on_found_tree)
+				self.redis.smembers("%s:tree:%s" % (root_id, from_state), on_found_tree)
 			else:
 				# Get the ones for this node - that is the intersection
 				# between jobs on our node in that state and the jobs in
 				# that tree.
-				self.redis.sinter(["%s_tree_%s" % (root_id, from_state), "node_%s_%s" % (node, from_state)], on_found_tree)
+				self.redis.sinter(["%s:tree:%s" % (root_id, from_state), "node:%s:%s" % (node, from_state)], on_found_tree)
 
 		self.get_root(job_id, on_found_root)
 
@@ -420,8 +432,8 @@ class RedisJobBackend(JobBackend):
 
 		def on_found_root(root_id):
 			state_sets = []
-			state_set_name = "temp_state_" + str(uuid.uuid4())
-			result_set_name = "temp_result_" + str(uuid.uuid4())
+			state_set_name = "temp_state:" + str(uuid.uuid4())
+			result_set_name = "temp_result:" + str(uuid.uuid4())
 			if state:
 				# Assemble the states into a set of sets that
 				# contain the desired states.
@@ -431,10 +443,10 @@ class RedisJobBackend(JobBackend):
 					sfilter.add(state)
 
 				for s in sfilter:
-					state_sets.append("%s_tree_%s" % (root_id, s))
+					state_sets.append("%s:tree:%s" % (root_id, s))
 			else:
 				# Just use the raw set.
-				state_sets.append("%s_tree" % root_id)
+				state_sets.append("%s:tree" % root_id)
 
 			# Now, start a transaction.
 			pipeline = self.redis.pipeline(True)
@@ -442,7 +454,7 @@ class RedisJobBackend(JobBackend):
 			pipeline.sunionstore(state_sets, state_set_name)
 			# Now, if we have a node, intersect that and store it.
 			if node:
-				pipeline.sinterstore([state_set_name, "node_%s" % node], result_set_name)
+				pipeline.sinterstore([state_set_name, "node:%s" % node], result_set_name)
 			else:
 				result_set_name = state_set_name
 			# Fetch out the result set.
