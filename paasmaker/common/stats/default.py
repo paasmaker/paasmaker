@@ -3,16 +3,13 @@ import os
 import platform
 import ctypes
 import json
+import re
 import subprocess
 
 import paasmaker
 from base import BaseStats, BaseStatsTest
 
 import tornado.process
-
-def __init__(self):
-	self.uptime_wrangler = re.compile('load averages?\: ([0-9\.]+)[\, ]+([0-9\.]+)[\, ]+([0-9\.]+)')
-	self.darwin_page_count = re.compile('^\w+\:\s+(\d+)\.$')
 
 # These two functions are a mix of two things:
 # http://stackoverflow.com/questions/51658/cross-platform-space-remaining-on-volume-using-python
@@ -43,8 +40,6 @@ def get_total_space(path):
 
 class DefaultStats(BaseStats):
 	def stats(self, existing_stats):
-		# TODO: Make this work on other platforms.
-
 		# Include the platform - this allows score plugins to make
 		# more informed decisions.
 		existing_stats['platform'] = platform.system()
@@ -52,7 +47,11 @@ class DefaultStats(BaseStats):
 		if platform.system() == 'Linux':
 			existing_stats['load'] = self._linux_loadavg()
 			existing_stats.update(self._linux_memory())
+
 		if platform.system() == 'Darwin':
+			self.uptime_wrangler = re.compile('load averages?\: ([0-9\.]+)[\, ]+([0-9\.]+)[\, ]+([0-9\.]+)')
+			self.darwin_page_count = re.compile('^.+\:\s+(\d+)\.$')
+
 			existing_stats['load'] = self._darwin_loadavg()
 			existing_stats['swap_used'] = self._darwin_swap_used()
 			existing_stats.update(self._darwin_memory())
@@ -181,7 +180,7 @@ class DefaultStats(BaseStats):
 		uptime_raw = subprocess.check_output("uptime")
 		averages = self.uptime_wrangler.findall(uptime_raw)
 
-		return float(averages[0])
+		return float(averages[0][0])
 				
 		
 class DefaultStatsTest(BaseStatsTest):
