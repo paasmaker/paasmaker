@@ -12,6 +12,7 @@
 			<th>Route</th>
 			<th>Roles</th>
 			<th>Last Heard</th>
+			<th>Score</th>
 			<th>State</th>
 		</tr>
 		{% for node in nodes %}
@@ -34,6 +35,9 @@
 				</td>
 				<td>
 					{{ "%0.2f" % node.updated_age() }}s
+				</td>
+				<td>
+					{{ "%0.2f" % node.score }}
 				</td>
 				<td>
 					<span class="node-{{ node.state }}">{{ nice_state(node.state) }}</span>
