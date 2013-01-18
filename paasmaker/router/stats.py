@@ -433,8 +433,6 @@ class ApplicationStats(object):
 		  specified application.
 		* **version**: all the version type IDs in the specified
 		  version.
-		* **node**: all the version type IDs for instances on
-		  the given node ID.
 		* **version_type**: just the version type ID specified.
 		* **uncaught**: a special case that returns stats on
 		  all requests that were unable to be routed to any instance.
@@ -452,7 +450,7 @@ class ApplicationStats(object):
 			callback(list(vtids))
 
 		if name == 'workspace' or name == 'application' or \
-			name == 'version' or name == 'node':
+			name == 'version': # or name == 'node':
 			# These are valid.
 			pass
 		elif name == 'version_type':

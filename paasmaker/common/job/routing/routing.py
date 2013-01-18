@@ -182,11 +182,11 @@ class RouterTableUpdate(object):
 		wid = self.instance.application_instance_type.application_version.application.workspace.id
 		aid = self.instance.application_instance_type.application_version.application.id
 		vid = self.instance.application_instance_type.application_version.id
-		nid = self.instance.node.id
+		#nid = self.instance.node.id
 		pipeline.sadd('workspace:%d' % wid, vtid)
 		pipeline.sadd('application:%d' % aid, vtid)
 		pipeline.sadd('version:%d' % vid, vtid)
-		pipeline.sadd('node:%d' % nid, vtid)
+		#pipeline.sadd('node:%d' % nid, vtid)
 		pipeline.execute(self.on_stats_complete)
 
 	def on_stats_complete(self, result):
