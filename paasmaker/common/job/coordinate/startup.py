@@ -17,7 +17,9 @@ import colander
 # TODO: Implement abort features for all of these jobs.
 
 # - Root
-#   - Startup Requester - queues up other jobs.
+#   - Startup Requester - queues up other jobs (will be children of root)
+#     - Register Request - queues up other jobs (will be children of startup requester)
+#       - Select locations
 #   - Routing - Instance A
 #     - Startup - Instance A
 #       - Pre-startup - Instance A
@@ -27,7 +29,7 @@ import colander
 
 class StartupRootJob(InstanceRootBase):
 	@classmethod
-	def setup_version(cls, configuration, application_version, callback, limit_instances=None):
+	def setup_version(cls, configuration, application_version, callback, limit_instances=None, parent=None):
 		# List all the instance types.
 		# Assume we have an open session on the application_version object.
 
@@ -65,18 +67,33 @@ class StartupRootJob(InstanceRootBase):
 				# The tag gets added here, but it's actually tagged on the root job.
 				type_tags = ['application_instance_type:%d' % instance_type.id]
 
-				registerer = tree.add_child()
-				registerer.set_job(
+				starter = tree.add_child()
+				starter.set_job(
 					'paasmaker.job.coordinate.startuprequest',
 					parameters,
 					"Startup requests for %s" % instance_type.name,
 					tags=type_tags
 				)
 
+				registerer = starter.add_child()
+				registerer.set_job(
+					'paasmaker.job.coordinate.registerrequest',
+					parameters,
+					"Registration requests for %s" % instance_type.name,
+					tags=type_tags
+				)
+
+				selectlocations = registerer.add_child()
+				selectlocations.set_job(
+					'paasmaker.job.coordinate.selectlocations',
+					parameters,
+					"Select instance locations for %s" % instance_type.name,
+				)
+
 		def on_tree_added(root_id):
 			callback(root_id)
 
-		configuration.job_manager.add_tree(tree, on_tree_added)
+		configuration.job_manager.add_tree(tree, on_tree_added, parent=parent)
 
 	def start_job(self, context):
 		self.update_jobs_from_context(context)

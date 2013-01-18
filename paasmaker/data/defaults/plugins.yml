@@ -139,6 +139,10 @@ plugins:
     class: paasmaker.pacemaker.health.downnodes.DownNodesHealthCheck
     title: Check for Down Nodes
 
+  - name: paasmaker.health.adjustinstances
+    class: paasmaker.pacemaker.health.adjustinstances.AdjustInstancesHealthCheck
+    title: Adjust Instance quantities
+
   # STATS PLUGINS
   - name: paasmaker.stats.default
     class: paasmaker.common.stats.default.DefaultStats

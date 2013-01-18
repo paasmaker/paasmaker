@@ -5,7 +5,7 @@ from ..base import BaseJob
 
 class InstanceRootBase(BaseJob):
 	@classmethod
-	def setup_instances(cls, configuration, instances, callback):
+	def setup_instances(cls, configuration, instances, callback, parent=None):
 		# Sanity check: Pass at least one instance object.
 		if len(instances) == 0:
 			raise ValueError("You must pass at least one instance object.")
@@ -22,7 +22,7 @@ class InstanceRootBase(BaseJob):
 		version = instances[0].application_instance_type.application_version
 
 		# Now that we've done that, call setup_version.
-		cls.setup_version(configuration, version, callback, limit_instances=instance_id_list)
+		cls.setup_version(configuration, version, callback, limit_instances=instance_id_list, parent=parent)
 
 	def update_jobs_from_context(self, context):
 		"""

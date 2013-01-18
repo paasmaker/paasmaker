@@ -35,7 +35,7 @@ import tornado
 class CurrentVersionRequestJob(InstanceJobHelper):
 
 	@staticmethod
-	def setup_version(configuration, application_version_id, callback):
+	def setup_version(configuration, application_version_id, callback, parent=None):
 		session = configuration.get_database_session()
 		context = {}
 		context['application_version_id'] = application_version_id
@@ -51,7 +51,8 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 			{},
 			"Make version %d current for %s" % (new_version.version, new_version.application.name),
 			on_root_job_added,
-			context=context
+			context=context,
+			parent=parent
 		)
 		session.close()
 

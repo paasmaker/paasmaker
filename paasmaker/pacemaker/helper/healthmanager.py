@@ -238,7 +238,10 @@ class HealthCheckRunJob(paasmaker.common.job.base.BaseJob):
 			self.failed(message)
 
 		# Kick off the plugin.
-		health.check(self.job_metadata['root_id'], success, failure)
+		# Get it to add jobs to our parent - which is the group container.
+		# This means that and jobs at this level need to complete
+		# before we can continue up to the next level.
+		health.check(self.job_metadata['parent_id'], success, failure)
 
 	def abort_job(self):
 		self.aborted("Aborted due to request.")

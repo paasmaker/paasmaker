@@ -1093,7 +1093,12 @@ class ApplicationInstanceType(OrmBase, Base):
 			ApplicationInstance.node_id.in_(active_nodes)
 		).count()
 
-		quantity -= existing_quantity
+		if self.exclusive and existing_quantity > 0 and not self.application_version.is_current:
+			# Special handling for exclusive instances.
+			# Basically, it should not be running in this condition.
+			quantity = -existing_quantity
+		else:
+			quantity -= existing_quantity
 
 		return quantity
 

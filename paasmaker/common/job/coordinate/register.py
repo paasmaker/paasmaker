@@ -33,7 +33,7 @@ import sqlalchemy
 
 class RegisterRootJob(InstanceRootBase):
 	@classmethod
-	def setup_version(cls, configuration, application_version, callback, limit_instances=None):
+	def setup_version(cls, configuration, application_version, callback, limit_instances=None, parent=None):
 		# List all the instance types.
 		# Assume we have an open session on the application_version object.
 
@@ -83,7 +83,7 @@ class RegisterRootJob(InstanceRootBase):
 		def on_tree_added(root_id):
 			callback(root_id)
 
-		configuration.job_manager.add_tree(tree, on_tree_added)
+		configuration.job_manager.add_tree(tree, on_tree_added, parent=parent)
 
 	def start_job(self, context):
 		self.update_version_from_context(context, constants.VERSION.READY)
@@ -160,7 +160,7 @@ class RegisterRequestJob(BaseJob):
 			self.configuration.job_manager.allow_execution(self.job_metadata['root_id'], callback=on_tree_executable)
 
 		# Add that entire tree into the job manager.
-		self.configuration.job_manager.add_tree(container, on_tree_added, parent=self.job_metadata['root_id'])
+		self.configuration.job_manager.add_tree(container, on_tree_added, parent=self.job_metadata['parent_id'])
 
 class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
@@ -254,6 +254,35 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(instance is not None, "Should have one registered instance.")
 		self.assertTrue(instance.port in range(42600, 42699), "Port not in expected range.")
 
+		# Deregister the whole lot. This is just to make sure the register task
+		# works properly. StartupRootJob will reselect and register instances again.
+		DeRegisterRootJob.setup_version(
+			self.configuration,
+			instance_type.application_version,
+			self.stop
+		)
+		deregister_root_id = self.wait()
+
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(deregister_root_id))
+
+		# And make it work.
+		self.configuration.job_manager.allow_execution(deregister_root_id, self.stop)
+		self.wait()
+
+		#print
+		#self.dump_job_tree(deregister_root_id)
+		#self.wait()
+
+		result = self.wait()
+		while result is None or result.state != constants.JOB.SUCCESS:
+			result = self.wait()
+
+		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
+
+		session.refresh(instance)
+
+		self.assertEquals(instance.state, constants.INSTANCE.DEREGISTERED, "Instance in wrong state.")
+
 		# Now, hijack this test to test startup of instance. And other stuff.
 		StartupRootJob.setup_version(
 			self.configuration,
@@ -283,6 +312,40 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# Make sure the version is in the correct state.
 		session.refresh(our_version)
 		self.assertEquals(our_version.state, constants.VERSION.RUNNING)
+
+		# Make sure the instances are as expected.
+		instances = session.query(
+			paasmaker.model.ApplicationInstance
+		).filter(
+			paasmaker.model.ApplicationInstance.application_instance_type == instance_type,
+			paasmaker.model.ApplicationInstance.state == constants.INSTANCE.RUNNING
+		)
+
+		self.assertEquals(instances.count(), 1, "Should have one running instance.")
+
+		deregistered_instances = session.query(
+			paasmaker.model.ApplicationInstance
+		).filter(
+			paasmaker.model.ApplicationInstance.application_instance_type == instance_type,
+			paasmaker.model.ApplicationInstance.state == constants.INSTANCE.DEREGISTERED
+		)
+
+		self.assertEquals(deregistered_instances.count(), 1, "Should have one deregistered instance.")
+
+		other_instance_id = instance.id
+
+		# Fetch the actual instance.
+		instance = session.query(
+			paasmaker.model.ApplicationInstance
+		).filter(
+			paasmaker.model.ApplicationInstance.application_instance_type == instance_type,
+			paasmaker.model.ApplicationInstance.state == constants.INSTANCE.RUNNING
+		).first()
+
+		# Verify the instance was set up.
+		self.assertNotEquals(other_instance_id, instance.id, "Should be a new instance.")
+		self.assertTrue(instance is not None, "Should have one running instance.")
+		self.assertTrue(instance.port in range(42600, 42699), "Port not in expected range.")
 
 		# Confirm that the entry exists in the routing table.
 		self.configuration.get_router_table_redis(self.stop, self.stop)

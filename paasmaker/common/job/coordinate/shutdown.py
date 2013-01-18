@@ -25,7 +25,7 @@ import colander
 
 class ShutdownRootJob(InstanceRootBase):
 	@classmethod
-	def setup_version(cls, configuration, application_version, callback, limit_instances=None):
+	def setup_version(cls, configuration, application_version, callback, limit_instances=None, parent=None):
 		# List all the instance types.
 		# Assume we have an open session on the application_version object.
 
@@ -68,7 +68,7 @@ class ShutdownRootJob(InstanceRootBase):
 		def on_tree_added(root_id):
 			callback(root_id)
 
-		configuration.job_manager.add_tree(tree, on_tree_added)
+		configuration.job_manager.add_tree(tree, on_tree_added, parent=parent)
 
 	def start_job(self, context):
 		self.update_jobs_from_context(context)
