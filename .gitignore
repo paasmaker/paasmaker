@@ -4,6 +4,7 @@
 /.coverage
 /paasmaker.pid
 /documentation/build/
+/documentation/websupport/
 /scratch/
 /paasmaker-development.db
 /paasmaker.yml

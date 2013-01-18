@@ -26,7 +26,10 @@ Configuration
 .. autoclass:: paasmaker.util.configurationhelper.NoConfigurationFileException
     :members:
 
-.. autoclass:: paasmaker.util.configurationhelper.InvalidConfigurationException
+.. autoclass:: paasmaker.util.configurationhelper.InvalidConfigurationFormatException
+    :members:
+
+.. autoclass:: paasmaker.util.configurationhelper.InvalidConfigurationParameterException
     :members:
 
 .. autoclass:: paasmaker.util.configurationhelper.ConfigurationHelper
