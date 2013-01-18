@@ -82,6 +82,9 @@
 								{% if has_permission(PERMISSION.HEALTH_CHECK) %}
 									<li><a href="/job/list/health">Health Check Results</a></li>
 								{% end %}
+								{% if has_permission(PERMISSION.SYSTEM_ADMINISTRATION) %}
+									<li><a href="/job/list/cleaner">Cleaner Tasks</a></li>
+								{% end %}
 							</ul>
 						</li>
 					{% end %}
