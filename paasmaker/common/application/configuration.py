@@ -178,7 +178,7 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 				# Raise another exception that encapsulates more context.
 				# In future this can be used to print a nicer report.
 				# Because the default output is rather confusing...!
-				raise paasmaker.common.configuration.InvalidConfigurationException(ex, '', self['instance']['instances'])
+				raise InvalidConfigurationFormatException(ex, '', self['instances'][instance])
 
 	def create_application(self, session, workspace):
 		"""

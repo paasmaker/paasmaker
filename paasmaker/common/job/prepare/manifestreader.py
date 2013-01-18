@@ -6,6 +6,9 @@ from paasmaker.common.core import constants
 from paasmaker.common.core import constants
 from ..base import BaseJob
 
+from paasmaker.util.configurationhelper import InvalidConfigurationParameterException
+from paasmaker.util.configurationhelper import InvalidConfigurationFormatException
+
 import sqlalchemy
 
 class ManifestReaderJob(BaseJob):
@@ -19,7 +22,7 @@ class ManifestReaderJob(BaseJob):
 		manifest = paasmaker.common.application.configuration.ApplicationConfiguration()
 		try:
 			manifest.load_from_file([manifest_full_path])
-		except paasmaker.common.configuration.InvalidConfigurationException, ex:
+		except (InvalidConfigurationParameterException, InvalidConfigurationFormatException), ex:
 			self.logger.critical("Failed to load configuration:")
 			self.logger.critical("Exception:", exc_info=ex)
 			self.failed("Failed to load configuration.")
