@@ -7,7 +7,7 @@ import urllib
 import paasmaker
 from apirequest import APIRequest, APIResponse
 
-import requests
+from requests.models import RequestEncodingMixin
 import tornado
 
 logger = logging.getLogger(__name__)
@@ -139,8 +139,7 @@ class UploadFileAPIRequest(APIRequest):
 	def _pack_file_segment(self, variables, filedata):
 		# Use the requests module to prepare the file data for us.
 		files = [('file.data', filedata)]
-		req = requests.Request(data=variables, files=files)
-		body, mimetype = req._encode_files(files)
+		body, mimetype = RequestEncodingMixin._encode_files(files, variables)
 		return {
 			'body': body,
 			'mimetype': mimetype
