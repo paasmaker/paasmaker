@@ -118,8 +118,8 @@ class VersionStartupController(VersionRootController):
 		version = self._get_version(version_id)
 		self.add_data('version', version)
 
-		if version.state != constants.VERSION.READY:
-			self.add_error("Version must be in state READY to be started.")
+		if version.state != constants.VERSION.READY and version.state != constants.VERSION.PREPARED:
+			self.add_error("Version must be in state PREPARED or READY to be started.")
 			raise tornado.web.HTTPError(400, "Incorrect state.")
 
 		def on_job_started():

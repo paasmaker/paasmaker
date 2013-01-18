@@ -33,7 +33,7 @@
 					<input type="submit" class="btn btn-mini btn-success" value="Register" />
 				</form>
 			{% end %}
-			{% if version.state == constants.VERSION.READY %}
+			{% if version.state == constants.VERSION.READY or version.state == constants.VERSION.PREPARED %}
 				<form method="POST" action="/version/{{ version.id }}/start">
 					<input type="submit" class="btn btn-mini btn-success" value="Start" />
 				</form>
