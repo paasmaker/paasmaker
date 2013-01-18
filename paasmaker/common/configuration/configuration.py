@@ -637,6 +637,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.job_manager = paasmaker.common.job.manager.manager.JobManager(self)
 		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
 		self.start_time = datetime.datetime.utcnow()
+		self.node_logging_configured = False
 
 	def uptime(self):
 		"""
@@ -1367,6 +1368,17 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			return None
 
 		return self.uuid
+
+	def setup_node_logging(self):
+		if not self.node_logging_configured:
+			if self.get_node_uuid():
+				# Redirect log output into a file based on the node UUID.
+				node_log_path = self.get_job_log_path(self.get_node_uuid())
+				root_logger = logging.getLogger()
+				log_handler = logging.FileHandler(node_log_path)
+				log_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
+				root_logger.addHandler(log_handler)
+				self.node_logging_configured = True
 
 	#
 	# HEART HELPERS

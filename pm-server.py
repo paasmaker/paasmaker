@@ -66,6 +66,11 @@ routes = []
 paasmaker.util.joblogging.JobLoggerAdapter.setup_joblogger(configuration)
 configuration.setup_job_watcher()
 
+# Set up the node logging. This may not set up the node logging
+# if this node has never been registered; but we call it again
+# later to handle that case.
+configuration.setup_node_logging()
+
 # Add any routes defined by plugins first. This makes them override internal routes.
 routes_plugins = configuration.plugins.plugins_for(
 	paasmaker.util.plugin.MODE.STARTUP_ROUTES
@@ -201,12 +206,9 @@ def on_registered_with_master():
 		)
 		pacemaker_updater.update(success_insert, failed_insert)
 
-	# Redirect log output into a file based on the node UUID.
-	node_log_path = configuration.get_job_log_path(configuration.get_node_uuid())
-	root_logger = logging.getLogger()
-	log_handler = logging.FileHandler(node_log_path)
-	log_handler.setFormatter(logging.Formatter('%(asctime)s %(levelname)s %(message)s'))
-	root_logger.addHandler(log_handler)
+	# Try again to set up node logging, if it did not previously work.
+	# This is because this might be the first time we've registered.
+	configuration.setup_node_logging()
 
 def on_completed_startup():
 	if platform.system() != 'Darwin' and not is_debug:
