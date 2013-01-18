@@ -49,7 +49,7 @@ class RegisterInstanceJob(BaseJob):
 			port = self.configuration.get_free_port()
 			self.parameters['instance']['port'] = port
 			self.configuration.port_allocator.add_allocated_port(port)
-			self.output_context[self.instance_id] = port
+			self.output_context["port-" + self.instance_id] = port
 
 		if not self.configuration.instances.has_instance(self.instance_id):
 			# Register the instance.

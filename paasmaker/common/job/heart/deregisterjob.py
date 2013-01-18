@@ -65,5 +65,6 @@ class DeRegisterInstanceJob(BaseJob):
 		else:
 			self.logger.warning("Not all files were removed. However, the instance is considered de-registered and can not be reused.")
 
-		self.success({self.instance_id: constants.INSTANCE.DEREGISTERED}, "Completed successfully.")
+		state_key = "state-%s" % self.instance_id
+		self.success({state_key: constants.INSTANCE.DEREGISTERED}, "Completed successfully.")
 

@@ -34,16 +34,17 @@ class InstanceRootBase(BaseJob):
 			# TODO: This is a very poor method of figuring out if the
 			# key is an instance ID.
 			# TODO: Optimise this somewhat. Should be possible with a single update.
-			if key.find('-') != -1:
+			if key.startswith('state-'):
+				instance_id = key[6:]
 				instance = session.query(
 					paasmaker.model.ApplicationInstance
 				).filter(
-					paasmaker.model.ApplicationInstance.instance_id == key
+					paasmaker.model.ApplicationInstance.instance_id == instance_id
 				).first()
 
 				if instance:
 					# Update the instance state.
-					self.logger.debug("Updating state for instance %s to %s", key, value)
+					self.logger.debug("Updating state for instance %s to %s", instance_id, value)
 					instance.state = value
 					session.add(instance)
 		session.commit()

@@ -34,8 +34,9 @@ class StorePortJob(BaseJob):
 		session = self.configuration.get_database_session()
 		instance = session.query(paasmaker.model.ApplicationInstance).get(self.parameters['database_id'])
 
-		if context.has_key(instance_id):
-			instance.port = context[instance_id]
+		key = "port-%s" % instance_id
+		if context.has_key(key):
+			instance.port = context[key]
 			self.logger.debug("Remote allocated port %d to this instance." % instance.port)
 		else:
 			self.logger.debug("Remote did not return a port for this instance.")

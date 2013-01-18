@@ -58,7 +58,8 @@ class InstanceShutdownJob(BaseJob):
 		self.configuration.instances.save()
 
 		self.logger.info("Instance stopped successfully.")
-		self.success({self.instance_id: constants.INSTANCE.STOPPED}, "Stopped instance successfully.")
+		state_key = "state-%s" % self.instance_id
+		self.success({state_key: constants.INSTANCE.STOPPED}, "Stopped instance successfully.")
 
 	def failure_callback(self, message, exception=None):
 		self.logger.error(message)
