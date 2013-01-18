@@ -26,6 +26,8 @@ import tornado
 #       - Optional: Exclusive Startup/Shutdown Container
 #         - Exclusive startup container
 #           - Start A + routing
+#             - Register
+#               - Select locations
 #           - Start B + routing
 #           - Exclusive shutdown container
 #             - Stop A + routing
@@ -146,6 +148,26 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 						{},
 						"Start exclusive instances"
 					)
+
+					# Jobs to select locations for starting exclusive instances,
+					# if required.
+					parameters = {}
+					parameters['application_instance_type_id'] = instance_type.id
+
+					registerer = exclusive_startup_container.add_child()
+					registerer.set_job(
+						'paasmaker.job.coordinate.registerrequest',
+						parameters,
+						"Registration requests for %s" % instance_type.name
+					)
+
+					selectlocations = registerer.add_child()
+					selectlocations.set_job(
+						'paasmaker.job.coordinate.selectlocations',
+						parameters,
+						"Select instance locations for %s" % instance_type.name,
+					)
+
 					exclusive_shutdown_container = exclusive_startup_container.add_child()
 					exclusive_shutdown_container.set_job(
 						'paasmaker.job.container',
@@ -230,7 +252,6 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 						"Pre startup instance %s on node %s" % (instance.instance_id, instance.node.name),
 						node=instance.node.uuid
 					)
-
 			else:
 				# Non-exclusive instance type.
 				instances = self.get_instances(
