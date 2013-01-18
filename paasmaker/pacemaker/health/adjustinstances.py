@@ -170,7 +170,12 @@ class AdjustInstancesHealthCheck(BaseHealthCheck):
 		# Make this job tree executable.
 		def done_executable():
 			self.callback(
-				{},
+				{
+					'adjusted_checked_versions': self.checked_version_count,
+					'adjusted_stop_actions': self.stop_actions,
+					'adjusted_start_actions': self.start_actions,
+					'adjusted_stopped_instances': self.stopped_instances
+				},
 				"Completed. %d versions checked, %d stop requests (%d instances), %d start requests." % (self.checked_version_count, self.stop_actions, self.stopped_instances, self.start_actions)
 			)
 
@@ -218,8 +223,7 @@ class AdjustInstancesHealthCheckTest(BaseHealthCheckTest):
 
 		# It shouldn't have done anything, but should have succeeded at doing nothing.
 		self.assertTrue(self.success, "Should have succeeded.")
-		self.assertEquals(len(self.context), 0, "Should not have emitted context.")
-		self.assertIn(" 0 versions", self.message, "Checked some versions when it should not have.")
+		self.assertEquals(self.context['adjusted_checked_versions'], 0, "Should not have checked any versions.")
 
 		# Create a sample application with a few instances.
 		instance_type = self.create_sample_application(
@@ -272,10 +276,9 @@ class AdjustInstancesHealthCheckTest(BaseHealthCheckTest):
 
 		# It shouldn't have done anything, but should have succeeded at doing nothing.
 		self.assertTrue(self.success, "Should have succeeded.")
-		self.assertEquals(len(self.context), 0, "Should not have emitted context.")
-		self.assertIn(" 1 versions", self.message, "Didn't check the right number of versions.")
-		self.assertIn(" 0 stop", self.message, "Stopped instances when it should not have.")
-		self.assertIn(" 0 start", self.message, "Started instances when it should not have.")
+		self.assertEquals(self.context['adjusted_checked_versions'], 1, "Didn't check any versions.")
+		self.assertEquals(self.context['adjusted_stop_actions'], 0, "Performed stop actions.")
+		self.assertEquals(self.context['adjusted_start_actions'], 0, "Performed start actions.")
 
 		# Stop that instance, and run again.
 		instance_running.state = constants.INSTANCE.STOPPED
@@ -291,10 +294,9 @@ class AdjustInstancesHealthCheckTest(BaseHealthCheckTest):
 		self.wait()
 
 		self.assertTrue(self.success, "Should have succeeded.")
-		self.assertEquals(len(self.context), 0, "Should not have emitted context.")
-		self.assertIn(" 1 versions", self.message, "Didn't check the right number of versions.")
-		self.assertIn(" 0 stop", self.message, "Stopped instances when it should not have.")
-		self.assertIn(" 1 start", self.message, "Did not start instances when it should not have.")
+		self.assertEquals(self.context['adjusted_checked_versions'], 1, "Didn't check any versions.")
+		self.assertEquals(self.context['adjusted_stop_actions'], 0, "Performed stop actions.")
+		self.assertEquals(self.context['adjusted_start_actions'], 1, "Didn't perform start actions.")
 
 		# Update it again to running.
 		# And then add another instance, which will be too many.
@@ -322,8 +324,7 @@ class AdjustInstancesHealthCheckTest(BaseHealthCheckTest):
 		self.wait()
 
 		self.assertTrue(self.success, "Should have succeeded.")
-		self.assertEquals(len(self.context), 0, "Should not have emitted context.")
-		self.assertIn(" 1 versions", self.message, "Didn't check the right number of versions.")
-		self.assertIn(" 1 stop", self.message, "Didn't stop instances when it should have.")
-		self.assertIn("(1 instances", self.message, "Didn't stop instances when it should have.")
-		self.assertIn(" 0 start", self.message, "Started instances when it should not have.")
+		self.assertEquals(self.context['adjusted_checked_versions'], 1, "Didn't check any versions.")
+		self.assertEquals(self.context['adjusted_stop_actions'], 1, "Didn't perform stop actions.")
+		self.assertEquals(self.context['adjusted_stopped_instances'], 1, "Didn't stop instances.")
+		self.assertEquals(self.context['adjusted_start_actions'], 0, "Performed start actions.")
