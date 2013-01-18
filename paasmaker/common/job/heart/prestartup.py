@@ -34,6 +34,9 @@ class PreInstanceStartupJob(BaseJob):
 			self.instance_data['environment']
 		)
 
+		if self.instance_data['instance'].has_key('port'):
+			self.instance_data['environment']['PM_PORT'] = str(self.instance_data['instance']['port'])
+
 		# Callback for when the environment is ready.
 		# This environment is used to actually fire up the instance as well.
 		def environment_ready(message):
