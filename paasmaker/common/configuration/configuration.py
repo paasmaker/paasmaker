@@ -803,7 +803,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			runtime = self.plugins.instantiate(plugin, paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
 			versions = runtime.get_versions()
 
-			tags[plugin] = versions
+			if len(versions) > 0:
+				# Only report that we have this runtime at all if we have
+				# more than one version.
+				tags[plugin] = versions
 
 		self._runtime_cache = tags
 		return self._runtime_cache
