@@ -141,7 +141,7 @@ class JobBackend(object):
 		waiting state, and whose children are all in the supplied success state.
 		Call the callback with a set of jobs that match.
 		"""
-		raise NotImplementedError("You must implement get_jobs_in_state().")
+		raise NotImplementedError("You must implement get_ready_to_run().")
 
 	def set_state_tree(self, job_id, from_state, to_state, callback, node=None):
 		"""
@@ -167,3 +167,14 @@ class JobBackend(object):
 		no arguments when done.
 		"""
 		raise NotImplementedError("You must implement delete_tree().")
+
+	def get_node_jobs(self, node, callback, state=None):
+		"""
+		Get a list of jobs on the given node. These could be anywhere in a job
+		tree. Optionally limit it to the list of states supplied.
+
+		:arg str node: The node UUID to fetch the jobs for.
+		:arg callable callback: The callback to call with the list of job IDs.
+		:arg str|list state: The states to limit to.
+		"""
+		raise NotImplementedError("You must implement get_node_jobs().")

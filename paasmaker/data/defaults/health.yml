@@ -9,3 +9,6 @@ groups:
       - plugin: paasmaker.health.adjustinstances
         order: 20
         parameters: {}
+      - plugin: paasmaker.health.stuckjobs
+        order: 20
+        parameters: {}

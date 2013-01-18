@@ -441,6 +441,45 @@ class JobManager(object):
 		# sort itself out.
 		self.configuration.send_job_status(job_id, constants.JOB.ABORTED)
 
+	def force_abort(self, job_id, node, callback):
+		# Force abort this job. This is designed for Pacemakers to kill jobs
+		# on down nodes. The default handling won't touch this because the
+		# pacemaker node won't own the job.
+		def on_waiting_altered(waiting_jobs):
+			# Now broadcast the status.
+			for job in waiting_jobs:
+				self.configuration.send_job_status(job, constants.JOB.ABORTED, summary="Aborted due to a related job.")
+
+			def on_running_altered(running_jobs):
+				for job in running_jobs:
+					self.configuration.send_job_status(job, constants.JOB.ABORTED, summary="Aborted due to a related job.")
+
+				callback(waiting_jobs.union(running_jobs))
+
+				# end of on_running_altered()
+
+			# Do the same for RUNNING.
+			logger.debug("Searching for WAITING jobs, and adjusting to aborted for tree %s.", job_id)
+			self.backend.set_state_tree(
+				job_id,
+				constants.JOB.RUNNING,
+				constants.JOB.ABORTED,
+				on_running_altered,
+				node=node
+			)
+
+			# end of on_waiting_altered()
+
+		logger.debug("Force aborting jobs for node %s." % node)
+		logger.debug("Searching for WAITING jobs, and adjusting to aborted for tree %s.", job_id)
+		self.backend.set_state_tree(
+			job_id,
+			constants.JOB.WAITING,
+			constants.JOB.ABORTED,
+			on_waiting_altered,
+			node=node
+		)
+
 	def debug_dump_job_tree(self, job_id, callback):
 		def on_job_full(jobs):
 			# Righto! Now we can sort and build this into a tree.
@@ -476,6 +515,9 @@ class JobManager(object):
 
 	def find_older_than(self, age, callback, limit=None):
 		self.backend.find_older_than(age, callback, limit=limit)
+
+	def get_node_jobs(self, node, callback, state=None):
+		self.backend.get_node_jobs(node, callback, state=state)
 
 	def delete_tree(self, job_id, callback):
 		self.backend.delete_tree(job_id, callback)

@@ -526,6 +526,24 @@ class RedisJobBackend(JobBackend):
 		# Find the root of the job.
 		self.get_root(job_id, on_found_root)
 
+	def get_node_jobs(self, node, callback, state=None):
+		# Figure out what sets to fetch from.
+		sets = []
+		if state:
+			if isinstance(state, basestring):
+				sets.append("node:%s:%s" % (node, state))
+			else:
+				for state_name in state:
+					sets.append("node:%s:%s" % (node, state_name))
+		else:
+			sets.append("node:%s" % node)
+
+		def got_node_jobs(jobs):
+			callback(jobs)
+
+		# Now fetch the intersection of those sets.
+		self.redis.sunion(sets, callback=got_node_jobs)
+
 class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		super(JobManagerBackendTest, self).setUp()
@@ -571,6 +589,29 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 		older = self.wait()
 
 		self.assertEquals(len(older), 0, "Not the right number of older jobs.")
+
+		# Find all the jobs on the node.
+		self.backend.get_node_jobs('here', self.stop)
+		jobs = self.wait()
+
+		self.assertEquals(len(jobs), 4, "Wrong number of node jobs returned.")
+
+		# Find by state on the node.
+		self.backend.get_node_jobs('here', self.stop, state=constants.JOB.RUNNING)
+		jobs = self.wait()
+
+		self.assertEquals(len(jobs), 2, "Wrong number of node jobs returned.")
+
+		# Find by an array of states on the node.
+		self.backend.get_node_jobs('here', self.stop, state=[constants.JOB.RUNNING])
+		jobs = self.wait()
+
+		self.assertEquals(len(jobs), 2, "Wrong number of node jobs returned.")
+
+		self.backend.get_node_jobs('here', self.stop, state=[constants.JOB.RUNNING, constants.JOB.WAITING])
+		jobs = self.wait()
+
+		self.assertEquals(len(jobs), 4, "Wrong number of node jobs returned.")
 
 		# Fetch multiple jobs in a batch.
 		self.backend.get_jobs(['child1', 'child2'], self.stop)

@@ -93,6 +93,7 @@ test_sets = {
 	paasmaker.pacemaker.helper.healthmanager: ['all', 'health', 'healthmanager'],
 	paasmaker.pacemaker.health.downnodes: ['all', 'health', 'node'],
 	paasmaker.pacemaker.health.adjustinstances: ['all', 'health', 'repair'],
+	paasmaker.pacemaker.health.stuckjobs: ['all', 'health', 'stuckjobs'],
 
 	paasmaker.common.helper.cleanupmanager: ['all', 'cleanup', 'cleanupmanager'],
 	paasmaker.common.cleaner.logs: ['all', 'cleanup'],
