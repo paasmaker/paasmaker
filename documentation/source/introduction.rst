@@ -209,10 +209,13 @@ However, established digital agencies will manage a large collection of these si
 hundred is not unusual for an agency that has been running for a few years. If each site used
 Elastic Beanstalk, and multiplied by a few hundred - the cost of running such an infrastructure
 adds up. So agencies do virtual hosting - a single server will host many websites, and a handful
-of servers will run several hundred websites.
+of servers will run several hundred websites. Handling failures is hard though, as running
+several hundred websites across a collection of servers, and maintaining which servers run
+which applications, and also keeping the routing up to date, is no small task.
 
 A PaaS can assist with these issues. The concept is to have a small pool of servers, and the
-PaaS can then distribute the resources as needed.
+PaaS can then distribute the resources as needed, working around failures, or scaling up to
+meet demand.
 
 For example, when a short term campaign is launched, you can instruct the PaaS to run it across
 all the nodes. Each node then takes a part of the brunt of the launch. During the campaign run,
