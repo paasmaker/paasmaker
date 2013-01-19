@@ -113,12 +113,6 @@ class PostgresServiceTest(BaseServiceTest):
 		self.short_wait_hack(length=0.5)
 		#delay = raw_input("Press enter to continue.")
 
-	def tearDown(self):
-		self.server.destroy()
-
-		super(PostgresServiceTest, self).tearDown()
-
-	def test_simple(self):
 		self.registry.register(
 			'paasmaker.service.postgres',
 			'paasmaker.pacemaker.service.postgres.PostgresService',
@@ -130,6 +124,13 @@ class PostgresServiceTest(BaseServiceTest):
 			},
 			'Postgres Service'
 		)
+
+	def tearDown(self):
+		self.server.destroy()
+
+		super(PostgresServiceTest, self).tearDown()
+
+	def test_simple(self):
 		service = self.registry.instantiate(
 			'paasmaker.service.postgres',
 			paasmaker.util.plugin.MODE.SERVICE_CREATE,
