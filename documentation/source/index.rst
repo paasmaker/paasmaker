@@ -7,6 +7,8 @@ Contents:
 .. toctree::
    :maxdepth: 2
 
+   introduction
+
    user
    administrator
    developer
