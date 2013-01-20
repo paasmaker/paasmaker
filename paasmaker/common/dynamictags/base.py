@@ -14,11 +14,19 @@ class BaseDynamicTags(paasmaker.util.plugin.Plugin):
 	}
 	OPTIONS_SCHEMA = BaseDynamicTagsConfigurationSchema()
 
-	def fetch(self, existing_tags):
+	def fetch(self, existing_tags, callback):
 		"""
-		Alter or insert into the provided existing tags array. Return nothing.
-		This is called synchronously, so you won't want to spend too long doing
-		things, although it is only called once upon node startup.
+		Alter or insert into the provided existing tags array. Call the callback
+		once completed with the tags.
+
+		For example::
+
+			def fetch(self, existing_tags, callback):
+				existing_tags['my_node_tag'] = "tag"
+				callback(existing_tags)
+
+		:arg dict existing_tags: The existing node tags.
+		:arg callable callback: The callback to call once done.
 		"""
 		raise NotImplementedError("You must implement fetch().")
 

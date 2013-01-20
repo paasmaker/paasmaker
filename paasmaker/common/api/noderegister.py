@@ -36,7 +36,7 @@ class NodeRegisterAPIRequest(APIRequest):
 		tags['roles'] = roles
 
 		# Include node tags.
-		tags['node'] = self.configuration.get_dynamic_tags()
+
 
 		payload['tags'] = tags
 
@@ -65,12 +65,18 @@ class NodeRegisterAPIRequest(APIRequest):
 			else:
 				payload_completed()
 
+		def got_tags(dynamic_tags):
+			tags['node'] = dynamic_tags
+			start_runtimes()
+
+		def start_tags():
+			self.configuration.get_dynamic_tags(got_tags)
+
 		def got_stats(stats):
 			payload['stats'] = stats
 			payload['score'] = self.configuration.get_node_score(payload['stats'])
 
-			# Move onto the runtimes list.
-			start_runtimes()
+			start_tags()
 
 		# Kick off the chain.
 		self.configuration.get_node_stats(got_stats)

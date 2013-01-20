@@ -836,19 +836,18 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# Kick off the process.
 		get_versions()
 
-	def get_dynamic_tags(self):
+	def get_dynamic_tags(self, callback):
 		"""
 		Get a list of dynamic tags and their associated values.
 
 		This reaches out to plugins to generate the tags. Once run
-		the first time, this is not run again. Also note that this
-		is run synchronously, so you won't want to spend too much time
-		doing what you need to do.
+		the first time, this is not run again until the node restarts.
 		"""
 
 		if hasattr(self, '_dynamic_tags_cache'):
 			logger.debug("Using existing dynamic tags cache.")
-			return self._dynamic_tags_cache
+			callback(self._dynamic_tags_cache)
+			return
 		else:
 			logger.info("Generating dynamic tags...")
 
@@ -856,15 +855,32 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		tags_plugins = self.plugins.plugins_for(
 			paasmaker.util.plugin.MODE.NODE_DYNAMIC_TAGS
 		)
-		for plugin in tags_plugins:
-			instance = self.plugins.instantiate(
-				plugin,
-				paasmaker.util.plugin.MODE.NODE_DYNAMIC_TAGS
-			)
-			instance.fetch(dynamic_tags)
 
-		self._dynamic_tags_cache = dynamic_tags
-		return dynamic_tags
+		def get_tags():
+			try:
+				def got_tags(tags):
+					# Move onto the next plugin.
+					get_tags()
+
+					# end of got_tags()
+
+				plugin = tags_plugins.pop()
+				tagger = self.plugins.instantiate(
+					plugin,
+					paasmaker.util.plugin.MODE.NODE_DYNAMIC_TAGS
+				)
+				tagger.fetch(dynamic_tags, got_tags)
+
+			except IndexError, ex:
+				# No more to process.
+				# Send back the tags.
+				self._dynamic_tags_cache = dynamic_tags
+				callback(self._dynamic_tags_cache)
+
+			# end of get_tags()
+
+		# Kick off the process.
+		get_tags()
 
 	def get_node_stats(self, callback):
 		"""

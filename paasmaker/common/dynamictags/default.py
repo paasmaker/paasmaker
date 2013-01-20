@@ -6,7 +6,7 @@ from base import BaseDynamicTags, BaseDynamicTagsTest
 
 class DefaultDynamicTags(BaseDynamicTags):
 
-	def fetch(self, existing_tags):
+	def fetch(self, existing_tags, callback):
 		# Store a few possibly helpful tags for the node.
 		tags = {}
 		tags['system'] = platform.system()
@@ -15,6 +15,8 @@ class DefaultDynamicTags(BaseDynamicTags):
 		tags['release'] = platform.release()
 
 		existing_tags['platform'] = tags
+
+		callback(existing_tags)
 
 class DefaultDynamicTagsTest(BaseDynamicTagsTest):
 	def setUp(self):
@@ -34,7 +36,8 @@ class DefaultDynamicTagsTest(BaseDynamicTagsTest):
 		)
 
 		tags = {}
-		plugin.fetch(tags)
+		plugin.fetch(tags, self.stop)
+		self.wait()
 
 		self.assertTrue(tags.has_key('platform'), "Missing platform tags.")
 		self.assertTrue(tags['platform'].has_key('system'), "Missing system tag.")
