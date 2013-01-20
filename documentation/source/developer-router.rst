@@ -7,8 +7,8 @@ HTTP requests are routed inside the system with several components:
 * A NGINX server runs an embedded LUA script.
 * The LUA script connects to the router table Redis that stores
   a mapping of hostnames to instance addresses. It also outputs
-  a key that allows logging the request to the appropriate version
-  type. See the section below for a list.
+  several keys that allows logging the request to the appropriate version
+  type, node, and instance. See the section below for a list.
 * Once the request is complete, NGINX logs the request to a file.
 * The access log file is adjusted to write out JSON lines instead
   of the normal plain text.
@@ -80,17 +80,16 @@ to make it easier to understand what the code is trying to do, and also to assis
 if you are trying to look at the data directly in redis.
 
 instances:<hostname> (SET)
-    This key is a set of instance addresses, for example, "127.0.0.1:42600". This
-    contains all known instance addresses for the router to use. "<hostname>" is the
-    actual hostname that matches the routes. There will be several of these for each
-    application.
+    This key is a set of instance addresses and logging information for that route.
+    This data is combined together to keep all the data together for the routers, and
+    remove the need for a second round trip to collect the logging keys. Each entry
+    in the set looks like this::
 
-logkey:<hostname> (STRING)
-    This key is a simple string, that is the key used to sort the output logs to figure
-    out what application they belong to. The value is a string representation of the
-    version type ID - so note that the router can't tell which instance it routed to,
-    and aggregates at the version type ID level. This is for performance reasons, to
-    avoid a second round trip to the Redis server during routing.
+        <address>:<port>#<version type id>#<node id>#<instance id>
+        An example: 127.0.0.1:42600#1#1#1
+
+    The set key name includes the full hostname of the entry, and this is used to
+    match up the hostname with the set of instances that match it.
 
 instance_ids:<hostname> (SET)
     This key contains a set of instance IDs for the given hostname. For each entry
@@ -107,7 +106,9 @@ Redis key layout - Stats
 ------------------------
 
 The stats instance stores accumulated stats for the router. It's done in such a way
-that remote routers can insert their records when they're ready.
+that remote routers can insert their records when they're ready. Ideally this will
+be done in real time, but routers can catch up later if they lose connectivity or
+are isolated for any reason.
 
 position:<nodeuuid> (INTEGER)
     This key indicates the number of bytes into the stats log that's been read and
@@ -115,7 +116,7 @@ position:<nodeuuid> (INTEGER)
     a track of where it's read up to. If a node can't report in for a while, it can
     use this to catch up when it can report in.
 
-stat:<application version type id> (HASH)
+stat_vt:<application version type id> (HASH)
     This key is a hash that contains the various stats for the given version type ID.
     This records only total stats for that version type ID. The keys stored are:
 
@@ -132,6 +133,9 @@ stat:<application version type id> (HASH)
     * 100/101.../599: the individual response codes are counted as well, but
       may or may not be set. You can test for these if you're interested. These
       are not currently exposed via the API or tools.
+
+    The "vt" in the key stands for "version type" - that is, an ID that matches
+    objects in the ``ApplicationInstanceType`` table.
 
 history:<application version type id>:<unix hour timestamp>:<metric> (HASH)
     These keys store historical values for a metric, in hourly buckets, down

@@ -114,12 +114,12 @@ class StatsLogReader(object):
 		for line in lines:
 			try:
 				parsed = json.loads(line)
-				key = parsed['key']
+				key = parsed['version_type_key']
 				if key == '':
 					# Bad key. Just reset it.
 					key = 'null'
 
-				basic_key = 'stat:%s' % key
+				basic_key = 'stat_vt:%s' % key
 
 				# Basic stats.
 				self._store_hash_value(basic_key, 'requests', 1)
@@ -185,7 +185,7 @@ class StatsLogReader(object):
 		# set, for insertion later. Adds the current value
 		# if it doesn't exist, or creates the key otherwise.
 		# TODO: No longer in use...
-		final_key = "stat:%s:%s" % (key, metric)
+		final_key = "stat_vt:%s:%s" % (key, metric)
 		if self.records.has_key(final_key):
 			self.records[final_key] += value
 		else:
@@ -525,7 +525,7 @@ class ApplicationStats(object):
 			# query out all the relevant metrics.
 			pipeline = self.redis.pipeline(True)
 			for vtid in idset:
-				pipeline.hgetall("stat:%s" % vtid)
+				pipeline.hgetall("stat_vt:%s" % vtid)
 			pipeline.execute(callback=on_stats_fetched)
 
 	def _finalize_stats(self, totals, callback):

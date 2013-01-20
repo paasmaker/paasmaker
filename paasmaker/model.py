@@ -4,6 +4,7 @@ import datetime
 import uuid
 import hashlib
 import logging
+import socket
 
 import paasmaker
 from paasmaker.common.core import constants
@@ -219,6 +220,24 @@ class Node(OrmBase, Base):
 		if not reference:
 			reference = now()
 		return (reference - self.start_time).total_seconds()
+
+	def get_pacemaker_location(self):
+		"""
+		Get the router location entry for this pacemaker
+		instance. The location includes an IP address, and several
+		keys that are used to account for the traffic.
+		"""
+		# TODO: Make this lookup async.
+		# TODO: IPv6 support.
+		# The format of the key is:
+		# <address>:<port>#pacemaker#<node id>#null
+		router_location = '%s:%d#pacemaker#%d#null' % (
+			socket.gethostbyname(self.route),
+			self.apiport,
+			self.id
+		)
+
+		return router_location
 
 class User(OrmBase, Base):
 	"""
@@ -1155,6 +1174,30 @@ class ApplicationInstance(OrmBase, Base):
 	@statistics.setter
 	def statistics(self, val):
 		self._statistics = json.dumps(val)
+
+	def get_router_location(self):
+		"""
+		Get the router location entry for this instance.
+		The location includes an IP address, and also several
+		keys that are used to account for the traffic.
+		"""
+		# TODO: This uses synchronous functions to do DNS
+		# lookups; don't do this. It will require some
+		# refactoring to fix this.
+		# TODO: Replace this with an Async DNS lookup.
+		# TODO: IPv6 support!
+
+		# The format of the key is:
+		# <address>:<port>#<version type id>#<node id>#<instance id>
+		router_location = '%s:%d#%d#%d#%d' % (
+			socket.gethostbyname(self.node.route),
+			self.port,
+			self.application_instance_type_id,
+			self.node_id,
+			self.id
+		)
+
+		return router_location
 
 class ApplicationInstanceTypeHostname(OrmBase, Base):
 	"""

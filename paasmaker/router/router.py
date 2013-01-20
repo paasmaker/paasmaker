@@ -32,8 +32,8 @@ events {
 }
 
 http {
-	log_format paasmaker '{"key":"$logkey","bytes":$bytes_sent,'
-		'"code":$status,"upstream_response_time":"$upstream_response_time",'
+	log_format paasmaker '{"version_type_key":"$versiontypekey","node_key":"$nodekey","instance_key":"$instancekey",'
+		'"bytes":$bytes_sent,"code":$status,"upstream_response_time":"$upstream_response_time",'
 		'"time":"$time_iso8601","timemsec":$msec,"nginx_response_time":$request_time}';
 
 	access_log %(log_path)s/access.log.paasmaker paasmaker;
@@ -49,7 +49,9 @@ http {
 			set $redis_host %(redis_host)s;
 			set $redis_port %(redis_port)d;
 			set $upstream "";
-			set $logkey "null";
+			set $versiontypekey "null";
+			set $nodekey "null";
+			set $instancekey "null";
 			rewrite_by_lua_file %(router_root)s/rewrite.lua;
 
 			proxy_set_header            Host $host;
@@ -254,18 +256,11 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 		# Now insert a record for it.
 		# Inserted records MUST be IP addresses.
-		target = "127.0.0.1:%d" % self.get_http_port()
+		target = "127.0.0.1:%d#1#1#1" % self.get_http_port()
 		redis = self.get_redis_client()
 		redis.sadd('instances:foo.com', target, callback=self.stop)
 		self.wait()
-		logkey = 1
-		redis.set('logkey:foo.com', logkey, callback=self.stop)
-		self.wait()
-		target = "127.0.0.1:%d" % self.get_http_port()
 		redis.sadd('instances:*.foo.com', target, callback=self.stop)
-		self.wait()
-		logkey = 1
-		redis.set('logkey:*.foo.com', logkey, callback=self.stop)
 		self.wait()
 
 		# Fetch the set members.
