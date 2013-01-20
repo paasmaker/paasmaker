@@ -598,6 +598,7 @@ class BaseController(tornado.web.RequestHandler):
 
 		def got_router_vtset(vtset):
 			router_stats.total_for_list(
+				'vt',
 				vtset,
 				got_router_stats,
 				router_stats_error
