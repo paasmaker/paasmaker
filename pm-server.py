@@ -411,13 +411,15 @@ def on_exit_plugins_prenotify():
 		).filter(
 			paasmaker.model.Node.uuid == configuration.get_node_uuid()
 		).first()
-		pacemaker_updater = paasmaker.common.job.routing.routing.RouterTablePacemakerUpdate(
-			configuration,
-			node,
-			False,
-			logging
-		)
-		pacemaker_updater.update(success_remove, failed_remove)
+
+		if node:
+			pacemaker_updater = paasmaker.common.job.routing.routing.RouterTablePacemakerUpdate(
+				configuration,
+				node,
+				False,
+				logging
+			)
+			pacemaker_updater.update(success_remove, failed_remove)
 
 def on_exit_prenotify_complete(message, exception=None):
 	on_exit_plugins_prenotify.required -= 1

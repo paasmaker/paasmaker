@@ -36,8 +36,6 @@ class NodeRegisterAPIRequest(APIRequest):
 		tags['roles'] = roles
 
 		# Include node tags.
-
-
 		payload['tags'] = tags
 
 		logger.debug("Sending node tags: %s", str(tags))
@@ -103,10 +101,13 @@ class NodeUpdateAPIRequest(NodeRegisterAPIRequest):
 	of the NodeRegisterAPIRequest that sends along the existing
 	UUID.
 	"""
-	def build_payload(self):
-		payload = super(NodeUpdateAPIRequest, self).build_payload()
-		payload['uuid'] = self.configuration.get_node_uuid()
-		return payload
+	def async_build_payload(self, payload, callback):
+		def completed_parent_payload(parent_payload):
+			payload['uuid'] = self.configuration.get_node_uuid()
+
+			callback(payload)
+
+		super(NodeUpdateAPIRequest, self).async_build_payload(payload, completed_parent_payload)
 
 	def get_endpoint(self):
 		return '/node/update'
