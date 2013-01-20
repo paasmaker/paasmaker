@@ -114,60 +114,103 @@ class StatsLogReader(object):
 		for line in lines:
 			try:
 				parsed = json.loads(line)
-				key = parsed['version_type_key']
-				if key == '':
+				vt_id = parsed['version_type_key']
+				if vt_id == '':
 					# Bad key. Just reset it.
-					key = 'null'
+					vt_id = 'null'
 
-				basic_key = 'stat_vt:%s' % key
+				vt_key = 'stat_vt:%s' % vt_id
+
+				node_id = parsed['node_key']
+				node_key = None
+				if node_id == '' or node_id == 'null':
+					# Bad key. Don't log anything.
+					node_id = None
+				else:
+					node_key = 'stat_node:%s' % node_id
 
 				# Basic stats.
-				self._store_hash_value(basic_key, 'requests', 1)
-				self._store_hash_value(basic_key, 'bytes', parsed['bytes'])
+				self._store_hash_value(vt_key, 'requests', 1)
+				self._store_hash_value(vt_key, 'bytes', parsed['bytes'])
+
+				if node_key:
+					self._store_hash_value(node_key, 'requests', 1)
+					self._store_hash_value(node_key, 'bytes', parsed['bytes'])
 
 				# The upstream response time, if given.
 				if parsed['upstream_response_time'] != '-':
 					# Convert it into decimal milliseconds.
 					upstream_response_milliseconds = int(float(parsed['upstream_response_time']) * 1000)
 
-					self._store_hash_value(basic_key, 'time', upstream_response_milliseconds)
-					self._store_hash_value(basic_key, 'timecount', 1)
+					self._store_hash_value(vt_key, 'time', upstream_response_milliseconds)
+					self._store_hash_value(vt_key, 'timecount', 1)
+
+					if node_key:
+						self._store_hash_value(node_key, 'time', upstream_response_milliseconds)
+						self._store_hash_value(node_key, 'timecount', 1)
 
 				# nginx's own time, converted into decimal milliseconds.
 				nginx_time_milliseconds = int(float(parsed['nginx_response_time']) * 1000)
-				self._store_hash_value(basic_key, 'nginxtime', nginx_time_milliseconds)
+				self._store_hash_value(vt_key, 'nginxtime', nginx_time_milliseconds)
+
+				if node_key:
+					self._store_hash_value(node_key, 'nginxtime', nginx_time_milliseconds)
 
 				# Split the response code into categories.
 				code_category = "%dxx" % (parsed['code'] / 100)
-				self._store_hash_value(basic_key, code_category, 1)
+				self._store_hash_value(vt_key, code_category, 1)
+
+				if node_key:
+					self._store_hash_value(node_key, code_category, 1)
 
 				# But why not, let's store the exact code too! It's quite cheap.
-				self._store_hash_value(basic_key, parsed['code'], 1)
+				self._store_hash_value(vt_key, parsed['code'], 1)
+
+				if node_key:
+					self._store_hash_value(node_key, parsed['code'], 1)
 
 				# For graphs. The target keys are like this:
 				# history:<vtid>:NNNNNNNNN:requests
 				# Where NNNNNNN is the unix time in seconds at the top of the hour.
 				# The key type is a hash.
 				hour_top = parsed['timemsec'] - (parsed['timemsec'] % 3600)
-				history_prefix = "history:%s:%d" % (key, hour_top)
+				history_prefix_vt = "history_vt:%s:%d" % (vt_id, hour_top)
+				history_prefix_node = None
+				if node_key:
+					history_prefix_node = "history_node:%s:%d" % (node_id, hour_top)
+
 				# And co-orce this one into an int.
 				history_key = "%d" % parsed['timemsec']
 
 				# Basic stats.
-				self._store_hash_value("%s:requests" % history_prefix, history_key, 1)
-				self._store_hash_value("%s:bytes" % history_prefix, history_key, parsed['bytes'])
+				self._store_hash_value("%s:requests" % history_prefix_vt, history_key, 1)
+				self._store_hash_value("%s:bytes" % history_prefix_vt, history_key, parsed['bytes'])
+
+				if history_prefix_node:
+					self._store_hash_value("%s:requests" % history_prefix_node, history_key, 1)
+					self._store_hash_value("%s:bytes" % history_prefix_node, history_key, parsed['bytes'])
 
 				# Upstream response time and count.
 				if parsed['upstream_response_time'] != '-':
 					# Convert it into decimal milliseconds.
-					self._store_hash_value("%s:time" % history_prefix, history_key, upstream_response_milliseconds)
-					self._store_hash_value("%s:timecount" % history_prefix, history_key, 1)
+					self._store_hash_value("%s:time" % history_prefix_vt, history_key, upstream_response_milliseconds)
+					self._store_hash_value("%s:timecount" % history_prefix_vt, history_key, 1)
+
+					if history_prefix_node:
+						self._store_hash_value("%s:time" % history_prefix_node, history_key, upstream_response_milliseconds)
+						self._store_hash_value("%s:timecount" % history_prefix_node, history_key, 1)
 
 				# Response code.
-				self._store_hash_value("%s:%s" % (history_prefix, code_category), history_key, 1)
+				self._store_hash_value("%s:%s" % (history_prefix_vt, code_category), history_key, 1)
+
+				if history_prefix_node:
+					self._store_hash_value("%s:%s" % (history_prefix_node, code_category), history_key, 1)
 
 				# nginx's own time, converted into decimal milliseconds.
-				self._store_hash_value("%s:nginxtime" % history_prefix, history_key, nginx_time_milliseconds)
+				self._store_hash_value("%s:nginxtime" % history_prefix_vt, history_key, nginx_time_milliseconds)
+
+				if history_prefix_node:
+					self._store_hash_value("%s:nginxtime" % history_prefix_node, history_key, nginx_time_milliseconds)
 
 			except ValueError, ex:
 				# Invalid line. Skip it.
@@ -474,17 +517,17 @@ class ApplicationStats(object):
 		"""
 		Helper to return a list of stats for uncaught requests.
 		"""
-		self.total_for_list(['null'], callback, error_callback)
+		self.total_for_list('vt', ['null'], callback, error_callback)
 
 	def total_for_pacemaker(self, callback, error_callback):
 		"""
 		Helper to return a list of stats for pacemaker requests.
 		"""
-		self.total_for_list(['pacemaker'], callback, error_callback)
+		self.total_for_list('vt', ['pacemaker'], callback, error_callback)
 
-	def total_for_list(self, idset, callback, error_callback):
+	def total_for_list(self, listtype, idset, callback, error_callback):
 		"""
-		Return the stats for the given version type ID list set.
+		Return the stats for the given list type and ID set.
 
 		A dict with all the possible stats is returned, which is
 		an aggregate of all the version type IDs supplied.
@@ -492,13 +535,19 @@ class ApplicationStats(object):
 		If an empty list of IDs is supplied, the error callback is
 		called.
 
-		:arg list idset: A list of version type IDs to fetch
-			the stats for.
+		:arg str listtype: One of "node" or "vt". If "node", idset is considered
+			to be a list of nodes to aggregate. If "vt", idset is considered a
+			list of version type IDs to aggregate.
+		:arg list idset: A list of version type IDs or nodes to
+			fetch the stats for.
 		:arg callable callback: A callback to call with the stats.
 			Passed a single argument which is a dict of stats.
 		:arg callable error_callback: A callback used if an error
 			occurs.
 		"""
+		if listtype not in ['node', 'vt']:
+			raise ValueError("List type must be either node or vt.")
+
 		def on_stats_fetched(stats):
 			# Parse the result from Redis into something more manageable.
 			metric_totals = {}
@@ -523,9 +572,14 @@ class ApplicationStats(object):
 		else:
 			# Ok, now, for the given id set list,
 			# query out all the relevant metrics.
+			if listtype == 'vt':
+				root_key = "stat_vt"
+			elif listtype == 'node':
+				root_key = "stat_node"
+
 			pipeline = self.redis.pipeline(True)
-			for vtid in idset:
-				pipeline.hgetall("stat_vt:%s" % vtid)
+			for thing_id in idset:
+				pipeline.hgetall("%s:%s" % (root_key, thing_id))
 			pipeline.execute(callback=on_stats_fetched)
 
 	def _finalize_stats(self, totals, callback):
@@ -554,10 +608,9 @@ class ApplicationStats(object):
 		# And we're done.
 		callback(totals)
 
-	def history_for_list(self, idset, metric, callback, error_callback, start, end=None):
+	def history(self, listtype, idset, metric, callback, error_callback, start, end=None):
 		"""
-		Return the history for a given metric and version type ID set,
-		in the given time frame.
+		Return the history for a given metric, list type, and ID set.
 
 		* This can return up to one value per second in the range;
 		  keep your ranges as small as you need them.
@@ -570,7 +623,10 @@ class ApplicationStats(object):
 				...
 			]
 
-		:arg list idset: The list of version type IDs to aggregate.
+		:arg str listtype: One of "node" or "vt". If "node", idset is considered
+			to be a list of nodes to aggregate. If "vt", idset is considered a
+			list of version type IDs to aggregate.
+		:arg list idset: The list of IDs to aggregate.
 		:arg str metric: One of the metrics for which the system records
 			history.
 		:arg callable callback: The callback to call with the history. This
@@ -583,6 +639,9 @@ class ApplicationStats(object):
 		# 2. Query all those history sets.
 		# 3. Merge all those history sets together, culling off data in the process.
 		# 4. Perform finalization of the data (averaging, etc)
+
+		if listtype not in ['node', 'vt']:
+			raise ValueError("List type must be either node or vt.")
 
 		if not end:
 			end = int(time.time())
@@ -619,15 +678,21 @@ class ApplicationStats(object):
 		#   [time, value]
 		# ]
 		# Queries from redis:
-		# history_<vtid>_NNNNNNNNNN_<metric> x 1 per vtid x 1 per hour boundary.
+		# history_<vt|node>:<id>:NNNNNNNNNN:<metric> x 1 per id x 1 per hour boundary.
 		real_start = int(start - (start % 3600))
 		hour_boundaries = range(real_start, int(end), 3600)
 
+		if listtype == 'vt':
+			root_key = "history_vt"
+		elif listtype == 'node':
+			root_key = "history_node"
+
 		pipeline = self.redis.pipeline(True)
-		for vtid in idset:
+		for thing_id in idset:
 			for boundary in hour_boundaries:
-				key = "history:%s:%s:%s" % (
-					vtid,
+				key = "%s:%s:%s:%s" % (
+					root_key,
+					thing_id,
 					boundary,
 					metric
 				)

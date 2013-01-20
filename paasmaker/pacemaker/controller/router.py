@@ -127,7 +127,7 @@ class RouterStatsStreamHandler(BaseWebsocketHandler):
 			self.send_error('error', message)
 
 		def got_set(vtset):
-			self.stats_output.total_for_list(vtset, got_stats, failed_stats)
+			self.stats_output.total_for_list('vt', vtset, got_stats, failed_stats)
 
 		# Must match the request schema.
 		request = self.validate_data(message, RouterStatsRequestSchema())
@@ -160,7 +160,8 @@ class RouterStatsStreamHandler(BaseWebsocketHandler):
 			self.send_error('error', message)
 
 		def got_set(vtset):
-			self.stats_output.history_for_list(
+			self.stats_output.history(
+				'vt',
 				vtset,
 				request['metric'],
 				got_history,

@@ -137,7 +137,7 @@ stat_vt:<application version type id> (HASH)
     The "vt" in the key stands for "version type" - that is, an ID that matches
     objects in the ``ApplicationInstanceType`` table.
 
-history:<application version type id>:<unix hour timestamp>:<metric> (HASH)
+history_vt:<application version type id>:<unix hour timestamp>:<metric> (HASH)
     These keys store historical values for a metric, in hourly buckets, down
     to the second resolution.
 
@@ -153,6 +153,10 @@ history:<application version type id>:<unix hour timestamp>:<metric> (HASH)
     the most efficient storage method (because to get any range you have to fetch
     the whole hour, or multiple hours from multiple hashes) but should be fast
     enough for the moment.
+
+history_vt:<node id>:<unix hour timestamp>:<metric> (HASH)
+    These keys are the same as history_vt, except they're for a single node instead
+    of an application version type.
 
 workspace:<workspace id> (SET)
     This key contains a set of all application version type IDs that appear in the

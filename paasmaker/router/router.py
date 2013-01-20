@@ -256,7 +256,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 		# Now insert a record for it.
 		# Inserted records MUST be IP addresses.
-		target = "127.0.0.1:%d#1#1#1" % self.get_http_port()
+		target = "127.0.0.1:%d#1#2#3" % self.get_http_port()
 		redis = self.get_redis_client()
 		redis.sadd('instances:foo.com', target, callback=self.stop)
 		self.wait()
@@ -335,7 +335,18 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		stats_output.vtset_for_name('version_type', 1, self.stop)
 		vtset = self.wait()
 		#print json.dumps(vtset, indent=4, sort_keys=True)
-		stats_output.total_for_list(vtset, self.stop, self.stop)
+		stats_output.total_for_list('vt', vtset, self.stop, self.stop)
+		result = self.wait()
+		#print json.dumps(result, indent=4, sort_keys=True)
+
+		self.assertEquals(result['requests'], 3, "Wrong number of requests.")
+		self.assertEquals(result['2xx'], 3, "Wrong number of requests.")
+		self.assertTrue(result['bytes'] > 400, "Wrong value returned.")
+		self.assertTrue(result['nginxtime'] > 0, "Wrong value returned.")
+		self.assertTrue(result['time'] > 0, "Wrong value returned.")
+
+		# Check that we have the same stats for the node.
+		stats_output.total_for_list('node', [2], self.stop, self.stop)
 		result = self.wait()
 		#print json.dumps(result, indent=4, sort_keys=True)
 
@@ -361,7 +372,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 		stats_output.vtset_for_name('workspace', 1, self.stop)
 		vtset = self.wait()
-		stats_output.total_for_list(vtset, self.stop, self.stop)
+		stats_output.total_for_list('vt', vtset, self.stop, self.stop)
 		result = self.wait()
 
 		# And the result should match the stats results for the
@@ -385,7 +396,16 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		stats_output.vtset_for_name('version_type', 1, self.stop)
 		vtset = self.wait()
 		#print json.dumps(vtset, indent=4, sort_keys=True)
-		stats_output.history_for_list(vtset, 'requests', self.stop, self.stop, time.time() - 60)
+		stats_output.history('vt', vtset, 'requests', self.stop, self.stop, time.time() - 60)
+		result = self.wait()
+		#print json.dumps(result, indent=4, sort_keys=True)
+
+		self.assertEquals(len(result), 1, "Wrong number of data points.")
+		self.assertEquals(len(result[0]), 2, "Malformed response.")
+		self.assertEquals(result[0][1], 3, "Wrong number of requests.")
+
+		# Do the same thing for the node history.
+		stats_output.history('node', [2], 'requests', self.stop, self.stop, time.time() - 60)
 		result = self.wait()
 		#print json.dumps(result, indent=4, sort_keys=True)
 
