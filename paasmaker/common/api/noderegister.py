@@ -16,10 +16,8 @@ class NodeRegisterAPIRequest(APIRequest):
 	internal use only, and you should not call it from your code.
 	"""
 
-	def build_payload(self):
-		# Build our payload.
-		payload = {}
-
+	def async_build_payload(self, payload, callback):
+		# Basic information.
 		# So here's my number... call me maybe?
 		payload['name'] = self.configuration.get_flat('my_name')
 		payload['route'] = self.configuration.get_flat('my_route')
@@ -36,11 +34,6 @@ class NodeRegisterAPIRequest(APIRequest):
 		roles['router'] = self.configuration.is_router()
 
 		tags['roles'] = roles
-
-		# Runtimes.
-		if self.configuration.is_heart():
-			runtimes = self.configuration.get_runtimes()
-			tags['runtimes'] = runtimes
 
 		# Include node tags.
 		tags['node'] = self.configuration.get_dynamic_tags()
@@ -60,7 +53,25 @@ class NodeRegisterAPIRequest(APIRequest):
 
 			logger.debug("Sending instance states: %s", str(statuses))
 
-		return payload
+		# Now delve into and fetch the asynchronous information.
+		def payload_completed():
+			# Called when all information has been gathered.
+			callback(payload)
+
+		def got_runtimes(runtimes):
+			# Got the runtimes from the configuration object.
+			tags['runtimes'] = runtimes
+			payload_completed()
+
+		def start_runtimes():
+			# Runtimes.
+			if self.configuration.is_heart():
+				self.configuration.get_runtimes(got_runtimes)
+			else:
+				payload_completed()
+
+		# Kick off the chain.
+		start_runtimes()
 
 	def get_endpoint(self):
 		return '/node/register'

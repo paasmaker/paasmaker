@@ -614,54 +614,66 @@ class NodeRegisterAPIRequestLocalHost(paasmaker.common.api.NodeRegisterAPIReques
 	Stub class to send back localhost as the route - on some machines,
 	the local path detection causes the unit tests to fail.
 	"""
-	def build_payload(self):
-		data = super(NodeRegisterAPIRequestLocalHost, self).build_payload()
-		data['route'] = 'localhost'
-		return data
+	def async_build_payload(self, payload, callback):
+		def parent_payload_done(parent_data):
+			payload['route'] = 'localhost'
+			callback(payload)
+
+		super(NodeRegisterAPIRequestLocalHost, self).async_build_payload(payload, parent_payload_done)
 
 class NodeUpdateAPIRequestLocalHost(paasmaker.common.api.NodeUpdateAPIRequest):
 	"""
 	Stub class to send back localhost as the route - on some machines,
 	the local path detection causes the unit tests to fail.
 	"""
-	def build_payload(self):
-		data = super(NodeUpdateAPIRequestLocalHost, self).build_payload()
-		data['route'] = 'localhost'
-		return data
+	def async_build_payload(self, payload, callback):
+		def parent_payload_done(parent_data):
+			payload['route'] = 'localhost'
+			callback(payload)
+
+		super(NodeUpdateAPIRequestLocalHost, self).async_build_payload(payload, parent_payload_done)
 
 class NodeShutdownAPIRequestLocalHost(paasmaker.common.api.NodeShutdownAPIRequest):
 	"""
 	Stub class to send back localhost as the route - on some machines,
 	the local path detection causes the unit tests to fail.
 	"""
-	def build_payload(self):
-		data = super(NodeShutdownAPIRequestLocalHost, self).build_payload()
-		data['route'] = 'localhost'
-		return data
+	def async_build_payload(self, payload, callback):
+		def parent_payload_done(parent_data):
+			payload['route'] = 'localhost'
+			callback(payload)
+
+		super(NodeShutdownAPIRequestLocalHost, self).async_build_payload(payload, parent_payload_done)
 
 class NodeRegisterAPIRequestFailPort(paasmaker.common.api.NodeRegisterAPIRequest):
 	"""
 	Stub class to send back a faulty HTTP port, to stop it from accessing the remote end.
 	"""
-	def build_payload(self):
-		data = super(NodeRegisterAPIRequestFailPort, self).build_payload()
-		data['apiport'] += 1000
-		return data
+	def async_build_payload(self, payload, callback):
+		def parent_payload_done(parent_data):
+			payload['apiport'] += 1000
+			callback(payload)
+
+		super(NodeRegisterAPIRequestFailPort, self).async_build_payload(payload, parent_payload_done)
 
 class NodeRegisterAPIRequestFailHost(paasmaker.common.api.NodeRegisterAPIRequest):
 	"""
 	Stub class to send back a faulty route, to stop it from accessing the remote end.
 	"""
-	def build_payload(self):
-		data = super(NodeRegisterAPIRequestFailHost, self).build_payload()
-		data['route'] = 'noexist.paasmaker.com'
-		return data
+	def async_build_payload(self, payload, callback):
+		def parent_payload_done(parent_data):
+			payload['route'] = 'noexist.paasmaker.com'
+			callback(payload)
+
+		super(NodeRegisterAPIRequestFailHost, self).async_build_payload(payload, parent_payload_done)
 
 class NodeUpdateAPIRequestFailUUID(paasmaker.common.api.NodeUpdateAPIRequest):
 	"""
 	Stub class to send back a faulty UUID.
 	"""
-	def build_payload(self):
-		data = super(NodeUpdateAPIRequestFailUUID, self).build_payload()
-		data['uuid'] = 'no node to see here'
-		return data
+	def async_build_payload(self, payload, callback):
+		def parent_payload_done(parent_data):
+			payload['uuid'] = 'no node to see here'
+			callback(payload)
+
+		super(NodeUpdateAPIRequestFailUUID, self).async_build_payload(payload, parent_payload_done)

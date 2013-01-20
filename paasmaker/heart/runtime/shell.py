@@ -39,9 +39,9 @@ class ShellRuntime(BaseRuntime):
 	}
 	OPTIONS_SCHEMA = ShellRuntimeOptionsSchema()
 
-	def get_versions(self):
+	def get_versions(self, callback):
 		# Just return this version.
-		return ['1']
+		callback(['1'])
 
 	def environment(self, version, environment, callback, error_callback):
 		# Nothing to set up - so just proceed.
@@ -147,7 +147,8 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		self.configuration.plugins.register('paasmaker.runtime.shell', 'paasmaker.heart.runtime.ShellRuntime', {}, 'Shell Runtime')
 		instance = self.configuration.plugins.instantiate('paasmaker.runtime.shell', paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
 
-		versions = instance.get_versions()
+		instance.get_versions(self.stop)
+		versions = self.wait()
 
 		self.assertEquals(len(versions), 1, "More than one version?")
 		self.assertEquals(versions[0], "1", "Wrong version returned.")

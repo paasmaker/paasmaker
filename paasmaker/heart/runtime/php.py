@@ -68,20 +68,23 @@ Listen %(port)d
 </VirtualHost>
 """
 
-	def get_versions(self):
-		# TODO: Handle when this fails, rather than letting it bubble.
-		raw_version = subprocess.check_output(['php', '-v'])
-		# Parse out the version number.
-		match = re.match(r'PHP ([\d.]+)', raw_version)
-		if match:
-			version = match.group(1)
-			bits = version.split(".")
-			major_version = ".".join(bits[0:2])
+	def get_versions(self, callback):
+		try:
+			raw_version = subprocess.check_output(['php', '-v'])
+			# Parse out the version number.
+			match = re.match(r'PHP ([\d.]+)', raw_version)
+			if match:
+				version = match.group(1)
+				bits = version.split(".")
+				major_version = ".".join(bits[0:2])
 
-			return [major_version, version]
-		else:
-			# No versions available.
-			return []
+				callback([major_version, version])
+			else:
+				# No versions available.
+				callback([])
+		except subprocess.CalledProcessError, ex:
+			# This means PHP didn't exist.
+			callback([])
 
 	def environment(self, version, environment, callback, error_callback):
 		# Nothing to set up - so just proceed.
@@ -310,7 +313,8 @@ class PHPRuntimeTest(BaseRuntimeTest):
 			paasmaker.util.plugin.MODE.RUNTIME_VERSIONS
 		)
 
-		versions = instance.get_versions()
+		instance.get_versions(self.stop)
+		versions = self.wait()
 
 		comparison = subprocess.check_output(['php', '-v'])
 		self.assertEquals(len(versions), 2, "Should have returned two values.")

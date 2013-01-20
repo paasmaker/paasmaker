@@ -50,7 +50,7 @@ class RbenvRuntime(BaseRuntime):
 		# or an absolute path if required.
 		return os.path.expanduser(raw_path)
 
-	def get_versions(self, include_majors=True):
+	def get_versions(self, callback, include_majors=True):
 		# From the directory, glob out a set of versions.
 		path = self._get_rbenv_root_path()
 		version_path = os.path.join(path, 'versions')
@@ -91,65 +91,74 @@ class RbenvRuntime(BaseRuntime):
 		output_versions = list(versions)
 		output_versions.sort()
 
-		return output_versions
+		callback(output_versions)
 
-	def _locate_version(self, version, candidates=None):
+	def _locate_version(self, version, callback, candidates=None):
+		def got_versions(versions):
+			# Does the exact version exist already?
+			if version in versions:
+				# Yes! Return it.
+				callback(version)
+				return
+			else:
+				# Not exactly. Let's search for the highest
+				# closest version match.
+				versions.reverse()
+				for possible_version in versions:
+					if possible_version.startswith(version):
+						# Found it. Because the list
+						# was sorted, this should be
+						# the highest version.
+						callback(possible_version)
+						return
+
+				# If we got here, we didn't find a match.
+				callback(None)
+
+			# end of got_versions()
+
 		# Get a list of available versions.
 		if candidates:
-			versions = candidates
+			got_versions(candidates)
 		else:
-			versions = self.get_versions(include_majors=False)
-
-		# Does the exact version exist already?
-		if version in versions:
-			# Yes! Return it.
-			return version
-		else:
-			# Not exactly. Let's search for the highest
-			# closest version match.
-			versions.reverse()
-			for possible_version in versions:
-				if possible_version.startswith(version):
-					# Found it. Because the list
-					# was sorted, this should be
-					# the highest version.
-					return possible_version
-
-			# If we got here, we didn't find a match.
-			return None
+			versions = self.get_versions(got_versions, include_majors=False)
 
 	def environment(self, version, environment, callback, error_callback):
 		# To get rbenv to work, all we need to do is to
 		# adjust two environment variables:
 		#   RBENV_VERSION=<version>
 		#   PATH=<rbenv stub path>:PATH
+
+		def located_version(real_version):
+			if not real_version:
+				# Can't find a version to match this.
+				error_message = "Unable to find version %s on this node." % version
+				self.logger.error(error_message)
+				error_callback(error_message)
+				return
+
+			self.logger.info("Using version %s (requested %s)", real_version, version)
+
+			environment['RBENV_VERSION'] = real_version
+			if not environment.has_key('PATH'):
+				error_message = "The environment is missing a PATH variable. This is unusual, so not continuing."
+				self.logger.error(error_message)
+				error_callback(error_message)
+				return
+
+			# TODO: Check if we're adding it again and don't do that.
+			environment['PATH'] = "%s:%s:%s" % (
+				os.path.join(self._get_rbenv_root_path(), 'shims'),
+				os.path.join(self._get_rbenv_root_path(), 'bin'),
+				environment['PATH']
+			)
+
+			callback("Ready to run version %s." % real_version)
+
+			# end of located_version()
+
 		# First, locate an appropriate version.
-		real_version = self._locate_version(version)
-
-		if not real_version:
-			# Can't find a version to match this.
-			error_message = "Unable to find version %s on this node." % version
-			self.logger.error(error_message)
-			error_callback(error_message)
-			return
-
-		self.logger.info("Using version %s (requested %s)", real_version, version)
-
-		environment['RBENV_VERSION'] = real_version
-		if not environment.has_key('PATH'):
-			error_message = "The environment is missing a PATH variable. This is unusual, so not continuing."
-			self.logger.error(error_message)
-			error_callback(error_message)
-			return
-
-		# TODO: Check if we're adding it again and don't do that.
-		environment['PATH'] = "%s:%s:%s" % (
-			os.path.join(self._get_rbenv_root_path(), 'shims'),
-			os.path.join(self._get_rbenv_root_path(), 'bin'),
-			environment['PATH']
-		)
-
-		callback("Ready to run version %s." % real_version)
+		self._locate_version(version, located_version)
 
 	def start(self, instance_id, callback, error_callback):
 		# Prepare the launch command.
@@ -277,7 +286,8 @@ class RbenvRuntimeTest(BaseRuntimeTest):
 			paasmaker.util.plugin.MODE.RUNTIME_VERSIONS
 		)
 
-		versions = instance.get_versions()
+		instance.get_versions(self.stop)
+		versions = self.wait()
 
 		self.assertTrue(len(versions) >= 2, "Not enough versions.")
 
@@ -290,16 +300,20 @@ class RbenvRuntimeTest(BaseRuntimeTest):
 		# Given a list of candidate versions, make sure it picks the right one.
 		versions = ['1.9.2-p190', '1.9.3-p120', '1.9.3-p140']
 
-		real_version = instance._locate_version('1.9.3', versions)
+		instance._locate_version('1.9.3', self.stop, versions)
+		real_version = self.wait()
 		self.assertEquals(real_version, '1.9.3-p140', 'Wrong version selected.')
 
-		real_version = instance._locate_version('1.9.3-p120', versions)
+		instance._locate_version('1.9.3-p120', self.stop, versions)
+		real_version = self.wait()
 		self.assertEquals(real_version, '1.9.3-p120', 'Wrong version selected.')
 
-		real_version = instance._locate_version('1.9.2', versions)
+		instance._locate_version('1.9.2', self.stop, versions)
+		real_version = self.wait()
 		self.assertEquals(real_version, '1.9.2-p190', 'Wrong version selected.')
 
-		real_version = instance._locate_version('1.9.1', versions)
+		instance._locate_version('1.9.1', self.stop, versions)
+		real_version = self.wait()
 		self.assertEquals(real_version, None, 'Wrong version selected.')
 
 	def test_environment(self):

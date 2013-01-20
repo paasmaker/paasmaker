@@ -777,13 +777,17 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		"""
 		return self.get_flat('router.enabled')
 
-	def get_runtimes(self):
+	def get_runtimes(self, callback):
 		"""
 		Get a list of runtimes and their associated versions.
 
 		Once the list is generated, it is cached for the lifetime
 		of the server. Subsequent calls return the same list generated
 		the first time.
+
+		The callback is called with a dict. The keys are the runtime
+		names, and the values are lists of versions that this node
+		can run.
 		"""
 		if not self.is_heart():
 			raise ImNotAHeart("I'm not a heart, so I have no runtimes.")
@@ -793,23 +797,44 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# time we re-register with the master.
 		if hasattr(self, '_runtime_cache'):
 			logger.debug("Using existing runtime cache.")
-			return self._runtime_cache
+			callback(self._runtime_cache)
+			return
 		else:
 			logger.info("Generating runtime list...")
 
 		tags = {}
 		runtime_plugins = self.plugins.plugins_for(paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
-		for plugin in runtime_plugins:
-			runtime = self.plugins.instantiate(plugin, paasmaker.util.plugin.MODE.RUNTIME_VERSIONS)
-			versions = runtime.get_versions()
 
-			if len(versions) > 0:
-				# Only report that we have this runtime at all if we have
-				# more than one version.
-				tags[plugin] = versions
+		def get_versions():
+			try:
+				def got_versions(versions):
+					if len(versions) > 0:
+						# Only report that we have this runtime at all if we have
+						# more than one version.
+						tags[plugin] = versions
 
-		self._runtime_cache = tags
-		return self._runtime_cache
+					# Move onto the next plugin.
+					get_versions()
+
+					# end of got_versions()
+
+				plugin = runtime_plugins.pop()
+				runtime = self.plugins.instantiate(
+					plugin,
+					paasmaker.util.plugin.MODE.RUNTIME_VERSIONS
+				)
+				runtime.get_versions(got_versions)
+
+			except IndexError, ex:
+				# No more to process.
+				# Send back the tags.
+				self._runtime_cache = tags
+				callback(self._runtime_cache)
+
+			# end of get_versions()
+
+		# Kick off the process.
+		get_versions()
 
 	def get_dynamic_tags(self):
 		"""

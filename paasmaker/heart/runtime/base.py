@@ -8,14 +8,13 @@ import tornado.testing
 # Base runtime interface.
 class BaseRuntime(paasmaker.util.plugin.Plugin):
 
-	def get_versions(self):
+	def get_versions(self, callback):
 		"""
-		Get the versions that this runtime supports. Return an array
-		of versions.
+		Get the versions that this runtime supports. Call the supplied
+		callback with an list of versions that it supports. Emit
+		an empty list if your node does not support this runtime.
 		"""
-		# NOTE: This is not asynchronous, so you probably don't want to
-		# spend a long time doing anything.
-		pass
+		raise NotImplementedError("You must implement get_versions().")
 
 	def environment(self, version, environment, callback, error_callback):
 		"""
