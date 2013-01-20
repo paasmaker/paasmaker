@@ -39,7 +39,7 @@ def get_total_space(path):
 		return s.f_bsize * s.f_blocks
 
 class DefaultStats(BaseStats):
-	def stats(self, existing_stats):
+	def stats(self, existing_stats, callback):
 		# Include the platform - this allows score plugins to make
 		# more informed decisions.
 		existing_stats['platform'] = platform.system()
@@ -93,6 +93,8 @@ class DefaultStats(BaseStats):
 		# to wait to collect this data.
 		existing_stats['cpus'] = tornado.process.cpu_count()
 
+		callback(existing_stats)
+
 	def _linux_memory(self):
 		# TODO: This is very crude. Fix it.
 		result = {}
@@ -139,7 +141,7 @@ class DefaultStats(BaseStats):
 
 	def _darwin_memory(self):
 		result = {}
-		
+
 		# page size is also returned in vm_stat, but is basically always 4096
 		result['page_size'] = int(subprocess.check_output(['sysctl', '-n', 'hw.pagesize']))
 		result['mem_total'] = int(subprocess.check_output(['sysctl', '-n', 'hw.memsize']))
@@ -160,11 +162,11 @@ class DefaultStats(BaseStats):
 				result['mem_free'] = extract(line)
 			if line.startswith("Pages inactive:"):
 				result['mem_inactive'] = extract(line)
-		
+
 		result['mem_adjusted_free'] = result['mem_free'] + result['mem_inactive']
-		
+
 		return result
-		
+
 	def _darwin_swap_used(self):
 		raw_swap = subprocess.check_output(['du', '-ak', '/private/var/vm'])
 		raw_swap = raw_swap.split("\n")
@@ -174,17 +176,17 @@ class DefaultStats(BaseStats):
 			if line.find('swapfile') != -1:
 				bits = line.split("\t")
 				swap_subtotal += int(bits[0]) * 1024
-		
+
 		return swap_subtotal
-		
+
 	def _darwin_loadavg(self):
 		# TODO: performance test me, since this also works on Linux
 		uptime_raw = subprocess.check_output("uptime")
 		averages = self.uptime_wrangler.findall(uptime_raw)
 
 		return float(averages[0][0])
-				
-		
+
+
 class DefaultStatsTest(BaseStatsTest):
 	def setUp(self):
 		super(DefaultStatsTest, self).setUp()
@@ -203,7 +205,8 @@ class DefaultStatsTest(BaseStatsTest):
 		)
 
 		stats = {}
-		plugin.stats(stats)
+		plugin.stats(stats, self.stop)
+		self.wait()
 
 		#print json.dumps(stats, indent=4, sort_keys=True)
 

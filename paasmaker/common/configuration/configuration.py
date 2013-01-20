@@ -866,26 +866,42 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self._dynamic_tags_cache = dynamic_tags
 		return dynamic_tags
 
-	def get_node_stats(self):
+	def get_node_stats(self, callback):
 		"""
 		Get a set of stats for the node. This can call out to
-		plugins to generate the stats. Note that in this implementation,
-		the calls are syncrhonous, so you won't want to spend long
-		doing what you're doing.
+		plugins to generate the stats. Once complete, it will call
+		the callback with the generated stats.
 		"""
 		# TODO: In post_load(), make sure there is at least one stats plugin.
 		stats = {}
+
 		stats_plugins = self.plugins.plugins_for(
 			paasmaker.util.plugin.MODE.NODE_STATS
 		)
-		for plugin in stats_plugins:
-			instance = self.plugins.instantiate(
-				plugin,
-				paasmaker.util.plugin.MODE.NODE_STATS
-			)
-			instance.stats(stats)
 
-		return stats
+		def get_stats():
+			try:
+				def got_stats(stats):
+					# Move onto the next plugin.
+					get_stats()
+
+					# end of got_stats()
+
+				plugin = stats_plugins.pop()
+				stat_collector = self.plugins.instantiate(
+					plugin,
+					paasmaker.util.plugin.MODE.NODE_STATS
+				)
+				stat_collector.stats(stats, got_stats)
+
+			except IndexError, ex:
+				# No more to process.
+				callback(stats)
+
+			# end of get_stats()
+
+		# Kick off the process.
+		get_stats()
 
 	def get_node_score(self, stats):
 		"""

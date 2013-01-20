@@ -42,10 +42,6 @@ class NodeRegisterAPIRequest(APIRequest):
 
 		logger.debug("Sending node tags: %s", str(tags))
 
-		# Get the stats for the node.
-		payload['stats'] = self.configuration.get_node_stats()
-		payload['score'] = self.configuration.get_node_score(payload['stats'])
-
 		# For hearts, send along instance statuses.
 		if self.configuration.is_heart():
 			statuses = self.configuration.instances.get_instance_list()
@@ -64,14 +60,20 @@ class NodeRegisterAPIRequest(APIRequest):
 			payload_completed()
 
 		def start_runtimes():
-			# Runtimes.
 			if self.configuration.is_heart():
 				self.configuration.get_runtimes(got_runtimes)
 			else:
 				payload_completed()
 
+		def got_stats(stats):
+			payload['stats'] = stats
+			payload['score'] = self.configuration.get_node_score(payload['stats'])
+
+			# Move onto the runtimes list.
+			start_runtimes()
+
 		# Kick off the chain.
-		start_runtimes()
+		self.configuration.get_node_stats(got_stats)
 
 	def get_endpoint(self):
 		return '/node/register'

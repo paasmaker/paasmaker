@@ -14,11 +14,20 @@ class BaseStats(paasmaker.util.plugin.Plugin):
 	}
 	OPTIONS_SCHEMA = BaseStatsConfigurationSchema()
 
-	def stats(self, existing_stats):
+	def stats(self, existing_stats, callback):
 		"""
-		Alter or insert into the provided existing stats array. Return nothing.
-		This is called synchronously, so you won't want to spend too long doing
-		things.
+		Alter or insert into the provided existing stats array. Call the callback
+		with the dictionary once completed.
+
+		For example::
+
+			def stats(self, existing_stats, callback):
+				existing_stats['my_stat'] = 1.0
+				callback(existing_stats)
+
+		:arg dict existing_stats: The existing stats. Insert your stats into
+			this dictionary.
+		:arg callable callback: The callback to call once done.
 		"""
 		raise NotImplementedError("You must implement stats().")
 
