@@ -142,6 +142,22 @@ class APIRequest(object):
 		"""
 		return {}
 
+	def async_build_payload(self, payload, callback):
+		"""
+		Build the payload of the request, and call the callback with the
+		payload. This allows your code to use other callbacks rather than
+		synchronous code. Modify the supplied payload dict, but also
+		pass that dict to the callback.
+
+		If you don't implement this function, a default implementation
+		is provided.
+
+		:arg dict payload: The payload to modify.
+		:arg callable callback: The callback to call, with a single
+			dict argument when complete.
+		"""
+		callback(payload)
+
 	def get_master(self):
 		"""
 		Get the address to the master host. This is designed for nodes
@@ -214,61 +230,73 @@ class APIRequest(object):
 
 		logger.debug("In send() of API request of type %s", type(self))
 
-		if self.method == 'POST':
-			# Build what we're sending.
-			data = {}
-			data['data'] = self.build_payload()
-			data['auth'] = { 'method': self.authmethod, 'value': self.authvalue }
+		def payload_ready(payload):
+			if self.method == 'POST':
+				# Build what we're sending.
+				data = {}
+				data['data'] = payload
+				data['auth'] = { 'method': self.authmethod, 'value': self.authvalue }
 
-			encoded = json.dumps(data, cls=paasmaker.util.jsonencoder.JsonEncoder)
+				encoded = json.dumps(data, cls=paasmaker.util.jsonencoder.JsonEncoder)
 
-			kwargs['body'] = encoded
-			# Always a POST, because we're sending a body.
-			kwargs['method'] = 'POST'
+				kwargs['body'] = encoded
+				# Always a POST, because we're sending a body.
+				kwargs['method'] = 'POST'
 
-			logger.debug("Payload sending to server: %s", encoded)
-		else:
-			kwargs['method'] = 'GET'
+				logger.debug("Payload sending to server: %s", encoded)
+			else:
+				kwargs['method'] = 'GET'
 
-		# Don't follow redirects - this is an API request.
-		kwargs['follow_redirects'] = False
+			# Don't follow redirects - this is an API request.
+			kwargs['follow_redirects'] = False
 
-		if self.authmethod == 'tokenheader':
-			if not kwargs.has_key('headers'):
-				kwargs['headers'] = {}
-			kwargs['headers']['User-Token'] = self.authvalue
-		if self.authmethod == 'superheader':
-			if not kwargs.has_key('headers'):
-				kwargs['headers'] = {}
-			kwargs['headers']['Super-Token'] = self.authvalue
-		if self.authmethod == 'nodeheader':
-			if not kwargs.has_key('headers'):
-				kwargs['headers'] = {}
-			kwargs['headers']['Node-Token'] = self.authvalue
+			if self.authmethod == 'tokenheader':
+				if not kwargs.has_key('headers'):
+					kwargs['headers'] = {}
+				kwargs['headers']['User-Token'] = self.authvalue
+			if self.authmethod == 'superheader':
+				if not kwargs.has_key('headers'):
+					kwargs['headers'] = {}
+				kwargs['headers']['Super-Token'] = self.authvalue
+			if self.authmethod == 'nodeheader':
+				if not kwargs.has_key('headers'):
+					kwargs['headers'] = {}
+				kwargs['headers']['Node-Token'] = self.authvalue
 
-		# The function called when it returns.
-		# It's a closure to preserve the callback provided.
-		def our_callback(response):
-			# Parse and handle what came back.
-			our_response = APIResponse(response)
-			# Use the built in response processor.
-			self.process_response(our_response)
-			# And call the user defined callback back.
-			if callback:
-				callback(our_response)
+			# The function called when it returns.
+			# It's a closure to preserve the callback provided.
+			def our_callback(response):
+				# Parse and handle what came back.
+				our_response = APIResponse(response)
+				# Use the built in response processor.
+				self.process_response(our_response)
+				# And call the user defined callback back.
+				if callback:
+					callback(our_response)
 
-		if not self.target:
-			self.target = self.get_master()
+			if not self.target:
+				self.target = self.get_master()
 
-		# Build and make the request.
-		endpoint = self.target + self.get_endpoint()
-		if endpoint.find('?') == -1:
-			endpoint += '?format=json'
-		else:
-			endpoint += '&format=json'
-		logger.debug("Endpoint for request: %s", endpoint)
-		request = tornado.httpclient.HTTPRequest(endpoint, **kwargs)
-		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
-		client.fetch(request, our_callback)
+			# Build and make the request.
+			endpoint = self.target + self.get_endpoint()
+			if endpoint.find('?') == -1:
+				endpoint += '?format=json'
+			else:
+				endpoint += '&format=json'
+			logger.debug("Endpoint for request: %s", endpoint)
+			request = tornado.httpclient.HTTPRequest(endpoint, **kwargs)
+			client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+			client.fetch(request, our_callback)
 
-# TODO: Add unit tests!
+			# end of payload_ready()
+
+		# Build the syncrhonous part of the payload.
+		sync_payload = self.build_payload()
+
+		# And then the async part.
+		self.async_build_payload(sync_payload, payload_ready)
+
+# TODO: There are no unit tests here. It's expected that the other
+# unit tests for API requests and controllers cover off the code in here.
+# This is probably not the correct assumption, and this class should
+# be explicitly tested.
