@@ -1246,26 +1246,28 @@ class ApplicationInstanceTypeCron(OrmBase, Base):
 class Service(OrmBase, Base):
 	"""
 	Service - a class to store the details of a service,
-	including it's state and the workspace that it belongs to.
+	including it's state and the application that it belongs to.
 
 	Special Features:
 
-	* The name of a service is unique per workspace, to allow
-	  applications to share services.
+	* The name of a service is unique per application.
 	* **parameters** and **credentials** are dicts, stored JSON
 	  encoded as text fields.
 	"""
 	__tablename__ = 'service'
-	__table_args__ = (Index('unique_service_per_workspace', "workspace_id", "name", unique=True),)
+	__table_args__ = (Index('unique_service_per_application', "application_id", "name", unique=True),)
 
 	id = Column(Integer, primary_key=True)
-	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False, index=True)
-	workspace = relationship("Workspace", backref=backref('services', order_by=id))
+	application_id = Column(Integer, ForeignKey('application.id'), nullable=False, index=True)
+	application = relationship("Application", backref=backref('services', order_by=id))
 	name = Column(String, nullable=False, index=True)
 	provider = Column(String, nullable=False, index=True)
 	_parameters = Column('parameters', Text, nullable=False)
 	_credentials = Column('credentials', Text, nullable=True)
 	state = Column(String, nullable=False, index=True)
+
+	# For future use.
+	shared = Column(Boolean, nullable=False, default=False)
 
 	@hybrid_property
 	def parameters(self):
@@ -1284,26 +1286,31 @@ class Service(OrmBase, Base):
 		self._credentials = json.dumps(val)
 
 	def __repr__(self):
-		return "<Service('%s'->'%s')>" % (self.provider, self.workspace)
+		return "<Service('%s'->'%s')>" % (self.provider, self.application)
 
 	def flatten(self, field_list=None):
-		return super(Service, self).flatten(['workspace_id', 'name', 'provider', 'credentials', 'state'])
+		return super(Service, self).flatten(['application_id', 'name', 'provider', 'credentials', 'state'])
 
 	@staticmethod
-	def get_or_create(session, workspace, name):
+	def get_or_create(session, application, name):
 		"""
 		Get an existing service with the given name in the given
-		workspace, or create a new one and return it. New services
+		application, or create a new one and return it. New services
 		are given the state NEW - it's expected that the job
 		that asked for this service will handle changing it's state.
 		"""
 		# Find an existing one.
-		service = session.query(Service).filter(Service.workspace == workspace, Service.name == name).first()
+		service = session.query(
+			Service
+		).filter(
+			Service.application == application,
+			Service.name == name
+		).first()
 		if service:
 			return service
 		else:
 			service = Service()
-			service.workspace = workspace
+			service.application = application
 			service.name = name
 			service.state = constants.SERVICE.NEW
 			return service

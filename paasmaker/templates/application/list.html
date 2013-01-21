@@ -21,6 +21,7 @@
 			<th>Application</th>
 			<th>Health</th>
 			<th>Versions</th>
+			<th>Services</th>
 		</tr>
 		{% for application in applications %}
 			<tr>
@@ -34,6 +35,11 @@
 					<a href="/application/{{ application.id }}">
 						{{ application.versions.filter(paasmaker.model.ApplicationVersion.deleted == None).count() }} versions
 					</a>
+				</td>
+				<td>
+					{% if has_permission(PERMISSION.APPLICATION_SERVICE_DETAIL) %}<a href="/application/{{ application.id }}/services">{% end %}
+						{{ len(application.services) }} services
+					{% if has_permission(PERMISSION.APPLICATION_SERVICE_DETAIL) %}</a>{% end %}
 				</td>
 			</tr>
 		{% end %}

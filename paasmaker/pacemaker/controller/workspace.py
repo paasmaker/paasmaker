@@ -129,36 +129,6 @@ class WorkspaceListController(BaseController):
 		routes.append((r"/workspace/list", WorkspaceListController, configuration))
 		return routes
 
-class WorkspaceServiceListController(BaseController):
-	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
-
-	def _get_workspace(self, workspace_id=None):
-		workspace = None
-		if workspace_id:
-			# Find and load the workspace.
-			workspace = self.db().query(paasmaker.model.Workspace).get(int(workspace_id))
-			if not workspace:
-				raise HTTPError(404, "No such workspace.")
-
-			self.add_data('workspace', workspace)
-
-		return workspace
-
-	def get(self, workspace_id):
-		workspace = self._get_workspace(workspace_id)
-		self.require_permission(constants.PERMISSION.WORKSPACE_SERVICE_DETAIL, workspace=workspace)
-
-		self._paginate('services', workspace.services)
-		self.add_data_template('json', json)
-
-		self.render("workspace/services.html")
-
-	@staticmethod
-	def get_routes(configuration):
-		routes = []
-		routes.append((r"/workspace/(\d+)/services", WorkspaceServiceListController, configuration))
-		return routes
-
 class WorkspaceEditControllerTest(BaseControllerTest):
 	config_modules = ['pacemaker']
 

@@ -75,17 +75,17 @@ class TestHelpers(object):
 		workspace.name = 'Test'
 		workspace.stub = 'test'
 
+		application = paasmaker.model.Application()
+		application.workspace = workspace
+		application.name = 'foo.com'
+
 		service = paasmaker.model.Service()
-		service.workspace = workspace
+		service.application = application
 		service.name = 'test'
 		service.provider = 'paasmaker.service.parameters'
 		service.parameters = {'test': 'bar'}
 		service.credentials = {'test': 'bar'}
 		service.state = paasmaker.common.core.constants.SERVICE.AVAILABLE
-
-		application = paasmaker.model.Application()
-		application.workspace = workspace
-		application.name = 'foo.com'
 
 		application_version = paasmaker.model.ApplicationVersion()
 		application_version.application = application

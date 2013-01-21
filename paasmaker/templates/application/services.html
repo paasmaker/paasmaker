@@ -10,7 +10,7 @@
 			<th>Name</th>
 			<th>Provider</th>
 			<th>Credentials</th>
-			<th>Applications</th>
+			<th>Versions</th>
 			<th>State</th>
 		</tr>
 		{% for service in services %}
@@ -26,7 +26,7 @@
 				</td>
 				<td>
 					{% for version in service.application_versions %}
-						{{ version.application.name }}: v{{ version.version }}<br />
+						v{{ version.version }}<br />
 					{% end %}
 				</td>
 				<td>

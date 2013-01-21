@@ -17,7 +17,11 @@ class ServiceContainerJob(BaseJob):
 		# Fetch all the relevant services and put them into the environment
 		# for the prepare tasks.
 		session = self.configuration.get_database_session()
-		version = session.query(paasmaker.model.ApplicationVersion).get(context['application_version_id'])
+		version = session.query(
+			paasmaker.model.ApplicationVersion
+		).get(
+			context['application_version_id']
+		)
 
 		# Build our environment for later.
 		environment = ApplicationEnvironment.get_environment(self.configuration, version)
@@ -32,7 +36,11 @@ class ServiceJob(BaseJob):
 
 	def start_job(self, context):
 		self.session = self.configuration.get_database_session()
-		self.service = self.session.query(paasmaker.model.Service).get(self.parameters['service_id'])
+		self.service = self.session.query(
+			paasmaker.model.Service
+		).get(
+			self.parameters['service_id']
+		)
 
 		try:
 			service_plugin = self.configuration.plugins.instantiate(

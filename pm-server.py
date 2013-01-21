@@ -103,7 +103,6 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.profile.ProfileResetAPIKeyController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceEditController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceListController.get_routes(route_extras))
-	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceServiceListController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.role.RoleEditController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.role.RoleListController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.role.RoleAllocationListController.get_routes(route_extras))
@@ -114,6 +113,7 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.application.ApplicationNewController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.application.ApplicationController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.application.ApplicationSetCurrentController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.application.ApplicationServiceListController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.scmlist.ScmListController.get_routes(route_extras))
 
 	routes.extend(paasmaker.pacemaker.controller.configuration.ConfigurationDumpController.get_routes(route_extras))

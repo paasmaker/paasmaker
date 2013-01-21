@@ -311,3 +311,22 @@ class ApplicationSetCurrentController(ApplicationRootController):
 		routes.append((r"/application/(\d+)/setcurrent", ApplicationSetCurrentController, configuration))
 		routes.append((r"/version/(\d+)/setcurrent", ApplicationSetCurrentController, configuration))
 		return routes
+
+
+class ApplicationServiceListController(ApplicationRootController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def get(self, application_id):
+		application = self._get_application(application_id)
+		self.require_permission(constants.PERMISSION.APPLICATION_SERVICE_DETAIL, workspace=application.workspace)
+
+		self._paginate('services', application.services)
+		self.add_data_template('json', json)
+
+		self.render("application/services.html")
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/application/(\d+)/services", ApplicationServiceListController, configuration))
+		return routes
