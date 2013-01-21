@@ -72,7 +72,7 @@ MODE_REQUIRE_PARAMS = {
 
 	'PACKER': False,
 	'UNPACKER': True,
-	'FETCHER': True,
+	'FETCHER': False,
 	'STORER': False
 }
 

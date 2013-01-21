@@ -815,7 +815,7 @@ class ApplicationVersion(OrmBase, Base):
 		"""
 		Flatten data that a heart will need to execute this version.
 		"""
-		fields = ['version', 'source_path', 'source_checksum']
+		fields = ['version', 'source_path', 'source_checksum', 'source_package_type']
 		return super(ApplicationVersion, self).flatten(fields)
 
 	@staticmethod

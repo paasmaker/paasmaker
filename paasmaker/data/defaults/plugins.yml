@@ -182,3 +182,8 @@ plugins:
   - name: paasmaker.storer.default
     class: paasmaker.pacemaker.storer.paasmakernode.PaasmakerNodeStorer
     title: Default Source Code storer
+
+  # FETCHER PLUGINS
+  - name: paasmaker.fetcher.paasmaker
+    class: paasmaker.heart.fetcher.paasmakernode.PaasmakerNodeFetcher
+    title: Paasmaker Code Fetcher

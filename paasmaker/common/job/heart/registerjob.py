@@ -62,53 +62,59 @@ class RegisterInstanceJob(BaseJob):
 		self.logger.info("Fetching package from %s", raw_url)
 		parsed = urlparse.urlparse(raw_url)
 
-		self.resolved_package_name = parsed.path.strip('/') # TODO: Prevent '../' and otherwise sanitise this name.
+		self.resolved_package_name = os.path.abspath(parsed.path)
+		self.resolved_package_name = os.path.basename(self.resolved_package_name)
 		self.resolved_package_path = os.path.join(
 			self.configuration.get_scratch_path_exists('packed'),
 			self.resolved_package_name
 		)
 
+		# Does the file exist locally?
 		if os.path.exists(self.resolved_package_path):
 			# No need to download it, it's already here!
-			self.begin_unpacking(self.resolved_package_path)
-		elif parsed.scheme == 'paasmaker' and parsed.netloc == self.configuration.get_node_uuid():
-			# This means the file should have been here, but is not... so fail with an error.
-			# TODO: Test this condition.
-			self.failed("Missing package file %s which should be stored on this node.", self.resolved_package_path)
-		elif parsed.scheme == 'paasmaker':
-			# It's hosted on another node - for the moment we're assuming the single master
-			# so go off and fetch it.
-			# TODO: Test this condition.
-			self.fetch_package(raw_url, parsed)
+			self._begin_unpacking(self.resolved_package_path)
 		else:
-			self.failed("Unknown package scheme %s.", parsed.scheme)
+			# Find a plugin to fetch the package.
+			fetcher_plugin_name = 'paasmaker.fetcher.%s' % parsed.scheme
 
-	def fetch_package(self, raw_url, parsed_url):
-		request = paasmaker.common.api.package.PackageDownloadAPIRequest(self.configuration)
-		request.fetch(
-			self.resolved_package_name,
-			self._package_fetched,
-			self._package_failed,
-			self._package_progress
-		)
+			plugin_exists = self.configuration.plugins.exists(
+				fetcher_plugin_name,
+				paasmaker.util.plugin.MODE.FETCHER
+			)
 
-	def _package_fetched(self, path, message):
-		self.logger.info(message)
-		self.begin_unpacking(path)
+			if not plugin_exists:
+				error_message = "No such fetcher %s - we don't know how to fetch this package." % fetcher_plugin_name
+				self.logger.error(error_message)
+				self.failed(error_message)
+				return
 
-	def _package_failed(self, error, exception=None):
-		self.logger.error(error)
+			fetcher_plugin = self.configuration.plugins.instantiate(
+				fetcher_plugin_name,
+				paasmaker.util.plugin.MODE.FETCHER,
+				{},
+				self.logger
+			)
+
+			fetcher.fetch(
+				raw_url,
+				self.resolved_package_name,
+				self.resolved_package_path,
+				self._fetch_complete,
+				self._fetch_failed
+			)
+
+	def _fetch_complete(self, path, message):
+		# Success! Move onto unpacking.
+		self._begin_unpacking(path)
+
+	def _fetch_failed(self, message, exception=None):
+		# Fail.
+		self.logger.error(message)
 		if exception:
-			self.logger.error("Exception:", exc_info=exception)
-		self.failed("Failed to download package: %s" % error)
+			self.logger.error("Exception", exc_info=exception)
+		self.failed(message)
 
-	def _package_progress(self, size, total):
-		percent = 0.0
-		if total > 0:
-			percent = (float(size) / float(total)) * 100
-		self.logger.info("Downloaded %d of %d bytes (%0.2f%%)", size, total, percent)
-
-	def begin_unpacking(self, package_path):
+	def _begin_unpacking(self, package_path):
 		self.log_fp = self.logger.takeover_file()
 
 		# Begin unpacking.
@@ -117,11 +123,11 @@ class RegisterInstanceJob(BaseJob):
 		extractor = paasmaker.util.Popen(command,
 			stdout=self.log_fp,
 			stderr=self.log_fp,
-			on_exit=self.unpacking_complete,
+			on_exit=self._unpacking_complete,
 			io_loop=self.configuration.io_loop,
 			cwd=self.instance_path)
 
-	def unpacking_complete(self, code):
+	def _unpacking_complete(self, code):
 		self.logger.untakeover_file(self.log_fp)
 		self.logger.info("tar command returned code: %d", code)
 		#self.configuration.debug_cat_job_log(logger.job_id)
