@@ -79,25 +79,16 @@ class ApplicationPrepareRootJob(BaseJob):
 
 		# Set the source path.
 		# Only store the package name, not the leading path.
-		package_name = os.path.basename(context['package'])
+		package_name = os.path.basename(context['package_file'])
 		version.source_path = "paasmaker://%s/%s" % (self.configuration.get_node_uuid(), package_name)
+		version.checksum = context['package_checksum']
+		version.source_package_type = context['package_type']
 
-		# Calculate the checksum of this source package.
-		checksum = paasmaker.util.streamingchecksum.StreamingChecksum(
-			context['package'],
-			self.configuration.io_loop,
-			self.logger
-		)
+		version.state = constants.VERSION.PREPARED
+		session.add(version)
+		session.commit()
 
-		def checksum_complete(checksum):
-			version.source_checksum = checksum
-			version.state = constants.VERSION.PREPARED
-			session.add(version)
-			session.commit()
-
-			self.success({}, "Successfully prepared package for %s" % context['application_name'])
-
-		checksum.start(checksum_complete)
+		self.success({}, "Successfully prepared package for %s" % context['application_name'])
 
 	# TODO: Can't place versions into ERROR state when they can't be prepared. Fix this!
 
@@ -192,8 +183,8 @@ class PrepareJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		context = self.wait()
 
 		# Verify the package exists, and has the files we expect.
-		self.assertTrue(os.path.exists(context['package']), "Packed file does not exist.")
-		files = subprocess.check_output(['tar', 'ztvf', context['package']])
+		self.assertTrue(os.path.exists(context['package_file']), "Packed file does not exist.")
+		files = subprocess.check_output(['tar', 'ztvf', context['package_file']])
 		self.assertIn("app.py", files, "Can't find app.py.")
 		self.assertIn("manifest.yml", files, "Can't find manifest.")
 		self.assertIn("prepare.txt", files, "Can't find prepare.txt - prepare probably failed.")

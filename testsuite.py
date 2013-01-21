@@ -79,6 +79,8 @@ test_sets = {
 	paasmaker.pacemaker.service.managedredis: ['slow', 'service', 'serviceredis'],
 	paasmaker.pacemaker.service.managedpostgres: ['slow', 'service', 'servicemanagedpostgres'],
 
+	paasmaker.pacemaker.packer.tarball: ['all', 'packer', 'tarball'],
+
 	paasmaker.pacemaker.prepare.shell: ['all', 'prepare', 'shellprepare'],
 
 	paasmaker.pacemaker.scm.zip: ['all', 'scm'],

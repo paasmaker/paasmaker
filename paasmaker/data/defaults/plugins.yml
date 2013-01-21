@@ -172,3 +172,8 @@ plugins:
   - name: paasmaker.cleaner.jobs
     class: paasmaker.common.cleaner.jobs.JobsCleaner
     title: Jobs Cleaner
+
+  # SOURCE CODE PACKERS
+  - name: paasmaker.packer.default
+    class: paasmaker.pacemaker.packer.tarball.TarballPacker
+    title: Default Source Code packer

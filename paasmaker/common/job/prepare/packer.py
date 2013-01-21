@@ -11,59 +11,61 @@ class SourcePackerJob(BaseJob):
 		# This is the working directory for this.
 		self.path = context['working_path']
 
-		package_name = "%d_%d.tar.gz" % (context['application_id'], context['application_version_id'])
+		package_prefix = "%d_%d.tar.gz" % (context['application_id'], context['application_version_id'])
 		package_path = self.configuration.get_scratch_path_exists('packed')
 
-		package_full_name = os.path.join(package_path, package_name)
-		output_context['package'] = package_full_name
+		package_full_prefix = os.path.join(package_path, package_prefix)
 
 		self.logger.info("Packaging source code...")
-		self.log_fp = self.logger.takeover_file()
+		# Locate a suitable plugin to do this.
+		packer_plugin_name = 'paasmaker.packer.default'
+		if context.has_key('preferred_packer'):
+			packer_plugin_name = 'paasmaker.packer.%s' % context['preferred_packer']
 
-		pack_result = 0
+		plugin_exists = self.configuration.plugins.exists(
+			packer_plugin_name,
+			paasmaker.util.plugin.MODE.PACKER
+		)
 
-		# The callback to handle source complete.
-		def cleanup_complete(code):
-			self.logger.untakeover_file(self.log_fp)
-			self.logger.info("Finished removing temporary directory. Code %d.", code)
-			#self.configuration.debug_cat_job_log(logger.job_id)
-			if pack_result == 0:
-				self.success(output_context, "Successfully packed source code.")
+		if not plugin_exists:
+			if context.has_key('preferred_packer'):
+				error_message = "The preferred packer %s was not found." % packer_plugin_name
 			else:
-				self.failed("Failed to pack source code.")
+				error_message = "Your Paasmaker configuration is incomplete. No default source packer plugin is configured."
 
-		# The callback to handle packaging completion.
-		def pack_complete(code):
-			self.logger.untakeover_file(self.log_fp)
-			self.logger.info("Command result: %d" % code)
-			pack_result = code
-			if code == 0:
-				self.logger.info("Successfully packed source code.")
-			else:
-				self.logger.error("Unable to pack up source code.")
+			self.logger.error(error_message)
+			self.failed(error_message)
+			return
 
-			# Remove the working directory. This occurs regardless of
-			# success or not.
-			# We do this as a subprocess, so it doesn't block our process.
-			# The callback to this then completes our job.
-			self.log_fp = self.logger.takeover_file()
-			cleanup_command = ['rm', '-rfv', self.path]
+		packer_plugin = self.configuration.plugins.instantiate(
+			packer_plugin_name,
+			paasmaker.util.plugin.MODE.PACKER,
+			{},
+			self.logger
+		)
 
-			cleanup_runner = paasmaker.util.Popen(cleanup_command,
-				stdout=self.log_fp,
-				stderr=self.log_fp,
-				on_exit=cleanup_complete,
-				cwd=self.path,
-				io_loop=self.configuration.io_loop,
-				env=context['environment'])
+		def pack_complete(pack_type, pack_file, checksum, message):
+			# Pack complete. Add output to the context, and pass it on.
+			self.logger.info(message)
 
-		# Fire off the pack command.
-		pack_command = ['tar', 'zcvf', package_full_name, '.']
+			output_context['package_type'] = pack_type
+			output_context['package_file'] = pack_file
+			output_context['package_checksum'] = checksum
 
-		packer_runner = paasmaker.util.Popen(pack_command,
-			stdout=self.log_fp,
-			stderr=self.log_fp,
-			on_exit=pack_complete,
-			cwd=self.path,
-			io_loop=self.configuration.io_loop,
-			env=context['environment'])
+			self.success(output_context, "Completed packing source code.")
+			# end of pack_complete()
+
+		def pack_failed(message, exception=None):
+			# Handle a failure to pack.
+			self.logger.error(message)
+			if exception:
+				self.logger.error("Exception", exc_info=exception)
+			self.failed(message)
+			# end of pack_failed()
+
+		packer_plugin.pack(
+			context['working_path'],
+			package_full_prefix,
+			pack_complete,
+			pack_failed
+		)

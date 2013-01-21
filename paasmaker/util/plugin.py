@@ -68,7 +68,12 @@ MODE_REQUIRE_PARAMS = {
 
 	'NODE_DYNAMIC_TAGS': False,
 	'NODE_STATS': False,
-	'NODE_SCORE': False
+	'NODE_SCORE': False,
+
+	'PACKER': False,
+	'UNPACKER': True,
+	'FETCHER': True,
+	'STORER': True
 }
 
 # Mode constants.

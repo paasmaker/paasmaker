@@ -783,6 +783,7 @@ class ApplicationVersion(OrmBase, Base):
 	manifest = Column(Text, nullable=False)
 	source_path = Column(String, nullable=True)
 	source_checksum = Column(String, nullable=True)
+	source_package_type = Column(String, nullable=True)
 	scm_name = Column(String, nullable=False)
 	_scm_parameters = Column("scm_parameters", Text, nullable=False)
 
