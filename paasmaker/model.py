@@ -752,20 +752,18 @@ class Application(OrmBase, Base):
 			# It's warning, because no versions are current.
 			return constants.HEALTH.WARNING
 
-	def can_delete(self, session):
+	def can_delete(self):
 		"""
 		Find out if this app has any versions in the READY or RUNNING states.
 		If so, return false; if not, this app can be deleted safely.
-		
+
 		:arg Session session: SQLAlchemy session object to work in
 		"""
-		versions = session.query(
-			ApplicationVersion
-		).filter(
+		undeleteable_versions = self.versions.filter(
 			ApplicationVersion.application == self,
 			ApplicationVersion.state.in_([constants.VERSION.READY, constants.VERSION.RUNNING])
 		)
-		return (versions.count() == 0)
+		return (undeleteable_versions.count() == 0)
 
 # Joining table between Application Version and services.
 # There is no ORM object to represent this.
@@ -1225,7 +1223,7 @@ class ApplicationInstanceTypeHostname(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	application_instance_type_id = Column(Integer, ForeignKey('application_instance_type.id'), nullable=False, index=True)
-	application_instance_type = relationship("ApplicationInstanceType", backref=backref('hostnames', order_by=id))
+	application_instance_type = relationship("ApplicationInstanceType", backref=backref('hostnames', order_by=id, cascade="all, delete"))
 
 	hostname = Column(String, nullable=False, index=True)
 	statistics = Column(Text, nullable=True)
@@ -1245,7 +1243,7 @@ class ApplicationInstanceTypeCron(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	application_instance_type_id = Column(Integer, ForeignKey('application_instance_type.id'), nullable=False, index=True)
-	application_instance_type = relationship("ApplicationInstanceType", backref=backref('crons', order_by=id))
+	application_instance_type = relationship("ApplicationInstanceType", backref=backref('crons', order_by=id, cascade="all, delete"))
 
 	runspec = Column(String, nullable=False)
 	uri = Column(Text, nullable=False)
@@ -1664,7 +1662,7 @@ class TestModel(unittest.TestCase):
 		# TODO: Think of more imaginitive ways that this
 		# very very simple permissions system can be broken,
 		# and test them.
-		
+
 	def test_application_create_and_delete(self):
 		session = self.session
 
@@ -1712,7 +1710,7 @@ class TestModel(unittest.TestCase):
 		instance_type.standalone = False
 
 		session.add(instance_type)
-		
+
 		node = paasmaker.model.Node(name='test1337',
 				route='1337.local.paasmaker.net',
 				apiport=12345,
@@ -1721,9 +1719,9 @@ class TestModel(unittest.TestCase):
 		node.heart = True
 		node.pacemaker = True
 		node.tags = {}
-		
+
 		session.add(node)
-		
+
 		instance = paasmaker.model.ApplicationInstance()
 		instance.instance_id = str(uuid.uuid4())
 		instance.application_instance_type = instance_type

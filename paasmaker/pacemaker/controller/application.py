@@ -315,14 +315,29 @@ class ApplicationSetCurrentController(ApplicationRootController):
 
 class ApplicationDeleteController(ApplicationRootController):
 
-	def get(self, input_id):
+	@tornado.web.asynchronous
+	def post(self, input_id):
 		application = self._get_application(input_id)
+
+		self.require_permission(constants.PERMISSION.APPLICATION_DELETE, workspace=application.workspace)
+
 		session = self.db()
 		if not application.can_delete(session):
 			raise tornado.web.HTTPError(400, "Cannot delete application that is still active")
-		session.delete(application)
-		session.commit()
-		self.render("api/apionly.html")
+
+		def job_started():
+			# Redirect to clear the post.
+			self._redirect_job(self.get_data('job_id'), '/workspace/%d/applications' % application.workspace.id)
+
+		def delete_job_ready(job_id):
+			self.add_data('job_id', job_id)
+			self.configuration.job_manager.allow_execution(job_id, callback=job_started)
+
+		paasmaker.common.job.delete.application.ApplicationDeleteRootJob.setup_for_application(
+			self.configuration,
+			application,
+			delete_job_ready
+		)
 
 	@staticmethod
 	def get_routes(configuration):
