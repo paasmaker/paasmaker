@@ -55,6 +55,11 @@ plugins:
     class: paasmaker.common.job.prepare.SourcePreparerJob
     title: Source Preparer Job
 
+  # PACEMAKER PLUGINS - OTHER JOBS
+  - name: paasmaker.job.application.delete
+    class: paasmaker.common.job.delete.application.ApplicationDeleteRootJob
+    title: Delete Application Job
+
   # COORDINATION JOBS
   - name: paasmaker.job.coordinate.selectlocations
     class: paasmaker.common.job.coordinate.SelectLocationsJob
