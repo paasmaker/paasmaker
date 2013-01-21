@@ -26,6 +26,7 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import colander
 import tornadoredis
+from pymongo import MongoClient
 from paasmaker.thirdparty.pika import TornadoConnection
 import pika
 import yaml
@@ -250,6 +251,33 @@ class HeartSchema(colander.MappingSchema):
 	@staticmethod
 	def default():
 		return {'enabled': False}
+
+#class MongoConnectionSchema(colander.MappingSchema):
+	#host = colander.SchemaNode(colander.String(),
+		#title="Hostname",
+		#description="mongoDB Hostname")
+	#port = colander.SchemaNode(colander.Integer(),
+		#title="Port",
+		#description="mongoDB Port")
+	#password = colander.SchemaNode(colander.String(),
+		#title="Password",
+		#description="mongoDB Password",
+		#missing=None,
+		#default=None)
+	#managed = colander.SchemaNode(colander.Boolean(),
+		#title="Managed",
+		#description="If true, this is a managed mongoDB instance. Paasmaker will create it on demand and manage storing it's data.",
+		#default=False,
+		#missing=False)
+	#shutdown = colander.SchemaNode(colander.Boolean(),
+		#title="Shutdown with node",
+		#description="If true, this managed mongoDB instance is shut down when the node is shut down.",
+		#default=False,
+		#missing=False)
+
+	#@staticmethod
+	#def default_mongo():
+		#return {'host': 'localhost', 'port': 42520, 'managed': False, 'shutdown': False}
 
 class RedisConnectionSchema(colander.MappingSchema):
 	host = colander.SchemaNode(colander.String(),
@@ -479,6 +507,7 @@ class ConfigurationSchema(colander.MappingSchema):
 	router = RouterSchema(default=RouterSchema.default(), missing=RouterSchema.default())
 
 	redis = RedisSchema(default=RedisSchema.default(), missing=RedisSchema.default())
+	#mongodb = MongoConnectionSchema(default=MongoConnectionSchema.default_mongo(), missing=MongoConnectionSchema.default_mongo())
 
 	plugins = PluginsSchema(
 		title="Plugins",
@@ -503,6 +532,11 @@ class ConfigurationSchema(colander.MappingSchema):
 	# Server related configuration. This is for an Ubuntu server, set up as
 	# per the installation instructions. Obviously, for other platforms
 	# this will need to be altered.
+	mongodb_binary = colander.SchemaNode(colander.String(),
+		title = "mongoDB server binary",
+		description = "The full path to the mongoDB server binary.",
+		default = find_executable("mongod"),
+		missing = find_executable("mongod"))
 	redis_binary = colander.SchemaNode(colander.String(),
 		title = "Redis server binary",
 		description = "The full path to the redis server binary.",
@@ -1070,6 +1104,105 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				# Must be started. Just connect.
 				self._connect_redis(credentials, callback, error_callback)
 
+	#def _connect_mongo(self, credentials, callback, error_callback):
+		#"""
+		#Internal function to connect to the given mongoDB server, calling
+		#the callback when it's ready with the client object.
+
+		#You should not call this externally.
+
+		#:arg dict credentials: A dict containing three keys, ``host``,
+			#``port``, and ``password``.
+		#:arg callable callback: The callback to call when completed. The
+			#callback is passed the client object, an instance of
+			#``MongoClient``.
+		#:arg callable error_callback: A callback called if an error occurs.
+		#"""
+		#client = MongoClient(
+			#host=credentials['host'],
+			#port=credentials['port']
+		#)
+
+		## TODO: Handle where it failed.
+		#callback(client)
+
+	#def _get_mongo(self, name, credentials, callback, error_callback):
+		#"""
+		#Internal helper to get a mongoDB connection.
+		#* A managed mongoDB? And not started? Start it, and then
+		  #return a client to it.
+		#* A managed mongoDB? And still starting up? Queue up the incoming
+		  #requests.
+		#* A managed mongoDB that's started? Proceed to fetching a connection.
+		#"""
+		#if not credentials['managed']:
+			## Not supported at this point
+			#logger.debug("CONFIG WARNING: tried to start a non-managed mongoDB instance; this is not currently supported")
+		#else:
+			## It's managed. Check it's state.
+			#meta_key = "%s_%d" % (credentials['host'], credentials['port'])
+			#if not hasattr(self, 'mongo_meta'):
+				#self.mongo_meta = {}
+			#if not self.mongo_meta.has_key(meta_key):
+				#self.mongo_meta[meta_key] = {
+					#'state': 'CREATE',
+					#'queue': [],
+					#'shutdown': credentials['shutdown']
+				#}
+
+			#meta = self.mongo_meta[meta_key]
+
+			## Callback to handle when it's up and running.
+			#def on_mongo_started(message):
+				## Mark it as started.
+				## TODO: Detect and handle where it didn't start.
+				#meta['state'] = 'STARTED'
+
+				## Play back all our callbacks.
+				#for queued in meta['queue']:
+					#self._connect_mongo(queued[0], queued[1], queued[2])
+
+			#def on_mongo_startup_failure(message, exception=None):
+				## TODO: Handle this.
+				#pass
+
+			## Change the action based on our state.
+			#if meta['state'] == 'CREATE':
+				## This is the first attempt to access it.
+				## Start up the service.
+				#meta['state'] = 'STARTING'
+				#meta['queue'].append((credentials, callback, error_callback))
+
+				#directory = self.get_scratch_path_exists(
+					#'mongodb', name
+				#)
+				#meta['manager'] = paasmaker.util.managedmongodb.ManagedMongo(self)
+				#try:
+					#meta['manager'].load_parameters(directory)
+				#except paasmaker.util.ManagedDaemonError, ex:
+					## Doesn't yet exist. Create it.
+					#meta['manager'].configure(directory, credentials['port'], credentials['host'])
+
+				#meta['manager'].start_if_not_running(on_mongo_started, on_mongo_startup_failure)
+
+			#elif meta['state'] == 'STARTING':
+				## Queue up our callbacks.
+				#meta['queue'].append((credentials, callback, error_callback))
+			#else:
+				## Must be started. Just connect.
+				#self._connect_mongo(credentials, callback, error_callback)
+
+	#def get_mongo(self, callback, error_callback):
+		#"""
+		#Get a mongoDB client pointing to the managed mongoDB instance.
+
+		#For multi node setups, this will generally point to the same
+		#instance of mongoDB, on a single host.
+		
+		#TODO: uses a hacked-up hardcoded instance name
+		#"""
+		#self._get_mongo('managed_mongodb_instance', self['mongodb'], callback, error_callback)
+
 	def get_router_table_redis(self, callback, error_callback):
 		"""
 		Get a redis client pointing to the router table Redis instance.
@@ -1114,6 +1247,23 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					# Wait until it stops.
 					while meta['manager'].is_running():
 						time.sleep(0.1)
+						
+	#def shutdown_managed_mongo(self):
+		#"""
+		#Shutdown any managed mongoDB instances for which we've been
+		#configured to shutdown on exit.
+
+		#This has no action if no mongoDB instances have been configured
+		#to shutdown on exit.
+		#"""
+		#if hasattr(self, 'mongo_meta'):
+			#for key, meta in self.redis_meta.iteritems():
+				#if meta['state'] == 'STARTED' and meta['shutdown']:
+					#logger.info("Shutting down managed mongoDB, because requested to do so.")
+					#meta['manager'].stop()
+					## Wait until it stops.
+					#while meta['manager'].is_running():
+						#time.sleep(0.1)
 
 	def setup_managed_nginx(self, callback, error_callback):
 		"""
