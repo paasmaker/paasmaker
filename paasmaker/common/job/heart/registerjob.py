@@ -115,28 +115,47 @@ class RegisterInstanceJob(BaseJob):
 		self.failed(message)
 
 	def _begin_unpacking(self, package_path):
-		self.log_fp = self.logger.takeover_file()
+		unpacker_plugin_name = 'paasmaker.unpacker.%s' % self.instance_data['application_version']['source_package_type']
 
-		# Begin unpacking.
-		command = ['tar', 'zxvf', package_path]
+		plugin_exists = self.configuration.plugins.exists(
+			unpacker_plugin_name,
+			paasmaker.util.plugin.MODE.UNPACKER
+		)
 
-		extractor = paasmaker.util.Popen(command,
-			stdout=self.log_fp,
-			stderr=self.log_fp,
-			on_exit=self._unpacking_complete,
-			io_loop=self.configuration.io_loop,
-			cwd=self.instance_path)
+		if not plugin_exists:
+			error_message = "No such unpacker %s - we don't know how to unpack this package." % unpacker_plugin_name
+			self.logger.error(error_message)
+			self.failed(error_message)
+			return
 
-	def _unpacking_complete(self, code):
-		self.logger.untakeover_file(self.log_fp)
-		self.logger.info("tar command returned code: %d", code)
-		#self.configuration.debug_cat_job_log(logger.job_id)
-		if code == 0:
+		unpacker_plugin = self.configuration.plugins.instantiate(
+			unpacker_plugin_name,
+			paasmaker.util.plugin.MODE.UNPACKER,
+			{},
+			self.logger
+		)
+
+		def unpack_success(message):
+			self.logger.info(message)
+			# Completed. Everything should now be set up.
 			self.instance_data['runtime']['path'] = self.instance_path
 			self.instance_data['instance']['state'] = constants.INSTANCE.REGISTERED
 			self.configuration.instances.save()
 			self.success(self.output_context, "Completed successfully.")
-		else:
+
+		def unpack_failure(self, message, exception=None):
+			# Fail.
+			self.logger.error(message)
+			if exception:
+				self.logger.error("Exception", exc_info=exception)
+
 			self.instance_data['instance']['state'] = constants.INSTANCE.ERROR
 			self.configuration.instances.save()
-			self.failed("Failed to extract files.")
+			self.failed("Failed to unpack files.")
+
+		unpacker_plugin.unpack(
+			package_path,
+			self.instance_path,
+			unpack_success,
+			unpack_failure
+		)

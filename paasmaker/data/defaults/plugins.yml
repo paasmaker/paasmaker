@@ -187,3 +187,8 @@ plugins:
   - name: paasmaker.fetcher.paasmaker
     class: paasmaker.heart.fetcher.paasmakernode.PaasmakerNodeFetcher
     title: Paasmaker Code Fetcher
+
+  # UNPACKER PLUGINS
+  - name: paasmaker.unpacker.tarball
+    class: paasmaker.heart.unpacker.tarball.TarballUnpacker
+    title: Tarball Code Unpacker

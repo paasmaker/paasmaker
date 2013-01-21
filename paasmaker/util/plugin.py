@@ -71,7 +71,7 @@ MODE_REQUIRE_PARAMS = {
 	'NODE_SCORE': False,
 
 	'PACKER': False,
-	'UNPACKER': True,
+	'UNPACKER': False,
 	'FETCHER': False,
 	'STORER': False
 }

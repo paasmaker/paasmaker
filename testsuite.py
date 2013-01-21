@@ -73,6 +73,8 @@ test_sets = {
 	paasmaker.heart.runtime.shell: ['slow', 'heart', 'runtime', 'shell'],
 	paasmaker.heart.runtime.rbenv: ['slow', 'heart', 'runtime', 'ruby'],
 
+	paasmaker.heart.unpacker.tarball: ['all', 'heart', 'unpacker'],
+
 	paasmaker.pacemaker.service.parameters: ['all', 'service', 'serviceparameters'],
 	paasmaker.pacemaker.service.mysql: ['slow', 'service', 'servicemysql'],
 	paasmaker.pacemaker.service.postgres: ['slow', 'service', 'servicepostgres'],
