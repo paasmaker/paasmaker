@@ -752,6 +752,21 @@ class Application(OrmBase, Base):
 			# It's warning, because no versions are current.
 			return constants.HEALTH.WARNING
 
+	def can_delete(self, session):
+		"""
+		Find out if this app has any versions in the READY or RUNNING states.
+		If so, return false; if not, this app can be deleted safely.
+		
+		:arg Session session: SQLAlchemy session object to work in
+		"""
+		versions = session.query(
+			ApplicationVersion
+		).filter(
+			ApplicationVersion.application == self,
+			ApplicationVersion.state.in_([constants.VERSION.READY, constants.VERSION.RUNNING])
+		)
+		return (versions.count() == 0)
+
 # Joining table between Application Version and services.
 # There is no ORM object to represent this.
 application_version_services = Table('application_version_service', Base.metadata,
@@ -776,7 +791,7 @@ class ApplicationVersion(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	application_id = Column(Integer, ForeignKey('application.id'), nullable=False, index=True)
-	application = relationship("Application", backref=backref('versions', lazy="dynamic"))
+	application = relationship("Application", backref=backref('versions', lazy="dynamic", cascade="all, delete"))
 	version = Column(Integer, nullable=False)
 	is_current = Column(Boolean, nullable=False)
 	statistics = Column(Text, nullable=True)
@@ -974,7 +989,7 @@ class ApplicationInstanceType(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	application_version_id = Column(Integer, ForeignKey('application_version.id'), nullable=False, index=True)
-	application_version = relationship("ApplicationVersion", backref=backref('instance_types', order_by=id))
+	application_version = relationship("ApplicationVersion", backref=backref('instance_types', order_by=id, cascade="all, delete"))
 	name = Column(String, nullable=False, index=True)
 	quantity = Column(Integer, nullable=False)
 	runtime_name = Column(Text, nullable=False)
@@ -1137,7 +1152,7 @@ class ApplicationInstance(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	instance_id = Column(String, nullable=False, index=True)
 	application_instance_type_id = Column(Integer, ForeignKey('application_instance_type.id'), nullable=False, index=True)
-	application_instance_type = relationship("ApplicationInstanceType", backref=backref('instances', order_by=id, lazy="dynamic"))
+	application_instance_type = relationship("ApplicationInstanceType", backref=backref('instances', order_by=id, lazy="dynamic", cascade="all, delete"))
 	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
 	node = relationship("Node", backref=backref('instances', order_by=id))
 	port = Column(Integer, nullable=True, index=True)
@@ -1259,7 +1274,7 @@ class Service(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	application_id = Column(Integer, ForeignKey('application.id'), nullable=False, index=True)
-	application = relationship("Application", backref=backref('services', order_by=id))
+	application = relationship("Application", backref=backref('services', order_by=id, cascade="all, delete"))
 	name = Column(String, nullable=False, index=True)
 	provider = Column(String, nullable=False, index=True)
 	_parameters = Column('parameters', Text, nullable=False)
@@ -1649,3 +1664,75 @@ class TestModel(unittest.TestCase):
 		# TODO: Think of more imaginitive ways that this
 		# very very simple permissions system can be broken,
 		# and test them.
+		
+	def test_application_create_and_delete(self):
+		session = self.session
+
+		workspace = paasmaker.model.Workspace()
+		workspace.name = 'Test'
+		workspace.stub = 'test'
+
+		application = paasmaker.model.Application()
+		application.workspace = workspace
+		application.name = 'foo.com'
+
+		service = paasmaker.model.Service()
+		service.application = application
+		service.name = 'test'
+		service.provider = 'paasmaker.service.parameters'
+		service.parameters = {'test': 'bar'}
+		service.credentials = {'test': 'bar'}
+		service.state = paasmaker.common.core.constants.SERVICE.AVAILABLE
+
+		application_version = paasmaker.model.ApplicationVersion()
+		application_version.application = application
+		application_version.version = 1
+		application_version.is_current = False
+		application_version.manifest = ''
+		application_version.source_path = "paasmaker://testnode/foobar"
+		application_version.source_checksum = 'dummychecksumhere'
+		application_version.source_package_type = 'tarball'
+		application_version.state = paasmaker.common.core.constants.VERSION.PREPARED
+		application_version.scm_name = 'paasmaker.scm.zip'
+		application_version.scm_parameters = {}
+
+		application_version.services.append(service)
+
+		instance_type = paasmaker.model.ApplicationInstanceType()
+		instance_type.application_version = application_version
+		instance_type.name = 'web'
+		instance_type.quantity = 1
+		instance_type.runtime_name = "paasmaker.runtime.shell"
+		instance_type.runtime_parameters = {}
+		instance_type.runtime_version = "1"
+		instance_type.startup = {}
+		instance_type.placement_provider = 'paasmaker.placement.default'
+		instance_type.placement_parameters = {}
+		instance_type.exclusive = False
+		instance_type.standalone = False
+
+		session.add(instance_type)
+		
+		node = paasmaker.model.Node(name='test1337',
+				route='1337.local.paasmaker.net',
+				apiport=12345,
+				uuid="foobar-test-node",
+				state=paasmaker.common.core.constants.NODE.ACTIVE)
+		node.heart = True
+		node.pacemaker = True
+		node.tags = {}
+		
+		session.add(node)
+		
+		instance = paasmaker.model.ApplicationInstance()
+		instance.instance_id = str(uuid.uuid4())
+		instance.application_instance_type = instance_type
+		instance.node = node
+		instance.state = paasmaker.common.core.constants.INSTANCE.ALLOCATED
+
+		session.add(instance)
+		session.commit()
+
+		session.delete(application)
+		session.commit()
+

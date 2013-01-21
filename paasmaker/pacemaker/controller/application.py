@@ -313,6 +313,24 @@ class ApplicationSetCurrentController(ApplicationRootController):
 		return routes
 
 
+class ApplicationDeleteController(ApplicationRootController):
+
+	def get(self, input_id):
+		application = self._get_application(input_id)
+		session = self.db()
+		if not application.can_delete(session):
+			raise tornado.web.HTTPError(400, "Cannot delete application that is still active")
+		session.delete(application)
+		session.commit()
+		self.render("api/apionly.html")
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/application/(\d+)/delete", ApplicationDeleteController, configuration))
+		return routes
+
+
 class ApplicationServiceListController(ApplicationRootController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
