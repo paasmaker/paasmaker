@@ -46,16 +46,16 @@ class ApplicationDeleteRootJob(BaseJob):
 		).get(
 			self.parameters["application_id"]
 		)
-		
+
 		if application is None:
 			error_msg = "Can't find application of id %d to delete" % self.parameters["application_id"]
 			self.logger.error(error_msg)
 			self.failed(error_msg)
 			return
-		
+
 		session.delete(application)
 		session.commit()
-		
+
 		self.success({}, "Deleted application id %d" % self.parameters["application_id"])
 
 	@classmethod
@@ -65,15 +65,89 @@ class ApplicationDeleteRootJob(BaseJob):
 			'application:%d' % application.id
 		]
 
-		configuration.job_manager.add_job(
+		tree = configuration.job_manager.get_specifier()
+		tree.set_job(
 			'paasmaker.job.application.delete',
 			{
 				'application_id': application.id
 			},
 			"Delete application %s" % application.name,
-			callback=callback,
 			tags=tags
 		)
+
+		for service in application.services:
+			servicejob = tree.add_child()
+			servicejob.set_job(
+				'paasmaker.job.application.delete.service',
+				{
+					'service_id': service.id
+				},
+				"Delete service '%s'" % service.name
+			)
+
+		def on_tree_added(root_id):
+			callback(root_id)
+
+		# Add that entire tree into the job manager.
+		configuration.job_manager.add_tree(tree, on_tree_added)
+
+class ApplicationDeleteServiceParametersSchema(colander.MappingSchema):
+	service_id = colander.SchemaNode(
+		colander.Integer(),
+		title="Service ID",
+		description="ID of the service to be deleted"
+	)
+
+class ApplicationDeleteServiceJob(BaseJob):
+	MODES = {
+		MODE.JOB: ApplicationDeleteServiceParametersSchema()
+	}
+
+	def start_job(self, context):
+		self.session = self.configuration.get_database_session()
+		self.service = self.session.query(
+			paasmaker.model.Service
+		).get(
+			self.parameters['service_id']
+		)
+
+		plugin_exists = self.configuration.plugins.exists(
+			self.service.provider,
+			paasmaker.util.plugin.MODE.SERVICE_DELETE
+		)
+
+		if not plugin_exists:
+			self.failed("Plugin with mode SERVICE_DELETE doesn't exist for service %s" %self.service.provider)
+			return
+
+		service_plugin = self.configuration.plugins.instantiate(
+			self.service.provider,
+			paasmaker.util.plugin.MODE.SERVICE_DELETE,
+			self.service.parameters,
+			self.logger
+		)
+
+		service_plugin.remove(self.service.name, self.service.credentials, self._service_success, self._service_failure)
+
+	def _service_success(self, message):
+		self.logger.info(message)
+		self.session.refresh(self.service)
+
+		self.session.delete(self.service)
+		self.session.commit()
+
+		# And signal completion.
+		self.success({}, "Successfully deleted service %s" % self.service.name)
+
+	def _service_failure(self, message):
+		# Record the new state.
+		self.session.refresh(self.service)
+		self.service.state = constants.SERVICE.ERROR
+		self.session.add(self.service)
+		self.session.commit()
+
+		# Signal failure.
+		self.failed(message)
 
 class ApplicationDeleteJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
@@ -83,6 +157,14 @@ class ApplicationDeleteJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# Fire up the job manager.
 		self.configuration.startup_job_manager(self.stop)
 		self.wait()
+
+		self.configuration.plugins.register(
+			'paasmaker.service.parameters',
+			'paasmaker.pacemaker.service.parameters.ParametersService',
+			{},
+			'Parameters Service'
+		)
+
 
 	def tearDown(self):
 		self.configuration.cleanup()
@@ -103,6 +185,30 @@ class ApplicationDeleteJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		application.workspace = workspace
 		application.name = 'foo.com'
 
+		service = paasmaker.model.Service()
+		service.application = application
+		service.name = 'test1'
+		service.provider = 'paasmaker.service.parameters'
+		service.parameters = {'test': 'bar'}
+		service.credentials = {'test': 'bar'}
+		service.state = paasmaker.common.core.constants.SERVICE.AVAILABLE
+
+		service = paasmaker.model.Service()
+		service.application = application
+		service.name = 'test2'
+		service.provider = 'paasmaker.service.parameters'
+		service.parameters = {'test': 'bar'}
+		service.credentials = {'test': 'bar'}
+		service.state = paasmaker.common.core.constants.SERVICE.AVAILABLE
+
+		service = paasmaker.model.Service()
+		service.application = application
+		service.name = 'test3'
+		service.provider = 'paasmaker.service.parameters'
+		service.parameters = {'test': 'bar'}
+		service.credentials = {'test': 'bar'}
+		service.state = paasmaker.common.core.constants.SERVICE.AVAILABLE
+
 		session.add(application)
 		session.commit()
 
@@ -120,7 +226,7 @@ class ApplicationDeleteJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# And make it work.
 		self.configuration.job_manager.allow_execution(root_job_id, self.stop)
 		self.wait()
-	
+
 		result = self.wait()
 		while result.state not in (constants.JOB_FINISHED_STATES):
 			result = self.wait()
@@ -137,4 +243,3 @@ class ApplicationDeleteJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		)
 
 		self.assertIsNone(shouldnt_exist, "Application appears to still exist after being deleted")
-		

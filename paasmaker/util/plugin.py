@@ -42,6 +42,7 @@ MODE_REQUIRE_PARAMS = {
 	'SHUTDOWN_POSTNOTIFY': False,
 
 	'SERVICE_CREATE': True,
+	'SERVICE_DELETE': False,
 
 	# This is for plugins that can run as startup commands for applications.
 	'RUNTIME_STARTUP': True,

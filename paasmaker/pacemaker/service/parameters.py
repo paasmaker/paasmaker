@@ -18,7 +18,8 @@ class ParametersService(BaseService):
 	for testing or for pumping in configuration or values from the manifest.
 	"""
 	MODES = {
-		paasmaker.util.plugin.MODE.SERVICE_CREATE: ParametersServiceParametersSchema()
+		paasmaker.util.plugin.MODE.SERVICE_CREATE: ParametersServiceParametersSchema(),
+		paasmaker.util.plugin.MODE.SERVICE_DELETE: None
 	}
 	OPTIONS_SCHEMA = ParametersServiceConfigurationSchema()
 

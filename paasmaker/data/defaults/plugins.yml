@@ -60,6 +60,10 @@ plugins:
     class: paasmaker.common.job.delete.application.ApplicationDeleteRootJob
     title: Delete Application Job
 
+  - name: paasmaker.job.application.delete.service
+    class: paasmaker.common.job.delete.application.ApplicationDeleteServiceJob
+    title: Delete Services for Application
+
   # COORDINATION JOBS
   - name: paasmaker.job.coordinate.selectlocations
     class: paasmaker.common.job.coordinate.SelectLocationsJob
