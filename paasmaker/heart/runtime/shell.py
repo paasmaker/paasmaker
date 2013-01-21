@@ -251,6 +251,27 @@ class ShellRuntimeTest(BaseRuntimeTest):
 
 		#print open(log_path, 'r').read()
 
+		# Try an instance that will fail immediately (and thus not assume the TCP port)
+		runtime = self.configuration.plugins.instantiate(
+			'paasmaker.runtime.shell',
+			paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
+			{
+				'launch_command': 'python failure.py --port=%(port)d'
+			}
+		)
+
+		# Start it up.
+		runtime.start(
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+
+		# Wait until it's started.
+		self.wait()
+		self.assertFalse(self.success)
+		self.assertIn("timeout", self.message)
+
 	def test_standalone(self):
 		# Put together the barest of possible information to start up the system.
 		instance_id = str(uuid.uuid4())
@@ -335,3 +356,26 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		)
 		self.wait()
 		self.assertFalse(self.success)
+
+		# Now try with an instance that will exit.
+		# This should report a startup failure.
+		runtime = self.configuration.plugins.instantiate(
+			'paasmaker.runtime.shell',
+			paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
+			{
+				'launch_command': 'python failure.py',
+				'standalone_wait': 1
+			}
+		)
+
+		# Start it up.
+		runtime.start(
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+
+		# Wait until it's started.
+		self.wait()
+		self.assertFalse(self.success)
+		self.assertIn("timeout", self.message)
