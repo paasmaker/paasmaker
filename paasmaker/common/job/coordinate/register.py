@@ -352,7 +352,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		redis = self.wait()
 
 		set_key_version_1 = "instances:%s" % instance.application_instance_type.version_hostname(self.configuration)
-		version_instance = "%s:%d" % (socket.gethostbyname(instance.node.route), instance.port)
+		version_instance = instance.get_router_location()
 
 		redis.smembers(set_key_version_1, self.stop)
 		routing_table = self.wait()
