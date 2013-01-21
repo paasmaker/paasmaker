@@ -12,3 +12,4 @@ import placement
 import prepare
 import cron
 import packer
+import storer

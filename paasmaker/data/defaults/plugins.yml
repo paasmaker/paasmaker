@@ -177,3 +177,8 @@ plugins:
   - name: paasmaker.packer.default
     class: paasmaker.pacemaker.packer.tarball.TarballPacker
     title: Default Source Code packer
+
+  # STORER PLUGINS
+  - name: paasmaker.storer.default
+    class: paasmaker.pacemaker.storer.paasmakernode.PaasmakerNodeStorer
+    title: Default Source Code storer

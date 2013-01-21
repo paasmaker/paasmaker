@@ -80,6 +80,7 @@ test_sets = {
 	paasmaker.pacemaker.service.managedpostgres: ['slow', 'service', 'servicemanagedpostgres'],
 
 	paasmaker.pacemaker.packer.tarball: ['all', 'packer', 'tarball'],
+	paasmaker.pacemaker.storer.paasmakernode: ['all', 'storer'],
 
 	paasmaker.pacemaker.prepare.shell: ['all', 'prepare', 'shellprepare'],
 

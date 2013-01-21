@@ -79,16 +79,55 @@ class ApplicationPrepareRootJob(BaseJob):
 
 		# Set the source path.
 		# Only store the package name, not the leading path.
-		package_name = os.path.basename(context['package_file'])
-		version.source_path = "paasmaker://%s/%s" % (self.configuration.get_node_uuid(), package_name)
 		version.checksum = context['package_checksum']
 		version.source_package_type = context['package_type']
 
-		version.state = constants.VERSION.PREPARED
-		session.add(version)
-		session.commit()
+		def store_complete(url, message):
+			self.logger.info(message)
+			version.source_path = url
+			version.state = constants.VERSION.PREPARED
+			session.add(version)
+			session.commit()
 
-		self.success({}, "Successfully prepared package for %s" % context['application_name'])
+			self.success({}, "Successfully prepared package for %s" % context['application_name'])
+
+		def store_failed(message, exception=None):
+			# Handle a failed store.
+			self.logger.error(message)
+			if exception:
+				self.logger.error("Exception", exc_info=exception)
+			self.failed(message)
+			# end of pack_failed()
+
+		# Store the package.
+		# Locate a suitable plugin to do this.
+		storer_plugin_name = 'paasmaker.storer.default'
+		if context.has_key('preferred_storer'):
+			storer_plugin_name = 'paasmaker.storer.%s' % context['preferred_storer']
+
+		plugin_exists = self.configuration.plugins.exists(
+			storer_plugin_name,
+			paasmaker.util.plugin.MODE.STORER
+		)
+
+		if not plugin_exists:
+			if context.has_key('preferred_storer'):
+				error_message = "The preferred storer %s was not found." % storer_plugin_name
+			else:
+				error_message = "Your Paasmaker configuration is incomplete. No default source storer plugin is configured."
+
+			self.logger.error(error_message)
+			self.failed(error_message)
+			return
+
+		storer_plugin = self.configuration.plugins.instantiate(
+			storer_plugin_name,
+			paasmaker.util.plugin.MODE.STORER,
+			{},
+			self.logger
+		)
+
+		storer_plugin.store(context['package_file'], context['package_checksum'], context['package_type'], store_complete, store_failed)
 
 	# TODO: Can't place versions into ERROR state when they can't be prepared. Fix this!
 
