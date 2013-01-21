@@ -203,7 +203,8 @@ Listen %(port)d
 				error_callback("Failed to start up - port %d wasn't listening inside the timeout." % instance['instance']['port'])
 
 			# Wait for it to start listening.
-			self.wait_until_port_used(
+			self.configuration.port_allocator.wait_until_port_used(
+				self.configuration.io_loop,
 				instance['instance']['port'],
 				2.0, # Should not need more than 2 seconds. TODO: Tweak.
 				callback, # On success, proceed to success.
@@ -235,7 +236,8 @@ Listen %(port)d
 
 			# Wait for it to stop listening.
 			instance = self.configuration.instances.get_instance(instance_id)
-			self.wait_until_port_free(
+			self.configuration.port_allocator.wait_until_port_free(
+				self.configuration.io_loop,
 				instance['instance']['port'],
 				2.0, # Should not need more than 2 seconds. TODO: Tweak.
 				callback, # On success, proceed to success.

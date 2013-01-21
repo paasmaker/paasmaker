@@ -28,8 +28,13 @@ class RbenvRuntimeParametersSchema(colander.MappingSchema):
 	start_timeout = colander.SchemaNode(colander.Integer(),
 		title="Startup timeout",
 		description="The maximum time to wait for the application to start listening on it's assigned port.",
-		missing=60,
-		default=60)
+		missing=20,
+		default=20)
+	standalone_wait = colander.SchemaNode(colander.Integer(),
+		title="Standalone Wait",
+		description="For standalone instances, wait this long for the instance to start before considering it running.",
+		missing=5,
+		default=5)
 
 class RbenvEnvironmentParametersSchema(colander.MappingSchema):
 	# No options.
@@ -164,42 +169,38 @@ class RbenvRuntime(BaseRuntime):
 		# Prepare the launch command.
 		instance = self.configuration.instances.get_instance(instance_id)
 		launch_params = {}
-		launch_params['port'] = instance['instance']['port']
+		port = None
+		if instance['instance'].has_key('port'):
+			port = instance['instance']['port']
+			launch_params['port'] = instance['instance']['port']
 		launch_command = self.parameters['launch_command'] % launch_params
 
 		def environment_prepared(message):
 			# Launch it.
-			self.supervise_start(
+			self._supervise_start(
 				instance_id,
 				launch_command,
 				instance['runtime']['path'],
 				instance['environment']
 			)
 
-			# TODO: Handle the case where the instance id gets a stop signal
-			# because the subprocess terminated.
-			def abort_result(message):
+			def errored_out(message):
 				error_callback("Failed to start up instance inside timeout.")
 
-			def abort_startup(message):
+			def timed_out(message):
 				# Failed to start up in time. Stop the instance.
-				self.stop(instance_id, abort_result, abort_result)
+				self.stop(instance_id, errored_out, errored_out)
 
-			# If it's not standalone, wait for it to assume it's TCP port.
-			if not instance['instance_type']['standalone']:
-				self.wait_until_port_used(
-					instance['instance']['port'],
-					self.parameters['start_timeout'],
-					callback,
-					abort_startup
-				)
-			else:
-				self.wait_until_supervisor_running(
-					instance_id,
-					self.parameters['start_timeout'],
-					callback,
-					abort_startup
-				)
+			self._wait_for_startup(
+				instance_id,
+				instance['instance_type']['standalone'],
+				port,
+				self.parameters['start_timeout'],
+				self.parameters['standalone_wait'],
+				callback,
+				timed_out,
+				errored_out
+			)
 
 			# end of environment_prepared()
 
@@ -214,36 +215,34 @@ class RbenvRuntime(BaseRuntime):
 	def stop(self, instance_id, callback, error_callback):
 		# Issue the stop command.
 		try:
-			self.supervise_stop(instance_id)
+			self._supervise_stop(instance_id)
 		except OSError, ex:
 			# Probably no such PID. Failed!
 			error_callback(str(ex), ex)
 			return
 
+		instance = self.configuration.instances.get_instance(instance_id)
+
 		def timeout(message):
 			# Failed to stop listening, so it's not responding.
+			# TODO: Handle this better.
 			error_callback(message)
 
-		# Wait for it to free up the port, if it's not standalone.
-		# If it's not standalone, wait for it to assume it's TCP port.
-		instance = self.configuration.instances.get_instance(instance_id)
-		if not instance['instance_type']['standalone']:
-			self.wait_until_port_free(
-				instance['instance']['port'],
-				self.parameters['start_timeout'],
-				callback,
-				timeout
-			)
-		else:
-			self.wait_until_supervisor_shutdown(
-				instance_id,
-				self.parameters['start_timeout'],
-				callback,
-				timeout
-			)
+		port = None
+		if instance['instance'].has_key('port'):
+			port = instance['instance']['port']
+
+		self._wait_for_shutdown(
+			instance_id,
+			instance['instance_type']['standalone'],
+			port,
+			self.parameters['start_timeout'],
+			callback,
+			timeout
+		)
 
 	def status(self, instance_id, callback, error_callback):
-		if self.supervise_is_running(instance_id):
+		if self._supervise_is_running(instance_id):
 			callback("Instance is running.")
 		else:
 			error_callback("Instance is not running.", exception=None)

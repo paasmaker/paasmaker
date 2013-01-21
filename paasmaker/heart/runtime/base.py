@@ -57,7 +57,7 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		"""
 		raise NotImplementedError("You must implement statistics().")
 
-	def generate_exit_report_command(self, instance_id):
+	def _generate_exit_report_command(self, instance_id):
 		"""
 		Generate an exit report command that can be used by runtimes
 		to report that they've exited or changed state to the heart.
@@ -82,13 +82,13 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 
 		self.configuration.instances.save()
 
-	def supervise_start(self, instance_id, command, cwd, environment):
+	def _supervise_start(self, instance_id, command, cwd, environment):
 		"""
 		Using the command supervisor, start the given command for the given
 		instance id. Returns regardless of startup status; the command
 		will report it's exit via the API.
 		"""
-		self.generate_exit_report_command(instance_id)
+		self._generate_exit_report_command(instance_id)
 
 		supervisor = paasmaker.util.CommandSupervisorLauncher(self.configuration, instance_id)
 		instance = self.configuration.instances.get_instance(instance_id)
@@ -100,29 +100,68 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		# And fire it off.
 		supervisor.launch(command, cwd, environment, exit_key, self.configuration.get_flat('http_port'))
 
-	def wait_until_port_used(self, port, timeout, callback, timeout_callback):
-		self.wait_until_port_state(port, True, timeout, callback, timeout_callback)
-	def wait_until_port_free(self, port, timeout, callback, timeout_callback):
-		self.wait_until_port_state(port, False, timeout, callback, timeout_callback)
+	def _wait_for_startup(self, instance_id, standalone, port, tcp_timeout, standalone_wait, callback, timeout_callback, error_callback):
+		"""
+		Wait for the given instance to start up.
 
-	def wait_until_port_state(self, port, state, timeout, callback, timeout_callback):
-		# Wait until the port is no longer free.
-		end_timeout = time.time() + timeout
+		For normal instances, it waits for the supplied TCP port to be in use.
+		It calls the timeout_callback if it doesn't assume the TCP port in time.
+		It calls the error_callback if the process dies before it assumes the TCP port
+		(so if it has an error on startup). It calls the callback if the process
+		assumes the TCP port correctly.
+
+		For standalone instances, it will give it standalone_wait seconds to start,
+		and then check it's status, and feed back the appropriate status based
+		on the instance.
+
+		:arg str instance_id: The instance ID to wait for.
+		:arg bool standalone: If the instance is standalone or not.
+		:arg int|None port: The TCP port that the instance should be assuming, if it's
+			not standalone.
+		:arg int tcp_timeout: The length of time to wait for it to assume the TCP
+			port. Only applies if it's not standalone.
+		:arg int standalone_wait: Wait this long for a standalone instance to start up.
+			This gives that instance time to settle, but does delay startup.
+		:arg callable callback: The callback to call when it's running.
+		:arg callable timeout_callback: The callback to call when the startup
+			times out.
+		:arg callable error_callback: The callback to call when the startup
+			fails, because the subprocess dies.
+		"""
+		# In a loop, wait for either the process to die (it gave an error)
+		# or for it to assume the appropriate TCP port.
+		end_timeout = time.time() + tcp_timeout
 
 		def wait_for_state():
-			if self.configuration.port_allocator.in_use(port) == state:
-				# And say that we're done.
-				callback("In appropriate state.")
-			else:
-				if time.time() > end_timeout:
-					timeout_callback("Failed to end up in appropriate state in time.")
-				else:
-					# Wait a little bit longer.
-					self.configuration.io_loop.add_timeout(time.time() + 0.1, wait_for_state)
+			process_running = self._supervise_is_running(instance_id)
+			if not standalone:
+				port_in_use = self.configuration.port_allocator.in_use(port)
 
-		self.configuration.io_loop.add_timeout(time.time() + 0.1, wait_for_state)
+			if not process_running:
+				# It errored.
+				error_callback("Process is no longer running.")
+				return
+			if standalone and process_running:
+				# It's running.
+				callback("Process is running.")
+				return
+			if not standalone and port_in_use:
+				# It's running.
+				callback("Port is now in use.")
+				return
+			if time.time() > end_timeout:
+				timeout_callback("Failed to end up in appropriate state in time.")
+				return
 
-	def supervise_stop(self, instance_id):
+			self.configuration.io_loop.add_timeout(time.time() + 0.2, wait_for_state)
+
+		if standalone:
+			# Wait for the appropriate time before checking the instance.
+			self.configuration.io_loop.add_timeout(time.time() + standalone_wait, wait_for_state)
+		else:
+			self.configuration.io_loop.add_timeout(time.time() + 0.2, wait_for_state)
+
+	def _supervise_stop(self, instance_id):
 		"""
 		Using the command supervisor, stop the given instance. If it was
 		not started using the supervisor, things will go wrong.
@@ -130,35 +169,52 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		supervisor = paasmaker.util.CommandSupervisorLauncher(self.configuration, instance_id)
 		supervisor.kill()
 
-	def supervise_is_running(self, instance_id):
+	def _wait_for_shutdown(self, instance_id, standalone, port, timeout, callback, timeout_callback):
+		"""
+		Wait for the given instance to shut down.
+
+		For normal instances, it waits for the supplied TCP port to be free.
+		It calls the timeout_callback if it doesn't release the TCP port inside the timeout.
+
+		For standalone instances, it will call the callback as soon as the instance
+		is no longer running, or the timeout callback if it doesn't stop.
+
+		:arg str instance_id: The instance ID to wait for.
+		:arg bool standalone: If the instance is standalone or not.
+		:arg int timeout: How long to wait for shutdown.
+		:arg callable callback: The callback to call when it's stopped.
+		:arg callable timeout_callback: The callback to call when the shutdown
+			times out.
+		"""
+		end_timeout = time.time() + timeout
+
+		def wait_for_state():
+			process_running = self._supervise_is_running(instance_id)
+			if not standalone:
+				port_in_use = self.configuration.port_allocator.in_use(port)
+
+			if not process_running:
+				# It finished.
+				callback("Process is finished.")
+				return
+			if not standalone and not port_in_use:
+				# Port is free.
+				callback("Port is now free.")
+				return
+			if time.time() > end_timeout:
+				timeout_callback("Failed to end up in appropriate state in time.")
+				return
+
+			self.configuration.io_loop.add_timeout(time.time() + 0.2, wait_for_state)
+
+		self.configuration.io_loop.add_timeout(time.time() + 0.2, wait_for_state)
+
+	def _supervise_is_running(self, instance_id):
 		"""
 		Determine if the supervised command is still running or not.
 		"""
 		supervisor = paasmaker.util.CommandSupervisorLauncher(self.configuration, instance_id)
 		return supervisor.is_running()
-
-	def wait_until_supervisor_running(self, instance_id, timeout, callback, timeout_callback):
-		self.wait_until_supervisor_state(instance_id, True, timeout, callback, timeout_callback)
-	def wait_until_supervisor_shutdown(self, instance_id, timeout, callback, timeout_callback):
-		self.wait_until_supervisor_state(instance_id, False, timeout, callback, timeout_callback)
-
-	def wait_until_supervisor_state(self, instance_id, state, timeout, callback, timeout_callback):
-		# TODO: This only checks that the supervisor started, not that it's child
-		# process started. Figure out how to better work this one.
-		end_timeout = time.time() + timeout
-
-		def wait_for_state():
-			if self.supervise_is_running(instance_id) == state:
-				# And say that we're done.
-				callback("In appropriate state.")
-			else:
-				if time.time() > end_timeout:
-					timeout_callback("Failed to end up in appropriate state in time.")
-				else:
-					# Wait a little bit longer.
-					self.configuration.io_loop.add_timeout(time.time() + 0.1, wait_for_state)
-
-		self.configuration.io_loop.add_timeout(time.time() + 0.1, wait_for_state)
 
 class BaseRuntimeTest(paasmaker.common.controller.BaseControllerTest):
 	config_modules = ['heart']
