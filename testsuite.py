@@ -9,120 +9,151 @@ import tempfile
 import subprocess
 import os
 
+import coverage
+import argparse
+
+# How to invoke the tests:
+# * Normal run of a default set of tests:
+#   ./testsuite.py
+# * A specific tag that matches a set of tests:
+#   ./testsuite.py tag
+# * Several tags at once:
+#   ./testsuite.py tag1,tag2
+# * Record coverage, and then show the result of that afterwards:
+#   ./testsuite.py -c
+#   coverage report -m
+# * Change the log level to assist with debugging:
+#   ./testsuite.py -l INFO
+
+parser = argparse.ArgumentParser()
+parser.add_argument('tags', default="normal", help="A comma seperated list of unit test tags to run.")
+parser.add_argument("-c", "--coverage", default=False, help="Compute and store coverage information.", action="store_true")
+parser.add_argument("-m", "--module", default=False, help="Run only the given module.", action="store_true")
+parser.add_argument("-t", "--temporaryoutput", default=None, help="Temporary output file for a module run.")
+parser.add_argument("-l", "--loglevel", default="CRITICAL", help="Log level, one of DEBUG|INFO|WARNING|ERROR|CRITICAL.")
+
+args = parser.parse_args()
+
+# Only run coverage over "import paasmaker" in the unit test invoker,
+# rather than every unit test subprocess.
+if args.coverage:
+	cov = coverage.coverage(source=["paasmaker"], auto_data=True)
+	cov.start()
+
 import paasmaker
 
-# Suppress log messages.
-# Turning this off temporarily can be helpful for debugging.
-#logging.basicConfig(level=logging.DEBUG)
-#logging.basicConfig(level=logging.INFO)
-#logging.basicConfig(level=logging.ERROR)
-logging.basicConfig(level=logging.CRITICAL)
+if args.coverage:
+	cov.stop()
+	cov.save()
+
+# Set the log level.
+logging.basicConfig(level=getattr(logging, args.loglevel))
 
 # Define the tests to run. The keys are the modules to search
 # in for test cases, and the array is a set of tags that will
-# cause this test to be run. They should have either 'all' or
+# cause this test to be run. They should have either 'normal' or
 # 'slow' as a tag, but not both.
 test_sets = {
-	paasmaker.util.example: ['all', 'quick', 'example'],
-	paasmaker.util.jsonencoder: ['all', 'quick', 'util', 'jsonencoder'],
-	paasmaker.util.configurationhelper: ['all', 'quick', 'util', 'configuration'],
-	paasmaker.util.joblogging: ['all', 'util', 'job', 'logging'],
-	paasmaker.util.port: ['all', 'util', 'network'],
-	paasmaker.util.plugin: ['all', 'quick', 'util', 'configuration', 'plugin'],
-	paasmaker.util.commandsupervisor: ['all', 'util', 'process'],
+	paasmaker.util.example: ['normal', 'quick', 'example'],
+	paasmaker.util.jsonencoder: ['normal', 'quick', 'util', 'jsonencoder'],
+	paasmaker.util.configurationhelper: ['normal', 'quick', 'util', 'configuration'],
+	paasmaker.util.joblogging: ['normal', 'util', 'job', 'logging'],
+	paasmaker.util.port: ['normal', 'util', 'network'],
+	paasmaker.util.plugin: ['normal', 'quick', 'util', 'configuration', 'plugin'],
+	paasmaker.util.commandsupervisor: ['normal', 'util', 'process'],
 	#paasmaker.util.temporaryrabbitmq: ['slow', 'util', 'messaging', 'rabbitmq'],
-	paasmaker.util.popen: ['all', 'util', 'process'],
-	paasmaker.util.streamingchecksum: ['all', 'util', 'checksum'],
-	paasmaker.util.processcheck: ['all', 'util', 'process'],
+	paasmaker.util.popen: ['normal', 'util', 'process'],
+	paasmaker.util.streamingchecksum: ['normal', 'util', 'checksum'],
+	paasmaker.util.processcheck: ['normal', 'util', 'process'],
 	#paasmaker.util.managedrabbitmq: ['slow', 'util', 'messaging', 'managedservice', 'rabbitmq'],
 	paasmaker.util.managedredis: ['slow', 'util', 'redis', 'managedservice'],
 	paasmaker.util.managedpostgres: ['slow', 'util', 'postgres', 'managedservice'],
 	paasmaker.util.managedmysql: ['slow', 'util', 'mysql', 'managedservice'],
 	paasmaker.util.managednginx: ['slow', 'util', 'nginx', 'managedservice'],
 	paasmaker.util.managedapache: ['slow', 'util', 'apache', 'managedservice'],
-	paasmaker.util.asyncdns: ['all', 'util', 'network'],
-	paasmaker.util.flattenizr: ['all', 'util', 'data'],
+	paasmaker.util.asyncdns: ['normal', 'util', 'network'],
+	paasmaker.util.flattenizr: ['normal', 'util', 'data'],
 
-	paasmaker.router.router: ['all', 'router'],
-	paasmaker.pacemaker.cron.cronrunner: ['all', 'cron'],
+	paasmaker.router.router: ['normal', 'router'],
+	paasmaker.pacemaker.cron.cronrunner: ['normal', 'cron'],
 
-	paasmaker.common.configuration.configuration: ['all', 'configuration'],
-	paasmaker.common.configuration.configurationstub: ['all', 'configuration'],
-	paasmaker.common.application.configuration: ['all', 'configuration'],
-	paasmaker.common.job.manager.backendredis: ['all', 'util', 'job', 'jobmanager', 'jobmanagerbackend'],
-	paasmaker.common.job.manager.manager: ['all', 'util', 'job', 'jobmanager', 'jobmanagercore'],
+	paasmaker.common.configuration.configuration: ['normal', 'configuration'],
+	paasmaker.common.configuration.configurationstub: ['normal', 'configuration'],
+	paasmaker.common.application.configuration: ['normal', 'configuration'],
+	paasmaker.common.job.manager.backendredis: ['normal', 'util', 'job', 'jobmanager', 'jobmanagerbackend'],
+	paasmaker.common.job.manager.manager: ['normal', 'util', 'job', 'jobmanager', 'jobmanagercore'],
 
-	paasmaker.common.dynamictags.default: ['all', 'dynamictags'],
-	paasmaker.common.stats.default: ['all', 'stats'],
-	paasmaker.common.score.default: ['all', 'score'],
+	paasmaker.common.dynamictags.default: ['normal', 'dynamictags'],
+	paasmaker.common.stats.default: ['normal', 'stats'],
+	paasmaker.common.score.default: ['normal', 'score'],
 
-	paasmaker.model: ['all', 'model'],
+	paasmaker.model: ['normal', 'model'],
 
-	paasmaker.common.controller.example: ['all', 'controller', 'example'],
-	paasmaker.common.controller.information: ['all', 'controller'],
-	paasmaker.common.controller.log: ['all', 'controller', 'websocket', 'logstream'],
-	paasmaker.pacemaker.controller.user: ['all', 'controller', 'user'],
-	paasmaker.pacemaker.controller.role: ['all', 'controller', 'role'],
-	paasmaker.pacemaker.controller.login: ['all', 'controller', 'login'],
-	paasmaker.pacemaker.controller.node: ['all', 'controller', 'node'],
-	paasmaker.pacemaker.controller.profile: ['all', 'controller', 'profile'],
-	paasmaker.pacemaker.controller.workspace: ['all', 'controller', 'workspace'],
-	paasmaker.pacemaker.controller.upload: ['all', 'controller', 'files'],
-	paasmaker.pacemaker.controller.job: ['all', 'jobmanager', 'websocket'],
-	paasmaker.pacemaker.controller.package: ['all', 'package', 'controller'],
-	paasmaker.pacemaker.controller.application: ['all', 'application', 'controller'],
-	paasmaker.pacemaker.controller.scmlist: ['all', 'scmlist', 'controller'],
-	paasmaker.pacemaker.controller.configuration: ['all', 'configuration', 'controller'],
-	paasmaker.heart.controller.instance: ['all', 'controller', 'instance', 'heart'],
+	paasmaker.common.controller.example: ['normal', 'controller', 'example'],
+	paasmaker.common.controller.information: ['normal', 'controller'],
+	paasmaker.common.controller.log: ['normal', 'controller', 'websocket', 'logstream'],
+	paasmaker.pacemaker.controller.user: ['normal', 'controller', 'user'],
+	paasmaker.pacemaker.controller.role: ['normal', 'controller', 'role'],
+	paasmaker.pacemaker.controller.login: ['normal', 'controller', 'login'],
+	paasmaker.pacemaker.controller.node: ['normal', 'controller', 'node'],
+	paasmaker.pacemaker.controller.profile: ['normal', 'controller', 'profile'],
+	paasmaker.pacemaker.controller.workspace: ['normal', 'controller', 'workspace'],
+	paasmaker.pacemaker.controller.upload: ['normal', 'controller', 'files'],
+	paasmaker.pacemaker.controller.job: ['normal', 'jobmanager', 'websocket'],
+	paasmaker.pacemaker.controller.package: ['normal', 'package', 'controller'],
+	paasmaker.pacemaker.controller.application: ['normal', 'application', 'controller'],
+	paasmaker.pacemaker.controller.scmlist: ['normal', 'scmlist', 'controller'],
+	paasmaker.pacemaker.controller.configuration: ['normal', 'configuration', 'controller'],
+	paasmaker.heart.controller.instance: ['normal', 'controller', 'instance', 'heart'],
 
-	paasmaker.heart.runtime: ['all', 'heart', 'runtime'],
+	paasmaker.heart.runtime: ['normal', 'heart', 'runtime'],
 	paasmaker.heart.runtime.php: ['slow', 'heart', 'runtime', 'php'],
 	paasmaker.heart.runtime.shell: ['slow', 'heart', 'runtime', 'shell'],
 	paasmaker.heart.runtime.rbenv: ['slow', 'heart', 'runtime', 'ruby'],
 
-	paasmaker.heart.unpacker.tarball: ['all', 'heart', 'unpacker'],
+	paasmaker.heart.unpacker.tarball: ['normal', 'heart', 'unpacker'],
 
-	paasmaker.pacemaker.service.parameters: ['all', 'service', 'serviceparameters'],
+	paasmaker.pacemaker.service.parameters: ['normal', 'service', 'serviceparameters'],
 	paasmaker.pacemaker.service.mysql: ['slow', 'service', 'servicemysql'],
 	paasmaker.pacemaker.service.postgres: ['slow', 'service', 'servicepostgres', 'postgres'],
 	paasmaker.pacemaker.service.managedredis: ['slow', 'service', 'serviceredis'],
 	paasmaker.pacemaker.service.managedpostgres: ['slow', 'service', 'servicemanagedpostgres', 'postgres'],
 
-	paasmaker.pacemaker.packer.tarball: ['all', 'packer', 'tarball'],
+	paasmaker.pacemaker.packer.tarball: ['normal', 'packer', 'tarball'],
 	paasmaker.pacemaker.storer.paasmakernode: ['all', 'storer'],
 
-	paasmaker.pacemaker.prepare.shell: ['all', 'prepare', 'shellprepare'],
+	paasmaker.pacemaker.prepare.shell: ['normal', 'prepare', 'shellprepare'],
 
-	paasmaker.pacemaker.scm.zip: ['all', 'scm'],
-	paasmaker.pacemaker.scm.tarball: ['all', 'scm'],
-	paasmaker.pacemaker.scm.git: ['all', 'scm'],
+	paasmaker.pacemaker.scm.zip: ['normal', 'scm'],
+	paasmaker.pacemaker.scm.tarball: ['normal', 'scm'],
+	paasmaker.pacemaker.scm.git: ['normal', 'scm'],
 
-	paasmaker.pacemaker.scmlist.bitbucket: ['all', 'scmlist', 'slow'],
+	paasmaker.pacemaker.scmlist.bitbucket: ['normal', 'scmlist', 'slow'],
 
-	paasmaker.pacemaker.auth.internal: ['all', 'auth'],
-	paasmaker.pacemaker.auth.allowany: ['all', 'auth'],
-	paasmaker.pacemaker.miscplugins.devdatabase: ['all', 'auth'],
+	paasmaker.pacemaker.auth.internal: ['normal', 'auth'],
+	paasmaker.pacemaker.auth.allowany: ['normal', 'auth'],
+	paasmaker.pacemaker.miscplugins.devdatabase: ['normal', 'auth'],
 
-	paasmaker.pacemaker.helper.healthmanager: ['all', 'health', 'healthmanager'],
-	paasmaker.pacemaker.health.downnodes: ['all', 'health', 'node'],
-	paasmaker.pacemaker.health.adjustinstances: ['all', 'health', 'repair'],
-	paasmaker.pacemaker.health.stuckjobs: ['all', 'health', 'stuckjobs'],
+	paasmaker.pacemaker.helper.healthmanager: ['normal', 'health', 'healthmanager'],
+	paasmaker.pacemaker.health.downnodes: ['normal', 'health', 'node'],
+	paasmaker.pacemaker.health.adjustinstances: ['normal', 'health', 'repair'],
+	paasmaker.pacemaker.health.stuckjobs: ['normal', 'health', 'stuckjobs'],
 
 	paasmaker.common.helper.cleanupmanager: ['all', 'cleanup', 'cleanupmanager'],
-	paasmaker.common.cleaner.logs: ['all', 'cleanup'],
-	paasmaker.common.cleaner.jobs: ['all', 'cleanup'],
+	paasmaker.common.cleaner.logs: ['normal', 'cleanup'],
+	paasmaker.common.cleaner.jobs: ['normal', 'cleanup'],
 
-	paasmaker.common.job.prepare.prepareroot: ['all', 'application', 'prepare'],
-	paasmaker.common.job.coordinate.selectlocations: ['all', 'application', 'coordinate'],
-	paasmaker.common.job.coordinate.register: ['all', 'application', 'coordinate'],
-	paasmaker.common.job.routing.routing: ['all', 'application', 'coordinate', 'router'],
-	paasmaker.common.job.delete.application: ['all', 'application', 'delete'],
+	paasmaker.common.job.prepare.prepareroot: ['normal', 'application', 'prepare'],
+	paasmaker.common.job.coordinate.selectlocations: ['normal', 'application', 'coordinate'],
+	paasmaker.common.job.coordinate.register: ['normal', 'application', 'coordinate'],
+	paasmaker.common.job.routing.routing: ['normal', 'application', 'coordinate', 'router'],
+	paasmaker.common.job.delete.application: ['normal', 'application', 'delete'],
 
-	paasmaker.pacemaker.controller.router: ['all', 'controller', 'router', 'routercontroller'],
+	paasmaker.pacemaker.controller.router: ['normal', 'controller', 'router', 'routercontroller'],
 
-	paasmaker.pacemaker.placement.default: ['all', 'application', 'placement'],
+	paasmaker.pacemaker.placement.default: ['normal', 'application', 'placement'],
 
-	paasmaker.heart.helper.instancemanager: ['all', 'application', 'heart']
+	paasmaker.heart.helper.instancemanager: ['normal', 'application', 'heart']
 }
 
 string_test_sets = {}
@@ -133,8 +164,18 @@ def run_test(module_name):
 	print
 	print "------------------------------------------------------------------------"
 	print "Testing module", module_name
+
+	if args.coverage:
+		cov = coverage.coverage(source=["paasmaker"], auto_data=True)
+		cov.start()
+
 	suite = unittest.TestLoader().loadTestsFromModule(string_test_sets[module_name])
 	result = unittest.TextTestRunner(verbosity=2).run(suite)
+
+	if args.coverage:
+		cov.stop()
+		cov.save()
+
 	return {
 		'failures': len(result.failures),
 		'errors': len(result.errors),
@@ -144,20 +185,19 @@ def run_test(module_name):
 
 if __name__ == '__main__':
 	# See if we're in the subprocess-run-only-one module mode.
-	if len(sys.argv) > 3:
-		if sys.argv[1] == "--run":
-			module_name = sys.argv[2]
-			temporary_name = sys.argv[3]
+	if args.module:
+		module_name = args.tags
 
-			result = run_test(module_name)
-			output = open(temporary_name, 'wb')
+		result = run_test(module_name)
+
+		if args.temporaryoutput:
+			output = open(args.temporaryoutput, 'wb')
 			pickle.dump(result, output)
-			sys.exit(0)
+
+		sys.exit(0)
 
 	# Otherwise, choose the tests to run.
-	selected = ['all']
-	if len(sys.argv) > 1:
-		selected = sys.argv[1].split(',')
+	selected = args.tags.split(',')
 
 	print "Selecting unit tests with tags: %s" % str(selected)
 
@@ -179,7 +219,12 @@ if __name__ == '__main__':
 	try:
 		for module in modules:
 			temporary_name = tempfile.mkstemp()[1]
-			subprocess.check_call([sys.argv[0], '--run', module, temporary_name])
+			arguments = [sys.argv[0], module, '-m', '-t', temporary_name]
+			if args.coverage:
+				arguments.append("-c")
+			arguments.extend(['-l', args.loglevel])
+
+			subprocess.check_call(arguments)
 
 			input_file = open(temporary_name, 'rb')
 			results = pickle.load(input_file)
@@ -204,3 +249,6 @@ if __name__ == '__main__':
 
 	if failed > 0 or errors > 0:
 		sys.exit(1)
+
+	# Once the tests are completed, use "coverage report -m" to
+	# show the coverage.
