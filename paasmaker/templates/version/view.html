@@ -55,7 +55,7 @@
 					{% if not instance_type.standalone %}
 						{% for hostname in instance_type.hostnames %}
 							{% if version.is_current %}
-								<a href="http://{{ hostname.hostname }}/" target="_blank">
+								<a href="http://{{ hostname.hostname }}{{ frontend_domain_postfix }}/" target="_blank">
 							{% end %}
 								{{ hostname.hostname }}
 							{% if version.is_current %}
@@ -63,7 +63,7 @@
 							{% end %}
 							<br />
 						{% end %}
-						<a href="http://{{ instance_type.version_hostname(configuration) }}" target="_blank">
+						<a href="http://{{ instance_type.version_hostname(configuration) }}{{ frontend_domain_postfix }}" target="_blank">
 							{{ instance_type.version_hostname(configuration) }}
 						</a>
 					{% else %}

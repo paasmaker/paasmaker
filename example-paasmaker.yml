@@ -53,7 +53,7 @@ pacemaker:
   allow_supertoken: true
   cluster_hostname: local.paasmaker.net
   dsn: sqlite:///scratch/paasmaker-development.db
-
+  frontend_domain_postfix: ":42530"
   health:
     enabled: true
     default: true

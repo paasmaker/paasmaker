@@ -90,6 +90,8 @@ class BaseController(tornado.web.RequestHandler):
 
 		self.add_data_template('format_form_error', self.format_form_error)
 		self.add_data_template('nice_state', self.nice_state)
+		if self.configuration.is_pacemaker():
+			self.add_data_template('frontend_domain_postfix', self.configuration.get_flat('pacemaker.frontend_domain_postfix'))
 
 		# Add a header that is our node's UUID.
 		uuid = self.configuration.get_node_uuid()

@@ -223,6 +223,12 @@ class PacemakerSchema(colander.MappingSchema):
 		default=HealthCombinedSchema.default()
 	)
 
+	frontend_domain_postfix = colander.SchemaNode(colander.String(),
+		title="Frontend domain name postfix",
+		description="In the web interface, append this string to any hostnames that the system generates for users. This is designed to add your router's port to the cluster domain name at display time.",
+		default="",
+		missing="")
+
 	@staticmethod
 	def default():
 		return {'enabled': False, 'scmlisters': [], 'health': HealthCombinedSchema.default()}
@@ -1120,7 +1126,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					# Wait until it stops.
 					while meta['manager'].is_running():
 						time.sleep(0.1)
-						
+
 
 	def setup_managed_nginx(self, callback, error_callback):
 		"""
