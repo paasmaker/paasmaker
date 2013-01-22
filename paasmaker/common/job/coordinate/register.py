@@ -289,7 +289,12 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 			instance_type.application_version,
 			self.stop
 		)
-		startup_root_id = self.wait()
+		# TODO: I have an unbalanced self.stop()/self.wait() pair
+		# around here, that causes startup_root_id to sometimes be
+		# None. So we loop until we get the real ID. We should fix this...
+		startup_root_id = None
+		while not startup_root_id:
+			startup_root_id = self.wait()
 
 		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(startup_root_id))
 
