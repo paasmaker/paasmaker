@@ -30,7 +30,12 @@ class ManifestReaderJob(BaseJob):
 
 		# Now based on that successul loading of the manifest, get started.
 		session = self.configuration.get_database_session()
-		workspace = session.query(paasmaker.model.Workspace).get(context['workspace_id'])
+		workspace = session.query(
+			paasmaker.model.Workspace
+		).get(
+			context['workspace_id']
+		)
+
 		if not context['application_id']:
 			# New application.
 			self.logger.debug("Creating new application for manifest.")
@@ -45,12 +50,12 @@ class ManifestReaderJob(BaseJob):
 			).first()
 
 			if existing:
-				error_message = "Application %s already exists in this workspace." % application_name
-				self.logger.error(error_message)
-				self.failed(error_message)
-				return
-
-			application = manifest.create_application(session, workspace)
+				# Let's create a new version of the application instead then.
+				self.logger.debug("Creating a new version of the application.")
+				application = existing
+			else:
+				self.logger.debug("Creating new application.")
+				application = manifest.create_application(session, workspace)
 		else:
 			self.logger.debug("Using existing application for manifest.")
 			application = session.query(paasmaker.model.Application).get(context['application_id'])
