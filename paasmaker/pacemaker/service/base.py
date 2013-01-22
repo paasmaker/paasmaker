@@ -72,6 +72,12 @@ class BaseServiceTest(tornado.testing.AsyncTestCase):
 		self.credentials = credentials
 		self.stop()
 
+	def success_remove_callback(self, message):
+		self.success = True
+		self.message = message
+		self.credentials = None
+		self.stop()
+
 	def failure_callback(self, message):
 		self.success = False
 		self.message = message

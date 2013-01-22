@@ -3,6 +3,7 @@ from base import BaseService, BaseServiceTest
 import paasmaker
 
 import momoko
+import psycopg2
 import colander
 
 class PostgresServiceConfigurationSchema(colander.MappingSchema):
@@ -76,15 +77,7 @@ class PostgresService(BaseService):
 				callback=on_user_created
 			)
 
-		self.db = momoko.AsyncClient(
-			{
-				'host': self.options['hostname'],
-				'port': self.options['port'],
-				'user': self.options['username'],
-				'password': self.options['password'],
-				'ioloop': self.configuration.io_loop
-			}
-		)
+		self.db = self._get_database()
 
 		on_connected()
 
@@ -93,7 +86,46 @@ class PostgresService(BaseService):
 		callback(existing_credentials, "Successfully modified service.")
 
 	def remove(self, name, existing_credentials, callback, error_callback):
-		error_callback("Removing not implemented.")
+		# Delete the database, removing all data along with it.
+		def on_user_dropped(result):
+			# Done!
+			self.logger.info("Completed deleting resources.")
+			callback("Completed deleting resources.")
+
+		def on_database_deleted(result):
+			self.logger.info("Deleting user...")
+			# NOTE: Username are already safe for database
+			# use so is inserted directly into the query.
+			# TODO: Verify this.
+			self.db.execute(
+				"DROP USER %s" % existing_credentials['username'],
+				callback=on_user_dropped
+			)
+
+		def on_connected():
+			# NOTE: 'Database' is already safe for database
+			# use so is inserted directly into the query.
+			# TODO: Verify this.
+			self.logger.info("Deleting database...")
+			self.db.execute(
+				"DROP DATABASE %s" % existing_credentials['database'],
+				callback=on_database_deleted
+			)
+
+		self.db = self._get_database()
+
+		on_connected()
+
+	def _get_database(self):
+		return momoko.AsyncClient(
+			{
+				'host': self.options['hostname'],
+				'port': self.options['port'],
+				'user': self.options['username'],
+				'password': self.options['password'],
+				'ioloop': self.configuration.io_loop
+			}
+		)
 
 class PostgresServiceTest(BaseServiceTest):
 	def setUp(self):
@@ -160,7 +192,45 @@ class PostgresServiceTest(BaseServiceTest):
 
 		db.execute("CREATE TABLE foo (id integer)", callback=self.stop)
 		result = self.wait()
-		#print str(result)
+		db.execute("INSERT INTO foo VALUES (1)", callback=self.stop)
+		result = self.wait()
+		db.execute("SELECT id FROM foo", callback=self.stop)
+		result = self.wait()
 
-		# We should have got here at this stage.
-		# The above would have raised an exception if it didn't work.
+		for row in result:
+			self.assertEquals(row[0], 1, "Result was not as expected.")
+
+		db.close()
+
+		credentials_copy = self.credentials
+
+		# Now attempt to delete the service.
+		service.remove('test', self.credentials, self.success_remove_callback, self.failure_callback)
+		self.wait()
+
+		self.assertTrue(self.success, "Did not succeed.")
+
+		self.credentials = credentials_copy
+
+		# Try to connect again.
+		db = momoko.AsyncClient(
+			{
+				'host': self.credentials['hostname'],
+				'port': self.credentials['port'],
+				'user': self.credentials['username'],
+				'password': self.credentials['password'],
+				'ioloop': self.configuration.io_loop
+			}
+		)
+
+		try:
+			db.execute("SELECT id FROM foo", callback=self.stop)
+			result = self.wait()
+
+			for row in result:
+				self.assertEquals(row[0], 1, "Result was not as expected.")
+
+			self.assertFalse(True, "Did not raise exception as expected.")
+		except psycopg2.OperationalError, ex:
+
+			self.assertTrue(True, "Raised exception correctly.")
