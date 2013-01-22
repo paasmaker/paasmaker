@@ -86,6 +86,7 @@ class ManagedRedisService(BaseService):
 			# Success! Emit the credentials.
 			self.logger.info("Successfully started. Returning the credentials.")
 			credentials = {}
+			credentials['name'] = instance_name
 			credentials['protocol'] = 'redis'
 			credentials['hostname'] = self.configuration.get_flat('my_route')
 			credentials['port'] = port
@@ -107,8 +108,29 @@ class ManagedRedisService(BaseService):
 		callback(existing_credentials, "Successfully modified service.")
 
 	def remove(self, name, existing_credentials, callback, error_callback):
-		# TODO: Implement.
-		error_callback("Removing not implemented.")
+		instance_name = existing_credentials['name']
+		instance_path = self.configuration.get_scratch_path_exists(
+			self.called_name,
+			instance_name
+		)
+
+		manager = paasmaker.util.managedredis.ManagedRedis(self.configuration)
+		try:
+			manager.load_parameters(instance_path)
+
+			# Destroy the instance.
+			self.logger.info("Destroying instance...")
+			manager.destroy()
+			self.logger.info("Complete.")
+
+			callback("Destroyed instance %s." % instance_name)
+
+		except paasmaker.util.ManagedDaemonError, ex:
+			self.logger.info("No such instance %s. Task complete." % instance_name)
+			# The instance doesn't actually exist.
+			# This is an error condition, but the net effect is
+			# the same. So just finish up.
+			callback("Instance %s already deleted." % instance_name)
 
 	def startup_async_prelisten(self, callback, error_callback):
 		# Start up all our managed instances, if they're not already listening.
@@ -200,7 +222,7 @@ class ManagedRedisServiceTest(BaseServiceTest):
 		self.wait()
 
 		self.assertTrue(self.success, "Service creation was not successful.")
-		self.assertEquals(len(self.credentials), 4, "Service did not return expected number of keys.")
+		self.assertEquals(len(self.credentials), 5, "Service did not return expected number of keys.")
 
 		client = tornadoredis.Client(
 			host=self.credentials['hostname'],
@@ -246,3 +268,26 @@ class ManagedRedisServiceTest(BaseServiceTest):
 		result = self.wait()
 
 		self.assertEquals(result, 'bar', "Result was not as expected.")
+
+		credentials_copy = self.credentials
+
+		# Now destroy the instance.
+		service.remove('test', self.credentials, self.success_remove_callback, self.failure_callback)
+		self.wait()
+
+		self.credentials = credentials_copy
+
+		# Try to connect again. Failure expected.
+		client = tornadoredis.Client(
+			host=self.credentials['hostname'],
+			port=self.credentials['port'],
+			password=self.credentials['password'],
+			io_loop=self.io_loop
+		)
+
+		try:
+			client.connect()
+
+			self.assertTrue(False, "Should have raised an exception.")
+		except tornadoredis.exceptions.ConnectionError, ex:
+			self.assertTrue(True, "Raised exception correctly.")
