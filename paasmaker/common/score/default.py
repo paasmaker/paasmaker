@@ -71,7 +71,8 @@ class DefaultScoreTest(BaseScoreTest):
 		)
 
 		stats = {}
-		stats_plugin.stats(stats)
+		stats_plugin.stats(stats, self.stop)
+		self.wait()
 
 		#print json.dumps(stats, indent=4, sort_keys=True)
 
