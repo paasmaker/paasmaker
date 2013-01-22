@@ -351,6 +351,14 @@ def handle_shutdown_exception():
 		logging.error("A shutdown task raised an exception.", exc_info=True)
 
 def on_exit_request():
+	# Did we even register with the master?
+	# If not, simply exit now.
+	uuid = configuration.get_node_uuid()
+	if not uuid:
+		logging.info("Never registered with a master node. Moving directly to exit phase.")
+		on_actual_exit()
+		return
+
 	# Check all instances for shutdown, if we're a heart.
 	if hasattr(configuration, 'node_register_periodic'):
 		configuration.node_register_periodic.stop()
