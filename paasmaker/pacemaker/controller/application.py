@@ -322,7 +322,7 @@ class ApplicationDeleteController(ApplicationRootController):
 		self.require_permission(constants.PERMISSION.APPLICATION_DELETE, workspace=application.workspace)
 
 		session = self.db()
-		if not application.can_delete(session):
+		if not application.can_delete():
 			raise tornado.web.HTTPError(400, "Cannot delete application that is still active")
 
 		def job_started():
