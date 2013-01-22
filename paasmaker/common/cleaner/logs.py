@@ -31,6 +31,7 @@ class LogsCleaner(BaseCleaner):
 
 		self.older_than = int(time.time()) - self.options['max_age']
 
+		self.logger.info("Starting cleanup process.")
 		self._fetch_directory()
 
 	def _fetch_directory(self):
@@ -40,6 +41,7 @@ class LogsCleaner(BaseCleaner):
 			self._process_directory(this_dir)
 		except IndexError, ex:
 			# No more to process.
+			self.logger.info("Completed cleanup process. Removed %d log files.", self.removed_files)
 			self.callback("Removed %d log files." % self.removed_files)
 
 	def _process_directory(self, path):
