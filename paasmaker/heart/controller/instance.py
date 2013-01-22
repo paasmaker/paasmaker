@@ -91,8 +91,11 @@ class InstanceRegisterControllerTest(BaseControllerTest, TestHelpers):
 		baseruntime = paasmaker.heart.runtime.BaseRuntime(
 			self.configuration,
 			paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT,
-			{}, {}, 'paasmaker.runtime.base')
-		baseruntime.generate_exit_report_command(instance_id)
+			{},
+			{},
+			'paasmaker.runtime.base'
+		)
+		baseruntime._generate_exit_report_command(instance_id)
 
 		# From that exit report, hit up the supplied URL.
 		instance_data = self.configuration.instances.get_instance(instance_id)
@@ -111,7 +114,7 @@ class InstanceRegisterControllerTest(BaseControllerTest, TestHelpers):
 		self.assertIn("credentials", response.body)
 
 		# Generate a new one, and exit with a non-zero response code.
-		baseruntime.generate_exit_report_command(instance_id)
+		baseruntime._generate_exit_report_command(instance_id)
 
 		instance_data = self.configuration.instances.get_instance(instance_id)
 
