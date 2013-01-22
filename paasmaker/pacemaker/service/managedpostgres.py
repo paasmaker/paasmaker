@@ -96,8 +96,7 @@ class ManagedPostgresService(PostgresService):
 		super(ManagedPostgresService, self).update(name, existing_credentials, callback, error_callback)
 
 	def remove(self, name, existing_credentials, callback, error_callback):
-		# TODO: Implement.
-		error_callback("Removing not implemented.")
+		super(ManagedPostgresService, self).remove(name, existing_credentials, callback, error_callback)
 
 	def startup_async_prelisten(self, callback, error_callback):
 		# Start up all our managed instances, if they're not already listening.
