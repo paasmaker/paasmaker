@@ -34,15 +34,16 @@ parser.add_argument("-l", "--loglevel", default="CRITICAL", help="Log level, one
 
 args = parser.parse_args()
 
-# Only run coverage over "import paasmaker" in the unit test invoker,
-# rather than every unit test subprocess.
-if args.coverage:
+# If coverage is turned on, record coverage for "import paasmaker"
+# only in the parent test suite - otherwise it uses a lot of CPU time
+# and makes the tests take longer.
+if args.coverage and not args.module:
 	cov = coverage.coverage(source=["paasmaker"], auto_data=True)
 	cov.start()
 
 import paasmaker
 
-if args.coverage:
+if args.coverage and not args.module:
 	cov.stop()
 	cov.save()
 
