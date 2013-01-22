@@ -18,11 +18,6 @@ class ManagedMongoServiceConfigurationSchema(colander.MappingSchema):
 		description="The maximum port to allocate mongoDB instances in.",
 		default=42799,
 		missing=42799)
-	apply_passwords = colander.SchemaNode(colander.Boolean(),
-		title="Apply Passwords",
-		description="If true, set a password on the mongoDB instance. It will be supplied to the application.",
-		default=True,
-		missing=True)
 	shutdown = colander.SchemaNode(colander.Boolean(),
 		title="Shutdown",
 		description="If true, shut down all managed mongoDB instances when the node stops. You won't want to do this normally.",
