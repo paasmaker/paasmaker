@@ -129,10 +129,11 @@ class UploadFileAPIRequest(APIRequest):
 		else:
 			self.variables['resumableChunkNumber'] += 1
 			# Call the progress callback.
-			self.progress_callback(
-				self.fp.tell(),
-				self.variables['resumableTotalSize']
-			)
+			if self.progress_callback is not None:
+				self.progress_callback(
+					self.fp.tell(),
+					self.variables['resumableTotalSize']
+				)
 			# Check and possibly send the next one.
 			self._check_exists()
 
