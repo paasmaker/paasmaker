@@ -131,10 +131,16 @@ def run_test(module_name):
 	print "------------------------------------------------------------------------"
 	print "Testing module", module_name
 	suite = unittest.TestLoader().loadTestsFromModule(string_test_sets[module_name])
-	return unittest.TextTestRunner(verbosity=2).run(suite)
+	result = unittest.TextTestRunner(verbosity=2).run(suite)
+	return {
+		'failures': len(result.failures),
+		'errors': len(result.errors),
+		'testsRun': result.testsRun,
+		'skipped': len(result.skipped)
+	}
 
 if __name__ == '__main__':
-	pool = Pool(processes=1)
+	pool = Pool(processes=1, maxtasksperchild=1)
 
 	selected = ['all']
 	if len(sys.argv) > 1:
@@ -153,7 +159,14 @@ if __name__ == '__main__':
 		sys.exit(2)
 
 	start = datetime.datetime.now()
-	results = pool.map(run_test, modules)
+	try:
+		# Wait a max of 120 seconds to complete them.
+		results = pool.map_async(run_test, modules).get(120)
+	except KeyboardInterrupt:
+		pool.terminate()
+		print "Cancelled."
+		sys.exit(1)
+
 	end = datetime.datetime.now()
 
 	failed = 0
@@ -162,10 +175,10 @@ if __name__ == '__main__':
 	skipped = 0
 
 	for result in results:
-		failed += len(result.failures)
-		errors += len(result.errors)
-		run += result.testsRun
-		skipped += len(result.skipped)
+		failed += result['failures']
+		errors += result['errors']
+		run += result['testsRun']
+		skipped += result['skipped']
 
 	time_taken = (end - start).total_seconds()
 
