@@ -208,6 +208,10 @@ class VersionDeleteController(VersionRootController):
 		version = self._get_version(version_id)
 		self.add_data('version', version)
 
+		if version.is_current:
+			self.add_error("The current version cannot be deleted. Make another version current before deleting this one.")
+			raise tornado.web.HTTPError(400, "Can't delete current version.")
+
 		if version.state != constants.VERSION.PREPARED:
 			self.add_error("Version must be in state PREPARED to be deleted.")
 			raise tornado.web.HTTPError(400, "Incorrect state.")
