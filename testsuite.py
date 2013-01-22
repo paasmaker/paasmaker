@@ -4,7 +4,10 @@ import logging
 import unittest
 import sys
 import datetime
-from multiprocessing import Pool
+import pickle
+import tempfile
+import subprocess
+import os
 
 import paasmaker
 
@@ -140,8 +143,18 @@ def run_test(module_name):
 	}
 
 if __name__ == '__main__':
-	pool = Pool(processes=1, maxtasksperchild=1)
+	# See if we're in the subprocess-run-only-one module mode.
+	if len(sys.argv) > 3:
+		if sys.argv[1] == "--run":
+			module_name = sys.argv[2]
+			temporary_name = sys.argv[3]
 
+			result = run_test(module_name)
+			output = open(temporary_name, 'wb')
+			pickle.dump(result, output)
+			sys.exit(0)
+
+	# Otherwise, choose the tests to run.
 	selected = ['all']
 	if len(sys.argv) > 1:
 		selected = sys.argv[1].split(',')
@@ -159,30 +172,35 @@ if __name__ == '__main__':
 		sys.exit(2)
 
 	start = datetime.datetime.now()
+	failed = 0
+	errors = 0
+	run = 0
+	skipped = 0
 	try:
-		# Wait a max of 120 seconds to complete them.
-		results = pool.map_async(run_test, modules).get(120)
+		for module in modules:
+			temporary_name = tempfile.mkstemp()[1]
+			subprocess.check_call([sys.argv[0], '--run', module, temporary_name])
+
+			input_file = open(temporary_name, 'rb')
+			results = pickle.load(input_file)
+
+			failed += results['failures']
+			errors += results['errors']
+			run += results['testsRun']
+			skipped += results['skipped']
+
+			input_file.close()
+			os.unlink(temporary_name)
+
 	except KeyboardInterrupt:
-		pool.terminate()
 		print "Cancelled."
 		sys.exit(1)
 
 	end = datetime.datetime.now()
 
-	failed = 0
-	errors = 0
-	run = 0
-	skipped = 0
-
-	for result in results:
-		failed += result['failures']
-		errors += result['errors']
-		run += result['testsRun']
-		skipped += result['skipped']
-
 	time_taken = (end - start).total_seconds()
 
 	print "Overall, %d run, %d errors, %d failed, %d skipped. Took %0.2fs." % (run, errors, failed, skipped, time_taken)
 
-	if failed > 0:
+	if failed > 0 or errors > 0:
 		sys.exit(1)
