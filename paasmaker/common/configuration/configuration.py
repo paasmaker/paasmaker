@@ -1405,6 +1405,94 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# Send the status message.
 		pub.sendMessage(status_topic, message=status)
 
+	def locate_log(self, job_id, callback, error_callback, unittest_force_remote=False):
+		"""
+		Locate the log file given by the job_id. Calls the callback
+		with one of a few things:
+
+		* A string, which is the path to the log file.
+		* A Node ORM object, that indicates where the file is. This will
+		  only be returned on Pacemaker nodes (as other nodes do not have
+		  access to the database). The session attached to it will be closed,
+		  so you won't be able to follow references.
+
+		:arg str job_id: The job ID to search for (which could also be
+			an instance ID or node UUID).
+		:arg callable callback: The callback to call when the job is found.
+		:arg callable error_callback: The error callback for when the log
+			can't be found, or the remote is down.
+		"""
+		# Try the easy case - does the log exist here?
+		if self.job_exists_locally(job_id) and not unittest_force_remote:
+			# Yep. Done.
+			callback(self.get_job_log_path(job_id))
+			return
+
+		if not self.is_pacemaker():
+			# The search ends here.
+			error_callback("Node is not a pacemaker, and can't search other nodes.")
+			return
+
+		# Now move onto the synchronous tests.
+		# TODO: This queries the DB twice for each lookup, which
+		# can be expensive. Having said that, tailing a log isn't something
+		# that's done that often. Discuss.
+		# Is the job_id an instance log?
+		session = self.get_database_session()
+
+		instance = session.query(
+			paasmaker.model.ApplicationInstance
+		).filter(
+			paasmaker.model.ApplicationInstance.instance_id == job_id
+		).first()
+
+		def check_node(node):
+			# Helper function to check the given node and return.
+			session.close()
+			if node is None:
+				error_callback("Can't find a node with this job on it.")
+				return
+			elif node.state == constants.NODE.ACTIVE:
+				callback(node)
+			else:
+				error_callback("Node %s has the log file, but that node is down." % node.name)
+
+		if instance is not None:
+			# It's on the given remote node.
+			# If the node is working...
+			check_node(instance.node)
+			return
+
+		# Try again - see if it's a node.
+		node = session.query(
+			paasmaker.model.Node
+		).filter(
+			paasmaker.model.Node.uuid == job_id
+		).first()
+
+		if node is not None:
+			# It's the given remote node.
+			check_node(node)
+			return
+
+		# Now, check the jobs system to see where that node is.
+		def on_got_job(data):
+			logger.debug("Got job metata for %s", job_id)
+			if not data.has_key(job_id):
+				error_callback("No such job %s." % job_id)
+			else:
+				# Locate the node that it's on.
+				node = session.query(
+					paasmaker.model.Node
+				).filter(
+					paasmaker.model.Node.uuid == data[job_id]['node']
+				).first()
+
+				# And pass it back.
+				check_node(node)
+
+		self.job_manager.get_jobs([job_id], on_got_job)
+
 	#
 	# IDENTITY HELPERS
 	#

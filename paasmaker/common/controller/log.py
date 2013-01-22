@@ -75,108 +75,86 @@ class LogStreamHandler(BaseWebsocketHandler):
 			if unittest_force_remote:
 				logger.warning("Using unit test force-remote mode. SHOULD NOT APPEAR IN PRODUCTION.")
 
-			if self.configuration.job_exists_locally(job_id) and not unittest_force_remote:
-				logger.info("Found job log %s locally.", job_id)
-				# Step 1: Feed since when they last saw.
-				self.send_job_log(job_id, subscribe['position'])
-				# Step 2: subscribe for future updates.
-				pub.subscribe(self.job_message_update, self.configuration.get_job_message_pub_topic(job_id))
-				self.job_watcher.add_watch(job_id)
-				self.subscribed[job_id] = True
+			def found_log(result):
+				if isinstance(result, basestring):
+					logger.info("Found job log %s locally.", job_id)
+					# It's the path to the log.
+					# Step 1: Feed since when they last saw.
+					self.send_job_log(job_id, subscribe['position'])
+					# Step 2: subscribe for future updates.
+					pub.subscribe(self.job_message_update, self.configuration.get_job_message_pub_topic(job_id))
+					self.job_watcher.add_watch(job_id)
+					self.subscribed[job_id] = True
 
-			elif self.configuration.is_pacemaker():
-				logger.info("Looking for %s log in the cluster.", job_id)
-				# The logs are in another castle.
-				# Fortunately in our modern day and age, we can
-				# just connect to the other castle and stream the logs.
-				self.handle_remote_subscribe(job_id, subscribe['position'], message, unittest_force_remote=unittest_force_remote)
+				elif isinstance(result, paasmaker.model.Node):
+					# It's a remote node containing the log.
+					# Ie, the logs are in another Castle. Sorry Mario.
+					self.handle_remote_subscribe(
+						job_id,
+						subscribe['position'],
+						message,
+						result,
+						unittest_force_remote=unittest_force_remote
+					)
 
-			else:
-				# Nope.
-				error_message = 'Unable to find job %s and we are not authorized to look for it.' % subscribe['job_id']
+			def unable_to_find_log(error_message):
 				logger.error(error_message)
 				self.send_error(error_message, message)
 
-	def handle_remote_subscribe(self, job_id, position, message, unittest_force_remote=False):
-		# TODO: Figure out how to send an error when both the instance and job logs don't exist.
-		def on_got_job(data):
-			logger.debug("Got job metata for %s", job_id)
-			if not data.has_key(job_id):
-				logger.info("No such job %s here.", job_id)
-				return
-			# Got the job metadata. Now look up the node.
-			job_data = data[job_id]
-			nodeuuid = job_data['node']
-			if not unittest_force_remote and nodeuuid == self.configuration.get_node_uuid():
-				# Prevent us from connecting to ourselves...
-				self.send_success('zerosize', {'job_id': job_id})
-				return
+			# Find me a log file.
+			self.configuration.locate_log(
+				job_id,
+				found_log,
+				unable_to_find_log,
+				unittest_force_remote=unittest_force_remote
+			)
 
-			if self.remote_connections.has_key(nodeuuid):
-				logger.debug("Using existing connection to %s", nodeuuid)
-				# We have an existing connection. Reuse that.
-				remote = self.remote_connections[nodeuuid]['connection']
-				remote.subscribe(job_id)
-				if not self.remote_subscriptions.has_key(job_id):
-					# Don't increase the refcount if we subscribe multiple times.
-					self.remote_connections[nodeuuid]['refcount'] += 1
-				self.remote_subscriptions[job_id] = nodeuuid
-			else:
-				# No existing connection. Make one.
-				logger.info("Creating connection to node %s", nodeuuid)
-				session = self.configuration.get_database_session()
-				node = session.query(
-					paasmaker.model.Node
-				).filter(
-					paasmaker.model.Node.uuid == nodeuuid
-				).first()
+	def handle_remote_subscribe(self, job_id, position, message, node, unittest_force_remote=False):
+		if not unittest_force_remote and nodeuuid == self.configuration.get_node_uuid():
+			# Prevent us from connecting to ourselves...
+			self.send_success('zerosize', {'job_id': job_id})
+			return
 
-				if not node:
-					error_message = "Unable to locate node where job %s is." % job_id
-					logger.error(error_message)
-					self.send_error(error_message, message)
-				else:
-					def this_remote_error(error):
-						self.send_error("Error for job %s: %s" % (job_id, error), message)
+		if self.remote_connections.has_key(node.uuid):
+			logger.debug("Using existing connection to %s", node.uuid)
+			# We have an existing connection. Reuse that.
+			remote = self.remote_connections[node.uuid]['connection']
+			remote.subscribe(job_id)
+			if not self.remote_subscriptions.has_key(job_id):
+				# Don't increase the refcount if we subscribe multiple times.
+				self.remote_connections[node.uuid]['refcount'] += 1
+			self.remote_subscriptions[job_id] = node.uuid
+		else:
+			# No existing connection. Make one.
+			logger.info("Creating connection to node %s", node.uuid)
 
-					# Now we try to connect to it.
-					# TODO: Test connection errors and handling of those errors.
-					logger.debug("Starting connection to %s", str(node))
-					remote = LogStreamRemoteClient(
-						"ws://%s:%d/log/stream" % (node.route, node.apiport),
-						io_loop=self.configuration.io_loop
-					)
-					remote.configure(
-						self.configuration,
-						self.handle_remote_lines,
-						this_remote_error
-					)
-					remote.subscribe(job_id, position=position)
-					remote.connect()
+			def this_remote_error(error):
+				self.send_error("Error for job %s: %s" % (job_id, error), message)
 
-					self.remote_connections[nodeuuid] = {
-						'connection': remote,
-						'refcount': 1
-					}
+			# Now we try to connect to it.
+			# TODO: Test connection errors and handling of those errors.
+			# Although we're already filtered to active instances,
+			# so that will help a lot.
+			logger.debug("Starting connection to %s", str(node))
+			remote = LogStreamRemoteClient(
+				"ws://%s:%d/log/stream" % (node.route, node.apiport),
+				io_loop=self.configuration.io_loop
+			)
+			remote.configure(
+				self.configuration,
+				self.handle_remote_lines,
+				this_remote_error
+			)
+			remote.subscribe(job_id, position=position)
+			remote.connect()
 
-					self.remote_subscriptions[job_id] = nodeuuid
-					logger.debug("Now waiting for connection to %s", str(node))
-			# end on_got_job()
+			self.remote_connections[node.uuid] = {
+				'connection': remote,
+				'refcount': 1
+			}
 
-		self.configuration.job_manager.get_jobs([job_id], on_got_job)
-
-		# Whilst that's going on, take a peek in the DB to see if the job_id
-		# matches an instance ID. If so, forward to that node.
-		session = self.configuration.get_database_session()
-		instance = session.query(
-			paasmaker.model.ApplicationInstance
-		).filter(
-			paasmaker.model.ApplicationInstance.instance_id == job_id
-		).first()
-		if instance:
-			# Found it!
-			on_got_job({job_id: {'node': instance.node.uuid}})
-		session.close()
+			self.remote_subscriptions[job_id] = node.uuid
+			logger.debug("Now waiting for connection to %s", str(node))
 
 	def handle_remote_lines(self, job_id, lines, position):
 		logger.debug("Got %d lines from remote for %s.", len(lines), job_id)
@@ -421,7 +399,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 		self.client.connect()
 
 		error = self.wait()
-		self.assertIn("Unable", error, "Error message is not as expected.")
+		self.assertIn("not a pacemaker", error, "Error message is not as expected.")
 
 	def test_get_remote(self):
 		def got_lines(job_id, lines, position):
