@@ -463,6 +463,24 @@ class ApplicationGetAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class ApplicationDeleteAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("application_id", help="Application ID to delete")
+		parser.add_argument("--follow", default=False, help="Follow the progress of this job.", action="store_true")
+
+	def describe(self):
+		return "Deletes an application (which must not have versions in ready or running state)"
+
+	def process(self, args):
+		request = paasmaker.common.api.application.ApplicationDeleteAPIRequest(None)
+		request.set_application(int(args.application_id))
+		self.point_and_auth(args, request)
+		self.args = args
+		if args.follow:
+			self._follow(request)
+		else:
+			request.send(self.generic_api_response)
+
 class ApplicationListAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("workspace_id", help="Workspace ID to list")
@@ -684,6 +702,7 @@ ACTION_MAP = {
 	'application-list': ApplicationListAction(),
 	'application-new': ApplicationNewAction(),
 	'application-newversion': ApplicationNewVersionAction(),
+	'application-delete': ApplicationDeleteAction(),
 	'version-get': VersionGetAction(),
 	'version-instances': VersionInstancesAction(),
 	'version-register': VersionRegisterAction(),

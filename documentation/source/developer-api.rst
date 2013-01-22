@@ -37,6 +37,9 @@ Application
 .. autoclass:: paasmaker.common.api.application.ApplicationNewVersionAPIRequest
     :members:
 
+.. autoclass:: paasmaker.common.api.application.ApplicationDeleteAPIRequest
+    :members:
+
 .. autoclass:: paasmaker.common.api.upload.UploadFileAPIRequest
     :members:
 

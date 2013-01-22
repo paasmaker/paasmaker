@@ -141,3 +141,21 @@ class ApplicationNewVersionAPIRequest(APIRequest):
 
 	def get_endpoint(self):
 		return '/application/%d/newversion' % self.application_id
+
+class ApplicationDeleteAPIRequest(APIRequest):
+	"""
+	Deletes an application.
+	"""
+
+	def __init__(self, *args, **kwargs):
+		super(ApplicationDeleteAPIRequest, self).__init__(*args, **kwargs)
+		self.application_id = None
+
+	def set_application(self, application_id):
+		"""
+		Set the application ID for the request.
+		"""
+		self.application_id = application_id
+
+	def get_endpoint(self):
+		return '/application/%d/delete' % self.application_id

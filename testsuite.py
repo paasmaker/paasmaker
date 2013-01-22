@@ -64,6 +64,7 @@ test_sets = {
 	paasmaker.pacemaker.controller.upload: ['all', 'controller', 'files'],
 	paasmaker.pacemaker.controller.job: ['all', 'jobmanager', 'websocket'],
 	paasmaker.pacemaker.controller.package: ['all', 'package', 'controller'],
+	paasmaker.pacemaker.controller.application: ['all', 'application', 'controller'],
 	paasmaker.pacemaker.controller.scmlist: ['all', 'scmlist', 'controller'],
 	paasmaker.pacemaker.controller.configuration: ['all', 'configuration', 'controller'],
 	paasmaker.heart.controller.instance: ['all', 'controller', 'instance', 'heart'],

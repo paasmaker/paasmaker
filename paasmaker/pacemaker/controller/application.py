@@ -8,7 +8,11 @@ import tempfile
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest
 from paasmaker.common.core import constants
+from user import UserEditController
+from upload import UploadController
+from workspace import WorkspaceEditController
 
+from pubsub import pub
 import tornado
 import tornado.testing
 import colander
@@ -363,3 +367,160 @@ class ApplicationServiceListController(ApplicationRootController):
 		routes = []
 		routes.append((r"/application/(\d+)/services", ApplicationServiceListController, configuration))
 		return routes
+
+class ApplicationControllerTest(BaseControllerTest):
+	config_modules = ['pacemaker']
+
+	def setUp(self):
+		super(ApplicationControllerTest, self).setUp()
+		# Start the job manager (since application creation is a job)
+		self.manager = self.configuration.job_manager
+		self.manager.prepare(self.stop, self.stop)
+		self.wait()
+
+	# Handled by BaseControllerTest		
+	# def tearDown(self):
+	# 	self.configuration.cleanup()
+	# 	super(ApplicationControllerTest, self).tearDown()
+
+	def get_app(self):
+		self.late_init_configuration(self.io_loop)
+		routes = ApplicationDeleteController.get_routes({'configuration': self.configuration})
+		routes.extend(ApplicationNewController.get_routes({'configuration': self.configuration}))
+		routes.extend(ApplicationListController.get_routes({'configuration': self.configuration}))
+		routes.extend(UploadController.get_routes({'configuration': self.configuration}))
+		routes.extend(UserEditController.get_routes({'configuration': self.configuration}))
+		routes.extend(WorkspaceEditController.get_routes({'configuration': self.configuration}))
+		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
+		return application
+
+	def on_job_status(self, message):
+		#print str(message.flatten())
+		self.stop(message)
+
+	def test_application_create_and_delete(self):
+		# Create a user.
+		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
+		request.set_user_params('User Name', 'username', 'username@example.com', True)
+		request.set_user_password('testtest')
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+
+		# Fetch that user from the db.
+		session = self.configuration.get_database_session()
+		user = session.query(paasmaker.model.User).get(response.data['user']['id'])
+		apikey = user.apikey
+
+		# And give them permission to upload a file.
+		# TODO: Check permissions work as well.
+		role = paasmaker.model.Role()
+		role.name = "Upload"
+		role.permissions = constants.PERMISSION.ALL
+		session.add(role)
+		allocation = paasmaker.model.WorkspaceUserRole()
+		allocation.user = user
+		allocation.role = role
+		session.add(allocation)
+		paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
+
+		# Create a tar file of the sample tornado app
+		tarfile = self.pack_sample_application("tornado-simple")
+
+		def progress_callback(position, total):
+			logger.info("Progress: %d of %d bytes uploaded.", position, total)
+
+		# Now, attempt to upload a file.
+		request = paasmaker.common.api.upload.UploadFileAPIRequest(self.configuration)
+		request.set_apikey_auth(apikey)
+		request.send_file(tarfile, progress_callback, self.stop, self.stop)
+		result = self.wait()
+
+		# Check that it succeeded.
+		self.assertTrue(result['data']['success'], "Uploading application file didn't succeed")
+		remote_file_id = result['data']['identifier']
+
+		# Create the workspace.
+		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
+		request.set_apikey_auth(apikey)
+		request.set_workspace_name('Test workspace')
+		request.set_workspace_stub('test')
+		request.send(self.stop)
+		response = self.wait()
+		new_workspace_id =  response.data['workspace']['id']
+
+		# The tar-unpacking SCM isn't enabled by default
+		self.configuration.plugins.register(
+			'paasmaker.scm.tarball',
+			'paasmaker.pacemaker.scm.tarball.TarballSCM',
+			{},
+			'Tarball SCM'
+		)
+
+		# First try creating a new application with our tarball
+		request = paasmaker.common.api.application.ApplicationNewAPIRequest(self.configuration)
+		request.set_workspace(new_workspace_id)
+		request.set_apikey_auth(apikey)
+		request.set_scm("paasmaker.scm.tarball")
+		request.set_uploaded_file(remote_file_id)
+		request.send(self.stop)
+		response = self.wait()
+
+		job_id = response.data['job_id']
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(job_id))
+
+		self.assertTrue(response.data['new_application'], "Sending ApplicationNewAPIRequest didn't create a new application")
+
+		result = self.wait()
+		while result.state not in (constants.JOB_FINISHED_STATES):
+			result = self.wait()
+
+		self.assertEquals(result.state, constants.JOB.SUCCESS, "Application creation job did not succeed")
+
+		# List applications in this workspace, to get the app ID
+		request = paasmaker.common.api.application.ApplicationListAPIRequest(self.configuration)
+		request.set_workspace(new_workspace_id)
+		request.set_apikey_auth(apikey)
+		request.send(self.stop)
+		response = self.wait()
+
+		self.assertEquals(len(response.data['applications']), 1, "ApplicationListAPIRequest returned %d results, but we only created one." % len(response.data['applications']))
+		application_id = response.data['applications'][0]['id']
+
+		# Now use the same tarball to create a new version
+		request = paasmaker.common.api.application.ApplicationNewVersionAPIRequest(self.configuration)
+		request.set_application(application_id)
+		request.set_apikey_auth(apikey)
+		request.set_scm("paasmaker.scm.tarball")
+		request.set_uploaded_file(remote_file_id)
+		request.send(self.stop)
+		response = self.wait()
+
+		job_id = response.data['job_id']
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(job_id))
+
+		self.assertFalse(response.data['new_application'], "Sending ApplicationNewVersionAPIRequest created a new application rather than a new version")
+
+		result = self.wait()
+		while result.state not in (constants.JOB_FINISHED_STATES):
+			result = self.wait()
+
+		self.assertEquals(result.state, constants.JOB.SUCCESS, "New application version job did not succeed")
+
+		# Now delete the new application!
+		request = paasmaker.common.api.application.ApplicationDeleteAPIRequest(self.configuration)
+		request.set_application(application_id)
+		request.set_apikey_auth(apikey)
+		request.send(self.stop)
+		response = self.wait()
+
+		job_id = response.data['job_id']
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(job_id))
+
+		result = self.wait()
+		while result.state not in (constants.JOB_FINISHED_STATES):
+			result = self.wait()
+
+		self.assertEquals(result.state, constants.JOB.SUCCESS, "Application delete job did not succeed")

@@ -8,7 +8,7 @@ from user import UserCreateAPIRequest, UserEditAPIRequest
 from workspace import WorkspaceCreateAPIRequest, WorkspaceEditAPIRequest
 from upload import UploadFileAPIRequest
 from role import RoleCreateAPIRequest, RoleEditAPIRequest, RoleListAPIRequest, RoleAllocationListAPIRequest, RoleAllocationAPIRequest
-from application import ApplicationGetAPIRequest, ApplicationListAPIRequest
+from application import ApplicationGetAPIRequest, ApplicationListAPIRequest, ApplicationDeleteAPIRequest
 from version import VersionGetAPIRequest
 from package import PackageSizeAPIRequest, PackageDownloadAPIRequest
 from job import JobAbortAPIRequest
