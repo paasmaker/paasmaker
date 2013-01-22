@@ -2,8 +2,11 @@
 
 import logging
 import unittest
-import paasmaker
 import sys
+import datetime
+from multiprocessing import Pool
+
+import paasmaker
 
 # Suppress log messages.
 # Turning this off temporarily can be helpful for debugging.
@@ -119,8 +122,19 @@ test_sets = {
 	paasmaker.heart.helper.instancemanager: ['all', 'application', 'heart']
 }
 
+string_test_sets = {}
+for key in test_sets:
+	string_test_sets[key.__name__] = key
+
+def run_test(module_name):
+	print
+	print "------------------------------------------------------------------------"
+	print "Testing module", module_name
+	suite = unittest.TestLoader().loadTestsFromModule(string_test_sets[module_name])
+	return unittest.TextTestRunner(verbosity=2).run(suite)
+
 if __name__ == '__main__':
-	suite = None
+	pool = Pool(processes=1)
 
 	selected = ['all']
 	if len(sys.argv) > 1:
@@ -129,17 +143,33 @@ if __name__ == '__main__':
 	print "Selecting unit tests with tags: %s" % str(selected)
 
 	selected = set(selected)
+	modules = []
 	for module, tags in test_sets.iteritems():
 		if len(set(tags).intersection(selected)) > 0:
-			if not suite:
-				suite = unittest.TestLoader().loadTestsFromModule(module)
-			else:
-				suite.addTests(unittest.TestLoader().loadTestsFromModule(module))
+			modules.append(module.__name__)
 
-	if not suite:
+	if len(modules) == 0:
 		print "No tests selected."
-		sys.exit(1)
+		sys.exit(2)
 
-	# And run them.
-	print "About to run %d tests." % suite.countTestCases()
-	unittest.TextTestRunner(verbosity=2).run(suite)
+	start = datetime.datetime.now()
+	results = pool.map(run_test, modules)
+	end = datetime.datetime.now()
+
+	failed = 0
+	errors = 0
+	run = 0
+	skipped = 0
+
+	for result in results:
+		failed += len(result.failures)
+		errors += len(result.errors)
+		run += result.testsRun
+		skipped += len(result.skipped)
+
+	time_taken = (end - start).total_seconds()
+
+	print "Overall, %d run, %d errors, %d failed, %d skipped. Took %0.2fs." % (run, errors, failed, skipped, time_taken)
+
+	if failed > 0:
+		sys.exit(1)
