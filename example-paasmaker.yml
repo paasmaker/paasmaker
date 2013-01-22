@@ -11,14 +11,17 @@ redis:
     host: 127.0.0.1
     port: 42510
     managed: true
+    shutdown: true
   stats:
     host: 127.0.0.1
     port: 42512
     managed: true
+    shutdown: true
   jobs:
     host: 127.0.0.1
     port: 42513
     managed: true
+    shutdown: true
 
 plugins:
   - name: paasmaker.scm.zip
@@ -63,3 +66,4 @@ router:
   stats_log: managed at runtime
   nginx:
     managed: true
+    shutdown: true
