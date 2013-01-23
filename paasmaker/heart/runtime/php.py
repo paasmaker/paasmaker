@@ -92,7 +92,7 @@ Listen %(port)d
 
 	def _get_managed_instance(self, callback, error_callback):
 		if self.options['managed']:
-			self.apache_server = paasmaker.util.managedapache.ManagedApache(self.configuration)
+			self.apache_server = paasmaker.util.apachedaemon.ApacheDaemon(self.configuration)
 			# This makes the directory named by the plugins registered name. So if you
 			# have multiple PHP plugins with different names, you'll get one apache per
 			# plugin.

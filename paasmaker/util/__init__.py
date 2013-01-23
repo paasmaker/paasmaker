@@ -11,7 +11,7 @@ from postgresdaemon import PostgresDaemon, PostgresDaemonError
 from managedmongodb import ManagedMongo, ManagedMongoError
 from managedmysql import ManagedMySQL, ManagedMySQLError
 from managednginx import ManagedNginx, ManagedNginxError
-from managedapache import ManagedApache, ManagedApacheError
+from apachedaemon import ApacheDaemon, ApacheDaemonError
 from temporaryrabbitmq import TemporaryRabbitMQ
 from commandsupervisor import CommandSupervisorLauncher
 from popen import Popen

@@ -71,7 +71,7 @@ test_sets = {
 	paasmaker.util.postgresdaemon: ['slow', 'util', 'postgres', 'managedservice'],
 	paasmaker.util.managedmysql: ['slow', 'util', 'mysql', 'managedservice'],
 	paasmaker.util.managednginx: ['slow', 'util', 'nginx', 'managedservice'],
-	paasmaker.util.managedapache: ['slow', 'util', 'apache', 'managedservice'],
+	paasmaker.util.apachedaemon: ['slow', 'util', 'apache', 'managedservice'],
 	paasmaker.util.asyncdns: ['normal', 'util', 'network'],
 	paasmaker.util.flattenizr: ['normal', 'util', 'data'],
 

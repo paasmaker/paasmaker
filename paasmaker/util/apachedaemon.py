@@ -15,10 +15,10 @@ from manageddaemon import ManagedDaemon, ManagedDaemonError
 import tornado.testing
 import tornadoredis
 
-class ManagedApacheError(ManagedDaemonError):
+class ApacheDaemonError(ManagedDaemonError):
 	pass
 
-class ManagedApache(ManagedDaemon):
+class ApacheDaemon(ManagedDaemon):
 	"""
 	A managed Apache instance. Runs an Apache server
 	with a cut down configuration file.
@@ -151,7 +151,7 @@ Include %(config_file_dir)s/
 		)
 
 	def is_running(self, keyword=None):
-		return super(ManagedApache, self).is_running('apache2')
+		return super(ApacheDaemon, self).is_running('apache2')
 
 	def destroy(self):
 		"""
@@ -188,20 +188,20 @@ Include %(config_file_dir)s/
 
 		return output
 
-class ManagedApacheTest(tornado.testing.AsyncTestCase, TestHelpers):
+class ApacheDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
-		super(ManagedApacheTest, self).setUp()
+		super(ApacheDaemonTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [], io_loop=self.io_loop)
 
 	def tearDown(self):
 		if hasattr(self, 'server'):
 			self.server.destroy()
 		self.configuration.cleanup()
-		super(ManagedApacheTest, self).tearDown()
+		super(ApacheDaemonTest, self).tearDown()
 		pass
 
 	def test_basic(self):
-		self.server = ManagedApache(self.configuration)
+		self.server = ApacheDaemon(self.configuration)
 		port = self.configuration.get_free_port()
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('apache2'),
