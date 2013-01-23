@@ -1065,7 +1065,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				directory = self.get_scratch_path_exists(
 					'redis', name
 				)
-				meta['manager'] = paasmaker.util.managedredis.ManagedRedis(self)
+				meta['manager'] = paasmaker.util.redisdaemon.RedisDaemon(self)
 				try:
 					meta['manager'].load_parameters(directory)
 				except paasmaker.util.ManagedDaemonError, ex:

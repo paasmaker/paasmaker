@@ -57,7 +57,7 @@ class ManagedPostgresService(PostgresService):
 	def create(self, name, callback, error_callback):
 		# See if our managed postgres exists, and is running.
 		postgres_path = self._postgres_path()
-		manager = paasmaker.util.managedpostgres.PostgresDaemon(self.configuration)
+		manager = paasmaker.util.postgresdaemon.PostgresDaemon(self.configuration)
 		try:
 			manager.load_parameters(postgres_path)
 
@@ -136,7 +136,7 @@ class ManagedPostgresService(PostgresService):
 			postgres_path = self._postgres_path()
 
 			try:
-				manager = paasmaker.util.managedpostgres.PostgresDaemon(self.configuration)
+				manager = paasmaker.util.postgresdaemon.PostgresDaemon(self.configuration)
 				manager.load_parameters(postgres_path)
 				self.logger.info("Found managed postgres at path %s - shutting down", postgres_path)
 

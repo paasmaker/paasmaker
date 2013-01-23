@@ -131,7 +131,7 @@ class PostgresServiceTest(BaseServiceTest):
 	def setUp(self):
 		super(PostgresServiceTest, self).setUp()
 
-		self.server = paasmaker.util.managedpostgres.PostgresDaemon(self.configuration)
+		self.server = paasmaker.util.postgresdaemon.PostgresDaemon(self.configuration)
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('postgres'),
 			self.configuration.get_free_port(),

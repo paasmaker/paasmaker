@@ -31,10 +31,10 @@ Completed Daemons
 .. autoclass:: paasmaker.util.managednginx.ManagedNginx
     :members:
 
-.. autoclass:: paasmaker.util.managedpostgres.ManagedPostgres
+.. autoclass:: paasmaker.util.postgresdaemon.PostgresDaemon
     :members:
 
-.. autoclass:: paasmaker.util.managedredis.ManagedRedis
+.. autoclass:: paasmaker.util.redisdaemon.RedisDaemon
     :members:
 
 In progress Daemons
