@@ -16,23 +16,20 @@ from manageddaemon import ManagedDaemon, ManagedDaemonError
 
 import tornado.testing
 
-class ManagedPostgresError(ManagedDaemonError):
+class PostgresDaemonError(ManagedDaemonError):
 	pass
 
-class ManagedPostgres(ManagedDaemon):
+class PostgresDaemon(ManagedDaemon):
 	"""
 	Start and manage a Postgres daemon in a custom data
-	directory.
+	directory, for use by other services/plugins.
 
-	This class is fully operational. If you set a password,
+	If you provide a password to the configure method,
 	the user 'postgres' will have that password. From there,
 	you can interact with the daemon as normal.
 
 	You should use a port other than 5432 for it, so as to
 	not conflict with any system installation of Postgres.
-
-	The primary use of this is unit tests against a Postgres
-	database.
 
 	This class contains hard coded paths that are currently
 	Ubuntu 12.04 specific, and rely on having Postgres 9.1
@@ -153,19 +150,19 @@ class ManagedPostgres(ManagedDaemon):
 		self.stop(signal.SIGKILL)
 		shutil.rmtree(self.parameters['working_dir'])
 
-class ManagedPostgresTest(tornado.testing.AsyncTestCase, TestHelpers):
+class PostgresDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
-		super(ManagedPostgresTest, self).setUp()
+		super(PostgresDaemonTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [], io_loop=self.io_loop)
 
 	def tearDown(self):
 		if hasattr(self, 'server'):
 			self.server.destroy()
 		self.configuration.cleanup()
-		super(ManagedPostgresTest, self).tearDown()
+		super(PostgresDaemonTest, self).tearDown()
 
 	def test_basic(self):
-		self.server = ManagedPostgres(self.configuration)
+		self.server = PostgresDaemon(self.configuration)
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('postgres'),
 			self.configuration.get_free_port(),

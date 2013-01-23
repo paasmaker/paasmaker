@@ -35,6 +35,15 @@ class ManagedRedisServiceParametersSchema(colander.MappingSchema):
 	pass
 
 class ManagedRedisService(BaseService):
+	"""
+	Start a Redis server (using the RedisDaemon class) and make
+	it available to applications as a service.
+
+	To enable, add a "services" section to your application manifest,
+	and add an item with "provider: paasmaker.service.managedredis"
+	and a name of your choosing.
+	"""
+
 	MODES = {
 		paasmaker.util.plugin.MODE.SERVICE_CREATE: ManagedRedisServiceParametersSchema(),
 		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None,
@@ -55,7 +64,7 @@ class ManagedRedisService(BaseService):
 			instance_name
 		)
 
-		manager = paasmaker.util.managedredis.ManagedRedis(self.configuration)
+		manager = paasmaker.util.managedredis.RedisDaemon(self.configuration)
 		try:
 			# TODO: This shouldn't exist yet, because we're creating it...
 			# Decide how to handle this case.
@@ -114,7 +123,7 @@ class ManagedRedisService(BaseService):
 			instance_name
 		)
 
-		manager = paasmaker.util.managedredis.ManagedRedis(self.configuration)
+		manager = paasmaker.util.managedredis.RedisDaemon(self.configuration)
 		try:
 			manager.load_parameters(instance_path)
 
@@ -145,7 +154,7 @@ class ManagedRedisService(BaseService):
 				instance_path = paths.pop()
 
 				try:
-					manager = paasmaker.util.managedredis.ManagedRedis(self.configuration)
+					manager = paasmaker.util.managedredis.RedisDaemon(self.configuration)
 					manager.load_parameters(instance_path)
 					self.logger.info("Found managed redis at path %s - starting.", instance_path)
 
@@ -178,7 +187,7 @@ class ManagedRedisService(BaseService):
 					instance_path = paths.pop()
 
 					try:
-						manager = paasmaker.util.managedredis.ManagedRedis(self.configuration)
+						manager = paasmaker.util.managedredis.RedisDaemon(self.configuration)
 						manager.load_parameters(instance_path)
 						self.logger.info("Found managed redis at path %s - shutting down", instance_path)
 

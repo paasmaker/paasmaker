@@ -15,12 +15,13 @@ from manageddaemon import ManagedDaemon, ManagedDaemonError
 import tornado.testing
 import tornadoredis
 
-class ManagedRedisError(ManagedDaemonError):
+class RedisDaemonError(ManagedDaemonError):
 	pass
 
-class ManagedRedis(ManagedDaemon):
+class RedisDaemon(ManagedDaemon):
 	"""
-	Start up a managed Redis daemon.
+	Start up a managed Redis daemon, for use by other service
+	plugins, or in unit tests.
 
 	As Redis doesn't really allow for multiple databases in the
 	same instance, this class is an easy way to simulate that by
@@ -138,7 +139,7 @@ appendonly no
 		return self.client
 
 	def is_running(self, keyword=None):
-		return super(ManagedRedis, self).is_running('redis-server')
+		return super(RedisDaemon, self).is_running('redis-server')
 
 	def stop(self, sig=signal.SIGTERM):
 		"""
@@ -148,7 +149,7 @@ appendonly no
 			self.client.disconnect()
 			self.client = None
 
-		super(ManagedRedis, self).stop(sig)
+		super(RedisDaemon, self).stop(sig)
 
 	def destroy(self):
 		"""
@@ -158,16 +159,16 @@ appendonly no
 		self.stop(signal.SIGKILL)
 		shutil.rmtree(self.parameters['working_dir'])
 
-class ManagedRedisTest(tornado.testing.AsyncTestCase, TestHelpers):
+class RedisDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
-		super(ManagedRedisTest, self).setUp()
+		super(RedisDaemonTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [], io_loop=self.io_loop)
 
 	def tearDown(self):
 		if hasattr(self, 'server'):
 			self.server.destroy()
 		self.configuration.cleanup()
-		super(ManagedRedisTest, self).tearDown()
+		super(RedisDaemonTest, self).tearDown()
 
 	def callback(self, channel, method, header, body):
 		# Print out the message.
@@ -176,7 +177,7 @@ class ManagedRedisTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.stop()
 
 	def test_basic(self):
-		self.server = ManagedRedis(self.configuration)
+		self.server = RedisDaemon(self.configuration)
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('redis'),
 			self.configuration.get_free_port(),

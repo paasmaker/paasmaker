@@ -33,6 +33,15 @@ class ManagedPostgresServiceParametersSchema(colander.MappingSchema):
 	pass
 
 class ManagedPostgresService(PostgresService):
+	"""
+	Start a Postgres server (using the PostgresDaemon class) and make
+	it available to applications as a service.
+
+	To enable, add a "services" section to your application manifest,
+	and add an item with "provider: paasmaker.service.managedpostgres"
+	and	a name of your choosing.
+	"""
+
 	MODES = {
 		paasmaker.util.plugin.MODE.SERVICE_CREATE: ManagedPostgresServiceParametersSchema(),
 		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None,
@@ -48,7 +57,7 @@ class ManagedPostgresService(PostgresService):
 	def create(self, name, callback, error_callback):
 		# See if our managed postgres exists, and is running.
 		postgres_path = self._postgres_path()
-		manager = paasmaker.util.managedpostgres.ManagedPostgres(self.configuration)
+		manager = paasmaker.util.managedpostgres.PostgresDaemon(self.configuration)
 		try:
 			manager.load_parameters(postgres_path)
 
@@ -103,7 +112,7 @@ class ManagedPostgresService(PostgresService):
 		postgres_path = self._postgres_path()
 
 		try:
-			manager = paasmaker.util.managedpostgres.ManagedPostgres(self.configuration)
+			manager = paasmaker.util.managedpostgres.PostgresDaemon(self.configuration)
 			manager.load_parameters(postgres_path)
 			self.logger.info("Found managed postgres at path %s - starting.", postgres_path)
 
@@ -127,7 +136,7 @@ class ManagedPostgresService(PostgresService):
 			postgres_path = self._postgres_path()
 
 			try:
-				manager = paasmaker.util.managedpostgres.ManagedPostgres(self.configuration)
+				manager = paasmaker.util.managedpostgres.PostgresDaemon(self.configuration)
 				manager.load_parameters(postgres_path)
 				self.logger.info("Found managed postgres at path %s - shutting down", postgres_path)
 
