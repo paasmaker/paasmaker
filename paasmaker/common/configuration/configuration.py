@@ -1137,7 +1137,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		"""
 		if self.get_flat('router.nginx.managed'):
 			# Fire up the managed version, if it's not already running.
-			self.nginx_server = paasmaker.util.managednginx.ManagedNginx(self)
+			self.nginx_server = paasmaker.util.nginxdaemon.NginxDaemon(self)
 			directory = self.get_scratch_path('nginx')
 			try:
 				self.nginx_server.load_parameters(directory)

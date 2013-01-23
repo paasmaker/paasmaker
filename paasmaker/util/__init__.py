@@ -10,7 +10,7 @@ from managedrabbitmq import ManagedRabbitMQ, ManagedRabbitMQError
 from postgresdaemon import PostgresDaemon, PostgresDaemonError
 from managedmongodb import ManagedMongo, ManagedMongoError
 from managedmysql import ManagedMySQL, ManagedMySQLError
-from managednginx import ManagedNginx, ManagedNginxError
+from nginxdaemon import NginxDaemon, NginxDaemonError
 from apachedaemon import ApacheDaemon, ApacheDaemonError
 from temporaryrabbitmq import TemporaryRabbitMQ
 from commandsupervisor import CommandSupervisorLauncher

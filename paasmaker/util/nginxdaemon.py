@@ -15,10 +15,10 @@ from manageddaemon import ManagedDaemon, ManagedDaemonError
 import tornado.testing
 import tornadoredis
 
-class ManagedNginxError(ManagedDaemonError):
+class NginxDaemonError(ManagedDaemonError):
 	pass
 
-class ManagedNginx(ManagedDaemon):
+class NginxDaemon(ManagedDaemon):
 	"""
 	Start a managed instance of the NGINX web server.
 
@@ -95,7 +95,7 @@ class ManagedNginx(ManagedDaemon):
 		)
 
 	def is_running(self, keyword=None):
-		return super(ManagedNginx, self).is_running('nginx')
+		return super(NginxDaemon, self).is_running('nginx')
 
 	def destroy(self):
 		"""
@@ -104,19 +104,19 @@ class ManagedNginx(ManagedDaemon):
 		self.stop()
 		shutil.rmtree(self.parameters['working_dir'])
 
-class ManagedNginxTest(tornado.testing.AsyncTestCase, TestHelpers):
+class NginxDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
-		super(ManagedNginxTest, self).setUp()
+		super(NginxDaemonTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [], io_loop=self.io_loop)
 
 	def tearDown(self):
 		if hasattr(self, 'server'):
 			self.server.destroy()
 		self.configuration.cleanup()
-		super(ManagedNginxTest, self).tearDown()
+		super(NginxDaemonTest, self).tearDown()
 
 	def test_basic(self):
-		self.server = ManagedNginx(self.configuration)
+		self.server = NginxDaemon(self.configuration)
 		port = self.configuration.get_free_port()
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('nginx'),
