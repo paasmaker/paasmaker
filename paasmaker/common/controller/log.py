@@ -110,7 +110,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 			)
 
 	def handle_remote_subscribe(self, job_id, position, message, node, unittest_force_remote=False):
-		if not unittest_force_remote and nodeuuid == self.configuration.get_node_uuid():
+		if not unittest_force_remote and node.uuid == self.configuration.get_node_uuid():
 			# Prevent us from connecting to ourselves...
 			self.send_success('zerosize', {'job_id': job_id})
 			return
