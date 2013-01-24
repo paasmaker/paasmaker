@@ -7,10 +7,11 @@ from base import BaseControllerTest
 from base import BaseWebsocketHandler
 from base import BaseLongpollController
 
+import paasmaker
+
 import colander
 import tornado
 import tornado.testing
-from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 class ExampleDataSchema(colander.MappingSchema):
 	more = colander.SchemaNode(colander.String(),
@@ -81,7 +82,7 @@ class ExampleWebsocketHandler(BaseWebsocketHandler):
 		self.write_message(u"You said: " + message)
 		self.events.append(message)
 
-	def on_close(self):
+	def on_closed(self):
 		self.events.append('Closed')
 
 	@staticmethod
@@ -122,13 +123,13 @@ class ExampleLongPollController(BaseLongpollController):
 ## TEST CODE
 ##
 
-class ExampleWebsocketHandlerTestClient(TornadoWebSocketClient):
+class ExampleWebsocketHandlerTestClient(paasmaker.thirdparty.twc.websocket.WebSocket):
 	events = []
-	def opened(self):
+	def on_open(self):
 		self.events.append('Opened')
-	def closed(self, code, reason):
+	def on_close(self, code, reason):
 		self.events.append('Closed: %d %s' % (code, reason))
-	def received_message(self, m):
+	def on_message(self, m):
 		self.events.append('Got message: %s' % m)
 
 class ExampleControllerTest(BaseControllerTest):
@@ -220,17 +221,16 @@ class ExampleControllerTest(BaseControllerTest):
 
 	def test_example_websocket(self):
 		client = ExampleWebsocketHandlerTestClient("ws://localhost:%d/example-websocket" % self.get_http_port(), io_loop=self.io_loop)
-		client.connect()
 		self.short_wait_hack() # Waiting for everything to settle.
 
 		# Send it a short message.
-		client.send('test')
+		client.write_message('test')
 		self.short_wait_hack() # Wait for processing of that message.
 
 		client.close()
 		self.short_wait_hack() # Wait for closing.
 
-		self.assertEquals(len(client.events), 3, "Missing events.")
+		self.assertEquals(len(client.events), 2, "Missing events.")
 
 	def test_long_poll(self):
 		body_parts = []

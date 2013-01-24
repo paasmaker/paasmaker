@@ -76,7 +76,7 @@ test_sets = {
 	paasmaker.util.asyncdns: ['normal', 'util', 'network'],
 	paasmaker.util.flattenizr: ['normal', 'util', 'data'],
 
-	paasmaker.router.router: ['normal', 'router'],
+	paasmaker.router.router: ['normal', 'router', 'routeronly'],
 	paasmaker.pacemaker.cron.cronrunner: ['normal', 'cron'],
 
 	paasmaker.common.configuration.configuration: ['normal', 'configuration'],

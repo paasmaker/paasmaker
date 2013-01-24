@@ -3,7 +3,6 @@ tornado==2.4.1
 sqlalchemy>=0.7.5
 pyyaml
 colander>=0.9.9
-ws4py==0.2.2
 pypubsub
 tornado-redis==0.0.7
 pika==0.9.5

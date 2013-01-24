@@ -9,7 +9,6 @@ from pubsub import pub
 import tornado
 import tornado.testing
 import colander
-from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())

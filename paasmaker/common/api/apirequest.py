@@ -5,7 +5,6 @@ import logging
 import paasmaker
 
 import tornado
-from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())

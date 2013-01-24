@@ -8,7 +8,6 @@ from paasmaker.common.core import constants
 
 import tornado
 import colander
-from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 class ConfigurationDumpController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]

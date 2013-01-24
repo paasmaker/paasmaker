@@ -16,7 +16,6 @@ from base import WebsocketLongpollWrapper
 import tornado
 import tornado.testing
 import colander
-from ws4py.client.tornadoclient import TornadoWebSocketClient
 from pubsub import pub
 
 logger = logging.getLogger(__name__)

@@ -19,7 +19,6 @@ import tornado.escape
 import colander
 import sqlalchemy
 from pubsub import pub
-from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 # Types of API requests.
 # 1. Node->Node. (ie, nodes talking to each other)

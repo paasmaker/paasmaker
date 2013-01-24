@@ -8,7 +8,6 @@ from paasmaker.common.core import constants
 
 import tornado
 import colander
-from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 class NginxController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
@@ -222,11 +221,11 @@ class TableDumpControllerTest(BaseControllerTest):
 		self.failIf(response.error)
 		self.assertIn('table', response.body)
 
-class RouterStreamHandlerTestClient(TornadoWebSocketClient):
-	def opened(self):
+class RouterStreamHandlerTestClient(paasmaker.thirdparty.twc.websocket.WebSocket):
+	def on_open(self):
 		self.messages = []
 
-	def closed(self, code, reason=None):
+	def on_close(self):
 		#print "Client: closed"
 		pass
 
@@ -234,19 +233,16 @@ class RouterStreamHandlerTestClient(TornadoWebSocketClient):
 		data = {'name': name, 'input_id': input_id}
 		auth = {'method': 'super', 'value': self.configuration.get_flat('pacemaker.super_token')}
 		message = {'request': 'update', 'data': data, 'auth': auth}
-		self.send(json.dumps(message))
+		self.write_message(json.dumps(message))
 
 	def history(self, name, input_id, metric, start, end=None):
 		data = {'name': name, 'input_id': input_id, 'metric': metric, 'start': start, 'end': end}
 		auth = {'method': 'super', 'value': self.configuration.get_flat('pacemaker.super_token')}
 		message = {'request': 'history', 'data': data, 'auth': auth}
-		self.send(json.dumps(message))
+		self.write_message(json.dumps(message))
 
-	def received_message(self, m):
-		#print "Client: got %s" % m
-		# Record the log lines.
-		# CAUTION: m is NOT A STRING.
-		parsed = json.loads(str(m))
+	def on_message(self, m):
+		parsed = json.loads(m)
 		self.messages.append(parsed)
 
 class RouterStreamHandlerTest(BaseControllerTest):
@@ -261,7 +257,6 @@ class RouterStreamHandlerTest(BaseControllerTest):
 	def test_router_stream(self):
 		client = RouterStreamHandlerTestClient("ws://localhost:%d/router/stats/stream" % self.get_http_port(), io_loop=self.io_loop)
 		client.configuration = self.configuration
-		client.connect()
 
 		# Wait for it to announce it's ready.
 		self.short_wait_hack(length=0.2)
@@ -296,4 +291,4 @@ class RouterStreamHandlerTest(BaseControllerTest):
 
 		self.assertEquals(len(expected_types), len(client.messages), "Not the right number of messages.")
 		for i in range(len(expected_types)):
-			self.assertEquals(client.messages[i]['type'], expected_types[i], "Wrong type for message %d" % i)
+			self.assertEquals(client.messages[i]['type'], expected_types[i], "Wrong type for message %d - got %s, expected %s" % (i, client.messages[i]['type'], expected_types[i]))
