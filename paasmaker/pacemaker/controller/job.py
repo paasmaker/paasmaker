@@ -257,25 +257,18 @@ class JobStreamHandler(BaseWebsocketHandler):
 		routes.append((r"/job/stream", JobStreamHandler, configuration))
 		return routes
 
-class JobStreamHandlerTestClient(TornadoWebSocketClient):
-	def opened(self):
+class JobStreamHandlerTestClient(paasmaker.thirdparty.twc.websocket.WebSocket):
+	def on_open(self):
 		self.messages = []
-
-	def closed(self, code, reason=None):
-		#print "Client: closed"
-		pass
 
 	def subscribe(self, job_id):
 		data = {'job_id': job_id}
 		auth = {'method': 'node', 'value': self.configuration.get_flat('node_token')}
 		message = {'request': 'subscribe', 'data': data, 'auth': auth}
-		self.send(json.dumps(message))
+		self.write_message(json.dumps(message))
 
-	def received_message(self, m):
-		#print "Client: got %s" % m
-		# Record the log lines.
-		# CAUTION: m is NOT A STRING.
-		parsed = json.loads(str(m))
+	def on_message(self, m):
+		parsed = json.loads(m)
 		self.messages.append(parsed)
 
 class JobStreamHandlerTest(BaseControllerTest):
@@ -321,7 +314,6 @@ class JobStreamHandlerTest(BaseControllerTest):
 	def test_job_stream(self):
 		client = JobStreamHandlerTestClient("ws://localhost:%d/job/stream" % self.get_http_port(), io_loop=self.io_loop)
 		client.configuration = self.configuration
-		client.connect()
 		self.short_wait_hack()
 
 		self.manager.add_job('paasmaker.job.success', {}, "Example root job.", self.stop)

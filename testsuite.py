@@ -101,7 +101,7 @@ test_sets = {
 	paasmaker.pacemaker.controller.profile: ['normal', 'controller', 'profile'],
 	paasmaker.pacemaker.controller.workspace: ['normal', 'controller', 'workspace'],
 	paasmaker.pacemaker.controller.upload: ['normal', 'controller', 'files'],
-	paasmaker.pacemaker.controller.job: ['normal', 'jobmanager', 'websocket'],
+	paasmaker.pacemaker.controller.job: ['normal', 'jobmanager', 'websocket', 'jobstream'],
 	paasmaker.pacemaker.controller.package: ['normal', 'package', 'controller'],
 	paasmaker.pacemaker.controller.application: ['normal', 'application', 'controller'],
 	paasmaker.pacemaker.controller.scmlist: ['normal', 'scmlist', 'controller'],
