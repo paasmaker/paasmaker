@@ -932,19 +932,19 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 
 		if self.NODE in self.AUTH_METHODS:
 			# Check that a valid node authentication.
-			if auth.has_key('method') and auth['method'] == 'node':
+			if auth.has_key('method') and (auth['method'] == 'node' or auth['method'] == 'nodeheader'):
 				if auth.has_key('value') and auth['value'] == self.configuration.get_flat('node_token'):
 					found_allowed_method = True
 
 		if self.SUPER in self.AUTH_METHODS:
 			# Check that a valid super authentication.
-			if auth.has_key('method') and auth['method'] == 'super' and self.configuration.get_flat('pacemaker.allow_supertoken'):
+			if auth.has_key('method') and (auth['method'] == 'super' or auth['method'] == 'superheader') and self.configuration.get_flat('pacemaker.allow_supertoken'):
 				if auth.has_key('value') and auth['value'] == self.configuration.get_flat('pacemaker.super_token'):
 					found_allowed_method = True
 
 		if self.USER in self.AUTH_METHODS:
 			test_token = None
-			if auth.has_key('method') and auth['method'] == 'token':
+			if auth.has_key('method') and (auth['method'] == 'token' or auth['method'] == 'tokenheader'):
 				test_token = auth['value']
 			if test_token:
 				# Lookup the user object.
@@ -1061,30 +1061,28 @@ class WebsocketLongpollWrapperSchema(colander.MappingSchema):
 		missing=False
 	)
 
-# TODO: Normal tornado stack context exception handling does not work if errors occur
-# inside this client. Fix this.
-class WebsocketWrapperClient(TornadoWebSocketClient):
-	def configure(self, configuration, on_connected, on_message, on_closed):
+class WebsocketWrapperClient(paasmaker.thirdparty.twc.websocket.WebSocket):
+	def configure(self, configuration, on_connected, on_message_handler, on_closed):
 		self.configuration = configuration
 		self.connected = False
-		self.on_connected = tornado.stack_context.wrap(on_connected)
-		self.on_message = tornado.stack_context.wrap(on_message)
-		self.on_closed = tornado.stack_context.wrap(on_closed)
+		self.on_connected = on_connected
+		self.on_message_handler = on_message_handler
+		self.on_closed = on_closed
 
-	def opened(self):
+	def on_open(self):
 		self.connected = True
 		self.on_connected(self)
 
-	def closed(self, code, reason=None):
+	def on_close(self):
 		self.connected = False
-		self.on_closed(self, code, reason)
+		self.on_closed(self)
 
 	def send_message(self, message):
-		self.send(json.dumps(message))
+		self.write_message(json.dumps(message))
 
-	def received_message(self, message):
-		parsed = json.loads(str(message))
-		self.on_message(self, parsed)
+	def on_message(self, message):
+		parsed = json.loads(message)
+		self.on_message_handler(self, parsed)
 
 class WebsocketLongpollSessionmanager(object):
 	def __init__(self):
@@ -1096,7 +1094,7 @@ class WebsocketLongpollSessionmanager(object):
 		else:
 			return False
 
-	def create(self, endpoint, connected_callback):
+	def create(self, endpoint, connected_callback, source_request):
 		session_id = str(uuid.uuid4())
 
 		def connected(client):
@@ -1104,7 +1102,7 @@ class WebsocketLongpollSessionmanager(object):
 			# connected.
 			connected_callback(session_id)
 
-		def closed(client, code, reason):
+		def closed(client):
 			# Remove the session.
 			if self.sessions.has_key(session_id):
 				del self.sessions[session_id]
@@ -1116,9 +1114,21 @@ class WebsocketLongpollSessionmanager(object):
 			# And publish that we have a new message.
 			pub.sendMessage('websocketwrapper.message', session_id=session_id)
 
+		extra_headers = {}
+		if 'user-token' in source_request.headers:
+			extra_headers['User-Token'] = source_request.headers['User-Token']
+		if 'super-token' in source_request.headers:
+			extra_headers['Super-Token'] = source_request.headers['Super-Token']
+		if 'node-token' in source_request.headers:
+			extra_headers['Node-Token'] = source_request.headers['Node-Token']
+
 		# Create the remote.
 		remote_url = "ws://localhost:%d%s" % (self.configuration.get_flat('http_port'), endpoint)
-		remote = WebsocketWrapperClient(remote_url, io_loop=self.configuration.io_loop)
+		remote = WebsocketWrapperClient(
+			remote_url,
+			io_loop=self.configuration.io_loop,
+			extra_headers=extra_headers
+		)
 		remote.configure(
 			self.configuration,
 			connected,
@@ -1134,18 +1144,12 @@ class WebsocketLongpollSessionmanager(object):
 			'messages': []
 		}
 
-		# Connect to the remote.
+		# Wait for callback.
 		# The callback will kick everything else off.
-		remote.connect()
 
 	def send(self, session_id, message):
 		if not self.sessions.has_key(session_id):
 			raise ValueError("No such session %s" % session_id)
-
-		# TODO: This is so wrong it's unbelievable.
-		# Steal the auth data from the request, not this.
-		message['auth']['method'] = 'super'
-		message['auth']['value'] = self.configuration.get_flat('pacemaker.super_token')
 
 		self.sessions[session_id]['remote'].send_message(message)
 
@@ -1227,7 +1231,7 @@ class WebsocketLongpollWrapper(BaseLongpollController):
 				raise tornado.web.HTTPError(400, "Session closed or non existnent.")
 		else:
 			# Create a new session.
-			self.SESSIONS.create(self.params['endpoint'], self._startup_session)
+			self.SESSIONS.create(self.params['endpoint'], self._startup_session, self.request)
 
 	def _startup_session(self, session_id, new_session=True):
 		# Save the session ID for other callbacks.

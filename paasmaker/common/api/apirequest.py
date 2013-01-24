@@ -302,27 +302,27 @@ class APIRequest(object):
 		# And then the async part.
 		self.async_build_payload(sync_payload, payload_ready)
 
-class StreamAPIWebsocketWrapper(TornadoWebSocketClient):
-	def configure(self, on_connected, on_message, on_closed):
+class StreamAPIWebsocketWrapper(paasmaker.thirdparty.twc.websocket.WebSocket):
+	def configure(self, on_connected, on_message_handler, on_closed):
 		self.connected = False
 		self.on_connected = on_connected
-		self.on_message = on_message
+		self.on_message_handler = on_message_handler
 		self.on_closed = on_closed
 
-	def opened(self):
+	def on_open(self):
 		self.connected = True
 		self.on_connected(self)
 
-	def closed(self, code, reason=None):
+	def on_close(self):
 		self.connected = False
-		self.on_closed(self, code, reason)
+		self.on_closed(self)
 
 	def send_message(self, message):
-		self.send(json.dumps(message))
+		self.write_message(json.dumps(message))
 
-	def received_message(self, message):
-		parsed = json.loads(str(message))
-		self.on_message(self, message)
+	def on_message(self, message):
+		parsed = json.loads(message)
+		self.on_message_handler(self, parsed)
 
 class StreamAPIRequest(APIRequest):
 	def __init__(self, *args):
@@ -366,9 +366,7 @@ class StreamAPIRequest(APIRequest):
 		complete_message = {
 			'request': message[0],
 			'data': message[1],
-			'auth': {
-				# TODO: Populate auth here.
-			}
+			'auth': {'method': self.authmethod, 'value': self.authvalue}
 		}
 
 		return complete_message
@@ -389,9 +387,13 @@ class StreamAPIRequest(APIRequest):
 
 				logging.debug("Websocket endpoint: %s", endpoint)
 
+				auth_headers = {}
+				self._authenticate_headers(auth_headers)
+
 				self.websocket = StreamAPIWebsocketWrapper(
 					endpoint,
-					io_loop=self.io_loop
+					io_loop=self.io_loop,
+					extra_headers=auth_headers
 				)
 				self.websocket.configure(
 					self._websocket_opened,
@@ -400,7 +402,6 @@ class StreamAPIRequest(APIRequest):
 				)
 				# TODO: Catch exception if this fails...
 				logging.debug("Connecting...")
-				self.websocket.connect()
 			else:
 				# Just send along the current message queue.
 				logging.debug("Not connected, long poll mode.")
@@ -451,7 +452,7 @@ class StreamAPIRequest(APIRequest):
 			'commands': formatted_commands,
 			'send_only': send_only
 		}
-		body['auth'] = { 'method': self.authmethod, 'value': self.authvalue }
+		body['auth'] = {'method': self.authmethod, 'value': self.authvalue}
 		request_arguments['body'] = json.dumps(body, cls=paasmaker.util.jsonencoder.JsonEncoder)
 
 		def long_poll_result(response):

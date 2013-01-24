@@ -502,6 +502,65 @@ class LogStreamHandlerTest(BaseControllerTest):
 		# TODO: The subscribe above currently hangs. Fix this and test it.
 		self.short_wait_hack()
 
+	def test_websocket_api_log(self):
+		# Make a job number, and log to it.
+		job_id = str(uuid.uuid4())
+		number_lines = 10
+
+		log = self.configuration.get_job_logger(job_id)
+
+		for i in range(number_lines):
+			log.info("Log message %d", i)
+
+		def got_lines(job_id, lines, position):
+			logging.debug("Job ID: %s", job_id)
+			logging.debug("Lines: %s", str(lines))
+			logging.debug("Position: %d", position)
+			# Store the last position on this function.
+			got_lines.position = position
+			self.stop(lines)
+
+		def on_message(message):
+			if message['type'] == 'lines':
+				got_lines(message['data']['job_id'], message['data']['lines'], message['data']['position'])
+
+		def on_error(error):
+			print error
+
+		# Now, connect to it and stream the log.
+		remote_request = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
+		remote_request.set_superkey_auth(self.configuration.get_flat('pacemaker.super_token'))
+		remote_request.set_callbacks(on_message, on_error)
+		#remote_request.set_stream_mode('longpoll')
+		remote_request.subscribe(job_id)
+
+		lines = self.wait()
+
+		self.assertEquals(number_lines, len(lines), "Didn't download the expected number of lines.")
+
+		# Send another log entry.
+		# This one should come back automatically because the websocket is subscribed.
+		log.info("Additional log entry.")
+
+		lines = self.wait()
+
+		self.assertEquals(1, len(lines), "Didn't download the expected number of lines.")
+
+		# Unsubscribe.
+		remote_request.unsubscribe(job_id)
+
+		# Send a new log entry. This one won't come back, because we've unsubscribed.
+		log.info("Another additional log entry.")
+		log.info("And Another additional log entry.")
+
+		# Now subscribe again. It will send us everything since the
+		# end of the last subscribe.
+		remote_request.subscribe(job_id, position=got_lines.position)
+
+		lines = self.wait()
+
+		self.assertEquals(2, len(lines), "Didn't download the expected number of lines.")
+
 	def test_longpoll_log(self):
 		# Make a job number, and log to it.
 		job_id = str(uuid.uuid4())
