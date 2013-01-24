@@ -150,7 +150,6 @@ class LogStreamHandler(BaseWebsocketHandler):
 				this_remote_error
 			)
 			remote.subscribe(job_id, position=position)
-			remote.connect()
 
 			self.remote_connections[node.uuid] = {
 				'connection': remote,
@@ -184,7 +183,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 					logger.info("Refcount for %s dropped to zero, closing connection.", nodeuuid)
 					remote = self.remote_connections[nodeuuid]['connection']
 					del self.remote_connections[nodeuuid]
-					remote.close_connection()
+					remote.close()
 
 	def on_close(self):
 		logger.info("Connection closed.")
@@ -235,9 +234,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 		routes.append((r"/log/stream", LogStreamHandler, configuration))
 		return routes
 
-# TODO: Normal tornado stack context exception handling does not work if errors occur
-# inside this client. Fix this.
-class LogStreamRemoteClient(TornadoWebSocketClient):
+class LogStreamRemoteClient(paasmaker.thirdparty.twc.websocket.WebSocket):
 	def configure(self, configuration, lines_callback, error_callback, unittest_force_remote=False):
 		self.configuration = configuration
 		self.connected = False
@@ -246,7 +243,7 @@ class LogStreamRemoteClient(TornadoWebSocketClient):
 		self.startup_job_ids = []
 		self.unittest_force_remote = unittest_force_remote
 
-	def opened(self):
+	def on_open(self):
 		self.connected = True
 		logger.debug("Client: Remote connection open.")
 		logger.debug("Client: Subscribing to %d jobs.", len(self.startup_job_ids))
@@ -263,7 +260,7 @@ class LogStreamRemoteClient(TornadoWebSocketClient):
 			data = {'job_id': job_id, 'position': position, 'unittest_force_remote': self.unittest_force_remote}
 			auth = {'method': 'node', 'value': self.configuration.get_flat('node_token')}
 			message = {'request': 'subscribe', 'data': data, 'auth': auth}
-			self.send(json.dumps(message))
+			self.write_message(json.dumps(message))
 
 	def unsubscribe(self, job_id):
 		# TODO: Handle when unsubscribing when not connected.
@@ -271,27 +268,18 @@ class LogStreamRemoteClient(TornadoWebSocketClient):
 		data = {'job_id': job_id}
 		auth = {'method': 'node', 'value': self.configuration.get_flat('node_token')}
 		message = {'request': 'unsubscribe', 'data': data, 'auth': auth}
-		self.send(json.dumps(message))
+		self.write_message(json.dumps(message))
 
-	def closed(self, code, reason=None):
+	def on_close(self):
 		logger.debug("Client: Closed.")
 		self.connected = False
 
-	def received_message(self, m):
-		try:
-			#print "Client: got %s" % m
-			# Record the log lines.
-			# CAUTION: m is NOT A STRING. We coerce it here before parsing it.
-			parsed = json.loads(str(m))
-			if parsed['type'] == 'lines':
-				self.lines_callback(parsed['data']['job_id'], parsed['data']['lines'], parsed['data']['position'])
-			elif parsed['type'] == 'error':
-				self.error_callback(parsed['data']['error'])
-
-		except Exception, ex:
-			# We're kinda not on the tornado IO loop properly here,
-			# so catch and report any errors.
-			self.error_callback(str(ex), exception=ex)
+	def on_message(self, m):
+		parsed = json.loads(str(m))
+		if parsed['type'] == 'lines':
+			self.lines_callback(parsed['data']['job_id'], parsed['data']['lines'], parsed['data']['position'])
+		elif parsed['type'] == 'error':
+			self.error_callback(parsed['data']['error'])
 
 class LogStreamHandlerTest(BaseControllerTest):
 	config_modules = ['pacemaker']
@@ -333,7 +321,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 
 	def tearDown(self):
 		if hasattr(self, 'client'):
-			self.client.close_connection()
+			self.client.close()
 
 		super(BaseControllerTest, self).tearDown()
 
@@ -359,7 +347,6 @@ class LogStreamHandlerTest(BaseControllerTest):
 		self.client = LogStreamRemoteClient("ws://localhost:%d/log/stream" % self.get_http_port(), io_loop=self.io_loop)
 		self.client.configure(self.configuration, got_lines, self.stop)
 		self.client.subscribe(job_id)
-		self.client.connect()
 
 		lines = self.wait()
 
@@ -401,7 +388,6 @@ class LogStreamHandlerTest(BaseControllerTest):
 		self.client = LogStreamRemoteClient("ws://localhost:%d/log/stream" % self.get_http_port(), io_loop=self.io_loop)
 		self.client.configure(self.configuration, self.stop, self.stop)
 		self.client.subscribe(job_id)
-		self.client.connect()
 
 		error = self.wait()
 		self.assertIn("not a pacemaker", error, "Error message is not as expected.")
@@ -437,7 +423,6 @@ class LogStreamHandlerTest(BaseControllerTest):
 		self.client = LogStreamRemoteClient("ws://localhost:%d/log/stream" % self.get_http_port(), io_loop=self.io_loop)
 		self.client.configure(self.configuration, got_lines, self.stop, unittest_force_remote=True)
 		self.client.subscribe(job_id)
-		self.client.connect()
 
 		lines = self.wait()
 
@@ -493,7 +478,6 @@ class LogStreamHandlerTest(BaseControllerTest):
 		self.client = LogStreamRemoteClient("ws://localhost:%d/log/stream" % self.get_http_port(), io_loop=self.io_loop)
 		self.client.configure(self.configuration, got_lines, self.stop, unittest_force_remote=True)
 		self.client.subscribe(instance.instance_id)
-		self.client.connect()
 
 		lines = self.wait()
 
