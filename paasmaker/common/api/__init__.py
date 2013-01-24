@@ -12,3 +12,4 @@ from application import ApplicationGetAPIRequest, ApplicationListAPIRequest, App
 from version import VersionGetAPIRequest
 from package import PackageSizeAPIRequest, PackageDownloadAPIRequest
 from job import JobAbortAPIRequest
+from log import LogStreamAPIRequest

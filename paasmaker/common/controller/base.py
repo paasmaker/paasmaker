@@ -3,7 +3,10 @@ import warnings
 import os
 import json
 import time
+import datetime
 import math
+import uuid
+import sys
 
 import paasmaker
 from ..testhelpers import TestHelpers
@@ -15,6 +18,8 @@ import tornado.websocket
 import tornado.escape
 import colander
 import sqlalchemy
+from pubsub import pub
+from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 # Types of API requests.
 # 1. Node->Node. (ie, nodes talking to each other)
@@ -811,6 +816,7 @@ class BaseLongpollController(BaseController):
 		self._finish_request(True)
 
 	def _finish_request(self, timeout_expired):
+		logger.debug("Finishing longpoll request.")
 		if self._longpoll_timer:
 			self.configuration.io_loop.remove_timeout(self._longpoll_timer)
 
@@ -1020,6 +1026,266 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 		Helper function to encode a message.
 		"""
 		return json.dumps(message, cls=paasmaker.util.jsonencoder.JsonEncoder)
+
+class CommandSchema(colander.MappingSchema):
+	pass
+
+class CommandsSchema(colander.SequenceSchema):
+	commands = CommandSchema(unknown='preserve')
+
+class WebsocketLongpollWrapperSchema(colander.MappingSchema):
+	endpoint = colander.SchemaNode(
+		colander.String(),
+		title="Websocket endpoint",
+		description="The Websocket endpoint on the server side (the URI, eg /log/stream)"
+	)
+	session_id = colander.SchemaNode(
+		colander.String(),
+		title="Long poll session ID",
+		description="The long poll session ID to resume. If not supplied, it will create a new session.",
+		default=None,
+		missing=None
+	)
+	# commands = colander.SchemaNode(
+	# 	CommandsSchema(),
+	# 	title="Commands",
+	# 	description="List of commands to send to the websocket handler.",
+	# 	default=[],
+	# 	missing=[]
+	# )
+	send_only = colander.SchemaNode(
+		colander.Boolean(),
+		title="Send data only",
+		description="Send data to the server only, do not return any messages.",
+		default=False,
+		missing=False
+	)
+
+# TODO: Normal tornado stack context exception handling does not work if errors occur
+# inside this client. Fix this.
+class WebsocketWrapperClient(TornadoWebSocketClient):
+	def configure(self, configuration, on_connected, on_message, on_closed):
+		self.configuration = configuration
+		self.connected = False
+		self.on_connected = tornado.stack_context.wrap(on_connected)
+		self.on_message = tornado.stack_context.wrap(on_message)
+		self.on_closed = tornado.stack_context.wrap(on_closed)
+
+	def opened(self):
+		self.connected = True
+		self.on_connected(self)
+
+	def closed(self, code, reason=None):
+		self.connected = False
+		self.on_closed(self, code, reason)
+
+	def send_message(self, message):
+		self.send(json.dumps(message))
+
+	def received_message(self, message):
+		parsed = json.loads(str(message))
+		self.on_message(self, parsed)
+
+class WebsocketLongpollSessionmanager(object):
+	def __init__(self):
+		self.sessions = {}
+
+	def has(self, session_id):
+		if self.sessions.has_key(session_id):
+			return True
+		else:
+			return False
+
+	def create(self, endpoint, connected_callback):
+		session_id = str(uuid.uuid4())
+
+		def connected(client):
+			# Call the connected callback to indicate that we're
+			# connected.
+			connected_callback(session_id)
+
+		def closed(client, code, reason):
+			# Remove the session.
+			if self.sessions.has_key(session_id):
+				del self.sessions[session_id]
+
+		def message(client, message):
+			# Store the message in the sessions list.
+			self.sessions[session_id]['messages'].append(message)
+
+			# And publish that we have a new message.
+			pub.sendMessage('websocketwrapper.message', session_id=session_id)
+
+		# Create the remote.
+		remote_url = "ws://localhost:%d%s" % (self.configuration.get_flat('http_port'), endpoint)
+		remote = WebsocketWrapperClient(remote_url, io_loop=self.configuration.io_loop)
+		remote.configure(
+			self.configuration,
+			connected,
+			message,
+			closed
+		)
+
+		# Record the new session.
+		self.sessions[session_id] = {
+			'endpoint': endpoint,
+			'remote': remote,
+			'timeout': None,
+			'messages': []
+		}
+
+		# Connect to the remote.
+		# The callback will kick everything else off.
+		remote.connect()
+
+	def send(self, session_id, message):
+		if not self.sessions.has_key(session_id):
+			raise ValueError("No such session %s" % session_id)
+
+		# TODO: This is so wrong it's unbelievable.
+		# Steal the auth data from the request, not this.
+		message['auth']['method'] = 'super'
+		message['auth']['value'] = self.configuration.get_flat('pacemaker.super_token')
+
+		self.sessions[session_id]['remote'].send_message(message)
+
+	def messages_waiting(self, session_id):
+		if not self.sessions.has_key(session_id):
+			raise ValueError("No such session %s" % session_id)
+
+		return len(self.sessions[session_id]['messages']) > 0
+
+	def get_messages(self, session_id):
+		if not self.sessions.has_key(session_id):
+			raise ValueError("No such session %s" % session_id)
+
+		# Get the messages, clearing them in the same process.
+		messages = self.sessions[session_id]['messages']
+		self.sessions[session_id]['messages'] = []
+		return messages
+
+	def touch(self, session_id):
+		# "Touch" the session, adding a timeout to clean it up
+		# in 60 seconds, or reset that timeout on an existing session.
+
+		# TODO: It's probably not efficient to keep adding these callbacks,
+		# as it's up to Python to clean them up when they're not referenced.
+		# We should fix this. The reason it's done this way as a closure is because
+		# you can't pass args to the add_timeout callback.
+		def clean_session():
+			# Close the session.
+			session_data = self.sessions[session_id]
+			del self.sessions[session_id]
+			session_data['remote'].close()
+
+		# Remove the existing cleanup timeout.
+		if self.sessions[session_id]['timeout']:
+			self.configuration.io_loop.remove_timeout(self.SESSIONS[self.session]['timeout'])
+
+		# And add a new timeout to clean up this session.
+		self.configuration.io_loop.add_timeout(datetime.timedelta(seconds=60), clean_session)
+
+class WebsocketLongpollWrapper(BaseLongpollController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	# Theory of operation.
+	# - You request this with several values: endpoint URL, and an array of commands.
+	# - Server creates a 'session', which uses the websocket to connect to itself.
+	# - Server processes all requests in that session, sends back the results.
+	# - Whilst the client is disconnected, messages queue up.
+	# - You get supplied a session ID. Use this when you call back to get things
+	#   that have changed since last time. If nothing has changed, it waits until
+	#   something does change, or until the timeout.
+	# - If you don't come back in 60 seconds, your session gets dropped on the server
+	#   side. If you come back with a dropped session ID, you get a message to indicate
+	#   that, as you'd have to resubscribe again.
+	# - Replies to the client are:
+	#   {'error': 'error message'} (Normally no such session)
+	#   {'messages': [{}, {}, ...]} (A list of messages since last time)
+	#   {'session_id': '<session id>'} (The session ID to use next time).
+
+	SESSIONS = WebsocketLongpollSessionmanager()
+
+	def poll(self, *args, **kwargs):
+		if not hasattr(self.SESSIONS, 'configuration'):
+			self.SESSIONS.configuration = self.configuration
+
+		self.validate_data(WebsocketLongpollWrapperSchema())
+
+		# The key 'commands' isn't correctly validating with Colander.
+		# TODO: Fix this.
+		if not self.raw_params.has_key('commands') or not isinstance(self.raw_params['commands'], list):
+			raise tornado.web.HTTPError(400, "No commands key sent.")
+
+		# Do we have an existing session?
+		if self.params['session_id']:
+			if self.SESSIONS.has(self.params['session_id']):
+				# Resume that session.
+				self._startup_session(self.params['session_id'], new_session=False)
+			else:
+				# Asked for a session that didn't exist.
+				raise tornado.web.HTTPError(400, "Session closed or non existnent.")
+		else:
+			# Create a new session.
+			self.SESSIONS.create(self.params['endpoint'], self._startup_session)
+
+	def _startup_session(self, session_id, new_session=True):
+		# Save the session ID for other callbacks.
+		self.session_id = session_id
+		# Touch the session, to create or reset the timeout.
+		self.SESSIONS.touch(self.session_id)
+
+		# Now send through all the commands.
+		for command in self.raw_params['commands']:
+			self.SESSIONS.send(self.session_id, command)
+
+		if self.params['send_only'] or new_session:
+			# End the request now - don't wait for messages.
+			# Also end if it's a new session, so the remote has the session ID.
+			self._finish_request(False)
+		else:
+			# Move onto the next phase, where we wait for messages to come back.
+			self._await_messages()
+
+	def _await_messages(self):
+		# Do we have any messages pending?
+		if self.SESSIONS.messages_waiting(self.session_id):
+			# Send all those back now and then return.
+			self._send_pending_messages()
+		else:
+			# No - so now let's wait for messages.
+			pub.subscribe(self._on_pub_message, 'websocketwrapper.message')
+
+	def _on_pub_message(self, session_id):
+		# Send that message back, and terminate the request.
+		pub.unsubscribe(self._on_pub_message, 'websocketwrapper.message')
+		self.configuration.io_loop.add_callback(self._send_pending_messages)
+
+	def _send_pending_messages(self):
+		messages = self.SESSIONS.get_messages(self.session_id)
+		for message in messages:
+			self.send_message(message, queue=True)
+
+		# And complete the request now.
+		self._finish_request(False)
+
+	def cleanup(self, callback, timeout_expired):
+		if timeout_expired:
+			# Unsubscribe before returning.
+			pub.unsubscribe(self._on_pub_message, 'websocketwrapper.message')
+
+		# Make sure to return the session ID.
+		if hasattr(self, 'session_id'):
+			self.send_message({'session_id': self.session_id}, queue=True)
+
+		# Continue on as we were.
+		callback()
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/websocket/longpoll", WebsocketLongpollWrapper, configuration))
+		return routes
 
 ##
 ## TEST CODE

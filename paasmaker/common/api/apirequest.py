@@ -1,7 +1,11 @@
-import paasmaker
+
 import json
-import tornado
 import logging
+
+import paasmaker
+
+import tornado
+from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -209,6 +213,16 @@ class APIRequest(object):
 		# Note that the supplied callback, if provided, is called after this.
 		pass
 
+	def _authenticate_headers(self, headers):
+		# Helper function to insert the right authentication headers,
+		# if we're set to use those.
+		if self.authmethod == 'tokenheader':
+			headers['User-Token'] = self.authvalue
+		if self.authmethod == 'superheader':
+			headers['Super-Token'] = self.authvalue
+		if self.authmethod == 'nodeheader':
+			headers['Node-Token'] = self.authvalue
+
 	def send(self, callback=None, **kwargs):
 		"""
 		Send the request to the remote server.
@@ -250,18 +264,10 @@ class APIRequest(object):
 			# Don't follow redirects - this is an API request.
 			kwargs['follow_redirects'] = False
 
-			if self.authmethod == 'tokenheader':
-				if not kwargs.has_key('headers'):
-					kwargs['headers'] = {}
-				kwargs['headers']['User-Token'] = self.authvalue
-			if self.authmethod == 'superheader':
-				if not kwargs.has_key('headers'):
-					kwargs['headers'] = {}
-				kwargs['headers']['Super-Token'] = self.authvalue
-			if self.authmethod == 'nodeheader':
-				if not kwargs.has_key('headers'):
-					kwargs['headers'] = {}
-				kwargs['headers']['Node-Token'] = self.authvalue
+			if not kwargs.has_key('headers'):
+				kwargs['headers'] = {}
+
+			self._authenticate_headers(kwargs['headers'])
 
 			# The function called when it returns.
 			# It's a closure to preserve the callback provided.
@@ -296,7 +302,225 @@ class APIRequest(object):
 		# And then the async part.
 		self.async_build_payload(sync_payload, payload_ready)
 
+class StreamAPIWebsocketWrapper(TornadoWebSocketClient):
+	def configure(self, on_connected, on_message, on_closed):
+		self.connected = False
+		self.on_connected = on_connected
+		self.on_message = on_message
+		self.on_closed = on_closed
+
+	def opened(self):
+		self.connected = True
+		self.on_connected(self)
+
+	def closed(self, code, reason=None):
+		self.connected = False
+		self.on_closed(self, code, reason)
+
+	def send_message(self, message):
+		self.send(json.dumps(message))
+
+	def received_message(self, message):
+		parsed = json.loads(str(message))
+		self.on_message(self, message)
+
+class StreamAPIRequest(APIRequest):
+	def __init__(self, *args):
+		super(StreamAPIRequest, self).__init__(*args)
+
+		self.stream_mode = 'websocket'
+		self.active = True
+		self.connected = False
+		self.websocket = None
+		self.message_callback = None
+		self.error_callback = None
+		self.send_queue = []
+		self.session_id = None
+
+	def set_stream_mode(self, mode):
+		if mode not in ['websocket', 'longpoll']:
+			raise ValueError("Invalid mode - try 'websocket' or 'longpoll'")
+
+		self.stream_mode = mode
+
+	def set_callbacks(self, message_callback, error_callback):
+		self.message_callback = message_callback
+		self.error_callback = error_callback
+
+	def deactivate(self):
+		self.active = False
+
+	def send(self, *args, **kwargs):
+		raise Exception("You should not use send() on StreamAPIRequest.")
+
+	def send_message(self, request, body):
+		logging.debug("Got message request %s, body %s", request, body)
+
+		# Queue it up.
+		self.send_queue.append((request, body))
+
+		# And then really send it.
+		self._real_send()
+
+	def _format_request(self, message):
+		complete_message = {
+			'request': message[0],
+			'data': message[1],
+			'auth': {
+				# TODO: Populate auth here.
+			}
+		}
+
+		return complete_message
+
+	def _real_send(self):
+		if not self.connected:
+			if self.stream_mode == 'websocket':
+				logging.debug("Not connected, websocket mode.")
+				# Connect to the websocket.
+				# And then fallback if we can't.
+
+				if not self.target:
+					self.target = self.get_master()
+
+				# Build and make the request.
+				endpoint = self.target + self.get_endpoint()
+				endpoint = endpoint.replace("http", "ws")
+
+				logging.debug("Websocket endpoint: %s", endpoint)
+
+				self.websocket = StreamAPIWebsocketWrapper(
+					endpoint,
+					io_loop=self.io_loop
+				)
+				self.websocket.configure(
+					self._websocket_opened,
+					self._websocket_incoming_message,
+					self._websocket_closed
+				)
+				# TODO: Catch exception if this fails...
+				logging.debug("Connecting...")
+				self.websocket.connect()
+			else:
+				# Just send along the current message queue.
+				logging.debug("Not connected, long poll mode.")
+				self._send_long_poll()
+		else:
+			# Connected, just use the existing backend.
+			if self.stream_mode == 'websocket':
+				logging.debug("Connected, websocket mode.")
+				messages = self.send_queue
+				self.send_queue = []
+				for request in messages:
+					complete_message = self._format_request(request)
+					self.websocket.send_message(complete_message)
+			else:
+				# Use an out of band send-only request to get
+				# the message to the server.
+				logging.debug("Connected, long poll mode.")
+				self._send_long_poll(send_only=True)
+
+	def _send_long_poll(self, send_only=False):
+		if not self.target:
+			self.target = self.get_master()
+
+		endpoint = self.target + '/websocket/longpoll?format=json'
+
+		logging.debug("Commencing long poll. send_only=%s", send_only)
+		logging.debug("Long poll endpoint: %s", endpoint)
+
+		request_arguments = {}
+		request_arguments['method'] = 'POST'
+		request_arguments['headers'] = {}
+		request_arguments['follow_redirects'] = False
+		self._authenticate_headers(request_arguments['headers'])
+
+		# TODO: Probably should remove the commands once we've confirmed
+		# that the server has them.
+		commands = self.send_queue
+		self.send_queue = []
+
+		formatted_commands = []
+		for command in commands:
+			formatted_commands.append(self._format_request(command))
+
+		body = {}
+		body['data'] = {
+			'endpoint': self.get_endpoint(),
+			'session_id': self.session_id,
+			'commands': formatted_commands,
+			'send_only': send_only
+		}
+		body['auth'] = { 'method': self.authmethod, 'value': self.authvalue }
+		request_arguments['body'] = json.dumps(body, cls=paasmaker.util.jsonencoder.JsonEncoder)
+
+		def long_poll_result(response):
+			if not send_only:
+				self.connected = False
+
+			if response.error:
+				# Error.
+				logger.error("Long Poll request failed with error: %s", response.error)
+				if self.error_callback:
+					self.error_callback(response.error)
+			else:
+				logger.debug("Raw Long Poll response body: %s", response.body)
+				if response.body and response.body[0] == '{' and response.body[-1] == '}':
+					try:
+						parsed = json.loads(response.body)
+
+						data = parsed['data']
+
+						for message in data['messages']:
+							if message.has_key('session_id'):
+								self.session_id = message['session_id']
+							else:
+								if self.message_callback:
+									self.message_callback(message)
+
+						# NOTE: If you don't set a message callback, these messages
+						# disappear into the ether.
+
+						# And start polling again.
+						if not send_only and self.active:
+							logger.debug("Long poll is reconnecting...")
+							self._send_long_poll()
+
+					except ValueError, ex:
+						logger.error("Unable to parse JSON:", exc_info=ex)
+						if self.error_callback:
+							self.error_callback("Unable to parse JSON: " + str(ex))
+					except KeyError, ex:
+						logger.error("Response was malformed:", exc_info=ex)
+						if self.error_callback:
+							self.error_callback("Response was malformed: " + str(ex))
+				else:
+					lgoger.error("Response was not JSON.")
+					if self.error_callback:
+						self.error_callback("Response was not JSON.")
+
+		request = tornado.httpclient.HTTPRequest(endpoint, **request_arguments)
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		if not send_only:
+			self.connected = True
+		client.fetch(request, long_poll_result)
+
+	def _websocket_opened(self, client):
+		logging.debug("Websocket opened.")
+		self.connected = True
+		# Clear the queue.
+		self._real_send()
+
+	def _websocket_incoming_message(self, client, message):
+		logging.debug("Websocket incoming message - %s.", message)
+		if self.message_callback:
+			self.message_callback(message)
+
+	def _websocket_closed(self, client, code, reason):
+		logging.debug("Websocket closed - %s, %s.", code, reason)
+		self.connected = False
+
 # TODO: There are no unit tests here. It's expected that the other
 # unit tests for API requests and controllers cover off the code in here.
-# This is probably not the correct assumption, and this class should
+# This is probably not the correct assumption, and these classes should
 # be explicitly tested.
