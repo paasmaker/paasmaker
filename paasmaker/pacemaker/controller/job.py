@@ -2,7 +2,7 @@ import logging
 import json
 
 import paasmaker
-from paasmaker.common.controller import BaseController, BaseControllerTest, BaseWebsocketHandler
+from paasmaker.common.controller.base import BaseController, BaseControllerTest, BaseWebsocketHandler, WebsocketLongpollWrapper
 from paasmaker.common.core import constants
 
 from pubsub import pub
@@ -271,9 +271,12 @@ class JobStreamHandlerTestClient(paasmaker.thirdparty.twc.websocket.WebSocket):
 		self.messages.append(parsed)
 
 class JobStreamHandlerTest(BaseControllerTest):
+	config_modules = ['pacemaker']
+
 	def get_app(self):
 		self.late_init_configuration(self.io_loop)
 		routes = JobStreamHandler.get_routes({'configuration': self.configuration})
+		routes.extend(WebsocketLongpollWrapper.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
@@ -357,3 +360,60 @@ class JobStreamHandlerTest(BaseControllerTest):
 		self.assertEquals(len(expected_types), len(client.messages), "Not the right number of messages.")
 		for i in range(len(expected_types)):
 			self.assertEquals(client.messages[i]['type'], expected_types[i], "Wrong type for message %d" % i)
+
+	def test_job_stream_longpoll(self):
+
+		self.manager.add_job('paasmaker.job.success', {}, "Example root job.", self.stop)
+		root_id = self.wait()
+
+		messages = []
+
+		def on_message(message):
+			messages.append(message)
+
+		def on_error(error):
+			print error
+
+		remote_request = paasmaker.common.api.job.JobStreamAPIRequest(self.configuration)
+		remote_request.set_superkey_auth(self.configuration.get_flat('pacemaker.super_token'))
+		remote_request.set_callbacks(on_message, on_error)
+		remote_request.set_stream_mode('longpoll')
+		remote_request.subscribe(root_id)
+
+		self.manager.add_job('paasmaker.job.success', {}, "Example sub1 job.", self.stop, parent=root_id, tags=['test'])
+		sub1_id = self.wait()
+		self.manager.add_job('paasmaker.job.success', {}, "Example sub2 job.", self.stop, parent=root_id)
+		sub2_id = self.wait()
+		self.manager.add_job('paasmaker.job.success', {}, "Example subsub1 job.", self.stop, parent=sub1_id)
+		subsub1_id = self.wait()
+
+		#print json.dumps(messages, indent=4, sort_keys=True)
+
+		# Start processing them.
+		self.manager.allow_execution(root_id, callback=self.stop)
+		self.wait()
+
+		# Wait for it all to complete.
+		self.short_wait_hack(length=0.4)
+
+		#print json.dumps(messages, indent=4, sort_keys=True)
+
+		# Now, analyze what happened.
+		# TODO: Make this clearer and more exhaustive.
+		expected_types = [
+			'subscribed',
+			'status',
+			'new',
+			'tree',
+			'new',
+			'new',
+			'status',
+			'status',
+			'status',
+			'status',
+			'status'
+		]
+
+		self.assertEquals(len(expected_types), len(messages), "Not the right number of messages.")
+		for i in range(len(expected_types)):
+			self.assertEquals(messages[i]['type'], expected_types[i], "Wrong type for message %d" % i)
