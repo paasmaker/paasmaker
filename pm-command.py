@@ -628,6 +628,30 @@ class JobAbortAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class LogStreamAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("job_id", help="Job ID to stream")
+		parser.add_argument("--position", default=0, help="Only return the log since this position.")
+
+	def describe(self):
+		return "Stream the given job ID."
+
+	def process(self, args):
+		logger.info("** Press CTRL+C to cancel.")
+		request = paasmaker.common.api.log.LogStreamAPIRequest(None)
+		self.point_and_auth(args, request)
+
+		def on_message(message):
+			if message['type'] == 'lines':
+				print "".join(message['data']['lines']),
+
+		def on_error(error):
+			logger.error(error)
+			self.exit(1)
+
+		request.set_callbacks(on_message, on_error)
+		request.subscribe(args.job_id, position=args.position)
+
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
@@ -686,6 +710,7 @@ ACTION_MAP = {
 	'version-setcurrent': VersionSetCurrentAction(),
 	'version-delete': VersionDeleteAction(),
 	'job-abort': JobAbortAction(),
+	'log-stream': LogStreamAction(),
 	'help': HelpAction()
 }
 
