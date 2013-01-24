@@ -14,10 +14,10 @@ from manageddaemon import ManagedDaemon, ManagedDaemonError
 
 from pymongo import MongoClient
 
-class ManagedMongoError(ManagedDaemonError):
+class MongoDaemonError(ManagedDaemonError):
 	pass
 
-class ManagedMongo(ManagedDaemon):
+class MongoDaemon(ManagedDaemon):
 	"""
 	Start up a managed mongoDB daemon.
 
@@ -115,7 +115,7 @@ journal = true
 		return self.client
 
 	def is_running(self, keyword=None):
-		return super(ManagedMongo, self).is_running('mongod')
+		return super(MongoDaemon, self).is_running('mongod')
 
 	def stop(self, sig=signal.SIGTERM):
 		"""
@@ -125,7 +125,7 @@ journal = true
 			self.client.disconnect()
 			self.client = None
 
-		super(ManagedMongo, self).stop(sig)
+		super(MongoDaemon, self).stop(sig)
 
 	def destroy(self):
 		"""
@@ -135,16 +135,16 @@ journal = true
 		self.stop(signal.SIGKILL)
 		shutil.rmtree(self.parameters['working_dir'])
 
-#class ManagedMongoTest(tornado.testing.AsyncTestCase, TestHelpers):
+#class MongoDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 #	def setUp(self):
-#		super(ManagedMongoTest, self).setUp()
+#		super(MongoDaemonTest, self).setUp()
 #		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [], io_loop=self.io_loop)
 #
 #	def tearDown(self):
 #		if hasattr(self, 'server'):
 #			self.server.destroy()
 #		self.configuration.cleanup()
-#		super(ManagedMongoTest, self).tearDown()
+#		super(MongoDaemonTest, self).tearDown()
 #
 #	def callback(self, channel, method, header, body):
 #		# Print out the message.
@@ -153,7 +153,7 @@ journal = true
 #		self.stop()
 #
 #	def test_basic(self):
-#		self.server = ManagedMongo(self.configuration)
+#		self.server = MongoDaemon(self.configuration)
 #		self.server.configure(
 #			self.configuration.get_scratch_path_exists('mongodb'),
 #			self.configuration.get_free_port(),

@@ -50,7 +50,7 @@ class ManagedMongoService(BaseService):
 			instance_name
 		)
 
-		manager = paasmaker.util.managedmongodb.ManagedMongo(self.configuration)
+		manager = paasmaker.util.mongodaemon.MongoDaemon(self.configuration)
 		try:
 			# TODO: This shouldn't exist yet, because we're creating it...
 			# Decide how to handle this case.
@@ -118,7 +118,7 @@ class ManagedMongoService(BaseService):
 				instance_path = paths.pop()
 
 				try:
-					manager = paasmaker.util.managedmongodb.ManagedMongo(self.configuration)
+					manager = paasmaker.util.mongodaemon.MongoDaemon(self.configuration)
 					manager.load_parameters(instance_path)
 					self.logger.info("Found managed mongoDB at path %s - starting.", instance_path)
 
@@ -151,7 +151,7 @@ class ManagedMongoService(BaseService):
 					instance_path = paths.pop()
 
 					try:
-						manager = paasmaker.util.managedmongodb.ManagedMongo(self.configuration)
+						manager = paasmaker.util.mongodaemon.MongoDaemon(self.configuration)
 						manager.load_parameters(instance_path)
 						self.logger.info("Found managed mongoDB at path %s - shutting down", instance_path)
 
