@@ -10,8 +10,10 @@ import unittest
 
 import paasmaker
 from ..common.testhelpers import TestHelpers
+from ..util.port import FreePortFinder
 from manageddaemon import ManagedDaemon, ManagedDaemonError
 
+import tornado
 from pymongo import MongoClient
 
 class MongoDaemonError(ManagedDaemonError):
@@ -21,10 +23,9 @@ class MongoDaemon(ManagedDaemon):
 	"""
 	Start up a managed mongoDB daemon.
 
-	Currently, it chooses some persistence options that match
-	the default Ubuntu/Debian configuration. In future it will
-	offer other canned persistence options to better suit
-	what the server is being used for.
+	Note: this class is incomplete; e.g. there is currently no support for
+	authentication. Journalling is also disabled, to avoid a 45-60 second
+	startup time, but this ought to be configurable.
 	"""
 
 	MONGO_SERVER_CONFIG = """
@@ -36,7 +37,8 @@ dbpath = %(working_dir)s
 logpath = %(working_dir)s/mongod.log
 pidfilepath = %(working_dir)s/mongodb.pid
 logappend = true
-journal = true
+nojournal = true
+smallfiles = true
 """
 
 	def configure(self, working_dir, port, bind_host, password=None):
@@ -54,7 +56,12 @@ journal = true
 		self.parameters['working_dir'] = working_dir
 		self.parameters['port'] = port
 		self.parameters['host'] = bind_host
-		self.parameters['password'] = password
+		
+		# TODO: allow this to be configured by service users
+		# journal_str = "journal = true" if enabled else "nojournal = true"
+
+		# TODO: support authentication
+		# self.parameters['password'] = password
 
 		# Create the working dir. If this fails, let it bubble up.
 		if not os.path.exists(working_dir):
@@ -108,8 +115,8 @@ journal = true
 		# Create a client for it.
 		
 		self.client = MongoClient(
-			host=self.parameters['host'],
-			port=self.parameters['port']
+			self.parameters['host'],
+			self.parameters['port']
 		)
 
 		return self.client
@@ -135,43 +142,44 @@ journal = true
 		self.stop(signal.SIGKILL)
 		shutil.rmtree(self.parameters['working_dir'])
 
-#class MongoDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
-#	def setUp(self):
-#		super(MongoDaemonTest, self).setUp()
-#		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [], io_loop=self.io_loop)
-#
-#	def tearDown(self):
-#		if hasattr(self, 'server'):
-#			self.server.destroy()
-#		self.configuration.cleanup()
-#		super(MongoDaemonTest, self).tearDown()
-#
-#	def callback(self, channel, method, header, body):
-#		# Print out the message.
-#		#print body
-#		# Signal that we got it.
-#		self.stop()
-#
-#	def test_basic(self):
-#		self.server = MongoDaemon(self.configuration)
-#		self.server.configure(
-#			self.configuration.get_scratch_path_exists('mongodb'),
-#			self.configuration.get_free_port(),
-#			'127.0.0.1'
-#		)
-#		self.server.start(self.stop, self.stop)
-#		result = self.wait()
-#
-#		self.assertIn("In appropriate state", result, "Failed to start mongoDB server.")
-#
-#		client = self.server.get_client()
-#
-#		client.set('test', 'foo', callback=self.stop)
-#		self.wait()
-#
-#		client.get('test', callback=self.stop)
-#		result = self.wait()
-#
-#		self.assertEquals('foo', result, "Result was not as expected.")
-#
-		# TODO: Test stopping and resuming the service.
+class MongoDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
+	def setUp(self):
+		super(MongoDaemonTest, self).setUp()
+		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [], io_loop=self.io_loop)
+
+	def tearDown(self):
+		if hasattr(self, 'server'):
+			self.server.destroy()
+		self.configuration.cleanup()
+		super(MongoDaemonTest, self).tearDown()
+
+	def callback(self, channel, method, header, body):
+		# Print out the message.
+		#print body
+		# Signal that we got it.
+		self.stop()
+
+	def test_configure_and_run(self):
+		# TODO: the testsuite will eventually either load paasmaker.yml, and/or
+		# use locally-installed versions of daemons from the install script.
+		self.assertIsNotNone(self.configuration.get_flat('mongodb_binary'), "mongoDB server is not in your PATH; this test cannot run")
+
+		working_dir = self.configuration.get_scratch_path_exists('mongodb')
+		port = self.configuration.get_free_port()
+		host = '127.0.0.1'
+
+		self.server = MongoDaemon(self.configuration)
+		self.server.configure(working_dir, port, host)
+		self.server.start(self.stop, self.stop)
+		result = self.wait()
+
+		self.assertIn("In appropriate state", result, "Failed to start mongoDB server.")
+
+		self.assertTrue(self.server.is_running(), "mongoDB daemon class doesn't report that it is running")
+
+		fp = FreePortFinder()
+		self.assertTrue(fp.in_use(port), "mongoDB daemon's port does not appear to be in use")
+
+		client = MongoClient(host, port)
+		info = client.server_info()
+		self.assertEquals(info['ok'], 1.0, "mongoDB server_info() does not report that it's OK!")

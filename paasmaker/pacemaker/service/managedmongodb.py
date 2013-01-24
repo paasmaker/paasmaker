@@ -6,6 +6,7 @@ from base import BaseService, BaseServiceTest
 import paasmaker
 
 import colander
+import pymongo
 
 class ManagedMongoServiceConfigurationSchema(colander.MappingSchema):
 	min_port = colander.SchemaNode(colander.Integer(),
@@ -38,11 +39,6 @@ class ManagedMongoService(BaseService):
 
 	def create(self, name, callback, error_callback):
 		instance_name = self._safe_name(name)
-		if self.options['apply_passwords']:
-			password = None
-			#password = self._generate_password()
-		else:
-			password = None
 
 		# Create or activate our instance.
 		instance_path = self.configuration.get_scratch_path_exists(
@@ -74,7 +70,7 @@ class ManagedMongoService(BaseService):
 				instance_path,
 				port,
 				'0.0.0.0',
-				password
+				None
 			)
 
 		def on_running(message):
@@ -84,8 +80,6 @@ class ManagedMongoService(BaseService):
 			credentials['protocol'] = 'mongodb'
 			credentials['hostname'] = self.configuration.get_flat('my_route')
 			credentials['port'] = port
-			if password:
-				credentials['password'] = password
 			callback(credentials, "Successfully created mongoDB instance.")
 
 		def on_startup_failure(message, exception=None):
@@ -190,27 +184,38 @@ class ManagedMongoServiceTest(BaseServiceTest):
 			{}
 		)
 
+		# TODO: the testsuite will eventually either load paasmaker.yml, and/or
+		# use locally-installed versions of daemons from the install script.
+		self.assertIsNotNone(self.configuration.get_flat('mongodb_binary'), "mongoDB server is not in your PATH; this test cannot run")
+
 		service.create('test', self.success_callback, self.failure_callback)
 
 		self.wait()
 
 		self.assertTrue(self.success, "Service creation was not successful.")
-		self.assertEquals(len(self.credentials), 4, "Service did not return expected number of keys.")
+		self.assertEquals(len(self.credentials), 3, "Service creation did not return expected number of keys.")
 
-		client = tornadoredis.Client(
-			host=self.credentials['hostname'],
-			port=self.credentials['port'],
-			password=self.credentials['password'],
-			io_loop=self.io_loop
+		client = pymongo.MongoClient(
+			self.credentials['hostname'],
+			self.credentials['port']
 		)
-		client.connect()
 
-		client.set('test', 'bar', callback=self.stop)
-		self.wait()
-		client.get('test', callback=self.stop)
-		result = self.wait()
+		# mongoDB creates databases if they don't already exist
+		db = client['managed-mongo-test-db']
+		self.assertIsInstance(db, pymongo.database.Database, "mongoDB client connection didn't create a new database object")
 
-		self.assertEquals(result, 'bar', "Result was not as expected.")
+		collection = db['testtesttest']
+		self.assertIsInstance(collection, pymongo.collection.Collection, "mongoDB client connection didn't create a new collection object")
+
+		test_post_id = collection.insert({'test': 'bar'})
+		names = db.collection_names()
+
+		self.assertTrue("testtesttest" in names, "The collection we created wasn't returned by collection_names()")
+
+		result = collection.find_one({"_id": test_post_id})
+
+		self.assertTrue("test" in result, "Result object didn't have the 'test' key that we set.")
+		self.assertEquals(result["test"], 'bar', "Result object didn't have the 'bar' value that we set.")
 
 		client.disconnect()
 
@@ -222,22 +227,24 @@ class ManagedMongoServiceTest(BaseServiceTest):
 		self.short_wait_hack(length=0.5)
 
 		# The port should now be free.
-		self.assertFalse(self.configuration.port_allocator.in_use(self.credentials['port']), "Port was not free.")
+		self.assertFalse(self.configuration.port_allocator.in_use(self.credentials['port']), "Port was not free after shutting down mongoDB service.")
 
 		# Now start them back up again.
 		service.startup_async_prelisten(self.stop, self.stop)
 		self.wait()
 
-		# Try to connect again. This should work.
-		client = tornadoredis.Client(
-			host=self.credentials['hostname'],
-			port=self.credentials['port'],
-			password=self.credentials['password'],
-			io_loop=self.io_loop
+		# Try to connect again and re-fetch the value we set.
+		new_client = pymongo.MongoClient(
+			self.credentials['hostname'],
+			self.credentials['port']
 		)
-		client.connect()
 
-		client.get('test', callback=self.stop)
-		result = self.wait()
+		new_db = new_client['managed-mongo-test-db']
+		new_collection = db['testtesttest']
+		new_result = new_collection.find_one({"_id": test_post_id})
 
-		self.assertEquals(result, 'bar', "Result was not as expected.")
+		self.assertTrue("test" in new_result, "Second result object (after shutdown and reconnect) didn't have the 'test' key that we set.")
+		self.assertEquals(result["test"], 'bar', "Second result object (after shutdown and reconnect) didn't have the 'bar' value that we set.")
+
+		# Clean up after ourselves: shut down the service again.
+		service.shutdown_postnotify(self.stop, self.stop)
