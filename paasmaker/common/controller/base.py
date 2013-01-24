@@ -1210,8 +1210,7 @@ class WebsocketLongpollWrapper(BaseLongpollController):
 	SESSIONS = WebsocketLongpollSessionmanager()
 
 	def poll(self, *args, **kwargs):
-		if not hasattr(self.SESSIONS, 'configuration'):
-			self.SESSIONS.configuration = self.configuration
+		self.SESSIONS.configuration = self.configuration
 
 		self.validate_data(WebsocketLongpollWrapperSchema())
 
@@ -1225,9 +1224,10 @@ class WebsocketLongpollWrapper(BaseLongpollController):
 			if self.SESSIONS.has(self.params['session_id']):
 				# Resume that session.
 				self._startup_session(self.params['session_id'], new_session=False)
+				return
 			else:
 				# Asked for a session that didn't exist.
-				raise tornado.web.HTTPError(400, "Session closed or non existnent.")
+				raise tornado.web.HTTPError(400, "Session closed or non existent.")
 		else:
 			# Create a new session.
 			self.SESSIONS.create(self.params['endpoint'], self._startup_session, self.request)

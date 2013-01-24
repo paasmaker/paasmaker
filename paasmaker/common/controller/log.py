@@ -287,6 +287,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 		self.late_init_configuration(self.io_loop)
 		routes = LogStreamHandler.get_routes({'configuration': self.configuration})
 		routes.extend(WebsocketLongpollWrapper.get_routes({'configuration': self.configuration}))
+		routes.extend(paasmaker.common.controller.example.ExampleController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 

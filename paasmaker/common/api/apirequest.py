@@ -302,11 +302,12 @@ class APIRequest(object):
 		self.async_build_payload(sync_payload, payload_ready)
 
 class StreamAPIWebsocketWrapper(paasmaker.thirdparty.twc.websocket.WebSocket):
-	def configure(self, on_connected, on_message_handler, on_closed):
+	def configure(self, on_connected, on_message_handler, on_closed, on_no_websockets):
 		self.connected = False
 		self.on_connected = on_connected
 		self.on_message_handler = on_message_handler
 		self.on_closed = on_closed
+		self.on_no_websockets = on_no_websockets
 
 	def on_open(self):
 		self.connected = True
@@ -322,6 +323,9 @@ class StreamAPIWebsocketWrapper(paasmaker.thirdparty.twc.websocket.WebSocket):
 	def on_message(self, message):
 		parsed = json.loads(message)
 		self.on_message_handler(self, parsed)
+
+	def on_unsupported(self):
+		self.on_no_websockets(self)
 
 class StreamAPIRequest(APIRequest):
 	def __init__(self, *args):
@@ -394,12 +398,20 @@ class StreamAPIRequest(APIRequest):
 					io_loop=self.io_loop,
 					extra_headers=auth_headers
 				)
+
+				def not_supported(client):
+					# The server doesn't support websockets, or there
+					# is a proxy between us and it that prevents it from
+					# working. Switch back to long poll mode.
+					self.set_stream_mode('longpoll')
+					self._real_send()
+
 				self.websocket.configure(
 					self._websocket_opened,
 					self._websocket_incoming_message,
-					self._websocket_closed
+					self._websocket_closed,
+					not_supported
 				)
-				# TODO: Catch exception if this fails...
 				logging.debug("Connecting...")
 			else:
 				# Just send along the current message queue.
@@ -436,7 +448,7 @@ class StreamAPIRequest(APIRequest):
 		self._authenticate_headers(request_arguments['headers'])
 
 		# TODO: Probably should remove the commands once we've confirmed
-		# that the server has them.
+		# that the server has them, rather than right now.
 		commands = self.send_queue
 		self.send_queue = []
 
@@ -447,10 +459,13 @@ class StreamAPIRequest(APIRequest):
 		body = {}
 		body['data'] = {
 			'endpoint': self.get_endpoint(),
-			'session_id': self.session_id,
 			'commands': formatted_commands,
 			'send_only': send_only
 		}
+
+		if self.session_id:
+			body['data']['session_id'] = self.session_id
+
 		body['auth'] = {'method': self.authmethod, 'value': self.authvalue}
 		request_arguments['body'] = json.dumps(body, cls=paasmaker.util.jsonencoder.JsonEncoder)
 
