@@ -8,7 +8,7 @@ from manageddaemon import ManagedDaemon, ManagedDaemonError
 from redisdaemon import RedisDaemon, RedisDaemonError
 from managedrabbitmq import ManagedRabbitMQ, ManagedRabbitMQError
 from postgresdaemon import PostgresDaemon, PostgresDaemonError
-from managedmongodb import ManagedMongo, ManagedMongoError
+from mongodaemon import ManagedMongo, ManagedMongoError
 from managedmysql import ManagedMySQL, ManagedMySQLError
 from nginxdaemon import NginxDaemon, NginxDaemonError
 from apachedaemon import ApacheDaemon, ApacheDaemonError
