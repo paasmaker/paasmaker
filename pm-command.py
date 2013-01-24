@@ -3,7 +3,6 @@
 # External library imports.
 import tornado.ioloop
 import argparse
-from ws4py.client.tornadoclient import TornadoWebSocketClient
 
 import sys
 import json
@@ -28,40 +27,6 @@ def die_on_error():
 	except Exception:
 		logging.error("exception in asynchronous operation", exc_info=True)
 		sys.exit(1)
-
-class CrudeJobStatusClient(TornadoWebSocketClient):
-	def opened(self):
-		# TODO: Errors here don't print out exceptions.
-		self.subscribe(self.job_id)
-
-	def closed(self, code, reason=None):
-		pass
-
-	def subscribe(self, job_id):
-		data = {'job_id': job_id}
-		auth = self.auth
-		message = {'request': 'subscribe', 'data': data, 'auth': auth}
-		self.send(json.dumps(message))
-
-	def received_message(self, m):
-		# TODO: Exceptions here don't cause errors to be displayed on screen.
-		parsed = json.loads(str(m))
-		self.action.prettyprint(parsed)
-		self.action.on_message(parsed)
-
-	@staticmethod
-	def setup(action, args, job_id):
-		client = CrudeJobStatusClient("ws://%s:%d/job/stream" % (args.remote, args.port))
-		if args.apikey:
-			auth = {'method': 'token', 'value': args.apikey}
-		elif args.superkey:
-			auth = {'method': 'super', 'value': args.superkey}
-		client.auth = auth
-		client.action = action
-		client.job_id = job_id
-		client.connect()
-
-		return client
 
 class RootAction(object):
 	def options(self, parser):
@@ -135,7 +100,6 @@ class RootAction(object):
 			self.exit(1)
 
 	def on_message(self, message):
-		# TODO: If any of this code fails, it doesn't print any errors to screen.
 		if message['type'] == 'status':
 			if message['data']['job_id'] == self.job_id and message['data']['state'] in constants.JOB_FINISHED_STATES:
 				if message['data']['state'] == constants.JOB.SUCCESS:
@@ -146,8 +110,18 @@ class RootAction(object):
 					self.exit(1)
 
 	def _follow_job(self, job_id):
+		def on_status(message):
+			self.prettyprint(message)
+			self.on_message(message)
+
+		def on_error(error):
+			self.logger.error(error)
+
 		# Follow the rabbit hole...
-		self.client = CrudeJobStatusClient.setup(self, self.args, job_id)
+		self.client = paasmaker.common.api.job.JobStreamAPIRequest(None)
+		self.point_and_auth(self.args, self.client)
+		self.client.set_callbacks(on_status, on_error)
+		self.client.subscribe(job_id)
 		self.job_id = job_id
 
 class UserCreateAction(RootAction):
