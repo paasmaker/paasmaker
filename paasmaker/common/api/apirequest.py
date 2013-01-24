@@ -216,11 +216,11 @@ class APIRequest(object):
 		# Helper function to insert the right authentication headers,
 		# if we're set to use those.
 		if self.authmethod == 'tokenheader':
-			headers['User-Token'] = self.authvalue
+			headers['User-Token'] = unicode(self.authvalue)
 		if self.authmethod == 'superheader':
-			headers['Super-Token'] = self.authvalue
+			headers['Super-Token'] = unicode(self.authvalue)
 		if self.authmethod == 'nodeheader':
-			headers['Node-Token'] = self.authvalue
+			headers['Node-Token'] = unicode(self.authvalue)
 
 	def send(self, callback=None, **kwargs):
 		"""
