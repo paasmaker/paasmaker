@@ -8,6 +8,7 @@ import paasmaker
 from paasmaker.common.core import constants
 from base import BaseWebsocketHandler
 from base import BaseControllerTest
+from base import BaseLongpollController
 
 import tornado
 import tornado.testing
@@ -75,7 +76,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 			if unittest_force_remote:
 				logger.warning("Using unit test force-remote mode. SHOULD NOT APPEAR IN PRODUCTION.")
 
-			def found_log(result):
+			def found_log(result_job_id, result):
 				if isinstance(result, basestring):
 					logger.info("Found job log %s locally.", job_id)
 					# It's the path to the log.
@@ -97,7 +98,7 @@ class LogStreamHandler(BaseWebsocketHandler):
 						unittest_force_remote=unittest_force_remote
 					)
 
-			def unable_to_find_log(error_message):
+			def unable_to_find_log(error_job_id, error_message):
 				logger.error(error_message)
 				self.send_error(error_message, message)
 

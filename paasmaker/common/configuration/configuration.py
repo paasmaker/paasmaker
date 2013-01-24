@@ -1408,7 +1408,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def locate_log(self, job_id, callback, error_callback, unittest_force_remote=False):
 		"""
 		Locate the log file given by the job_id. Calls the callback
-		with one of a few things:
+		with two arguments. The first argument is the job ID. The second
+		argument is one of the following:
 
 		* A string, which is the path to the log file.
 		* A Node ORM object, that indicates where the file is. This will
@@ -1425,12 +1426,12 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# Try the easy case - does the log exist here?
 		if self.job_exists_locally(job_id) and not unittest_force_remote:
 			# Yep. Done.
-			callback(self.get_job_log_path(job_id))
+			callback(job_id, self.get_job_log_path(job_id))
 			return
 
 		if not self.is_pacemaker():
 			# The search ends here.
-			error_callback("Node is not a pacemaker, and can't search other nodes.")
+			error_callback(job_id, "Node is not a pacemaker, and can't search other nodes.")
 			return
 
 		# Now move onto the synchronous tests.
@@ -1450,12 +1451,12 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			# Helper function to check the given node and return.
 			session.close()
 			if node is None:
-				error_callback("Can't find a node with this job on it.")
+				error_callback(job_id, "Can't find a node with this job on it.")
 				return
 			elif node.state == constants.NODE.ACTIVE:
-				callback(node)
+				callback(job_id, node)
 			else:
-				error_callback("Node %s has the log file, but that node is down." % node.name)
+				error_callback(job_id, "Node %s has the log file, but that node is down." % node.name)
 
 		if instance is not None:
 			# It's on the given remote node.
@@ -1479,7 +1480,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		def on_got_job(data):
 			logger.debug("Got job metata for %s", job_id)
 			if not data.has_key(job_id):
-				error_callback("No such job %s." % job_id)
+				error_callback(job_id, "No such job %s." % job_id)
 			else:
 				# Locate the node that it's on.
 				node = session.query(
