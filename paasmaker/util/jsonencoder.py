@@ -3,7 +3,9 @@ import datetime
 import unittest
 import re
 import paasmaker
+
 import sqlalchemy
+import colander
 
 class JsonEncoder(json.JSONEncoder):
 	"""
@@ -39,6 +41,8 @@ class JsonEncoder(json.JSONEncoder):
 			for item in obj:
 				flat.append(item)
 			return flat
+		if isinstance(obj, colander._null):
+			return None
 		return json.JSONEncoder.default(self, obj)
 
 class TestJsonEncoder(unittest.TestCase):
