@@ -1,6 +1,7 @@
 # pacemaker controller init.
 
 from index import IndexController
+from tools import ToolsController
 from overview import OverviewController
 from login import LoginController, LogoutController
 from node import NodeRegisterController, NodeListController
