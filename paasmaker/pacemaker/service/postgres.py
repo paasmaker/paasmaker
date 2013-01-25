@@ -43,6 +43,7 @@ class PostgresService(BaseService):
 
 		def on_database_created(result):
 			# Done!
+			self.db.close()
 			self.logger.info("Completed creating database.")
 			callback(
 				{
@@ -89,6 +90,7 @@ class PostgresService(BaseService):
 		# Delete the database, removing all data along with it.
 		def on_user_dropped(result):
 			# Done!
+			self.db.close()
 			self.logger.info("Completed deleting resources.")
 			callback("Completed deleting resources.")
 
@@ -234,3 +236,5 @@ class PostgresServiceTest(BaseServiceTest):
 		except psycopg2.OperationalError, ex:
 
 			self.assertTrue(True, "Raised exception correctly.")
+
+		db.close()
