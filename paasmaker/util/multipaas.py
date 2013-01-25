@@ -157,7 +157,6 @@ class MultiPaas(object):
 		return Executor(
 			'localhost',
 			self.cluster_params['master_port'],
-			'super',
 			self.cluster_params['super_token']
 		)
 
@@ -169,17 +168,14 @@ class Executor(object):
 
 	:arg str target_host: The target pacemaker host.
 	:arg int target_port: The target pacemaker port.
-	:arg str auth_method: The authentication method to use. Only
-		'super' is currently supported.
 	:arg str auth_value: The appropriate value for the
 		authentication method.
 	"""
-	def __init__(self, target_host, target_port, auth_method, auth_value):
+	def __init__(self, target_host, target_port, auth_value):
 		self.target = []
 		self.target.extend(['-r', target_host])
 		self.target.extend(['-p', str(target_port)])
-		if auth_method == 'super':
-			self.auth = '--superkey=' + auth_value
+		self.auth = '--key=' + auth_value
 
 	def run(self, arguments):
 		"""
