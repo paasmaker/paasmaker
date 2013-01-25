@@ -67,8 +67,6 @@ class ManagedMySQL(ManagedDaemon):
 			stderr=self._eat_output(),
 		)
 
-		# TODO: Implement the password feature.
-
 		self.save_parameters()
 
 	def start(self, callback, error_callback):
