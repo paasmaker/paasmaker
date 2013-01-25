@@ -71,10 +71,12 @@ The target version is 2.7.
 
 Ubuntu 12.04 comes with Python 2.7 by default. However, you will need to install pip packages.
 At this time, I'm not currently using virtualenv or equivalents; however this should
-be easily possible.
+be easily possible. NOTE: python-mysqldb is required here because it doesn't seem to be
+available via pip.
 
 	sudo apt-get install python-pip
 	sudo apt-get install python-dev
+	sudo apt-get install python-mysqldb
 	sudo pip install -r requirements.txt
     sudo pip install coverage
 
