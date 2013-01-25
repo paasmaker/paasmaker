@@ -52,10 +52,7 @@ class RootAction(object):
 			scheme = 'https'
 		host = "%s://%s:%d" % (scheme, args.remote, args.port)
 		apirequest.set_target(host)
-		if args.apikey:
-			apirequest.set_apikey_auth(args.apikey)
-		elif args.superkey:
-			apirequest.set_superkey_auth(args.superkey)
+		apirequest.set_auth(args.key)
 
 	def generic_request_failed(self, message, exception=None):
 		logging.error(message)
@@ -726,9 +723,8 @@ parser.add_argument('action', help="The action to perform.")
 # Set up common command line options.
 parser.add_argument("-r", "--remote", default="localhost", help="The pacemaker host.")
 parser.add_argument("-p", "--port", type=int, default=42500, help="The pacemaker port.")
-parser.add_argument("-k", "--apikey", help="User API key to authenticate with.")
+parser.add_argument("-k", "--key", help="Key to authenticate with. Either a user API key, or a super token.")
 parser.add_argument("--ssl", default=False, help="Use SSL to connect to the node.", action="store_true")
-parser.add_argument("--superkey", default="", help="Super key to authenticate with.")
 parser.add_argument("--loglevel", default="INFO", help="Log level, one of DEBUG|INFO|WARNING|ERROR|CRITICAL.")
 
 # Now get our action to set up it's options.
@@ -745,7 +741,7 @@ logger.setLevel(getattr(logging, args.loglevel))
 logger.debug("Parsed command line arguments: %s", str(args))
 
 # Make sure we have an auth source.
-if not args.superkey and not args.apikey:
+if not args.key:
 	logger.error("No API or node key passed.")
 	sys.exit(1)
 
