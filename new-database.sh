@@ -12,8 +12,8 @@ then
 	exit 1
 fi
 
-./pm-command.py user-create $USERNAME $EMAIL "$NAME" $PASSWORD --superkey=$SUPERKEY
-./pm-command.py role-create Administrator ALL --superkey=$SUPERKEY
-./pm-command.py workspace-create Test test {} --superkey=$SUPERKEY
-./pm-command.py role-allocate 1 1 --superkey=$SUPERKEY
+./pm-command.py user-create $USERNAME $EMAIL "$NAME" $PASSWORD --key=$SUPERKEY
+./pm-command.py role-create Administrator ALL --key=$SUPERKEY
+./pm-command.py workspace-create Test test {} --key=$SUPERKEY
+./pm-command.py role-allocate 1 1 --key=$SUPERKEY
 
