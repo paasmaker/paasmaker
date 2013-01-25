@@ -1,5 +1,4 @@
 import os
-import uuid
 
 import paasmaker
 from base import BaseService, BaseServiceTest
@@ -66,7 +65,13 @@ class FilesystemService(BaseService):
 			error_callback("Couldn't create directory", ex)
 			return
 
-		callback({"directory": full_path}, "Created directory for filesystem access")
+		callback(
+			{
+				"directory": full_path,
+				"protocol": "directory"
+			},
+			"Created directory for filesystem access"
+		)
 
 	def update(self, name, existing_credentials, callback, error_callback):
 		callback(existing_credentials)
@@ -92,7 +97,7 @@ class FilesystemService(BaseService):
 				self.logger.info("All files removed successfully.")
 				callback("All files removed.")
 			else:
-				self.logger.warning("Not all files were removed.")
+				self.logger.error("Not all files were removed.")
 				error_callback("Couldn't delete all files.")
 
 		removeer = paasmaker.util.Popen(command,
@@ -104,8 +109,7 @@ class FilesystemService(BaseService):
 
 class FilesystemServiceTest(BaseServiceTest):
 	def test_simple(self):
-		job_id = str(uuid.uuid4())
-		logger = self.configuration.get_job_logger(job_id)
+		logger = self.configuration.get_job_logger("testfilesystemservice")
 
 		self.registry.register(
 			'paasmaker.service.filesystem',
@@ -124,7 +128,7 @@ class FilesystemServiceTest(BaseServiceTest):
 		self.wait()
 
 		self.assertTrue(self.success, "FilesystemService creation was not successful.")
-		self.assertEquals(len(self.credentials), 1, "FilesystemService did not return expected number of keys.")
+		self.assertEquals(len(self.credentials), 2, "FilesystemService did not return expected number of keys.")
 		self.assertTrue('directory' in self.credentials, "FilesystemService did not return the directory it created.")
 
 		fs_dir = self.credentials['directory']
