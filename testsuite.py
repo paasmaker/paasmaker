@@ -116,6 +116,7 @@ test_sets = {
 	paasmaker.heart.unpacker.tarball: ['normal', 'heart', 'unpacker'],
 
 	paasmaker.pacemaker.service.parameters: ['normal', 'service', 'serviceparameters'],
+	paasmaker.pacemaker.service.filesystem: ['normal', 'service', 'filesystem'],
 	paasmaker.pacemaker.service.mysql: ['slow', 'service', 'servicemysql'],
 	paasmaker.pacemaker.service.postgres: ['slow', 'service', 'servicepostgres', 'postgres'],
 	paasmaker.pacemaker.service.managedredis: ['service', 'serviceredis', 'redis'],
