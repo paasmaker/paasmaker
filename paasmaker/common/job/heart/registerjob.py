@@ -95,7 +95,7 @@ class RegisterInstanceJob(BaseJob):
 				self.logger
 			)
 
-			fetcher.fetch(
+			fetcher_plugin.fetch(
 				raw_url,
 				self.resolved_package_name,
 				self.resolved_package_path,

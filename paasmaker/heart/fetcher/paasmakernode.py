@@ -11,14 +11,14 @@ class PaasmakerNodeFetcher(BaseFetcher):
 
 	def fetch(self, url, remote_filename, target_filename, callback, error_callback):
 		# Use the API to fetch it from the appropriate node.
-		def package_fetched(self, path, message):
+		def package_fetched(path, message):
 			self.logger.info(message)
 			callback(path, message)
 
-		def package_failed(self, error, exception=None):
+		def package_failed(error, exception=None):
 			error_callback(error, exception=exception)
 
-		def package_progress(self, size, total):
+		def package_progress(size, total):
 			percent = 0.0
 			if total > 0:
 				percent = (float(size) / float(total)) * 100
