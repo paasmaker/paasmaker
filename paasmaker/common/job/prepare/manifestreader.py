@@ -137,7 +137,7 @@ class ManifestReaderJob(BaseJob):
 				paasmaker.util.plugin.MODE.SERVICE_CREATE
 			)
 			if not plugin_exists:
-				error_message = "No service provider %s found.", service.provider
+				error_message = "No service provider %s found." % service.provider
 				self.logger.critical(error_message)
 				self.failed(error_message)
 				return
