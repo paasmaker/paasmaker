@@ -107,6 +107,7 @@ class BaseServiceTest(tornado.testing.AsyncTestCase):
 		self.credentials = None
 		self.success = None
 		self.message = None
+		self.exception = None
 
 	def tearDown(self):
 		self.configuration.cleanup()
@@ -114,19 +115,22 @@ class BaseServiceTest(tornado.testing.AsyncTestCase):
 
 	def success_callback(self, credentials, message):
 		self.success = True
+		self.exception = None
 		self.message = message
 		self.credentials = credentials
 		self.stop()
 
 	def success_remove_callback(self, message):
 		self.success = True
+		self.exception = None
 		self.message = message
 		self.credentials = None
 		self.stop()
 
-	def failure_callback(self, message):
+	def failure_callback(self, message, exception=None):
 		self.success = False
 		self.message = message
+		self.exception = exception
 		self.credentials = None
 		self.stop()
 
