@@ -114,6 +114,7 @@ test_sets = {
 	paasmaker.heart.runtime.rbenv: ['slow', 'heart', 'runtime', 'ruby'],
 
 	paasmaker.heart.unpacker.tarball: ['normal', 'heart', 'unpacker'],
+	paasmaker.heart.startup.filesystemlinker: ['normal', 'heart', 'filesystem'],
 
 	paasmaker.pacemaker.service.parameters: ['normal', 'service', 'serviceparameters'],
 	paasmaker.pacemaker.service.filesystem: ['normal', 'service', 'filesystem'],
