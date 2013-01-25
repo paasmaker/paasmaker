@@ -179,7 +179,7 @@ class UploadControllerTest(BaseControllerTest):
 
 		# Now, attempt to upload a file.
 		request = paasmaker.common.api.upload.UploadFileAPIRequest(self.configuration)
-		request.set_apikey_auth(apikey)
+		request.set_auth(apikey)
 		request.send_file(uploadfile, progress_callback, self.stop, self.stop)
 		result = self.wait()
 
@@ -198,5 +198,4 @@ class UploadControllerTest(BaseControllerTest):
 		uploaded_sum = self.wait()
 
 		self.assertEquals(incoming_sum, uploaded_sum, "Uploaded file is not the same.")
-		
-		
+

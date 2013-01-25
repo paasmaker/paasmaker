@@ -36,10 +36,6 @@ class UploadFileAPIRequest(APIRequest):
 			is completed.
 		:arg callable error_callback: The callback used if an error occurs.
 		"""
-		# Split and send the file.
-		if self.authmethod == 'node':
-			raise ValueError("You can not upload files with node authentication. Use user authentication instead.")
-
 		# Store callbacks.
 		self.progress_callback = progress_callback
 		self.finished_callback = finished_callback
@@ -69,7 +65,7 @@ class UploadFileAPIRequest(APIRequest):
 		endpoint += '?' + urllib.urlencode(self.variables)
 		kwargs = {}
 		kwargs['method'] = 'GET'
-		kwargs['headers'] = {'User-Token': self.authvalue}
+		kwargs['headers'] = {'Auth-Paasmaker': self.authvalue}
 		kwargs['follow_redirects'] = False
 
 		request = tornado.httpclient.HTTPRequest(endpoint, **kwargs)
@@ -111,7 +107,7 @@ class UploadFileAPIRequest(APIRequest):
 			kwargs['method'] = 'POST'
 			kwargs['body'] = file_body['body']
 			kwargs['headers'] = {
-				'User-Token': self.authvalue,
+				'Auth-Paasmaker': self.authvalue,
 				'Content-Type': file_body['mimetype']
 			}
 

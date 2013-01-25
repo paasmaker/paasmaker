@@ -301,7 +301,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 
 		# Fetch the workspace list as that user.
 		request = paasmaker.common.api.workspace.WorkspaceListAPIRequest(self.configuration)
-		request.set_apikey_auth(user.apikey)
+		request.set_auth(user.apikey)
 		request.send(self.stop)
 		response = self.wait()
 

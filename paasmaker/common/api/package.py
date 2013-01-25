@@ -95,7 +95,7 @@ class PackageDownloadAPIRequest(APIRequest):
 			# And proceed to download the file.
 			endpoint = self.get_master() + '/files/package/download?%s' % urllib.urlencode([('name', self.package)])
 			headers = {}
-			headers['Node-Token'] = self.configuration.get_flat('node_token')
+			headers['Auth-Paasmaker'] = self.configuration.get_flat('node_token')
 
 			request = tornado.httpclient.HTTPRequest(
 				endpoint,

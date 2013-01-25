@@ -132,7 +132,7 @@ class PackageControllerTest(BaseControllerTest):
 		calc = paasmaker.util.streamingchecksum.StreamingChecksum(dummy_full, self.io_loop, logging)
 		calc.start(self.stop)
 		result_checksum = self.wait()
-		
+
 		self.assertEquals(source_checksum, result_checksum, "Downloaded file isn't the same.")
 
 		# Try again, with an invalid path.
@@ -148,5 +148,4 @@ class PackageControllerTest(BaseControllerTest):
 		result_checksum = self.wait()
 
 		self.assertEquals(source_checksum, result_checksum, "Clobbered output file.")
-		
-		
+

@@ -81,11 +81,10 @@ class APIRequest(object):
 		self.target = None
 		self.method = 'POST'
 		if configuration:
-			self.authmethod = 'nodeheader'
+			# By default, we assume that we're talking node->node
 			self.authvalue = self.configuration.get_flat('node_token')
 			self.io_loop = configuration.io_loop
 		else:
-			self.authmethod = None
 			self.authvalue = None
 			self.io_loop = tornado.ioloop.IOLoop.instance()
 
@@ -97,44 +96,31 @@ class APIRequest(object):
 		:arg APIRequest request: The request to copy the authentication
 			details from.
 		"""
-		self.authmethod = request.authmethod
 		self.authvalue = request.authvalue
 		self.target = request.target
 
-	def set_apikey_auth(self, key):
+	def set_auth(self, key):
 		"""
-		Set this request to use a user-based API key,
-		with the supplied key.
+		Set the authentication key presented to the server.
+		It can be either a node token, super token, or user
+		token, and the server will allow access depending on
+		it's settings.
 
-		:arg str key: The User API key to present to the
-			server.
+		:arg str key: The key to present to the server.
 		"""
-		self.authmethod = 'tokenheader'
 		self.authvalue = key
 
-	def set_nodekey_auth(self, key):
-		"""
-		Set this request to use node-key authentication.
-
-		:arg str key: The Node API key to present to the server.
-		"""
-		self.authmethod = 'nodeheader'
-		self.authvalue = key
-
-	def set_superkey_auth(self, key=None):
+	def set_superkey_auth(self):
 		"""
 		Set this request to use super-key authentication.
-		If no key is supplied, it will attempt to read the super
-		key from the configuration object.
-
-		:arg str key: The super key to present to the server.
+		This will only work if a configuration object is
+		set for this request. It's designed to be an easy
+		way to set authentication for unit tests.
 		"""
-		self.authmethod = 'superheader'
-		if key:
-			self.authvalue = key
-		else:
-			# TODO: More error checking here.
-			self.authvalue = self.configuration.get_flat('pacemaker.super_token')
+		if self.configuration is None:
+			raise ValueError("No configuration object set.")
+
+		self.authvalue = self.configuration.get_flat('pacemaker.super_token')
 
 	def build_payload(self):
 		"""
@@ -212,16 +198,6 @@ class APIRequest(object):
 		# Note that the supplied callback, if provided, is called after this.
 		pass
 
-	def _authenticate_headers(self, headers):
-		# Helper function to insert the right authentication headers,
-		# if we're set to use those.
-		if self.authmethod == 'tokenheader':
-			headers['User-Token'] = unicode(self.authvalue)
-		if self.authmethod == 'superheader':
-			headers['Super-Token'] = unicode(self.authvalue)
-		if self.authmethod == 'nodeheader':
-			headers['Node-Token'] = unicode(self.authvalue)
-
 	def send(self, callback=None, **kwargs):
 		"""
 		Send the request to the remote server.
@@ -238,9 +214,6 @@ class APIRequest(object):
 
 		:arg callback callback: The callback to call when done.
 		"""
-		if self.method == 'GET' and self.authmethod in ['node', 'super', 'token']:
-			raise ValueError("Can't do a GET request with node, super, or token authentication methods.")
-
 		logger.debug("In send() of API request of type %s", type(self))
 
 		def payload_ready(payload):
@@ -248,7 +221,6 @@ class APIRequest(object):
 				# Build what we're sending.
 				data = {}
 				data['data'] = payload
-				data['auth'] = { 'method': self.authmethod, 'value': self.authvalue }
 
 				encoded = json.dumps(data, cls=paasmaker.util.jsonencoder.JsonEncoder)
 
@@ -266,7 +238,7 @@ class APIRequest(object):
 			if not kwargs.has_key('headers'):
 				kwargs['headers'] = {}
 
-			self._authenticate_headers(kwargs['headers'])
+			kwargs['headers']['Auth-Paasmaker'] = self.authvalue
 
 			# The function called when it returns.
 			# It's a closure to preserve the callback provided.
@@ -369,7 +341,7 @@ class StreamAPIRequest(APIRequest):
 		complete_message = {
 			'request': message[0],
 			'data': message[1],
-			'auth': {'method': self.authmethod, 'value': self.authvalue}
+			'auth': self.authvalue
 		}
 
 		return complete_message
@@ -391,7 +363,7 @@ class StreamAPIRequest(APIRequest):
 				logging.debug("Websocket endpoint: %s", endpoint)
 
 				auth_headers = {}
-				self._authenticate_headers(auth_headers)
+				auth_headers['Auth-Paasmaker'] = self.authvalue
 
 				self.websocket = StreamAPIWebsocketWrapper(
 					endpoint,
@@ -445,7 +417,8 @@ class StreamAPIRequest(APIRequest):
 		request_arguments['method'] = 'POST'
 		request_arguments['headers'] = {}
 		request_arguments['follow_redirects'] = False
-		self._authenticate_headers(request_arguments['headers'])
+		request_arguments['headers'] = {}
+		request_arguments['headers']['Auth-Paasmaker'] = self.authvalue
 
 		# TODO: Probably should remove the commands once we've confirmed
 		# that the server has them, rather than right now.
@@ -466,7 +439,6 @@ class StreamAPIRequest(APIRequest):
 		if self.session_id:
 			body['data']['session_id'] = self.session_id
 
-		body['auth'] = {'method': self.authmethod, 'value': self.authvalue}
 		request_arguments['body'] = json.dumps(body, cls=paasmaker.util.jsonencoder.JsonEncoder)
 
 		def long_poll_result(response):

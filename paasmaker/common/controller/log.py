@@ -257,7 +257,7 @@ class LogStreamRemoteClient(paasmaker.thirdparty.twc.websocket.WebSocket):
 		else:
 			logger.debug("Client: Sending subscribe request for %s", job_id)
 			data = {'job_id': job_id, 'position': position, 'unittest_force_remote': self.unittest_force_remote}
-			auth = {'method': 'node', 'value': self.configuration.get_flat('node_token')}
+			auth = self.configuration.get_flat('node_token')
 			message = {'request': 'subscribe', 'data': data, 'auth': auth}
 			self.write_message(json.dumps(message))
 
@@ -265,7 +265,7 @@ class LogStreamRemoteClient(paasmaker.thirdparty.twc.websocket.WebSocket):
 		# TODO: Handle when unsubscribing when not connected.
 		logger.debug("Client: Unsubscribing from %s", job_id)
 		data = {'job_id': job_id}
-		auth = {'method': 'node', 'value': self.configuration.get_flat('node_token')}
+		auth = self.configuration.get_flat('node_token')
 		message = {'request': 'unsubscribe', 'data': data, 'auth': auth}
 		self.write_message(json.dumps(message))
 
@@ -529,7 +529,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 
 		# Now, connect to it and stream the log.
 		remote_request = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
-		remote_request.set_superkey_auth(self.configuration.get_flat('pacemaker.super_token'))
+		remote_request.set_superkey_auth()
 		remote_request.set_callbacks(on_message, on_error)
 		#remote_request.set_stream_mode('longpoll')
 		remote_request.subscribe(job_id)
@@ -588,7 +588,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 
 		# Now, connect to it and stream the log.
 		remote_request = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
-		remote_request.set_superkey_auth(self.configuration.get_flat('pacemaker.super_token'))
+		remote_request.set_superkey_auth()
 		remote_request.set_callbacks(on_message, on_error)
 		remote_request.set_stream_mode('longpoll')
 		remote_request.subscribe(job_id)

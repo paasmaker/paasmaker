@@ -378,7 +378,7 @@ class ApplicationControllerTest(BaseControllerTest):
 		self.manager.prepare(self.stop, self.stop)
 		self.wait()
 
-	# Handled by BaseControllerTest		
+	# Handled by BaseControllerTest
 	# def tearDown(self):
 	# 	self.configuration.cleanup()
 	# 	super(ApplicationControllerTest, self).tearDown()
@@ -434,7 +434,7 @@ class ApplicationControllerTest(BaseControllerTest):
 
 		# Now, attempt to upload a file.
 		request = paasmaker.common.api.upload.UploadFileAPIRequest(self.configuration)
-		request.set_apikey_auth(apikey)
+		request.set_auth(apikey)
 		request.send_file(tarfile, progress_callback, self.stop, self.stop)
 		result = self.wait()
 
@@ -444,7 +444,7 @@ class ApplicationControllerTest(BaseControllerTest):
 
 		# Create the workspace.
 		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
-		request.set_apikey_auth(apikey)
+		request.set_auth(apikey)
 		request.set_workspace_name('Test workspace')
 		request.set_workspace_stub('test')
 		request.send(self.stop)
@@ -462,7 +462,7 @@ class ApplicationControllerTest(BaseControllerTest):
 		# First try creating a new application with our tarball
 		request = paasmaker.common.api.application.ApplicationNewAPIRequest(self.configuration)
 		request.set_workspace(new_workspace_id)
-		request.set_apikey_auth(apikey)
+		request.set_auth(apikey)
 		request.set_scm("paasmaker.scm.tarball")
 		request.set_uploaded_file(remote_file_id)
 		request.send(self.stop)
@@ -482,7 +482,7 @@ class ApplicationControllerTest(BaseControllerTest):
 		# List applications in this workspace, to get the app ID
 		request = paasmaker.common.api.application.ApplicationListAPIRequest(self.configuration)
 		request.set_workspace(new_workspace_id)
-		request.set_apikey_auth(apikey)
+		request.set_auth(apikey)
 		request.send(self.stop)
 		response = self.wait()
 
@@ -492,7 +492,7 @@ class ApplicationControllerTest(BaseControllerTest):
 		# Now use the same tarball to create a new version
 		request = paasmaker.common.api.application.ApplicationNewVersionAPIRequest(self.configuration)
 		request.set_application(application_id)
-		request.set_apikey_auth(apikey)
+		request.set_auth(apikey)
 		request.set_scm("paasmaker.scm.tarball")
 		request.set_uploaded_file(remote_file_id)
 		request.send(self.stop)
@@ -512,7 +512,7 @@ class ApplicationControllerTest(BaseControllerTest):
 		# Now delete the new application!
 		request = paasmaker.common.api.application.ApplicationDeleteAPIRequest(self.configuration)
 		request.set_application(application_id)
-		request.set_apikey_auth(apikey)
+		request.set_auth(apikey)
 		request.send(self.stop)
 		response = self.wait()
 

@@ -216,7 +216,7 @@ class LoginControllerTest(BaseControllerTest):
 		# Try again with the HTTP header token.
 		request = tornado.httpclient.HTTPRequest(
 			"http://localhost:%d/information" % self.get_http_port(),
-			headers={'User-Token': u.apikey})
+			headers={'Auth-Paasmaker': u.apikey})
 		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
 		client.fetch(request, self.stop)
 		response = self.wait()
@@ -238,7 +238,7 @@ class LoginControllerTest(BaseControllerTest):
 		s.refresh(u)
 
 		request = paasmaker.common.api.InformationAPIRequest(self.configuration)
-		request.set_apikey_auth('bogus')
+		request.set_auth('bogus')
 		request.send(self.stop)
 		response = self.wait()
 
@@ -247,7 +247,7 @@ class LoginControllerTest(BaseControllerTest):
 
 		# Try it again with the key.
 		request = paasmaker.common.api.InformationAPIRequest(self.configuration)
-		request.set_apikey_auth(u.apikey)
+		request.set_auth(u.apikey)
 		request.send(self.stop)
 		response = self.wait()
 
@@ -256,7 +256,7 @@ class LoginControllerTest(BaseControllerTest):
 
 	def test_login_superkey(self):
 		request = paasmaker.common.api.InformationAPIRequest(self.configuration)
-		request.set_superkey_auth('bogus')
+		request.set_auth('bogus')
 		request.send(self.stop)
 		response = self.wait()
 
@@ -265,7 +265,7 @@ class LoginControllerTest(BaseControllerTest):
 
 		# Try it again with the key.
 		request = paasmaker.common.api.InformationAPIRequest(self.configuration)
-		request.set_superkey_auth(self.configuration.get_flat('pacemaker.super_token'))
+		request.set_auth(self.configuration.get_flat('pacemaker.super_token'))
 		request.send(self.stop)
 		response = self.wait()
 

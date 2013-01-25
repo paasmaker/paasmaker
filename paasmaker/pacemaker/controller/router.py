@@ -231,7 +231,7 @@ class RouterStreamHandlerTestClient(paasmaker.thirdparty.twc.websocket.WebSocket
 
 	def update(self, name, input_id):
 		data = {'name': name, 'input_id': input_id}
-		auth = {'method': 'super', 'value': self.configuration.get_flat('pacemaker.super_token')}
+		auth = self.configuration.get_flat('pacemaker.super_token')
 		message = {'request': 'update', 'data': data, 'auth': auth}
 		self.write_message(json.dumps(message))
 

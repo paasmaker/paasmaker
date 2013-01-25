@@ -26,22 +26,14 @@ from pubsub import pub
 # 3. User->Pacemaker (token auth) (ie, command line tool or other API request)
 
 # Structure of API requests.
-# auth: { method: 'node|cookie|token', value: 'token|cookie' }
+# auth: 'value'
 # data: { ... keys ... }
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
-class APIAuthRequestSchema(colander.MappingSchema):
-	method = colander.SchemaNode(colander.String(),
-		title="Method of authentication",
-		description="One of node, cookie, or token")
-	value = colander.SchemaNode(colander.String(),
-		title="Authentication value",
-		description="The authentication value")
-
 class APIRequestSchema(colander.MappingSchema):
-	auth = APIAuthRequestSchema()
+	auth = colander.SchemaNode(colander.String(), title="Auth value", missing="", default="")
 	data = colander.SchemaNode(colander.Mapping(unknown='preserve'))
 
 class BaseController(tornado.web.RequestHandler):
@@ -87,7 +79,7 @@ class BaseController(tornado.web.RequestHandler):
 		self.root_data = {}
 		self.session = None
 		self.user = None
-		self.auth = {}
+		self.auth = ""
 		self.params = {}
 		self.raw_params = {}
 		self.super_auth = False
@@ -147,7 +139,7 @@ class BaseController(tornado.web.RequestHandler):
 		self.raw_params.update(structure)
 
 		# Must be one of the supported auth methods.
-		self.require_authentication(self.AUTH_METHODS)
+		self._require_authentication(self.AUTH_METHODS)
 
 	def validate_data(self, api_schema, html_schema=None):
 		"""
@@ -209,7 +201,7 @@ class BaseController(tornado.web.RequestHandler):
 		else:
 			self.render("api/apionly.html")
 
-	def require_authentication(self, methods):
+	def _require_authentication(self, methods):
 		"""
 		Check the authentication methods until one is found that
 		can be satisfied. In HTML mode, redirects to the login page.
@@ -226,32 +218,50 @@ class BaseController(tornado.web.RequestHandler):
 			logger.debug("Anonymous method allowed. Allowing request.")
 			found_allowed_method = True
 
-		if self.NODE in methods:
-			# Check that a valid node authenticated.
-			logger.debug("Checking node authentication.")
-			node_allowed = self.check_node_auth()
-			if node_allowed:
+		# See if the request has an auth value.
+		auth_value = self.auth
+		if 'Auth-Paasmaker' in self.request.headers:
+			# User supplied an auth value via header;
+			# check that value.
+			auth_value = self.request.headers['Auth-Paasmaker']
+
+		if len(auth_value) > 0:
+			# We've been supplied a value. Now test it.
+			if self.NODE in methods:
+				if auth_value == self.configuration.get_flat('node_token'):
+					# Permitted.
+					logger.debug("Permitted node token authentication.")
+					found_allowed_method = True
+
+			if self.SUPER in methods and self.configuration.is_pacemaker() and self.configuration.get_flat('pacemaker.allow_supertoken'):
+				if auth_value == self.configuration.get_flat('pacemaker.super_token'):
+					# Permitted.
+					logger.debug("Permitted super token authentication.")
+					found_allowed_method = True
+					self.super_auth = True
+
+			if self.USER in methods and self.configuration.is_pacemaker():
+				# If the used passed an API key, try to look that up.
+				user = self.db().query(
+					paasmaker.model.User
+				).filter(
+					paasmaker.model.User.apikey == auth_value
+				).first()
+				# Make sure we have the user, and it's enabled and not deleted.
+				if user and user.enabled and not user.deleted:
+					self.user = user
+					self._update_user_permissions_cache()
+					found_allowed_method = True
+					logger.debug("Permitted user token authentication.")
+
+		# Finally, if USER authentication is permitted, and
+		# we're not authenticated yet, enforce that.
+		if self.USER in methods and self.configuration.is_pacemaker() and not found_allowed_method:
+			user = self.get_current_user()
+			if user:
 				found_allowed_method = True
-			logger.debug("Node authentication: %s", str(node_allowed))
 
-		if self.SUPER in methods:
-			# Check that a valid super key was supplied.
-			logger.debug("Checking super authentication.")
-			super_allowed = self.check_super_auth()
-			if super_allowed:
-				found_allowed_method = True
-				self.super_auth = True
-			logger.debug("Super authentication: %s", str(super_allowed))
-
-		if self.USER in methods:
-			# Check that a valid user is authenticated.
-			logger.debug("Checking user authentication.")
-			user_allowed = self.get_current_user()
-			if user_allowed:
-				found_allowed_method = True
-
-			logger.debug("User authentication: %s", user_allowed)
-
+		# And based on the result...
 		if not found_allowed_method:
 			# YOU ... SHALL NOT ... PAAS!
 			# (But with less bridge breaking.)
@@ -261,36 +271,10 @@ class BaseController(tornado.web.RequestHandler):
 			else:
 				self.redirect('/login?rt=' + tornado.escape.url_escape(self.request.uri))
 
-	def check_node_auth(self):
-		"""
-		Check to see if the node authentication is valid.
-		"""
-		auth_using_header = self.request.headers.has_key('Node-Token')
-		if auth_using_header:
-			if self.request.headers['node-token'] == self.configuration.get_flat('node_token'):
-				return True
-		if self.auth.has_key('method') and self.auth['method'] == 'node':
-			if self.auth.has_key('value') and self.auth['value'] == self.configuration.get_flat('node_token'):
-				return True
-		return False
-
-	def check_super_auth(self):
-		"""
-		Check to see if the super authentication is valid.
-		"""
-		if self.configuration.is_pacemaker() and self.configuration.get_flat('pacemaker.allow_supertoken'):
-			if self.auth.has_key('method') and self.auth['method'] == 'super':
-				if self.auth.has_key('value') and self.auth['value'] == self.configuration.get_flat('pacemaker.super_token'):
-					return True
-			auth_using_header = self.request.headers.has_key('Super-Token')
-			if auth_using_header:
-				if self.request.headers['super-token'] == self.configuration.get_flat('pacemaker.super_token'):
-					return True
-		return False
-
 	def get_current_user(self):
 		"""
-		Get the currently logged in user.
+		Get the currently logged in user. Only tests for HTTP cookies
+		to perform the login.
 		"""
 		# Did we already look them up? Return that.
 		if self.user:
@@ -300,32 +284,24 @@ class BaseController(tornado.web.RequestHandler):
 		if not self.configuration.is_pacemaker():
 			return None
 
-		# See if we're using token authentication.
-		test_token = None
-		auth_using_token = self.auth.has_key('method') and self.auth['method'] == 'token'
-		if auth_using_token and self.auth.has_key('value'):
-			test_token = self.auth['value']
-		auth_using_header = self.request.headers.has_key('User-Token')
-		if auth_using_header:
-			test_token = self.request.headers['user-token']
-		if auth_using_token or auth_using_header:
-			if test_token:
-				# Lookup the user object.
-				user = self.db().query(paasmaker.model.User) \
-					.filter(paasmaker.model.User.apikey==test_token).first()
-				# Make sure we have the user, and it's enabled and not deleted.
-				if user and user.enabled and not user.deleted:
-					self.user = user
-
 		# Fetch their cookie.
-		raw = self.get_secure_cookie('user', max_age_days=self.configuration.get_flat('pacemaker.login_age'))
+		raw = self.get_secure_cookie(
+			'user',
+			max_age_days=self.configuration.get_flat('pacemaker.login_age')
+		)
 		if raw:
 			# Lookup the user object.
-			user = self.db().query(paasmaker.model.User).get(int(raw))
+			user = self.db().query(
+				paasmaker.model.User
+			).get(int(raw))
 			# Make sure we have the user, and it's enabled and not deleted.
 			if user and user.enabled and not user.deleted:
 				self.user = user
+				self._update_user_permissions_cache()
 
+		return self.user
+
+	def _update_user_permissions_cache(self):
 		# Update their permissions cache. The idea is to do
 		# one SQL query per request to check it, and 2 if
 		# the permissions have changed - the second one is to
@@ -336,10 +312,8 @@ class BaseController(tornado.web.RequestHandler):
 		if self.user:
 			user_key = str(self.user.id)
 			if not self.PERMISSIONS_CACHE.has_key(user_key):
-				self.PERMISSIONS_CACHE[user_key] = paasmaker.model.WorkspaceUserRoleFlatCache(user)
+				self.PERMISSIONS_CACHE[user_key] = paasmaker.model.WorkspaceUserRoleFlatCache(self.user)
 			self.PERMISSIONS_CACHE[user_key].check_cache(self.db())
-
-		return self.user
 
 	def has_permission(self, permission, workspace=None, user=None):
 		"""
@@ -827,7 +801,7 @@ class BaseLongpollController(BaseController):
 		self.cleanup(finish, timeout_expired)
 
 # A schema for websocket incoming messages, to keep them consistent.
-class WebsocketMessageSchemaCookie(colander.MappingSchema):
+class WebsocketMessageSchema(colander.MappingSchema):
 	request = colander.SchemaNode(colander.String(),
 		title="Request",
 		description="What is intended from this request")
@@ -837,9 +811,7 @@ class WebsocketMessageSchemaCookie(colander.MappingSchema):
 		default=0,
 		missing=0)
 	data = colander.SchemaNode(colander.Mapping(unknown='preserve'))
-
-class WebsocketMessageSchemaNormal(WebsocketMessageSchemaCookie):
-	auth = APIAuthRequestSchema()
+	auth = colander.SchemaNode(colander.String(), title="Auth value", missing="", default="")
 
 class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 	"""
@@ -877,7 +849,7 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 		:arg str message: The raw message from the client.
 		"""
 		parsed = json.loads(message)
-		schema = WebsocketMessageSchemaNormal()
+		schema = WebsocketMessageSchema()
 
 		# See if there was a user cookie passed. If so, it's valid.
 		# TODO: Permissions.
@@ -886,12 +858,13 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 		if raw:
 			# Lookup the user object.
 			# TODO: This uses up a database session?
-			user = self.configuration.get_database_session().query(paasmaker.model.User).get(int(raw))
+			user = self.configuration.get_database_session().query(
+				paasmaker.model.User
+			).get(int(raw))
 			# Make sure we have the user, and it's enabled and not deleted.
 			if user and user.enabled and not user.deleted:
 				self.user = user
 				self.authenticated = True
-				schema = WebsocketMessageSchemaCookie()
 
 		try:
 			result = schema.deserialize(parsed)
@@ -902,7 +875,7 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 			if self.authenticated:
 				return result
 			else:
-				self.check_authentication(result['auth'], result)
+				self._check_authentication(result['auth'], result)
 				if self.authenticated:
 					return result
 				else:
@@ -913,7 +886,7 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 			self.send_error(str(ex), parsed)
 			return None
 
-	def check_authentication(self, auth, message):
+	def _check_authentication(self, auth_value, message):
 		"""
 		Check the authentication of the message. This is called
 		by ``parse_message()``.
@@ -927,33 +900,45 @@ class BaseWebsocketHandler(tornado.websocket.WebSocketHandler):
 
 		if self.ANONYMOUS in self.AUTH_METHODS:
 			# Anonymous is allowed. So let it go through...
+			logger.debug("Anonymous method allowed. Allowing request.")
 			found_allowed_method = True
 
-		if self.NODE in self.AUTH_METHODS:
-			# Check that a valid node authentication.
-			if auth.has_key('method') and (auth['method'] == 'node' or auth['method'] == 'nodeheader'):
-				if auth.has_key('value') and auth['value'] == self.configuration.get_flat('node_token'):
+		# See if the request has an auth value.
+		if 'Auth-Paasmaker' in self.request.headers:
+			# User supplied an auth value via header;
+			# check that value.
+			auth_value = self.request.headers['Auth-Paasmaker']
+
+		if len(auth_value) > 0:
+			# We've been supplied a value. Now test it.
+			if self.NODE in self.AUTH_METHODS:
+				if auth_value == self.configuration.get_flat('node_token'):
+					# Permitted.
+					logger.debug("Permitted node token authentication.")
 					found_allowed_method = True
 
-		if self.SUPER in self.AUTH_METHODS:
-			# Check that a valid super authentication.
-			if auth.has_key('method') and (auth['method'] == 'super' or auth['method'] == 'superheader') and self.configuration.get_flat('pacemaker.allow_supertoken'):
-				if auth.has_key('value') and auth['value'] == self.configuration.get_flat('pacemaker.super_token'):
+			if self.SUPER in self.AUTH_METHODS and self.configuration.is_pacemaker() and self.configuration.get_flat('pacemaker.allow_supertoken'):
+				if auth_value == self.configuration.get_flat('pacemaker.super_token'):
+					# Permitted.
+					logger.debug("Permitted super token authentication.")
 					found_allowed_method = True
 
-		if self.USER in self.AUTH_METHODS:
-			test_token = None
-			if auth.has_key('method') and (auth['method'] == 'token' or auth['method'] == 'tokenheader'):
-				test_token = auth['value']
-			if test_token:
-				# Lookup the user object.
-				user = self.configuration.get_database_session().query(paasmaker.model.User) \
-					.filter(paasmaker.model.User.apikey==test_token).first()
+			if self.USER in self.AUTH_METHODS and self.configuration.is_pacemaker():
+				# If the used passed an API key, try to look that up.
+				session = self.configuration.get_database_session()
+				user = session.query(
+					paasmaker.model.User
+				).filter(
+					paasmaker.model.User.apikey == auth_value
+				).first()
+				session.close()
 				# Make sure we have the user, and it's enabled and not deleted.
 				if user and user.enabled and not user.deleted:
+					self.user = user
 					found_allowed_method = True
+					logger.debug("Permitted user token authentication.")
 
-		# TODO: Handle user token authentication.
+		# And based on the result...
 		if not found_allowed_method:
 			self.send_error('Access is denied. Authentication failed.', message)
 		else:
@@ -1114,12 +1099,8 @@ class WebsocketLongpollSessionmanager(object):
 			pub.sendMessage('websocketwrapper.message', session_id=session_id)
 
 		extra_headers = {}
-		if 'user-token' in source_request.headers:
-			extra_headers['User-Token'] = source_request.headers['User-Token']
-		if 'super-token' in source_request.headers:
-			extra_headers['Super-Token'] = source_request.headers['Super-Token']
-		if 'node-token' in source_request.headers:
-			extra_headers['Node-Token'] = source_request.headers['Node-Token']
+		if 'Auth-Paasmaker' in source_request.headers:
+			extra_headers['Auth-Paasmaker'] = source_request.headers['Auth-Paasmaker']
 
 		# Create the remote.
 		remote_url = "ws://localhost:%d%s" % (self.configuration.get_flat('http_port'), endpoint)

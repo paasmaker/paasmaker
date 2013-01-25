@@ -262,7 +262,7 @@ class JobStreamHandlerTestClient(paasmaker.thirdparty.twc.websocket.WebSocket):
 
 	def subscribe(self, job_id):
 		data = {'job_id': job_id}
-		auth = {'method': 'node', 'value': self.configuration.get_flat('node_token')}
+		auth = self.configuration.get_flat('node_token')
 		message = {'request': 'subscribe', 'data': data, 'auth': auth}
 		self.write_message(json.dumps(message))
 
@@ -375,7 +375,7 @@ class JobStreamHandlerTest(BaseControllerTest):
 			print error
 
 		remote_request = paasmaker.common.api.job.JobStreamAPIRequest(self.configuration)
-		remote_request.set_superkey_auth(self.configuration.get_flat('pacemaker.super_token'))
+		remote_request.set_superkey_auth()
 		remote_request.set_callbacks(on_message, on_error)
 		remote_request.set_stream_mode('longpoll')
 		remote_request.subscribe(root_id)
