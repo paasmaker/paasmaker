@@ -112,7 +112,7 @@ class ManagedPostgresService(PostgresService):
 		postgres_path = self._postgres_path()
 
 		try:
-			manager = paasmaker.util.managedpostgres.PostgresDaemon(self.configuration)
+			manager = paasmaker.util.postgresdaemon.PostgresDaemon(self.configuration)
 			manager.load_parameters(postgres_path)
 			self.logger.info("Found managed postgres at path %s - starting.", postgres_path)
 
