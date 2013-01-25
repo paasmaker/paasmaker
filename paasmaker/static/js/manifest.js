@@ -13,9 +13,12 @@ $(function() {
 	}
 
 	var addErrorMessage = function(line, column, message) {
-		var error_block = $('#pm_manifest_yaml_form').append("<div class=\"pm-manifest-error\">" + message + "</div>")
-
-		error_block.css('top', (5 + line * textarea.styles.lineHeight) + "px");
+		var error_block = $('#pm_manifest_yaml_form').append(
+			"<div class=\"pm-manifest-error\""
+			+ "style=\"top:" + (5 + (line + 1) * textarea.styles.lineHeight) + "px\">"
+			+ message
+			+ "</div>"
+		);
 	};
 
 	$("#pm_manifest_yaml_block").on("keyup", function(e, t, o) {
