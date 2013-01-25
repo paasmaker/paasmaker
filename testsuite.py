@@ -70,7 +70,7 @@ test_sets = {
 	paasmaker.util.redisdaemon: ['util', 'redis', 'managedservice'],
 	paasmaker.util.postgresdaemon: ['slow', 'util', 'postgres', 'managedservice'],
 	paasmaker.util.mongodaemon: ['util', 'mongodb', 'managedservice'],
-	paasmaker.util.managedmysql: ['slow', 'util', 'mysql', 'managedservice'],
+	paasmaker.util.mysqldaemon: ['slow', 'util', 'mysql', 'managedservice'],
 	paasmaker.util.nginxdaemon: ['slow', 'util', 'nginx', 'managedservice'],
 	paasmaker.util.apachedaemon: ['slow', 'util', 'apache', 'managedservice'],
 	paasmaker.util.asyncdns: ['normal', 'util', 'network'],
@@ -118,7 +118,7 @@ test_sets = {
 
 	paasmaker.pacemaker.service.parameters: ['normal', 'service', 'serviceparameters'],
 	paasmaker.pacemaker.service.filesystem: ['normal', 'service', 'filesystem'],
-	paasmaker.pacemaker.service.mysql: ['slow', 'service', 'servicemysql'],
+	paasmaker.pacemaker.service.mysql: ['slow', 'service', 'servicemysql', 'mysql'],
 	paasmaker.pacemaker.service.postgres: ['slow', 'service', 'servicepostgres', 'postgres'],
 	paasmaker.pacemaker.service.managedredis: ['service', 'serviceredis', 'redis'],
 	paasmaker.pacemaker.service.managedmongodb: ['service', 'mongodb'],

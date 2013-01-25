@@ -9,7 +9,7 @@ from redisdaemon import RedisDaemon, RedisDaemonError
 from managedrabbitmq import ManagedRabbitMQ, ManagedRabbitMQError
 from postgresdaemon import PostgresDaemon, PostgresDaemonError
 from mongodaemon import MongoDaemon, MongoDaemonError
-from managedmysql import ManagedMySQL, ManagedMySQLError
+from mysqldaemon import MySQLDaemon, MySQLDaemonError
 from nginxdaemon import NginxDaemon, NginxDaemonError
 from apachedaemon import ApacheDaemon, ApacheDaemonError
 from temporaryrabbitmq import TemporaryRabbitMQ

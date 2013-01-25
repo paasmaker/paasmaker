@@ -120,7 +120,7 @@ class MySQLServiceTest(BaseServiceTest):
 	def setUp(self):
 		super(MySQLServiceTest, self).setUp()
 
-		self.server = paasmaker.util.managedmysql.ManagedMySQL(self.configuration)
+		self.server = paasmaker.util.mysqldaemon.MySQLDaemon(self.configuration)
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('mysql'),
 			self.configuration.get_free_port(),

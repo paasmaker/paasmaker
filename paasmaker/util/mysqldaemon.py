@@ -20,10 +20,10 @@ import tornadoredis
 
 # TODO: CAUTION: AppArmor interferes with this unit test.
 
-class ManagedMySQLError(ManagedDaemonError):
+class MySQLDaemonError(ManagedDaemonError):
 	pass
 
-class ManagedMySQL(ManagedDaemon):
+class MySQLDaemon(ManagedDaemon):
 	"""
 	A class to start and manage a MySQL daemon with a custom
 	data directory.
@@ -112,7 +112,7 @@ class ManagedMySQL(ManagedDaemon):
 		return os.path.join(self.parameters['working_dir'], 'mysqld.pid')
 
 	def is_running(self, keyword=None):
-		return super(ManagedMySQL, self).is_running('mysqld')
+		return super(MySQLDaemon, self).is_running('mysqld')
 
 	def destroy(self):
 		"""
@@ -122,19 +122,19 @@ class ManagedMySQL(ManagedDaemon):
 		self.stop(signal.SIGKILL)
 		shutil.rmtree(self.parameters['working_dir'])
 
-class ManagedMySQLTest(tornado.testing.AsyncTestCase, TestHelpers):
+class MySQLDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
-		super(ManagedMySQLTest, self).setUp()
+		super(MySQLDaemonTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [], io_loop=self.io_loop)
 
 	def tearDown(self):
 		if hasattr(self, 'server'):
 			self.server.destroy()
 		self.configuration.cleanup()
-		super(ManagedMySQLTest, self).tearDown()
+		super(MySQLDaemonTest, self).tearDown()
 
 	def test_basic(self):
-		self.server = ManagedMySQL(self.configuration)
+		self.server = MySQLDaemon(self.configuration)
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('mysql'),
 			self.configuration.get_free_port(),
