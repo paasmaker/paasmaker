@@ -160,7 +160,8 @@ class PostgresServiceTest(BaseServiceTest):
 		)
 
 	def tearDown(self):
-		self.server.destroy()
+		if hasattr(self, 'server'):
+			self.server.destroy()
 
 		super(PostgresServiceTest, self).tearDown()
 

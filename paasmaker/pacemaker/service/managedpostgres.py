@@ -156,6 +156,11 @@ class ManagedPostgresService(PostgresService):
 			callback("No action to perform.")
 
 class ManagedPostgresServiceTest(PostgresServiceTest):
+	def setUp(self):
+		# Call above our class - because the parent one starts
+		# a redundant additional server.
+		super(PostgresServiceTest, self).setUp()
+
 	def test_simple(self):
 		# Override the plugin it registered.
 		self.registry.register(
