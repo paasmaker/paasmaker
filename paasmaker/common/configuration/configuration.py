@@ -480,6 +480,14 @@ class ConfigurationSchema(colander.MappingSchema):
 		default=60000,
 		missing=60000)
 
+	job_manager_check_interval = colander.SchemaNode(
+		colander.Integer(),
+		title="Job Manager check interval",
+		description="How often, in milliseconds, between checks of the job manager backend.",
+		default=5000,
+		missing=5000
+	)
+
 	pacemaker = PacemakerSchema(default=PacemakerSchema.default(), missing=PacemakerSchema.default())
 	heart = HeartSchema(defalt=HeartSchema.default(), missing=HeartSchema.default())
 	router = RouterSchema(default=RouterSchema.default(), missing=RouterSchema.default())
@@ -1079,7 +1087,12 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				meta['queue'].append((credentials, callback, error_callback))
 			else:
 				# Must be started. Just connect.
-				self._connect_redis(credentials, callback, error_callback)
+				if not meta['manager'].is_running():
+					meta['state'] = 'CREATE'
+					# Call this function again to go through.
+					self._get_redis(name, credentials, callback, error_callback)
+				else:
+					self._connect_redis(credentials, callback, error_callback)
 
 
 	def get_router_table_redis(self, callback, error_callback):
@@ -1238,6 +1251,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		it may need to work.
 		"""
 		self.job_manager.prepare(callback, error_callback)
+		self.job_manager.watchdog.enable()
 
 	def startup_health_manager(self, start_checking=True):
 		"""

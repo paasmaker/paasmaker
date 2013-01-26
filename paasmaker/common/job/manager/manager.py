@@ -33,6 +33,7 @@ class JobManager(object):
 		Calls the supplied callbacks when ready.
 		"""
 		self.backend.setup(callback, error_callback)
+		self.watchdog = JobManagerBackendWatchdog(self.configuration, self.backend)
 
 	def set_context(self, job_id, context, callback):
 		"""
@@ -577,6 +578,40 @@ class JobManager(object):
 			self.backend.get_tree(root_id, on_root_tree)
 
 		self.backend.get_root(job_id, on_found_root)
+
+class JobManagerBackendWatchdog(object):
+	"""
+	A class to periodically check that the backend for the job
+	manager is still running. It's up to the backend to take
+	the appropriate action to make sure it's still operating.
+	"""
+	def __init__(self, configuration, backend):
+		self.configuration = configuration
+		self.backend = backend
+
+		# Create the periodic handler.
+		self.periodic = tornado.ioloop.PeriodicCallback(
+			self.trigger,
+			configuration.get_flat('job_manager_check_interval'),
+			io_loop=configuration.io_loop
+		)
+
+		# Flag to store if the periodic has started.
+		self.started = False
+
+	def enable(self):
+		if not self.started:
+			self.periodic.start()
+			self.started = True
+
+	def disable(self):
+		if self.started:
+			self.periodic.stop()
+			self.started = False
+
+	def trigger(self):
+		logger.debug("Job manager backend watchdog: performing check.")
+		self.backend.ensure_connected()
 
 class JobSpecifier(object):
 

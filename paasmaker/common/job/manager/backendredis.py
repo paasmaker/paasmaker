@@ -65,6 +65,8 @@ class RedisJobBackend(JobBackend):
 	def setup(self, callback, error_callback):
 		self.setup_callback = callback
 		self.setup_steps = 2
+		self.redis = None
+		self.pubsub_client = None
 		self.configuration.get_jobs_redis(self.redis_ready, error_callback)
 		self.configuration.get_jobs_redis(self.pubsub_redis_ready, error_callback)
 
@@ -91,6 +93,40 @@ class RedisJobBackend(JobBackend):
 	def check_setup_complete(self):
 		if self.setup_steps == 0:
 			self.setup_callback("Jobs backend Redis ready.")
+
+	def ensure_connected(self):
+		reconnection_required = False
+
+		# If the redis/pubsub_client are None, we never connected.
+		if self.redis is None or self.pubsub_client is None:
+			reconnection_required = True
+		elif not self.redis.connection.connected():
+			reconnection_required = True
+		elif not self.pubsub_client.connection.connected():
+			reconnection_required = True
+
+		if reconnection_required:
+			def reconnect_success(message):
+				# Reconnected successfully.
+				logger.info("Successfully reconnected to the jobs Redis system.")
+				logger.info("Will start evaluating jobs.")
+				# Trigger off any pending jobs.
+				self.configuration.job_manager.evaluate()
+
+			def reconnect_failed(message, exception=None):
+				# Failed.
+				# Make an obvious warning in the logs that we're out of touch.
+				logger.error("UNABLE TO RECONNECT TO JOBS REDIS.")
+				logger.error(message)
+				if exception:
+					logger.error("Exception", exc_info=exception)
+				logger.error("SHOULD ATTEMPT AGAIN SHORTLY.")
+
+			logger.error("NOT CONNECTED TO JOBS BACKEND REDIS.")
+			logger.error("REATTEMPTING CONNECTION.")
+			self.setup(reconnect_success, reconnect_failed)
+		else:
+			logger.debug("Job manager is still connected.")
 
 	def _on_job_status_message(self, message):
 		if isinstance(message.body, int):

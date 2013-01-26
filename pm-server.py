@@ -228,34 +228,36 @@ def on_completed_startup():
 	fp.close()
 
 	# Start listening for HTTP requests, as everything is ready.
+	# Also, use a different context handler - now that the server is running,
+	# exceptions thrown should not cause the server to exit.
 	with tornado.stack_context.StackContext(handle_runtime_exception):
 		logging.info("Listening on port %d", configuration['http_port'])
 		application.listen(configuration['http_port'])
 		logging.info("All systems are go.")
 
-	# Subscribe for when the node is registered.
-	pub.subscribe(on_registered_with_master, 'node.firstregistration')
+		# Subscribe for when the node is registered.
+		pub.subscribe(on_registered_with_master, 'node.firstregistration')
 
-	# Register the node with the server.
-	# This periodic manager will handle keeping it up to date.
-	configuration.node_register_periodic = paasmaker.common.api.NodeUpdatePeriodicManager(configuration)
+		# Register the node with the server.
+		# This periodic manager will handle keeping it up to date.
+		configuration.node_register_periodic = paasmaker.common.api.NodeUpdatePeriodicManager(configuration)
 
-	# Also, start up the periodic router log reader now as well, if configured to do so.
-	if configuration.is_router() and configuration.get_flat('router.process_stats'):
-		configuration.stats_reader_periodic = paasmaker.router.stats.StatsLogPeriodicManager(configuration)
-		configuration.stats_reader_periodic.start()
+		# Also, start up the periodic router log reader now as well, if configured to do so.
+		if configuration.is_router() and configuration.get_flat('router.process_stats'):
+			configuration.stats_reader_periodic = paasmaker.router.stats.StatsLogPeriodicManager(configuration)
+			configuration.stats_reader_periodic.start()
 
-	# Start up the cron manager.
-	if configuration.is_pacemaker() and configuration.get_flat('pacemaker.run_crons'):
-		configuration.cron_periodic = paasmaker.pacemaker.cron.cronrunner.CronPeriodicManager(configuration)
+		# Start up the cron manager.
+		if configuration.is_pacemaker() and configuration.get_flat('pacemaker.run_crons'):
+			configuration.cron_periodic = paasmaker.pacemaker.cron.cronrunner.CronPeriodicManager(configuration)
 
-	# Set up the health checks.
-	if configuration.is_pacemaker() and configuration.get_flat('pacemaker.health.enabled'):
-		logger.info("Starting up health manager, because it's configured to run on this node.")
-		configuration.startup_health_manager()
+		# Set up the health checks.
+		if configuration.is_pacemaker() and configuration.get_flat('pacemaker.health.enabled'):
+			logger.info("Starting up health manager, because it's configured to run on this node.")
+			configuration.startup_health_manager()
 
-	# Set up the cleanup tasks.
-	configuration.startup_cleanup_manager()
+		# Set up the cleanup tasks.
+		configuration.startup_cleanup_manager()
 
 def on_intermediary_started(message):
 	logger.debug(message)
@@ -303,31 +305,37 @@ def handle_startup_exception():
 def on_ioloop_started():
 	logger.debug("IO loop running. Launching other connections.")
 
+	# For the job manager startup.
+	on_intermediary_started.required += 1
+	# For the managed NGINX startup.
+	on_intermediary_started.required += 1
+	# For the possibly managed router table redis startup.
+	on_intermediary_started.required += 1
+	# For the possibly managed stats redis startup.
+	on_intermediary_started.required += 1
+
+	# Any plugins that want to perform some async startup.
+	async_startup_plugins = configuration.plugins.plugins_for(
+		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN
+	)
+	on_intermediary_started.required += len(async_startup_plugins)
+
+	# *********************************************
+	# THESE tasks are not in the context manager, because they can fail.
+	# If they fail, they catch up later - the job manager has a
+	# watchdog to ensure it reconnects, and the other two are on
+	# demand, and failure means the appropriate code will retry.
+
+	# Job manager
+	configuration.startup_job_manager(on_intermediary_started, on_intermediary_failed)
+
+	# Possibly managed routing table startup.
+	configuration.get_router_table_redis(on_redis_started, on_intermediary_failed)
+
+	# Possibly managed stats redis startup.
+	configuration.get_stats_redis(on_redis_started, on_intermediary_failed)
+
 	with tornado.stack_context.StackContext(handle_startup_exception):
-		# For the job manager startup.
-		on_intermediary_started.required += 1
-		# For the managed NGINX startup.
-		on_intermediary_started.required += 1
-		# For the possibly managed router table redis startup.
-		on_intermediary_started.required += 1
-		# For the possibly managed stats redis startup.
-		on_intermediary_started.required += 1
-
-		# Any plugins that want to perform some async startup.
-		async_startup_plugins = configuration.plugins.plugins_for(
-			paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN
-		)
-		on_intermediary_started.required += len(async_startup_plugins)
-
-		# Job manager
-		configuration.startup_job_manager(on_intermediary_started, on_intermediary_failed)
-
-		# Possibly managed routing table startup.
-		configuration.get_router_table_redis(on_redis_started, on_intermediary_failed)
-
-		# Possibly managed stats redis startup.
-		configuration.get_stats_redis(on_redis_started, on_intermediary_failed)
-
 		# Managed NGINX.
 		configuration.setup_managed_nginx(on_intermediary_started, on_intermediary_failed)
 
@@ -499,6 +507,7 @@ def on_exit_postnotify_complete(message, exception=None):
 
 def on_actual_exit():
 	# Now stop any managed daemons.
+	configuration.job_manager.watchdog.disable()
 	configuration.shutdown_managed_nginx()
 	configuration.shutdown_managed_redis()
 

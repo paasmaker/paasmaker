@@ -16,6 +16,14 @@ class JobBackend(object):
 		"""
 		raise NotImplementedError("You must implement setup().")
 
+	def ensure_connected(self):
+		"""
+		Ensure that your backend is connected to the appropriate services.
+		Eg, make sure the pub/sub connection is still active. This will
+		be called periodically based on the configuration.
+		"""
+		raise NotImplementedError("You must implement ensure_connected().")
+
 	def store_context(self, job_id, context, callback):
 		"""
 		Store the given context for the given job ID.
