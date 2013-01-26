@@ -1059,9 +1059,39 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				for queued in meta['queue']:
 					self._connect_redis(queued[0], queued[1], queued[2])
 
+				# Is this a router table, that's a slave of another?
+				# TODO: None of this is currently tested.
+				if name == 'table':
+					# TODO: Ensure this retries if it fails on first startup.
+					if self.get_flat('redis.slaveof.enabled'):
+						def on_slaved(result):
+							logger.info("Successfully set up redis server as slave of the master.")
+							logger.debug("%s", str(result))
+
+						def got_redis(client):
+							# TODO: Does not support password protected Redis instances!
+							client.execute_command(
+								'SLAVEOF',
+								self.get_flat('redis.slaveof.host'),
+								self.get_flat('redis.slaveof.port'),
+								callback=on_slaved
+							)
+
+						def failed_redis(message, exception=None):
+							# Nope. TODO: Take some other action?
+							logger.error("Unable to get redis to make into slave: %s", message)
+							if exception:
+								logger.error("Exception:", exc_info=exception)
+
+						# It's a slave. Make it so.
+						self._connect_redis(credentials, got_redis, failed_redis)
+
 			def on_redis_startup_failure(message, exception=None):
 				# TODO: Handle this.
-				pass
+				logger.error("Failed to start managed redis: %s", message)
+				if exception:
+					logger.error("Exception:", exc_info=exception)
+				error_callback("Failed to start managed redis: %s"  % message)
 
 			# Change the action based on our state.
 			if meta['state'] == 'CREATE':
