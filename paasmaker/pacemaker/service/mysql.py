@@ -130,12 +130,6 @@ class MySQLServiceTest(BaseServiceTest):
 		self.server.start(self.stop, self.stop)
 		result = self.wait()
 
-	def tearDown(self):
-		self.server.destroy()
-
-		super(MySQLServiceTest, self).tearDown()
-
-	def test_simple(self):
 		self.registry.register(
 			'paasmaker.service.mysql',
 			'paasmaker.pacemaker.service.mysql.MySQLService',
@@ -147,6 +141,14 @@ class MySQLServiceTest(BaseServiceTest):
 			},
 			'MySQL Service'
 		)
+
+	def tearDown(self):
+		if hasattr(self, 'server'):
+			self.server.destroy()
+
+		super(MySQLServiceTest, self).tearDown()
+
+	def test_simple(self):
 		service = self.registry.instantiate(
 			'paasmaker.service.mysql',
 			paasmaker.util.plugin.MODE.SERVICE_CREATE,

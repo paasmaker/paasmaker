@@ -123,6 +123,7 @@ test_sets = {
 	paasmaker.pacemaker.service.managedredis: ['service', 'serviceredis', 'redis'],
 	paasmaker.pacemaker.service.managedmongodb: ['service', 'mongodb'],
 	paasmaker.pacemaker.service.managedpostgres: ['slow', 'service', 'servicemanagedpostgres', 'postgres'],
+	paasmaker.pacemaker.service.managedmysql: ['slow', 'service', 'servicemanagedmysql', 'mysql'],
 
 	paasmaker.pacemaker.packer.tarball: ['normal', 'packer', 'tarball'],
 	paasmaker.pacemaker.storer.paasmakernode: ['all', 'storer'],
