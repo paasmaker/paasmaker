@@ -44,6 +44,7 @@ class ManagedPostgresService(PostgresService):
 
 	MODES = {
 		paasmaker.util.plugin.MODE.SERVICE_CREATE: ManagedPostgresServiceParametersSchema(),
+		paasmaker.util.plugin.MODE.SERVICE_DELETE: None,
 		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None,
 		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None
 	}
