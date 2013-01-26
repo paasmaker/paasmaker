@@ -130,10 +130,6 @@ class ManagedPostgresService(PostgresService):
 
 	def shutdown_postnotify(self, callback, error_callback):
 		if self.options['shutdown']:
-			instance_root = self.configuration.get_scratch_path_exists(
-				self.called_name
-			)
-
 			postgres_path = self._postgres_path()
 
 			try:
