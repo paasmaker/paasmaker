@@ -15,10 +15,7 @@ JSON POST format
 When you POST data in JSON format, the structure of the body should be as so::
 
     {
-        "auth": {
-            "method": "method",
-            "value": "value"
-        },
+        "auth": "value",
         "data": {
             "key1": "here",
             ...
@@ -26,7 +23,8 @@ When you POST data in JSON format, the structure of the body should be as so::
     }
 
 The valid values for auth are described in the section below. The data section
-can contain any keys, nested as appropriate, for the controller action.
+can contain any keys, nested as appropriate, for the controller action. Auth
+can also be omitted, if you authenticate using a HTTP header.
 
 Authentication
 --------------
@@ -47,26 +45,10 @@ Authentication falls into four categories:
 * **Anonymous**: some controllers permit anonymous access. In this case,
   no authentication is required or checked.
 
-When making HTTP requests, you can pass along these HTTP headers to
-authenticate:
+When making HTTP requests, you can include a `Auth-Paasmaker` header, that
+contains either a super token, a node token, or a user's API key. The
+controller will automatically detect the type of token and grant access
+if it matches.
 
-* ``Node-Token`` - if this header's value is a valid node token that matches
-  the configuration's token, access is granted. However, it's only available
-  to controllers that allow Node authentication.
-* ``Super-Token`` - if this header's value matches the pacemaker's super token,
-  access is granted. The matching controller needs to allow super token access.
-* A standard cookie header, with an appropriate secure value that matches the
-  logged in user. The values expire after a time specified in the configuration;
-  so this is not recommended for long term use.
-* ``User-Token`` - if this header contains the same value as an API key for a
-  user in the database, that user is granted access to the system with the
-  permissions defined for the user.
-
-If you send a JSON POST body, the following method strings can be used:
-
-* ``token`` - if the value matches a user's API key, that user is considered
-  to be logged in.
-* ``super`` - if the value matches the nodes configured super token, and
-  super tokens are enabled, then the request will be allowed.
-* ``node`` - if the value matches the configured node token, access is allowed
-  where the controller permits it.
+If you send a JSON POST body, you can include the "auth" key in the root,
+which is just a string. This follows the same rules as for the HTTP header.
