@@ -23,12 +23,11 @@ class ThreadCallback(threading.Thread):
 		"""
 		super(ThreadCallback, self).__init__(**kwargs)
 		self.io_loop = io_loop
-		self.callback = tornado.stack_context.wrap(callback)
-		self.error_callback = tornado.stack_context.wrap(error_callback)
-		self.result = None
-		self.exception = None
-		self.callback_args = []
-		self.callback_kwargs = {}
+		self._user_callback = tornado.stack_context.wrap(callback)
+		self._user_error_callback = tornado.stack_context.wrap(error_callback)
+		self._exception = None
+		self._user_callback_args = []
+		self._user_callback_kwargs = {}
 		self.input_args = []
 		self.input_kwargs = {}
 
@@ -37,7 +36,7 @@ class ThreadCallback(threading.Thread):
 			self._work(*self.input_args, **self.input_kwargs)
 		except Exception, ex:
 			# Catch ALL the exceptions.
-			self.exception = ex
+			self._exception = ex
 
 		# Add a callback to handle the result.
 		# This transfers control back to the main IO loop.
@@ -69,16 +68,25 @@ class ThreadCallback(threading.Thread):
 
 		self.start()
 
+	def _callback(self, *args, **kwargs):
+		"""
+		Call the callback with all the arguments supplied. Your subclass
+		should call this when it's done.
+		"""
+		self._user_callback_args = args
+		self._user_callback_kwargs = kwargs
+
+
 	def _do_result_callback(self):
-		if self.exception:
-			self.error_callback(str(self.exception), exception=self.exception)
+		if self._exception:
+			self._user_error_callback(str(self._exception), exception=self._exception)
 		else:
-			self.callback(*self.callback_args, **self.callback_kwargs)
+			self._user_callback(*self._user_callback_args, **self._user_callback_kwargs)
 
 class ThreadCallbackSuccess(ThreadCallback):
 
 	def _work(self, input_one):
-		self.callback_args = ['bar']
+		self._callback('bar')
 
 class ThreadCallbackException(ThreadCallback):
 

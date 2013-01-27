@@ -38,11 +38,11 @@ class AsyncDNS(ThreadCallback):
 
 		# Assume that the first one passed back is the preferred one.
 		if len(initial_result) > 0:
-			self.callback_args = [initial_result[0][4][0]]
+			self._callback(initial_result[0][4][0])
 		else:
 			# Nothing returned. Probably the DNS server returned no
 			# records at all...
-			self.callback_args = [None]
+			self._callback(None)
 
 class AsyncDNSTest(tornado.testing.AsyncTestCase):
 	def _error(self, message, exception=None):
