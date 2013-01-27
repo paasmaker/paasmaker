@@ -77,6 +77,9 @@ class MultiPaas(object):
 		node_config = os.path.join(self.cluster_root, "%s.yml" % node_name)
 		os.makedirs(node_dir)
 
+		# Only the first node is the master.
+		is_master = (len(self.nodes) == 0)
+
 		node = Paasmaker(pacemaker, heart, router)
 		node.choose_parameters(
 			self,
@@ -84,7 +87,7 @@ class MultiPaas(object):
 			node_name,
 			node_port,
 			self.cluster_params,
-			len(self.nodes) == 0, # Only the first node is the master.
+			is_master,
 			self.cluster_params['master_port']
 		)
 		node.write_configuration(self.cluster_params, node_config)
@@ -234,11 +237,7 @@ master:
   isitme: %(is_cluster_master)s
 
 redis:
-  table:
-    host: 127.0.0.1
-    port: %(router_redis_port)d
-    managed: %(is_cluster_master)s
-    shutdown: true
+%(table_redis)s
   stats:
     host: 127.0.0.1
     port: %(stats_redis_port)d
@@ -295,6 +294,26 @@ router:
     shutdown: true
 """
 
+	MASTER_REDIS = """
+  table:
+    host: 127.0.0.1
+    port: %(router_redis_port)d
+    managed: true
+    shutdown: true
+"""
+
+	SLAVE_REDIS = """
+  table:
+    host: 127.0.0.1
+    port: %(my_slave_redis_port)d
+    managed: true
+    shutdown: true
+  slaveof:
+    enabled: true
+    host: localhost
+    port: %(router_redis_port)d
+"""
+
 	def __init__(self, pacemaker, heart, router):
 		self.pacemaker = pacemaker
 		self.heart = heart
@@ -329,6 +348,8 @@ router:
 		if self.heart:
 			self.params['heart_working_dir'] = self._exists(node_dir, 'heart')
 
+		self.params['my_slave_redis_port'] = multipaas._free_port()
+
 		if self.router:
 			self.params['nginx_port'] = multipaas._free_port()
 
@@ -350,8 +371,16 @@ router:
 		if self.router:
 			raw_configuration += self.ROUTER
 
+
 		self.complete_params = dict(cluster_parameters)
 		self.complete_params.update(self.params)
+
+		if self.complete_params['is_cluster_master'] == 'true':
+			table_redis = self.MASTER_REDIS % self.complete_params
+			self.complete_params['table_redis'] = table_redis
+		else:
+			table_redis = self.SLAVE_REDIS % self.complete_params
+			self.complete_params['table_redis'] = table_redis
 
 		merged_configuration = raw_configuration % self.complete_params
 
