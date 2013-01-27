@@ -75,6 +75,7 @@ test_sets = {
 	paasmaker.util.apachedaemon: ['slow', 'util', 'apache', 'managedservice'],
 	paasmaker.util.asyncdns: ['normal', 'util', 'network'],
 	paasmaker.util.flattenizr: ['normal', 'util', 'data'],
+	paasmaker.util.threadcallback: ['normal', 'util', 'thread'],
 
 	paasmaker.router.router: ['normal', 'router', 'routeronly'],
 	paasmaker.pacemaker.cron.cronrunner: ['normal', 'cron'],
