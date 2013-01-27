@@ -16,7 +16,7 @@ class SourceSCMJob(BaseJob):
 
 	def start_job(self, context):
 		try:
-			scm_plugin = self.configuration.plugins.instantiate(
+			self.scm_plugin = self.configuration.plugins.instantiate(
 				self.parameters['scm_name'],
 				paasmaker.util.plugin.MODE.SCM_EXPORT,
 				self.parameters['scm_parameters'],
@@ -32,7 +32,7 @@ class SourceSCMJob(BaseJob):
 		# Now that SCM plugin should create us a directory that we can work on.
 		# The success callback will emit a working directory.
 		# TODO: Cleanup on failure/abort.
-		scm_plugin.create_working_copy(self.scm_success, self.scm_failure)
+		self.scm_plugin.create_working_copy(self.scm_success, self.scm_failure)
 
 	def scm_success(self, path, message, parameters={}):
 		# Emit the path via the context.
@@ -42,3 +42,10 @@ class SourceSCMJob(BaseJob):
 		# Signal failure.
 		# TODO: Cleanup.
 		self.failed(message)
+
+	def abort_job(self):
+		# Ask the plugin to stop.
+		# It should exit with an error of some kind.
+		if hasattr(self, 'scm_plugin'):
+			self.scm_plugin.abort()
+		# Otherwise, do nothing.

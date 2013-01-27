@@ -31,6 +31,9 @@ class GitSCM(BaseSCM):
 	}
 
 	def create_working_copy(self, callback, error_callback):
+		self.git_in_progress = False
+		self.output_in_progress = False
+
 		# Make a directory to extract to. It should be persistent.
 		self.path = self._get_persistent_scm_dir()
 		self.callback = callback
@@ -39,7 +42,7 @@ class GitSCM(BaseSCM):
 		self.logger.info("Working directory: %s", self.path)
 		self.logger.info("Source git repo is %s", self.parameters['location'])
 
-		worker = GitGetDirectoryUpToDate(
+		self.git_worker = GitGetDirectoryUpToDate(
 			self.configuration,
 			self.path,
 			self.parameters,
@@ -48,11 +51,14 @@ class GitSCM(BaseSCM):
 
 		def git_up_to_date(path):
 			# Move on to creating the output directory.
+			self.git_in_progress = False
 			self._create_output_directory()
 
-		worker.start(git_up_to_date, error_callback)
+		self.git_in_progress = True
+		self.git_worker.start(git_up_to_date, error_callback)
 
 	def _create_output_directory(self):
+		self.output_in_progress = True
 		# Now we need to create a copy of the checkout that can be altered.
 		# For speed, we rsync over the top using the delete flag
 		# to speed it up.
@@ -72,6 +78,7 @@ class GitSCM(BaseSCM):
 		]
 
 		def on_command_finish(code):
+			self.output_in_progress = False
 			self.logger.untakeover_file(self.log_fp)
 			self.logger.info("Command returned code %d", code)
 			#self.configuration.debug_cat_job_log(self.logger.job_id)
@@ -89,7 +96,7 @@ class GitSCM(BaseSCM):
 			else:
 				self.error_callback("Unable to create a working output directory.")
 
-		rsync = paasmaker.util.Popen(
+		self.rsync = paasmaker.util.Popen(
 			command,
 			stdout=self.log_fp,
 			stderr=self.log_fp,
@@ -97,6 +104,12 @@ class GitSCM(BaseSCM):
 			io_loop=self.configuration.io_loop,
 			cwd=self.path
 		)
+
+	def _abort(self):
+		if self.git_in_progress:
+			self.git_worker.abort()
+		elif self.output_in_progress:
+			self.rsync.kill()
 
 	def create_form(self, last_parameters):
 		template = """
@@ -211,6 +224,10 @@ class GitGetDirectoryUpToDate(object):
 		else:
 			self.error_callback("Unable to select the revision.")
 
+	def abort(self):
+		# Kill the process and let everything catch up.
+		self.git.kill()
+
 	def _git_command(self, command, callback):
 		self.log_fp = self.logger.takeover_file()
 
@@ -220,7 +237,7 @@ class GitGetDirectoryUpToDate(object):
 			#self.configuration.debug_cat_job_log(self.logger.job_id)
 			callback(code)
 
-		git = paasmaker.util.Popen(
+		self.git = paasmaker.util.Popen(
 			command,
 			stdout=self.log_fp,
 			stderr=self.log_fp,

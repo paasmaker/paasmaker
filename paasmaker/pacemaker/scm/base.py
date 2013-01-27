@@ -112,6 +112,27 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 		"""
 		raise NotImplementedError("You must implement create_summary().")
 
+	def abort(self):
+		"""
+		Helper function called by the code that invoked this SCM, indicating
+		that it should abort it's processing and clean up, if it can.
+
+		Subclasses should override ``_abort()`` instead of this function.
+		"""
+		self.aborted = True
+
+		self._abort()
+
+	def _abort(self):
+		# By default... do nothing.
+		pass
+
+	def _is_aborted(self):
+		if self.hasattr(self, 'aborted'):
+			return self.aborted
+		else:
+			return False
+
 class BaseSCMTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
 		super(BaseSCMTest, self).setUp()

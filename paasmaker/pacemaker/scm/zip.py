@@ -31,13 +31,16 @@ class ZipSCM(BaseSCM):
 				error_callback("Unable to extract files.")
 
 		# Start the extractor. This will call cb() defined above when done.
-		extractor = paasmaker.util.Popen(
+		self.extractor = paasmaker.util.Popen(
 			command,
 			stdout=log_fp,
 			stderr=log_fp,
 			on_exit=cb,
 			io_loop=self.configuration.io_loop
 		)
+
+	def _abort(self):
+		self.extractor.kill()
 
 	def create_form(self, last_parameters):
 		return """
