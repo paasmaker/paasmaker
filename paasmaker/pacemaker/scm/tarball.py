@@ -11,7 +11,7 @@ class TarballSCM(BaseSCM):
 
 	def create_working_copy(self, callback, error_callback):
 		# Make a directory to extract to.
-		path = self.get_temporary_scm_dir()
+		path = self._get_temporary_scm_dir()
 
 		self.logger.info("Unpacking to %s", path)
 		self.logger.info("Source tarball file %s", self.parameters['location'])
@@ -42,12 +42,14 @@ class TarballSCM(BaseSCM):
 
 		# Start the extractor. This will call cb() defined above when done.
 		# TODO: Assumes that files inside the tarball are at the root level.
-		extractor = paasmaker.util.Popen(command,
+		extractor = paasmaker.util.Popen(
+			command,
 			stdout=log_fp,
 			stderr=log_fp,
 			on_exit=cb,
 			io_loop=self.configuration.io_loop,
-			cwd=path)
+			cwd=path
+		)
 
 	def create_form(self, last_parameters):
 		return """

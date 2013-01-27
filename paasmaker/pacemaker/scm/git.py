@@ -32,7 +32,7 @@ class GitSCM(BaseSCM):
 
 	def create_working_copy(self, callback, error_callback):
 		# Make a directory to extract to. It should be persistent.
-		self.path = self.get_persistent_scm_dir()
+		self.path = self._get_persistent_scm_dir()
 		self.callback = callback
 		self.error_callback = error_callback
 
@@ -56,7 +56,7 @@ class GitSCM(BaseSCM):
 		# Now we need to create a copy of the checkout that can be altered.
 		# For speed, we rsync over the top using the delete flag
 		# to speed it up.
-		self.output_dir = self.get_persistent_output_dir()
+		self.output_dir = self._get_persistent_output_dir()
 
 		self.logger.info("Creating editable working copy.")
 		self.log_fp = self.logger.takeover_file()

@@ -34,7 +34,7 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 	}
 	OPTIONS_SCHEMA = BaseSCMConfigurationSchema()
 
-	def get_this_scm_path(self, postfix):
+	def _get_this_scm_path(self, postfix):
 		scratch_path = self.configuration.get_flat('scratch_directory')
 		path = os.path.join(scratch_path, 'scm', self.__class__.__name__, postfix)
 		if not os.path.exists(path):
@@ -42,14 +42,14 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 
 		return path
 
-	def get_temporary_scm_dir(self):
+	def _get_temporary_scm_dir(self):
 		"""
 		Get a temporary directory to unpack the source into.
 		"""
 		random = str(uuid.uuid4())
-		return self.get_this_scm_path(random)
+		return self._get_this_scm_path(random)
 
-	def get_persistent_scm_dir(self):
+	def _get_persistent_scm_dir(self):
 		"""
 		Get a persistent directory to unpack the source into.
 		This is designed for SCMs that can update their code,
@@ -60,9 +60,9 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 		name = re.sub(r'[^.A-Za-z]', '_', name)
 		name = name.replace("__", "_")
 		name = name.replace("__", "_")
-		return self.get_this_scm_path(name)
+		return self._get_this_scm_path(name)
 
-	def get_persistent_output_dir(self):
+	def _get_persistent_output_dir(self):
 		"""
 		Get a persistent directory to output the result of repo
 		into, that can be used by prepare commands to get ready.
@@ -72,7 +72,7 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 		name = re.sub(r'[^.A-Za-z]', '_', name)
 		name = name.replace("__", "_")
 		name = name.replace("__", "_")
-		return self.get_this_scm_path(name + '_output')
+		return self._get_this_scm_path(name + '_output')
 
 	def create_working_copy(self, callback, error_callback):
 		"""
