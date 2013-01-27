@@ -353,13 +353,22 @@ def on_ioloop_started():
 		logger.debug("Launched all startup jobs.")
 
 @tornado.stack_context.contextlib.contextmanager
-def handle_shutdown_exception():
+def handle_shutdown_exception_prenotify():
 	try:
 		yield
 	except Exception, ex:
 		# Log what happened.
 		# But let other things continue to shutdown.
-		logging.error("A shutdown task raised an exception.", exc_info=True)
+		on_exit_prenotify_complete("A shutdown task raised an exception.", exception=ex)
+
+@tornado.stack_context.contextlib.contextmanager
+def handle_shutdown_exception_postnotify():
+	try:
+		yield
+	except Exception, ex:
+		# Log what happened.
+		# But let other things continue to shutdown.
+		on_exit_postnotify_complete("A shutdown task raised an exception.", exception=ex)
 
 def on_exit_request():
 	# Did we even register with the master?
@@ -369,6 +378,9 @@ def on_exit_request():
 		logging.info("Never registered with a master node. Moving directly to exit phase.")
 		on_actual_exit()
 		return
+
+	# Stop the jobs manager watchdog.
+	configuration.job_manager.watchdog.disable()
 
 	# Check all instances for shutdown, if we're a heart.
 	if hasattr(configuration, 'node_register_periodic'):
@@ -400,11 +412,11 @@ def on_exit_plugins_prenotify():
 	logger.info("Launching %d pre-notification shutdown plugins.", len(shutdown_plugins))
 
 	# Launch plugins.
-	with tornado.stack_context.StackContext(handle_shutdown_exception):
+	with tornado.stack_context.StackContext(handle_shutdown_exception_prenotify):
 		for plugin in shutdown_plugins:
 			instance = configuration.plugins.instantiate(
 				plugin,
-				paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN
+				paasmaker.util.plugin.MODE.SHUTDOWN_PRENOTIFY
 			)
 			instance.shutdown_prenotify(
 				on_exit_prenotify_complete,
@@ -440,6 +452,9 @@ def on_exit_plugins_prenotify():
 				logging
 			)
 			pacemaker_updater.update(success_remove, failed_remove)
+	else:
+		# Proceed to shutdown.
+		on_exit_prenotify_complete("Not a pacemaker.")
 
 def on_exit_prenotify_complete(message, exception=None):
 	on_exit_plugins_prenotify.required -= 1
@@ -485,11 +500,11 @@ def on_exit_plugins_postnotify():
 		# Continue directly.
 		on_exit_postnotify_complete("No post-notification plugins to execute.")
 	else:
-		with tornado.stack_context.StackContext(handle_shutdown_exception):
+		with tornado.stack_context.StackContext(handle_shutdown_exception_postnotify):
 			for plugin in shutdown_plugins:
 				instance = configuration.plugins.instantiate(
 					plugin,
-					paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN
+					paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY
 				)
 				instance.shutdown_postnotify(
 					on_exit_postnotify_complete,
@@ -507,7 +522,6 @@ def on_exit_postnotify_complete(message, exception=None):
 
 def on_actual_exit():
 	# Now stop any managed daemons.
-	configuration.job_manager.watchdog.disable()
 	configuration.shutdown_managed_nginx()
 	configuration.shutdown_managed_redis()
 
