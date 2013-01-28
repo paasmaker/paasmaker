@@ -22,6 +22,9 @@ momoko==0.5.0
 # MongoDB (should be optional, but isn't yet)
 pymongo
 
+# For AWS related services.
+boto
+
 # Testing.
 mock
 coverage

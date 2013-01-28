@@ -119,6 +119,7 @@ test_sets = {
 
 	paasmaker.pacemaker.service.parameters: ['normal', 'service', 'serviceparameters'],
 	paasmaker.pacemaker.service.filesystem: ['normal', 'service', 'filesystem'],
+	paasmaker.pacemaker.service.s3bucket: ['normal', 'service', 's3', 'amazonaws'],
 	paasmaker.pacemaker.service.mysql: ['slow', 'service', 'servicemysql', 'mysql'],
 	paasmaker.pacemaker.service.postgres: ['slow', 'service', 'servicepostgres', 'postgres'],
 	paasmaker.pacemaker.service.managedredis: ['service', 'serviceredis', 'redis'],

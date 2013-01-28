@@ -7,3 +7,4 @@ from managedredis import ManagedRedisService
 from managedpostgres import ManagedPostgresService
 from managedmongodb import ManagedMongoService
 from managedmysql import ManagedMySQLService
+from s3bucket import S3BucketService
