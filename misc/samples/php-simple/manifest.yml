@@ -16,7 +16,7 @@ application:
             - echo "foo" > web/prepare.txt
 
 instances:
-  web:
+  - name: web
     quantity: 1
     runtime:
       name: paasmaker.runtime.php
