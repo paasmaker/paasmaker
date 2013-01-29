@@ -37,25 +37,6 @@ class PreInstanceStartupJob(BaseJob):
 		if self.instance_data['instance'].has_key('port'):
 			self.instance_data['environment']['PM_PORT'] = str(self.instance_data['instance']['port'])
 
-		# Callback for when the environment is ready.
-		# This environment is used to actually fire up the instance as well.
-		def environment_ready(message):
-			# Save the instance data. Which now includes a mutated environment.
-			self.logger.info("Environment ready.");
-			self.configuration.instances.save()
-
-			# We need to go over the startup entries in order,
-			# and process them, signalling failure when one fails,
-			# and success when we have none left.
-			# CAUTION: The environment is not shared between commands.
-			if len(self.startup_commands) == 0:
-				self.logger.info("No tasks to progress, so successfully completed.")
-				self.done("No tasks to process.")
-			else:
-				self.logger.info("Running through %d tasks.", len(self.startup_commands))
-				task = self.startup_commands.pop()
-				self.do_startup_task(task)
-
 		# If supplied with a runtime, get that runtime to set up the environment
 		# before we continue. It can be None, so check for that too.
 		runtime_name = self.instance_data['instance_type']['runtime_name']
@@ -79,21 +60,40 @@ class PreInstanceStartupJob(BaseJob):
 			plugin.environment(
 				self.instance_data['instance_type']['runtime_version'],
 				self.instance_data['environment'],
-				environment_ready,
-				self.plugin_failure
+				self._environment_ready,
+				self._plugin_failure
 			)
 
-	def find_next_task(self):
+	# Callback for when the environment is ready.
+	# This environment is used to actually fire up the instance as well.
+	def _environment_ready(self, message):
+		# Save the instance data. Which now includes a mutated environment.
+		self.logger.info("Environment ready.");
+		self.configuration.instances.save()
+
+		# We need to go over the startup entries in order,
+		# and process them, signalling failure when one fails,
+		# and success when we have none left.
+		# CAUTION: The environment is not shared between commands.
+		if len(self.startup_commands) == 0:
+			self.logger.info("No tasks to progress, so successfully completed.")
+			self.done("No tasks to process.")
+		else:
+			self.logger.info("Running through %d tasks.", len(self.startup_commands))
+			task = self.startup_commands.pop()
+			self._do_startup_task(task)
+
+	def _find_next_task(self):
 		# Find the next task.
 		try:
 			next_task = self.startup_commands.pop()
-			self.do_startup_task(next_task)
+			self._do_startup_task(next_task)
 		except IndexError, ex:
 			# No more tasks to pop. So we're done!
 			self.logger.info("Completed all tasks successfully.")
 			self.done("Completed all startup tasks successfully.")
 
-	def do_startup_task(self, task):
+	def _do_startup_task(self, task):
 		plugin_name = task['plugin']
 		if self.configuration.plugins.exists(plugin_name, paasmaker.util.plugin.MODE.RUNTIME_STARTUP):
 			self.logger.info("Starting up plugin %s...", plugin_name)
@@ -106,8 +106,8 @@ class PreInstanceStartupJob(BaseJob):
 			plugin.prepare(
 				self.instance_data['environment'],
 				self.instance_path,
-				self.plugin_success,
-				self.plugin_failure
+				self._plugin_success,
+				self._plugin_failure
 			)
 		else:
 			# Invalid plugin.
@@ -115,8 +115,8 @@ class PreInstanceStartupJob(BaseJob):
 			self.logger.error(error_message)
 			self.failed(error_message)
 
-	def plugin_success(self, message):
-		self.find_next_task()
+	def _plugin_success(self, message):
+		self._find_next_task()
 
-	def plugin_failure(self, message):
+	def _plugin_failure(self, message):
 		self.failed("Failed to execute startup command: " + message)

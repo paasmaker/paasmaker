@@ -19,7 +19,8 @@ class SourcePackerJob(BaseJob):
 		self.logger.info("Packaging source code...")
 		# Locate a suitable plugin to do this.
 		packer_plugin_name = 'paasmaker.packer.default'
-		if context.has_key('preferred_packer'):
+		self.logger.debug("%s", str(context))
+		if 'preferred_packer' in context:
 			packer_plugin_name = 'paasmaker.packer.%s' % context['preferred_packer']
 
 		plugin_exists = self.configuration.plugins.exists(
@@ -28,7 +29,7 @@ class SourcePackerJob(BaseJob):
 		)
 
 		if not plugin_exists:
-			if context.has_key('preferred_packer'):
+			if 'preferred_packer' in context:
 				error_message = "The preferred packer %s was not found." % packer_plugin_name
 			else:
 				error_message = "Your Paasmaker configuration is incomplete. No default source packer plugin is configured."

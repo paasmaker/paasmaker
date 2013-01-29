@@ -102,7 +102,7 @@ class ApplicationPrepareRootJob(BaseJob):
 		# Store the package.
 		# Locate a suitable plugin to do this.
 		storer_plugin_name = 'paasmaker.storer.default'
-		if context.has_key('preferred_storer'):
+		if 'preferred_storer' in context:
 			storer_plugin_name = 'paasmaker.storer.%s' % context['preferred_storer']
 
 		plugin_exists = self.configuration.plugins.exists(
@@ -111,7 +111,7 @@ class ApplicationPrepareRootJob(BaseJob):
 		)
 
 		if not plugin_exists:
-			if context.has_key('preferred_storer'):
+			if 'preferred_storer' in context:
 				error_message = "The preferred storer %s was not found." % storer_plugin_name
 			else:
 				error_message = "Your Paasmaker configuration is incomplete. No default source storer plugin is configured."

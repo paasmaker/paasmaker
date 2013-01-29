@@ -44,19 +44,34 @@ class DeRegisterInstanceJob(BaseJob):
 		# Get the instance path.
 		self.instance_path = self.configuration.get_instance_path(self.instance_id)
 
-		self.log_fp = self.logger.takeover_file()
+		if os.path.islink(self.instance_path):
+			# It's a link. Unlink it rather than removing files.
+			self.logger.info("Target is a symlink, so just removing that symlink instead.")
+			os.unlink(self.instance_path)
+			self._finish()
+		else:
+			self.log_fp = self.logger.takeover_file()
 
-		# Remove it.
-		command = ['rm', '-rfv', self.instance_path]
+			# Sanity check - make sure that the instance path is a subpath of the heart
+			# directory. For safety.
+			absdir = os.path.abspath(self.instance_path)
+			absdir = os.path.realpath(absdir)
+			working_dir = self.configuration.get_flat('heart.working_dir')
 
-		removeer = paasmaker.util.Popen(command,
-			stdout=self.log_fp,
-			stderr=self.log_fp,
-			on_exit=self.remove_complete,
-			io_loop=self.configuration.io_loop,
-			cwd=self.instance_path)
+			if not absdir.startswith(working_dir):
+				raise ValueError("Instance path is not a sub path of the configured heart working directory. For safety, we're refusing to remove it.")
 
-	def remove_complete(self, code):
+			# Remove it.
+			command = ['rm', '-rfv', self.instance_path]
+
+			remover = paasmaker.util.Popen(command,
+				stdout=self.log_fp,
+				stderr=self.log_fp,
+				on_exit=self._remove_complete,
+				io_loop=self.configuration.io_loop,
+				cwd=self.instance_path)
+
+	def _remove_complete(self, code):
 		self.logger.untakeover_file(self.log_fp)
 		self.logger.info("rm command returned code: %d", code)
 		#self.configuration.debug_cat_job_log(self.logger.job_id)
@@ -65,6 +80,9 @@ class DeRegisterInstanceJob(BaseJob):
 		else:
 			self.logger.warning("Not all files were removed. However, the instance is considered de-registered and can not be reused.")
 
+		self._finish()
+
+	def _finish(self):
 		state_key = "state-%s" % self.instance_id
 		self.success({state_key: constants.INSTANCE.DEREGISTERED}, "Completed successfully.")
 
