@@ -675,6 +675,17 @@ class TestExceptionStartJobRunner(BaseJob):
 	def abort_job(self):
 		self.aborted("Aborted.")
 
+class TestSyntaxErrorJobRunner(BaseJob):
+	def start_job(self, context):
+		os.foo("Bar")
+
+class TestSyntaxErrorCallbackJobRunner(BaseJob):
+	def start_job(self, context):
+		self.configuration.io_loop.add_callback(self._syntax_error)
+
+	def _syntax_error(self):
+		os.foo("Bar")
+
 ABORT_HANDLER_RESPONSE = None
 class TestAbortHandlerJobRunner(BaseJob):
 	def start_job(self, context):
@@ -721,6 +732,18 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 			'paasmaker.common.job.manager.manager.TestExceptionStartJobRunner',
 			{},
 			'Test Exception Job'
+		)
+		self.configuration.plugins.register(
+			'paasmaker.job.syntaxerrorstart',
+			'paasmaker.common.job.manager.manager.TestSyntaxErrorJobRunner',
+			{},
+			'Test Syntax Error'
+		)
+		self.configuration.plugins.register(
+			'paasmaker.job.syntaxerrorcallbackstart',
+			'paasmaker.common.job.manager.manager.TestSyntaxErrorCallbackJobRunner',
+			{},
+			'Test Syntax Error Callback'
 		)
 		self.configuration.plugins.register(
 			'paasmaker.job.aborthandler',
@@ -915,6 +938,38 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def test_manager_exception_start(self):
 		# Set up a simple exception job.
 		self.manager.add_job('paasmaker.job.exceptionstart', {}, "Example job.", self.stop)
+		job_id = self.wait()
+
+		self.manager.allow_execution(job_id, callback=self.stop)
+		self.wait()
+
+		self.short_wait_hack()
+
+		#self.dump_job_tree(job_id, self.manager.backend)
+		#self.wait()
+
+		result = self.get_state(job_id)
+		self.assertEquals(result, constants.JOB.FAILED, 'Test job did not fail.')
+
+	def test_manager_syntax_error_start(self):
+		# Set up a simple exception job.
+		self.manager.add_job('paasmaker.job.syntaxerrorstart', {}, "Example job.", self.stop)
+		job_id = self.wait()
+
+		self.manager.allow_execution(job_id, callback=self.stop)
+		self.wait()
+
+		self.short_wait_hack()
+
+		#self.dump_job_tree(job_id, self.manager.backend)
+		#self.wait()
+
+		result = self.get_state(job_id)
+		self.assertEquals(result, constants.JOB.FAILED, 'Test job did not fail.')
+
+	def test_manager_syntax_error_callback_start(self):
+		# Set up a simple exception job.
+		self.manager.add_job('paasmaker.job.syntaxerrorcallbackstart', {}, "Example job.", self.stop)
 		job_id = self.wait()
 
 		self.manager.allow_execution(job_id, callback=self.stop)
