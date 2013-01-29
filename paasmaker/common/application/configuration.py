@@ -31,7 +31,7 @@ class Service(colander.MappingSchema):
 	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
 
 class Services(colander.SequenceSchema):
-	service = Service(unknown='preserve')
+	service = Service()
 
 class Placement(colander.MappingSchema):
 	strategy = colander.SchemaNode(colander.String(),
@@ -116,6 +116,11 @@ class Manifest(colander.MappingSchema):
 		description="The manifest format version number.")
 
 class Instance(colander.MappingSchema):
+	name = colander.SchemaNode(
+		colander.String(),
+		title="Name",
+		description="Instance type name for this instance."
+	)
 	quantity = colander.SchemaNode(colander.Integer(),
 		title="Quantity",
 		description="The quantity of instances to start with.",
@@ -137,12 +142,15 @@ class Instance(colander.MappingSchema):
 		missing=False)
 	crons = Crons(default=[], missing=[])
 
+class Instances(colander.SequenceSchema):
+	instance = Instance()
+
 class ConfigurationSchema(colander.MappingSchema):
 	application = Application()
 	services = Services(default=[], missing=[])
 	# NOTE: We validate the instances ApplicationConfiguration.post_load(), because
 	# there didn't seem to be an easy way to get Colander to validate them.
-	instances = colander.SchemaNode(colander.Mapping(unknown='preserve'))
+	instances = Instances()
 	manifest = Manifest()
 
 class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationHelper):
@@ -155,30 +163,6 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 
 	def __init__(self):
 		super(ApplicationConfiguration, self).__init__(ConfigurationSchema())
-
-	def post_load(self):
-		"""
-		Perform additional validation of the schema once loaded.
-
-		In particular, it valides the schema of the instance types
-		listed in the manifest.
-		"""
-		# Check the schema of nodes in the instances map.
-		# Because there doesn't seem to be a way to get colander to do so.
-		schema = Instance()
-		for instance in self['instances']:
-			# TODO: Validate that the "name" is suitable for use in urls (eg [-a-z0-9])
-			try:
-				# Validate.
-				valid = schema.deserialize(self['instances'][instance])
-				# Replace that section in our schema with the data.
-				# TODO: This won't update the flat data.
-				self['instances'][instance] = valid
-			except colander.Invalid, ex:
-				# Raise another exception that encapsulates more context.
-				# In future this can be used to print a nicer report.
-				# Because the default output is rather confusing...!
-				raise InvalidConfigurationFormatException(ex, '', self['instances'][instance])
 
 	def create_application(self, session, workspace):
 		"""
@@ -228,11 +212,11 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 		version.scm_parameters = scm_parameters
 
 		# Import instances.
-		for name, imetadata in self['instances'].iteritems():
+		for imetadata in self['instances']:
 			instance_type = paasmaker.model.ApplicationInstanceType()
-
+			
 			# Basic information.
-			instance_type.name = name
+			instance_type.name = imetadata['name']
 			instance_type.quantity = imetadata['quantity']
 			instance_type.exclusive = imetadata['exclusive']
 			instance_type.standalone = imetadata['standalone']
@@ -306,7 +290,7 @@ application:
             - php app/console cache:clear
 
 instances:
-  web:
+  - name: web
     quantity: 1
     runtime:
       name: paasmaker.runtime.php
@@ -365,13 +349,13 @@ services:
 		config.load(self.test_config)
 		self.assertEquals(config.get_flat('manifest.format'), 1, "Manifest version is incorrect.")
 		# Disabled until the schema can be sorted out.
-		#self.assertEquals(config.get_flat('instances.web.provider'), "paasmaker.runtime.php", "Runtime provider is not as expected.")
-		#self.assertEquals(config.get_flat('instances.web.version'), "5.4", "Runtime version is not as expected.")
-		self.assertEquals(len(config['instances']['web']['hostnames']), 4, "Number of hostnames is not as expected.")
-		self.assertIn("www.foo.com.au", config['instances']['web']['hostnames'], "Hostnames does not contain an expected item.")
+		#self.assertEquals(config.get_flat('instances[0].provider'), "paasmaker.runtime.php", "Runtime provider is not as expected.")
+		#self.assertEquals(config.get_flat('instances[0].version'), "5.4", "Runtime version is not as expected.")
+		self.assertEquals(len(config['instances'][0]['hostnames']), 4, "Number of hostnames is not as expected.")
+		self.assertIn("www.foo.com.au", config['instances'][0]['hostnames'], "Hostnames does not contain an expected item.")
 		self.assertEquals(len(config['services']), 2, "Services array does not contain the expected number of items.")
 		self.assertEquals(config.get_flat('application.name'), "foo.com", "Application name is not as expected.")
-		self.assertEquals(len(config['instances']['web']['crons']), 2, "Number of crons is not as expected.")
+		self.assertEquals(len(config['instances'][0]['crons']), 2, "Number of crons is not as expected.")
 
 	def test_bad_config(self):
 		try:
