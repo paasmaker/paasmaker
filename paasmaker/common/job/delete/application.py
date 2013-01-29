@@ -117,6 +117,9 @@ class ApplicationDeleteServiceJob(BaseJob):
 		)
 
 		if not plugin_exists:
+			self.service.state = constants.SERVICE.ERROR
+			self.session.add(self.service)
+			self.session.commit()
 			self.failed("Plugin with mode SERVICE_DELETE doesn't exist for service %s" %self.service.provider)
 			return
 
