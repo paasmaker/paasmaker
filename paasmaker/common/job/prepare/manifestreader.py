@@ -63,8 +63,12 @@ class ManifestReaderJob(BaseJob):
 		self.logger.debug("Unpacking manifest into database...")
 		try:
 			scm_full_parameters = dict(context['scm_parameters'])
-			if context.has_key('scm_output'):
+			if 'scm_output' in context:
 				scm_full_parameters.update(context['scm_output'])
+				if 'preferred_packer' in scm_full_parameters:
+					output_context['preferred_packer'] = scm_full_parameters['preferred_packer']
+				if 'preferred_storer' in scm_full_parameters:
+					output_context['preferred_storer'] = scm_full_parameters['preferred_storer']
 
 			application_version = manifest.unpack_into_database(
 				session,
