@@ -70,7 +70,7 @@ class RegisterInstanceJob(BaseJob):
 		)
 
 		# Does the file exist locally?
-		if os.path.exists(self.resolved_package_path):
+		if os.path.exists(self.resolved_package_path) and os.path.isfile(self.resolved_package_path):
 			# No need to download it, it's already here!
 			self._begin_unpacking(self.resolved_package_path)
 		else:
@@ -156,6 +156,7 @@ class RegisterInstanceJob(BaseJob):
 		unpacker_plugin.unpack(
 			package_path,
 			self.instance_path,
+			self.instance_data['application_version']['source_path'],
 			unpack_success,
 			unpack_failure
 		)

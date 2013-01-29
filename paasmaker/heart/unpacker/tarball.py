@@ -9,7 +9,7 @@ import colander
 
 class TarballUnpacker(BaseUnpacker):
 
-	def unpack(self, package_path, target_path, callback, error_callback):
+	def unpack(self, package_path, target_path, original_url, callback, error_callback):
 		command = ['tar', 'zxvf', package_path]
 		self.log_fp = self.logger.takeover_file()
 
@@ -54,6 +54,7 @@ class TarballUnpackerTest(BaseUnpackerTest):
 		unpacker.unpack(
 			packed,
 			unpack_target,
+			'dummy://url/', # This unpacker doesn't make use of this.
 			self.success_callback,
 			self.failure_callback
 		)

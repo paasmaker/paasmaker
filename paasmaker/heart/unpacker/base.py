@@ -17,13 +17,15 @@ class BaseUnpacker(paasmaker.util.plugin.Plugin):
 	}
 	OPTIONS_SCHEMA = BaseUnpackerConfigurationSchema()
 
-	def unpack(self, package_path, target_path, callback, error_callback):
+	def unpack(self, package_path, target_path, original_url, callback, error_callback):
 		"""
 		Unpack the given package path into the supplied target path.
 		Call the callback once complete with a message.
 
 		:arg str package_path: The path to the package.
 		:arg str target_path: The path that it should be unpacked to.
+		:arg str original_url: The full original URL of the package. Not normally
+			needed.
 		:arg callable callback: The callback to call once done.
 		:arg callable error_callback: The callback to call when an
 			error occurs.
