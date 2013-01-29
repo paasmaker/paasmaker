@@ -36,7 +36,7 @@ class MySQLService(BaseService):
 	def create(self, name, callback, error_callback):
 		# Choose a username, password, and database name.
 		# The username and database name are based off the supplied name.
-		username = self._safe_name(name)
+		username = self._safe_name(name, max_length=16)
 		database = username
 		password = self._generate_password()
 
@@ -155,7 +155,7 @@ class MySQLServiceTest(BaseServiceTest):
 			{}
 		)
 
-		service.create('test', self.success_callback, self.failure_callback)
+		service.create('testlongname', self.success_callback, self.failure_callback)
 
 		self.wait()
 
@@ -182,7 +182,7 @@ class MySQLServiceTest(BaseServiceTest):
 			self.assertEqual(row['id'], 1, "Row value not as expected.")
 
 		# Now remove the database.
-		service.remove('test', credentials, self.success_remove_callback, self.failure_callback)
+		service.remove('testlongname', credentials, self.success_remove_callback, self.failure_callback)
 
 		self.assertTrue(self.success, "Service deletion was not successful.")
 
