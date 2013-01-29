@@ -43,11 +43,6 @@ misc_ports:
   min: 42700
   max: 42799
 
-broker:
-  host: localhost
-  port: %(broker_port)d
-  managed: true
-
 redis:
   table:
     host: 0.0.0.0

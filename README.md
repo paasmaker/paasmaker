@@ -37,3 +37,23 @@ this command:
 
 Once you've applied your migration successfully, you can check in the new migrations version
 file.
+
+## Redirecting port 80 to 42530
+
+By default, Paasmaker runs entirely as a non-privileged user. Normally, to listen on port 80,
+nginx would need to be started as root.
+
+One way to work around this is to have iptables forward port 80 to 42531, which makes
+installation and configuration of Paasmaker simpler.
+
+The managed NGINX listens on port 42530 and port 42531. The difference between the two is the
+HTTP headers forwarded to the instance. On port 42530, NGINX passes along an X-Fowarded-Port header
+with 42530. On port 42531, NGINX passes along an X-Fowarded-Port header at port 80.
+
+To do that, issue these iptables commands:
+
+	sudo iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 42531
+	sudo iptables -t nat -I OUTPUT -p tcp -d 127.0.0.0/8 --dport 80 -j REDIRECT --to-ports 42531
+
+If you're not running Paasmaker in production, just use port 42530 for testing, and it will
+all work fine.

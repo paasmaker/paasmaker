@@ -50,7 +50,8 @@ DEFAULT_ROUTER_REDIS_SLAVE = 42511
 DEFAULT_ROUTER_REDIS_STATS = 42512
 DEFAULT_REDIS_JOBS = 42513
 
-DEFAULT_NGINX = 42530
+DEFAULT_NGINX_DIRECT = 42530
+DEFAULT_NGINX_PORT80 = 42531
 
 DEFAULT_APPLICATION_MIN = 42600
 DEFAULT_APPLICATION_MAX = 42699
@@ -307,11 +308,16 @@ class NginxSchema(colander.MappingSchema):
 		description="If enabled, a managed version of NGINX is started as appropriate, pointing to the correct resources for this node. Note that you must specify a port, and it must be >1024, as this node won't be run as root.",
 		default=False,
 		missing=False)
-	port = colander.SchemaNode(colander.Integer(),
+	port_direct = colander.SchemaNode(colander.Integer(),
+		title="Managed NGINX port - direct connection",
+		description="The port to run the managed NGINX on. This port sends X-Forwarded-Port: <port_direct> to applications.",
+		default=DEFAULT_NGINX_DIRECT,
+		missing=DEFAULT_NGINX_DIRECT)
+	port_80 = colander.SchemaNode(colander.Integer(),
 		title="Managed NGINX port",
-		description="The port to run the managed NGINX on.",
-		default=DEFAULT_NGINX,
-		missing=DEFAULT_NGINX)
+		description="The port to run the managed NGINX on. This port sends X-Forwarded-Port: 80 to applications.",
+		default=DEFAULT_NGINX_PORT80,
+		missing=DEFAULT_NGINX_PORT80)
 	shutdown = colander.SchemaNode(colander.Boolean(),
 		title="Shutdown with node",
 		description="If true, this managed nginx instance is shut down when the node is shut down.",
@@ -320,7 +326,7 @@ class NginxSchema(colander.MappingSchema):
 
 	@staticmethod
 	def default():
-		return {'managed': False, 'port': DEFAULT_NGINX, 'shutdown': False}
+		return {'managed': False, 'port_direct': DEFAULT_NGINX_DIRECT, 'port_80': DEFAULT_NGINX_PORT80, 'shutdown': False}
 
 class RouterSchema(colander.MappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -1188,7 +1194,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				# Doesn't yet exist. Create it.
 				self.nginx_server.configure(
 					directory,
-					self.get_flat('router.nginx.port')
+					self.get_flat('router.nginx.port_direct'),
+					self.get_flat('router.nginx.port_80')
 				)
 
 			def on_nginx_started(message):

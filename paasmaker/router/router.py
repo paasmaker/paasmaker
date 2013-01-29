@@ -42,7 +42,7 @@ http {
 	%(temp_paths)s
 
 	server {
-		listen       %(listen_port)d;
+		listen       %(listen_port_direct)d;
 		server_name  localhost;
 
 		location / {
@@ -57,7 +57,33 @@ http {
 			proxy_set_header            Host $host;
 			proxy_buffering             off;
 			proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
-			proxy_set_header            X-Forwarded-Port %(listen_port)d;
+			proxy_set_header            X-Forwarded-Port $server_port;
+			proxy_set_header            X-Forwarded-Host $host;
+			proxy_redirect              off;
+			proxy_connect_timeout       10;
+			proxy_send_timeout          60;
+			proxy_read_timeout          60;
+			proxy_pass                  http://$upstream;
+		}
+	}
+
+	server {
+		listen       %(listen_port_80)d;
+		server_name  localhost;
+
+		location / {
+			set $redis_host %(redis_host)s;
+			set $redis_port %(redis_port)d;
+			set $upstream "";
+			set $versiontypekey "null";
+			set $nodekey "null";
+			set $instancekey "null";
+			rewrite_by_lua_file %(router_root)s/rewrite.lua;
+
+			proxy_set_header            Host $host;
+			proxy_buffering             off;
+			proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+			proxy_set_header            X-Forwarded-Port 80;
 			proxy_set_header            X-Forwarded-Host $host;
 			proxy_redirect              off;
 			proxy_connect_timeout       10;
@@ -98,8 +124,10 @@ http {
 		* configuration: a string containing the NGINX
 		  configuration.
 		* temp_dir: The temporary directory for NGINX.
-		* listen_port: The port that the NGINX server will
-		  listen on.
+		* listen_port_direct: The port that the NGINX server will
+		  listen on for direct connections.
+		* listen_port_80: The port that the NGINX server will
+		  listen on for port 80 connections.
 		* log_path: The path where log files will be placed.
 		* pid_path: The full path to the NGINX server PID.
 		* log_level: The NGINX log level.
@@ -116,13 +144,15 @@ http {
 
 		if managed_params:
 			parameters['temp_dir'] = managed_params['temp_path']
-			parameters['listen_port'] = managed_params['port']
+			parameters['listen_port_direct'] = managed_params['port_direct']
+			parameters['listen_port_80'] = managed_params['port_80']
 			parameters['log_path'] = managed_params['log_path']
 			parameters['temp_paths'] = NginxRouter.TEMP_PATHS % {'temp_dir': managed_params['temp_path']}
 			parameters['pid_path'] = managed_params['pid_path']
 			parameters['log_level'] = managed_params['log_level']
 		else:
-			parameters['listen_port'] = 80
+			parameters['listen_port_direct'] = 42530
+			parameters['listen_port_80'] = 80
 			# TODO: This is Linux specific.
 			parameters['log_path'] = '/var/log/nginx'
 			parameters['pid_path'] = '/var/run/nginx.pid'
@@ -168,7 +198,8 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		super(RouterTest, self).setUp()
 
 		managed_params = {}
-		managed_params['port'] = self.configuration.get_free_port()
+		managed_params['port_direct'] = self.configuration.get_free_port()
+		managed_params['port_80'] = self.configuration.get_free_port()
 		managed_params['log_path'] = tempfile.mkdtemp()
 		managed_params['temp_path'] = self.configuration.get_scratch_path_exists('nginx')
 		managed_params['pid_path'] = managed_params['temp_path']
@@ -179,7 +210,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# Fire up an nginx instance.
 		self.nginxconfig = tempfile.mkstemp()[1]
 		self.nginxpidfile = os.path.join(self.nginx['pid_path'], 'nginx.pid')
-		self.nginxport = self.nginx['listen_port']
+		self.nginxport = self.nginx['listen_port_direct']
 
 		# For debugging... they are unlinked in tearDown()
 		# but you can inspect them in the meantime.

@@ -30,15 +30,17 @@ class NginxDaemon(ManagedDaemon):
 	start it's own managed routing servers.
 	"""
 
-	def configure(self, working_dir, port):
+	def configure(self, working_dir, port_direct, port_80):
 		"""
 		Configure this instance.
 
 		:arg str working_dir: The working directory.
-		:arg int port: The port to listen on.
+		:arg int port_direct: The "direct" port to listen on.
+		:arg int port_80: The "port 80" port to listen on.
 		"""
 		self.parameters['working_dir'] = working_dir
-		self.parameters['port'] = port
+		self.parameters['port_direct'] = port_direct
+		self.parameters['port_80'] = port_80
 
 		# Create the working dir. If this fails, let it bubble up.
 		if not os.path.exists(working_dir):
@@ -60,7 +62,8 @@ class NginxDaemon(ManagedDaemon):
 		# Write out the configuration.
 		configfile = self.get_configuration_path(self.parameters['working_dir'])
 		parameters = {}
-		parameters['port'] = self.parameters['port']
+		parameters['port_direct'] = self.parameters['port_direct']
+		parameters['port_80'] = self.parameters['port_80']
 		parameters['temp_path'] = os.path.join(self.parameters['working_dir'], 'temp')
 		parameters['pid_path'] = self.parameters['working_dir']
 		parameters['log_level'] = 'info'
@@ -75,7 +78,7 @@ class NginxDaemon(ManagedDaemon):
 		fp.close()
 
 		# Fire up the server.
-		logging.info("Starting up nginx server on port %d." % self.parameters['port'])
+		logging.info("Starting up nginx server on port %d." % self.parameters['port_direct'])
 		subprocess.check_call(
 			[
 				self.configuration.get_flat('nginx_binary'),
@@ -88,7 +91,7 @@ class NginxDaemon(ManagedDaemon):
 		# Wait for the port to come into use.
 		self.configuration.port_allocator.wait_until_port_used(
 			self.configuration.io_loop,
-			self.parameters['port'],
+			self.parameters['port_direct'],
 			5,
 			callback,
 			error_callback
@@ -117,10 +120,12 @@ class NginxDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 	def test_basic(self):
 		self.server = NginxDaemon(self.configuration)
-		port = self.configuration.get_free_port()
+		port_direct = self.configuration.get_free_port()
+		port_80 = self.configuration.get_free_port()
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('nginx'),
-			port
+			port_direct,
+			port_80
 		)
 		self.server.start(self.stop, self.stop)
 		result = self.wait()
@@ -128,7 +133,7 @@ class NginxDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertIn("In appropriate state", result, "Failed to start nginx server.")
 
 		# Connect to it. It should give us a 500 server error.
-		request = tornado.httpclient.HTTPRequest('http://localhost:%d/foo' % port)
+		request = tornado.httpclient.HTTPRequest('http://localhost:%d/foo' % port_direct)
 		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
 		client.fetch(request, self.stop)
 
