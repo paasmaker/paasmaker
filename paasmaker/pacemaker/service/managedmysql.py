@@ -6,6 +6,7 @@ from base import BaseService, BaseServiceTest
 from mysql import MySQLService, MySQLServiceTest
 import paasmaker
 
+import torndb
 import colander
 
 class ManagedMySQLServiceConfigurationSchema(colander.MappingSchema):
@@ -106,6 +107,10 @@ class ManagedMySQLService(MySQLService):
 		super(ManagedMySQLService, self).update(name, existing_credentials, callback, error_callback)
 
 	def remove(self, name, existing_credentials, callback, error_callback):
+		# TODO: don't hack this quite so badly
+		self.options['hostname'] = '127.0.0.1'
+		self.options['username'] = 'root'
+
 		super(ManagedMySQLService, self).remove(name, existing_credentials, callback, error_callback)
 
 	def startup_async_prelisten(self, callback, error_callback):
@@ -170,33 +175,49 @@ class ManagedMySQLServiceTest(MySQLServiceTest):
 			'MySQL Service'
 		)
 
-		# Use the parent's test.
-		super(ManagedMySQLServiceTest, self).test_simple()
-
-		# And then shut down the service.
+		# Try starting the service.
 		service = self.registry.instantiate(
 			'paasmaker.service.mysql',
 			paasmaker.util.plugin.MODE.SERVICE_CREATE,
 			{}
 		)
 
-		# Now, shut down the instances.
-		service.shutdown_postnotify(self.stop, self.stop)
-		self.wait()
-
-		# Wait for it to be free.
-		self.short_wait_hack(length=1.0)
-
-		# The port should now be free.
-		# TODO: It is free... but this check is not working.
-		self.assertFalse(self.configuration.port_allocator.in_use(service.options['port']), "Port was not free.")
-
-		# Wait a little bit longer.
-		self.short_wait_hack(length=1.0)
-
-		# Now start them back up again.
-		service.startup_async_prelisten(self.stop, self.stop)
+		service.create('test', self.success_callback, self.failure_callback)
 		self.wait()
 
 		# The port should now be used.
-		self.assertTrue(self.configuration.port_allocator.in_use(service.options['port']), "Port was not in use.")
+		self.assertTrue(self.success, "Creating managed MySQL service didn't succeed.")
+		self.assertTrue(self.configuration.port_allocator.in_use(service.options['port']), "MySQL port %d was not in use." % service.options['port'])
+
+		# Some basic operations copied out of the parent test.
+		connection = torndb.Connection(
+			"%s:%d" % (self.credentials['hostname'], self.credentials['port']),
+			self.credentials['database'],
+			user=self.credentials['username'],
+			password=self.credentials['password']
+		)
+
+		connection.execute("CREATE TABLE foo (id INTEGER)")
+		connection.execute("INSERT INTO foo VALUES (1)")
+		results = connection.query("SELECT * FROM foo")
+
+		for row in results:
+			self.assertEqual(row['id'], 1, "Row value not as expected.")
+
+		# Instantiate the plugin in delete mode and delete the databases associated with it.
+		port_copy = service.options['port']
+		service = self.registry.instantiate(
+			'paasmaker.service.mysql',
+			paasmaker.util.plugin.MODE.SERVICE_DELETE,
+			{}
+		)
+
+		service.remove('test', self.credentials, self.success_remove_callback, self.failure_callback)
+		self.wait()
+		self.assertTrue(self.success, "Deleting managed MySQL service didn't succeed.")
+
+		# Finally, shut down the service and check that the daemon has stopped.
+		service.shutdown_postnotify(self.stop, self.stop)
+		self.wait()
+		self.short_wait_hack(length=1.0)
+		self.assertFalse(self.configuration.port_allocator.in_use(port_copy), "MySQL port %d was not free." % port_copy)
