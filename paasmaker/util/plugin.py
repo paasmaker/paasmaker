@@ -230,6 +230,12 @@ class PluginRegistry(object):
 		if len(former.MODES) == 0:
 			raise ValueError("Supplied class has no modes.")
 
+		# If we already have the plugin, remove it first,
+		# and then add it again. This is in case the replacement
+		# has different modes - we don't want to double register it.
+		if plugin in self.class_registry:
+			self.deregister(plugin)
+
 		# If we got here, all good!
 		self.class_registry[plugin] = klass
 		self.options_registry[plugin] = options
@@ -243,6 +249,20 @@ class PluginRegistry(object):
 			if MODE_REQUIRE_PARAMS[mode] and not former.MODES[mode]:
 				raise ValueError("Supplied class does not have a parameter schema, but has a mode that accepts parameters.")
 		self.class_modes[plugin] = former.MODES.keys()
+
+	def deregister(self, plugin):
+		"""
+		De-register a plugin with this registry. This cleans up all the internal
+		data structures.
+
+		:arg str plugin: The symbolic name of the plugin.
+		"""
+		del self.class_registry[plugin]
+		del self.options_registry[plugin]
+		del self.title_registry[plugin]
+
+		for mode in self.class_modes[plugin]:
+			self.mode_registry[mode].remove(plugin)
 
 	def exists(self, plugin, mode):
 		"""
@@ -429,6 +449,25 @@ class TestExample(unittest.TestCase):
 		self.assertEquals(instance.configuration, 2, "Configuration was not passed to instance.")
 		self.assertEquals(instance.get_flat_option('option1'), 'test', 'Flat option not present.')
 		self.assertEquals(instance.get_flat_parameter('parameter1'), 'test', 'Flat parameter not present.')
+
+	def test_plugin_deregistration(self):
+		#print str(registry)
+		registry = PluginRegistry(2)
+
+		self.assertFalse(registry.exists('paasmaker.test', MODE.TEST_PARAM), "Plugin already exists?")
+
+		registry.register(
+			'paasmaker.test',
+			'paasmaker.util.PluginExample',
+			{'option1': 'test'},
+			"Test Plugin"
+		)
+
+		self.assertTrue(registry.exists('paasmaker.test', MODE.TEST_PARAM), "Plugin doesn't exist.")
+
+		registry.deregister('paasmaker.test')
+
+		self.assertFalse(registry.exists('paasmaker.test', MODE.TEST_PARAM), "Plugin still exists!")
 
 	def test_plugin_bad_options(self):
 		registry = PluginRegistry(2)
