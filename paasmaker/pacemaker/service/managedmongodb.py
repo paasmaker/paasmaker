@@ -32,6 +32,7 @@ class ManagedMongoServiceParametersSchema(colander.MappingSchema):
 class ManagedMongoService(BaseService):
 	MODES = {
 		paasmaker.util.plugin.MODE.SERVICE_CREATE: ManagedMongoServiceParametersSchema(),
+		paasmaker.util.plugin.MODE.SERVICE_DELETE: None,
 		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None,
 		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None
 	}
@@ -77,6 +78,7 @@ class ManagedMongoService(BaseService):
 			# Success! Emit the credentials.
 			self.logger.info("Successfully started. Returning the credentials.")
 			credentials = {}
+			credentials['name'] = instance_name
 			credentials['protocol'] = 'mongodb'
 			credentials['hostname'] = self.configuration.get_flat('my_route')
 			credentials['port'] = port
@@ -96,8 +98,28 @@ class ManagedMongoService(BaseService):
 		callback(existing_credentials, "Successfully modified service.")
 
 	def remove(self, name, existing_credentials, callback, error_callback):
-		# TODO: Implement.
-		error_callback("Removing not implemented.")
+		instance_name = existing_credentials['name']
+		instance_path = self.configuration.get_scratch_path_exists(
+			self.called_name,
+			instance_name
+		)
+
+		manager = paasmaker.util.mongodaemon.MongoDaemon(self.configuration)
+		try:
+			manager.load_parameters(instance_path)
+
+			self.logger.info("Destroying mongoDB instance %s ..." % instance_name)
+			manager.destroy()
+			self.logger.info("Complete.")
+
+			callback("Destroyed instance %s." % instance_name)
+
+		except paasmaker.util.ManagedDaemonError, ex:
+			self.logger.info("No such instance %s. Task complete." % instance_name)
+			# The instance doesn't actually exist.
+			# This is an error condition, but the net effect is
+			# the same. So just finish up.
+			callback("Instance %s already deleted." % instance_name)
 
 	def startup_async_prelisten(self, callback, error_callback):
 		# Start up all our managed instances, if they're not already listening.
@@ -193,7 +215,7 @@ class ManagedMongoServiceTest(BaseServiceTest):
 		self.wait()
 
 		self.assertTrue(self.success, "Service creation was not successful.")
-		self.assertEquals(len(self.credentials), 3, "Service creation did not return expected number of keys.")
+		self.assertEquals(len(self.credentials), 4, "Service creation did not return expected number of keys.")
 
 		client = pymongo.MongoClient(
 			self.credentials['hostname'],
@@ -219,17 +241,15 @@ class ManagedMongoServiceTest(BaseServiceTest):
 
 		client.disconnect()
 
-		# Now, shut down the instances.
+		# Shut down the instance, wait, and check that the port is free.
 		service.shutdown_postnotify(self.stop, self.stop)
 		self.wait()
 
-		# Wait for it to be free.
 		self.short_wait_hack(length=0.5)
 
-		# The port should now be free.
 		self.assertFalse(self.configuration.port_allocator.in_use(self.credentials['port']), "Port was not free after shutting down mongoDB service.")
 
-		# Now start them back up again.
+		# Now start it back up again.
 		service.startup_async_prelisten(self.stop, self.stop)
 		self.wait()
 
@@ -246,5 +266,23 @@ class ManagedMongoServiceTest(BaseServiceTest):
 		self.assertTrue("test" in new_result, "Second result object (after shutdown and reconnect) didn't have the 'test' key that we set.")
 		self.assertEquals(result["test"], 'bar', "Second result object (after shutdown and reconnect) didn't have the 'bar' value that we set.")
 
-		# Clean up after ourselves: shut down the service again.
-		service.shutdown_postnotify(self.stop, self.stop)
+		# Clean up after ourselves: delete the instance and check that we can't connect.
+		credentials_copy = self.credentials
+		service = self.registry.instantiate(
+			'paasmaker.service.managedmongodb',
+			paasmaker.util.plugin.MODE.SERVICE_DELETE,
+			{}
+		)
+
+		service.remove('test', self.credentials, self.success_remove_callback, self.failure_callback)
+		self.wait()
+
+		try:
+			new_client = pymongo.MongoClient(
+				credentials_copy['hostname'],
+				credentials_copy['port']
+			)
+
+			self.assertTrue(False, "Connecting to deleted instance should have raised an exception.")
+		except Exception, ex:
+			self.assertIn("Connection reset by peer", ex.message, "Exception %s isn't what we expected." % ex)
