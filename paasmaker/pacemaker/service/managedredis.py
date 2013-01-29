@@ -46,6 +46,7 @@ class ManagedRedisService(BaseService):
 
 	MODES = {
 		paasmaker.util.plugin.MODE.SERVICE_CREATE: ManagedRedisServiceParametersSchema(),
+		paasmaker.util.plugin.MODE.SERVICE_DELETE: None,
 		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None,
 		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None
 	}
@@ -279,6 +280,12 @@ class ManagedRedisServiceTest(BaseServiceTest):
 		self.assertEquals(result, 'bar', "Result was not as expected.")
 
 		credentials_copy = self.credentials
+
+		service = self.registry.instantiate(
+			'paasmaker.service.managedredis',
+			paasmaker.util.plugin.MODE.SERVICE_DELETE,
+			{}
+		)
 
 		# Now destroy the instance.
 		service.remove('test', self.credentials, self.success_remove_callback, self.failure_callback)
