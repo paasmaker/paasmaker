@@ -57,7 +57,8 @@ http {
 			proxy_set_header            Host $host;
 			proxy_buffering             off;
 			proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
-			proxy_set_header            X-Forwarded-Port 80;
+			proxy_set_header            X-Forwarded-Port %(listen_port)d;
+			proxy_set_header            X-Forwarded-Host $host;
 			proxy_redirect              off;
 			proxy_connect_timeout       10;
 			proxy_send_timeout          60;
