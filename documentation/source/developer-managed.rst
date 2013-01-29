@@ -25,10 +25,10 @@ Base Class
 Completed Daemons
 -----------------
 
-.. autoclass:: paasmaker.util.managedapache.ManagedApache
+.. autoclass:: paasmaker.util.apachedaemon.ApacheDaemon
     :members:
 
-.. autoclass:: paasmaker.util.managednginx.ManagedNginx
+.. autoclass:: paasmaker.util.nginxdaemon.NginxDaemon
     :members:
 
 .. autoclass:: paasmaker.util.postgresdaemon.PostgresDaemon
@@ -37,11 +37,11 @@ Completed Daemons
 .. autoclass:: paasmaker.util.redisdaemon.RedisDaemon
     :members:
 
+.. autoclass:: paasmaker.util.mysqldaemon.MySQLDaemon
+    :members:
+
 In progress Daemons
 -------------------
-
-.. autoclass:: paasmaker.util.managedmysql.ManagedMySQL
-    :members:
 
 .. autoclass:: paasmaker.util.managedrabbitmq.ManagedRabbitMQ
     :members:
