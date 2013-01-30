@@ -524,21 +524,11 @@ class ConfigurationSchema(StrictAboutExtraKeysColanderMappingSchema):
 	# Server related configuration. This is for an Ubuntu server, set up as
 	# per the installation instructions. Obviously, for other platforms
 	# this will need to be altered.
-	mongodb_binary = colander.SchemaNode(colander.String(),
-		title = "mongoDB server binary",
-		description = "The full path to the mongoDB server binary.",
-		default = find_executable("mongod"),
-		missing = find_executable("mongod"))
 	redis_binary = colander.SchemaNode(colander.String(),
 		title = "Redis server binary",
 		description = "The full path to the redis server binary.",
 		default = find_executable("redis-server"),
 		missing = find_executable("redis-server"))
-	rabbitmq_binary = colander.SchemaNode(colander.String(),
-		title="RabbitMQ server binary",
-		description="The full path to the RabbitMQ server binary.",
-		default="/usr/lib/rabbitmq/bin/rabbitmq-server",
-		missing="/usr/lib/rabbitmq/bin/rabbitmq-server")
 	nginx_binary =colander.SchemaNode(colander.String(),
 		title="nginx server binary",
 		description="The full path to the nginx server binary.",

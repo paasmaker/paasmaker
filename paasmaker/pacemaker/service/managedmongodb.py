@@ -1,6 +1,7 @@
 
 import os
 import glob
+from distutils.spawn import find_executable
 
 from base import BaseService, BaseServiceTest
 import paasmaker
@@ -24,6 +25,12 @@ class ManagedMongoServiceConfigurationSchema(colander.MappingSchema):
 		description="If true, shut down all managed mongoDB instances when the node stops. You won't want to do this normally.",
 		default=False,
 		missing=False)
+	binary = colander.SchemaNode(colander.String(),
+		title = "mongoDB server binary",
+		description = "The full path to the mongoDB server binary.",
+		default = find_executable("mongod"),
+		missing = find_executable("mongod"))
+
 
 class ManagedMongoServiceParametersSchema(colander.MappingSchema):
 	# No options available for runtime configuration.
@@ -69,6 +76,7 @@ class ManagedMongoService(BaseService):
 			# Doesn't yet exist. Create it.
 			manager.configure(
 				instance_path,
+				self.options['binary'],
 				port,
 				'0.0.0.0',
 				None
@@ -208,7 +216,7 @@ class ManagedMongoServiceTest(BaseServiceTest):
 
 		# TODO: the testsuite will eventually either load paasmaker.yml, and/or
 		# use locally-installed versions of daemons from the install script.
-		self.assertIsNotNone(self.configuration.get_flat('mongodb_binary'), "mongoDB server is not in your PATH; this test cannot run")
+		self.assertIsNotNone(service.options['binary'], "mongoDB server is not in your PATH; this test cannot run")
 
 		service.create('test', self.success_callback, self.failure_callback)
 

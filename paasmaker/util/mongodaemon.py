@@ -7,6 +7,7 @@ import logging
 import subprocess
 import time
 import unittest
+from distutils.spawn import find_executable
 
 import paasmaker
 from ..common.testhelpers import TestHelpers
@@ -41,7 +42,7 @@ nojournal = true
 smallfiles = true
 """
 
-	def configure(self, working_dir, port, bind_host, password=None):
+	def configure(self, working_dir, binary_path, port, bind_host, password=None):
 		"""
 		Configure this mongoDB instance.
 
@@ -54,6 +55,7 @@ smallfiles = true
 		# TODO: Allow a memory limit.
 		# TODO: Allow custom configuration entries.
 		self.parameters['working_dir'] = working_dir
+		self.parameters['binary_path'] = binary_path
 		self.parameters['port'] = port
 		self.parameters['host'] = bind_host
 		
@@ -87,7 +89,7 @@ smallfiles = true
 		logging.info("Starting up mongoDB server on port %d." % self.parameters['port'])
 		subprocess.check_call(
 			[
-				self.configuration.get_flat('mongodb_binary'), '-f',
+				self.parameters['binary_path'], '-f',
 				self.get_configuration_path(self.parameters['working_dir'])
 			]
 		)
@@ -146,6 +148,7 @@ class MongoDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		super(MongoDaemonTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [], io_loop=self.io_loop)
+		self.mongodb_binary = find_executable("mongod")
 
 	def tearDown(self):
 		if hasattr(self, 'server'):
@@ -162,14 +165,14 @@ class MongoDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def test_configure_and_run(self):
 		# TODO: the testsuite will eventually either load paasmaker.yml, and/or
 		# use locally-installed versions of daemons from the install script.
-		self.assertIsNotNone(self.configuration.get_flat('mongodb_binary'), "mongoDB server is not in your PATH; this test cannot run")
+		self.assertIsNotNone(self.mongodb_binary, "mongoDB server is not in your PATH; this test cannot run")
 
 		working_dir = self.configuration.get_scratch_path_exists('mongodb')
 		port = self.configuration.get_free_port()
 		host = '127.0.0.1'
 
 		self.server = MongoDaemon(self.configuration)
-		self.server.configure(working_dir, port, host)
+		self.server.configure(working_dir, self.mongodb_binary, port, host)
 		self.server.start(self.stop, self.stop)
 		result = self.wait()
 

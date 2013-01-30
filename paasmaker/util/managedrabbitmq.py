@@ -19,8 +19,18 @@ from manageddaemon import ManagedDaemon, ManagedDaemonError
 class ManagedRabbitMQError(ManagedDaemonError):
 	pass
 
+# was in common/configuration/configuration.py
+# rabbitmq_binary = colander.SchemaNode(colander.String(),
+# 	title="RabbitMQ server binary",
+# 	description="The full path to the RabbitMQ server binary.",
+# 	default="/usr/lib/rabbitmq/bin/rabbitmq-server",
+# 	missing="/usr/lib/rabbitmq/bin/rabbitmq-server")
+
 class ManagedRabbitMQ(ManagedDaemon):
 	"""
+	.. warning::
+		This class is not in a working state.
+
 	Start a managed instance of a RabbitMQ server.
 
 	No passwords or authentication details are set up on the new node.
