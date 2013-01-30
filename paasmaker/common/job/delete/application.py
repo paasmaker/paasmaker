@@ -142,12 +142,15 @@ class ApplicationDeleteServiceJob(BaseJob):
 		# And signal completion.
 		self.success({}, "Successfully deleted service %s" % self.service.name)
 
-	def _service_failure(self, message):
+	def _service_failure(self, message, exception=None):
 		# Record the new state.
 		self.session.refresh(self.service)
 		self.service.state = constants.SERVICE.ERROR
 		self.session.add(self.service)
 		self.session.commit()
+
+		if exception:
+			self.logger.error("Exception", exc_info=exception)
 
 		# Signal failure.
 		self.failed(message)
