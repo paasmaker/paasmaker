@@ -19,7 +19,7 @@ class ManifestReaderJob(BaseJob):
 		self.logger.debug("About to start reading manifest from file %s", manifest_full_path)
 
 		# Load the manifest.
-		manifest = paasmaker.common.application.configuration.ApplicationConfiguration()
+		manifest = paasmaker.common.application.configuration.ApplicationConfiguration(self.configuration)
 		try:
 			manifest.load_from_file([manifest_full_path])
 		except (InvalidConfigurationParameterException, InvalidConfigurationFormatException), ex:

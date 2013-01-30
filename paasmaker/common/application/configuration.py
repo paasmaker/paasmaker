@@ -11,6 +11,7 @@ from paasmaker.util.configurationhelper import InvalidConfigurationParameterExce
 from paasmaker.util.configurationhelper import InvalidConfigurationFormatException
 from paasmaker.util.configurationhelper import StrictAboutExtraKeysColanderMappingSchema
 from paasmaker.common.controller import BaseControllerTest
+from paasmaker.util.plugin import MODE
 
 from paasmaker.common.core import constants
 
@@ -162,8 +163,51 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 	when working with the application schemas.
 	"""
 
-	def __init__(self):
+	def __init__(self, configuration):
+		self.configuration = configuration
 		super(ApplicationConfiguration, self).__init__(ConfigurationSchema())
+
+	def post_load(self):
+		error_list = []
+
+		if self.get_flat("application.prepare.runtime.name") is not None:
+			error_list.extend(
+				self.check_plugin_exists("application.prepare.runtime.name", MODE.RUNTIME_ENVIRONMENT)
+			)
+
+		if len(self["application"]["prepare"]["commands"]) > 0:
+			for i in range(len(self["application"]["prepare"]["commands"])):
+				error_list.extend(
+					self.check_plugin_exists("application.prepare.commands.%d.plugin" % i, MODE.PREPARE_COMMAND)
+				)
+
+		for i in range(len(self["instances"])):
+			error_list.extend(
+				self.check_plugin_exists("instances.%d.runtime.name" % i, MODE.RUNTIME_EXECUTE)
+			)
+			error_list.extend(
+				self.check_plugin_exists("instances.%d.placement.strategy" % i, MODE.PLACEMENT)
+			)
+			if len(self["instances"][i]["startup"]) > 0:
+				for j in range(len(self["instances"][i]["startup"])):
+					error_list.extend(
+						self.check_plugin_exists("instances.%d.startup.%d.plugin" % (i, j), MODE.RUNTIME_STARTUP)
+					)
+
+		for i in range(len(self["services"])):
+			error_list.extend(
+				self.check_plugin_exists("services.%d.provider" % i, MODE.SERVICE_CREATE)
+			)
+
+		if len(error_list) > 0:
+			raise InvalidConfigurationParameterException(str(error_list))
+
+	def check_plugin_exists(self, config_item, mode):
+		plugin_name = self.get_flat(config_item)
+		if not self.configuration.plugins.exists(plugin_name, mode):
+			return ["Plugin %s not enabled or doesn't exist (referenced in %s)" % (plugin_name, config_item)]
+		else:
+			return []
 
 	def create_application(self, session, workspace):
 		"""
@@ -283,7 +327,6 @@ application:
       name: paasmaker.runtime.shell
       version: 1
     commands:
-      - plugin: paasmaker.prepare.symfony2
       - plugin: paasmaker.prepare.shell
         parameters:
           commands:
@@ -330,11 +373,41 @@ services:
       bar: foo
 """
 
-	bad_config = """
+	invalid_plugin_config = """
+manifest:
+  format: 1
+
+application:
+  name: foobar.com
+  prepare:
+    runtime:
+      name: paasmaker.runtime.lalala_notlistening
+      version: 1
+
+instances:
+  - name: web
+    runtime:
+      name: paasmaker.runtime.zomg_what_plugin_is_this
+      version: 1
+
+services:
+  - name: busted
+    provider: paasmaker.service.icantbelieveitsnot_aplugin
+"""
+
+	empty_config = """
 """
 
 	def setUp(self):
 		super(TestApplicationConfiguration, self).setUp()
+
+		# Register our test plugin
+		self.configuration.plugins.register(
+			'paasmaker.service.test',
+			'paasmaker.common.testplugin.TestPlugin',
+			{},
+			'Dummy service plugin'
+		)
 
 	def tearDown(self):
 		super(TestApplicationConfiguration, self).tearDown()
@@ -346,7 +419,7 @@ services:
 		return application
 
 	def test_loading(self):
-		config = ApplicationConfiguration()
+		config = ApplicationConfiguration(self.configuration)
 		config.load(self.test_config)
 		self.assertEquals(config.get_flat('manifest.format'), 1, "Manifest version is incorrect.")
 		# Disabled until the schema can be sorted out.
@@ -358,16 +431,35 @@ services:
 		self.assertEquals(config.get_flat('application.name'), "foo.com", "Application name is not as expected.")
 		self.assertEquals(len(config['instances'][0]['crons']), 2, "Number of crons is not as expected.")
 
-	def test_bad_config(self):
+	def test_empty_config(self):
 		try:
-			config = ApplicationConfiguration()
-			config.load(self.bad_config)
+			config = ApplicationConfiguration(self.configuration)
+			config.load(self.empty_config)
 			self.assertTrue(False, "Should have thrown an exception.")
 		except InvalidConfigurationFormatException, ex:
 			self.assertTrue(True, "Threw exception correctly.")
 
+	def test_invalid_plugin_config(self):
+		try:
+			config = ApplicationConfiguration(self.configuration)
+			config.load(self.invalid_plugin_config)
+			self.assertTrue(False, "Invalid plugin config should have thrown an exception.")
+		except InvalidConfigurationParameterException, ex:
+			self.assertIn(
+				"Plugin paasmaker.runtime.lalala_notlistening not enabled or doesn't exist (referenced in application.prepare.runtime.name)",
+				ex.message, "Invalid plugin config threw an exception without the expected error message"
+			)
+			self.assertIn(
+				"Plugin paasmaker.runtime.zomg_what_plugin_is_this not enabled or doesn't exist (referenced in instances.0.runtime.name)",
+				ex.message, "Invalid plugin config threw an exception without the expected error message"
+			)
+			self.assertIn(
+				"Plugin paasmaker.service.icantbelieveitsnot_aplugin not enabled or doesn't exist (referenced in services.0.provider)",
+				ex.message, "Invalid plugin config threw an exception without the expected error message"
+			)
+			
 	def test_unpack_configuration(self):
-		config = ApplicationConfiguration()
+		config = ApplicationConfiguration(self.configuration)
 		config.load(self.test_config)
 
 		session = self.configuration.get_database_session()

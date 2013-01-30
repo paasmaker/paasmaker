@@ -1,6 +1,7 @@
 # paasmaker common module init.
 
 from testhelpers import TestHelpers
+from testplugin import TestPlugin
 
 import controller
 import core
