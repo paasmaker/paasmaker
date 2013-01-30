@@ -128,7 +128,7 @@ test_sets = {
 	paasmaker.pacemaker.service.managedmysql: ['slow', 'service', 'servicemanagedmysql', 'mysql'],
 
 	paasmaker.pacemaker.packer.tarball: ['normal', 'packer', 'tarball'],
-	paasmaker.pacemaker.storer.paasmakernode: ['all', 'storer'],
+	paasmaker.pacemaker.storer.paasmakernode: ['normal', 'storer'],
 
 	paasmaker.pacemaker.prepare.shell: ['normal', 'prepare', 'shellprepare'],
 
@@ -147,7 +147,7 @@ test_sets = {
 	paasmaker.pacemaker.health.adjustinstances: ['normal', 'health', 'repair'],
 	paasmaker.pacemaker.health.stuckjobs: ['normal', 'health', 'stuckjobs'],
 
-	paasmaker.common.helper.cleanupmanager: ['all', 'cleanup', 'cleanupmanager'],
+	paasmaker.common.helper.cleanupmanager: ['normal', 'cleanup', 'cleanupmanager'],
 	paasmaker.common.cleaner.logs: ['normal', 'cleanup'],
 	paasmaker.common.cleaner.jobs: ['normal', 'cleanup'],
 
