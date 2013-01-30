@@ -19,6 +19,7 @@ import paasmaker
 from paasmaker.util.configurationhelper import InvalidConfigurationParameterException
 from paasmaker.util.configurationhelper import InvalidConfigurationFormatException
 from paasmaker.util.configurationhelper import NoConfigurationFileException
+from paasmaker.util.configurationhelper import StrictAboutExtraKeysColanderMappingSchema
 from paasmaker.common.core import constants
 
 from pubsub import pub
@@ -57,7 +58,7 @@ DEFAULT_APPLICATION_MIN = 42600
 DEFAULT_APPLICATION_MAX = 42699
 
 # The Configuration Schema.
-class PluginSchema(colander.MappingSchema):
+class PluginSchema(StrictAboutExtraKeysColanderMappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Symbolic name",
 		description="The symbolic name for this plugin, used to match it up in application configuration")
@@ -77,7 +78,7 @@ class PluginSchema(colander.MappingSchema):
 class PluginsSchema(colander.SequenceSchema):
 	plugin = PluginSchema()
 
-class CleanerSchema(colander.MappingSchema):
+class CleanerSchema(StrictAboutExtraKeysColanderMappingSchema):
 	plugin = colander.SchemaNode(colander.String(),
 		title="Cleaner Plugin",
 		description="The cleaner plugin to run.")
@@ -88,10 +89,10 @@ class CleanerSchema(colander.MappingSchema):
 class CleanersSchema(colander.SequenceSchema):
 	cleaner = CleanerSchema()
 
-class CleanersOnlySchema(colander.MappingSchema):
+class CleanersOnlySchema(StrictAboutExtraKeysColanderMappingSchema):
 	cleaners = CleanersSchema()
 
-class ScmListerSchema(colander.MappingSchema):
+class ScmListerSchema(StrictAboutExtraKeysColanderMappingSchema):
 	for_name = colander.SchemaNode(colander.String(),
 		name="for",
 		title="The SCM plugin that these listers are for.")
@@ -104,7 +105,7 @@ class ScmListerSchema(colander.MappingSchema):
 class ScmListersSchema(colander.SequenceSchema):
 	lister = ScmListerSchema()
 
-class HealthPluginSchema(colander.MappingSchema):
+class HealthPluginSchema(StrictAboutExtraKeysColanderMappingSchema):
 	plugin = colander.SchemaNode(colander.String(),
 		title="Plugin name",
 		description="Plugin name for this particular health check.")
@@ -124,7 +125,7 @@ class HealthPluginsSchema(colander.SequenceSchema):
 	def default():
 		return {'plugins': []}
 
-class HealthGroupSchema(colander.MappingSchema):
+class HealthGroupSchema(StrictAboutExtraKeysColanderMappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Symbolic name",
 		description="The symbolic name for this health check group.")
@@ -142,10 +143,10 @@ class HealthGroupSchema(colander.MappingSchema):
 class HealthGroupsSchema(colander.SequenceSchema):
 	group = HealthGroupSchema()
 
-class HealthGroupsOnlySchema(colander.MappingSchema):
+class HealthGroupsOnlySchema(StrictAboutExtraKeysColanderMappingSchema):
 	groups = HealthGroupsSchema()
 
-class HealthCombinedSchema(colander.MappingSchema):
+class HealthCombinedSchema(StrictAboutExtraKeysColanderMappingSchema):
 	groups = HealthGroupsSchema(
 		missing=[],
 		default=[]
@@ -155,7 +156,7 @@ class HealthCombinedSchema(colander.MappingSchema):
 		description="If true, run health checks on this node. If you have multiple pacemakers, you will only want to run this on one node. However, you could configure two pacemakers to perform different health checks.",
 		missing=True,
 		default=True)
-	default = colander.SchemaNode(colander.Boolean(),
+	use_default_checks = colander.SchemaNode(colander.Boolean(),
 		title="Include default health checks",
 		description="Include default health checks. These are added to any groups. If you do enable this, you should not define a 'default' group.",
 		missing=True,
@@ -165,7 +166,7 @@ class HealthCombinedSchema(colander.MappingSchema):
 	def default():
 		return {'enabled': False, 'groups': []}
 
-class PacemakerSchema(colander.MappingSchema):
+class PacemakerSchema(StrictAboutExtraKeysColanderMappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
 		title="Pacemaker enabled",
 		description="Pacemaker is enabled for this node",
@@ -234,7 +235,7 @@ class PacemakerSchema(colander.MappingSchema):
 	def default():
 		return {'enabled': False, 'scmlisters': [], 'health': HealthCombinedSchema.default()}
 
-class HeartSchema(colander.MappingSchema):
+class HeartSchema(StrictAboutExtraKeysColanderMappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
 		title="Heart enabled",
 		description="Heart is enabled for this node",
@@ -258,7 +259,7 @@ class HeartSchema(colander.MappingSchema):
 	def default():
 		return {'enabled': False}
 
-class RedisConnectionSchema(colander.MappingSchema):
+class RedisConnectionSchema(StrictAboutExtraKeysColanderMappingSchema):
 	host = colander.SchemaNode(colander.String(),
 		title="Hostname",
 		description="Redis Hostname")
@@ -302,7 +303,7 @@ class RedisConnectionSlaveSchema(RedisConnectionSchema):
 	def default():
 		return {'enabled': False}
 
-class NginxSchema(colander.MappingSchema):
+class NginxSchema(StrictAboutExtraKeysColanderMappingSchema):
 	managed = colander.SchemaNode(colander.Boolean(),
 		title="Enable managed nginx",
 		description="If enabled, a managed version of NGINX is started as appropriate, pointing to the correct resources for this node. Note that you must specify a port, and it must be >1024, as this node won't be run as root.",
@@ -328,7 +329,7 @@ class NginxSchema(colander.MappingSchema):
 	def default():
 		return {'managed': False, 'port_direct': DEFAULT_NGINX_DIRECT, 'port_80': DEFAULT_NGINX_PORT80, 'shutdown': False}
 
-class RouterSchema(colander.MappingSchema):
+class RouterSchema(StrictAboutExtraKeysColanderMappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
 		title="Router enabled",
 		description="Router is enabled for this node",
@@ -360,7 +361,7 @@ class RouterSchema(colander.MappingSchema):
 			'nginx': NginxSchema.default()
 		}
 
-class RedisSchema(colander.MappingSchema):
+class RedisSchema(StrictAboutExtraKeysColanderMappingSchema):
 	table = RedisConnectionSchema(default=RedisConnectionSchema.default_router_table(), missing=RedisConnectionSchema.default_router_table())
 	stats = RedisConnectionSchema(default=RedisConnectionSchema.default_router_stats(), missing=RedisConnectionSchema.default_router_stats())
 	slaveof = RedisConnectionSlaveSchema(default=RedisConnectionSlaveSchema.default(), missing=RedisConnectionSlaveSchema.default())
@@ -375,7 +376,7 @@ class RedisSchema(colander.MappingSchema):
 			'jobs': RedisConnectionSchema.default_jobs()
 		}
 
-class MiscPortsSchema(colander.MappingSchema):
+class MiscPortsSchema(StrictAboutExtraKeysColanderMappingSchema):
 	minimum = colander.SchemaNode(colander.Integer(),
 		title="Minimum port",
 		description="Lower end of the port range to search for free ports on.",
@@ -391,7 +392,7 @@ class MiscPortsSchema(colander.MappingSchema):
 	def default():
 		return {'minimum': DEFAULT_APPLICATION_MIN, 'maximum': DEFAULT_APPLICATION_MAX}
 
-class MasterSchema(colander.MappingSchema):
+class MasterSchema(StrictAboutExtraKeysColanderMappingSchema):
 	host = colander.SchemaNode(colander.String(),
 		title="Master Node",
 		description="The master node for this cluster.")
@@ -410,7 +411,7 @@ class MasterSchema(colander.MappingSchema):
 	def default():
 		return {'host': 'localhost', 'port': DEFAULT_API_PORT, 'isitme': False}
 
-class ConfigurationSchema(colander.MappingSchema):
+class ConfigurationSchema(StrictAboutExtraKeysColanderMappingSchema):
 	http_port = colander.SchemaNode(colander.Integer(),
 		title="HTTP Port",
 		description="The HTTP port that this node listens on for API requests",
@@ -544,7 +545,7 @@ class ConfigurationSchema(colander.MappingSchema):
 		default="/usr/local/openresty/nginx/sbin/nginx",
 		missing="/usr/local/openresty/nginx/sbin/nginx")
 
-class PluginsOnlySchema(colander.MappingSchema):
+class PluginsOnlySchema(StrictAboutExtraKeysColanderMappingSchema):
 	plugins = PluginsSchema(
 		title="Plugins",
 		description="The list of plugins.",
@@ -1645,7 +1646,8 @@ class TestConfiguration(unittest.TestCase):
 node_token: 5893b415-f166-41a8-b606-7bdb68b88f0b
 log_directory: /tmp
 scratch_directory: /tmp
-master_host: localhost
+master:
+  host: localhost
 """
 
 	def setUp(self):

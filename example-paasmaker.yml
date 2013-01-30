@@ -59,7 +59,7 @@ pacemaker:
   frontend_domain_postfix: ":42530"
   health:
     enabled: true
-    default: true
+    use_default_checks: true
 
 router:
   enabled: true

@@ -40,8 +40,8 @@ master:
   isitme: true
 
 misc_ports:
-  min: 42700
-  max: 42799
+  minimum: 42700
+  maximum: 42799
 
 redis:
   table:

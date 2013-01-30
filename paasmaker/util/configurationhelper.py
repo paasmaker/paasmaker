@@ -47,6 +47,14 @@ class InvalidConfigurationFormatException(Exception):
 		# TODO: Implement this.
 		pass
 
+class StrictAboutExtraKeysColanderMappingSchema(colander.MappingSchema):
+	"""
+	Work around a bug in Colander that prevents the unknown="raise"
+	argument being passed into MappingSchema instances.
+	"""
+	def __init__(self, **kwargs):
+		super(StrictAboutExtraKeysColanderMappingSchema, self).__init__(colander.Mapping(unknown='raise'), **kwargs)
+
 class ConfigurationHelper(dict):
 	"""
 	A configuration helper base class. Provides helpers for other
@@ -166,7 +174,7 @@ class ConfigurationHelper(dict):
 
 			registry.register(name, klass, params, title)
 
-class TestConfigurationSchema(colander.MappingSchema):
+class TestConfigurationSchema(StrictAboutExtraKeysColanderMappingSchema):
 	str_item = colander.SchemaNode(colander.String())
 	map_item = colander.SchemaNode(colander.Mapping())
 

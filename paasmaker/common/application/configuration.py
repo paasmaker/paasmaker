@@ -9,6 +9,7 @@ import tornado
 
 from paasmaker.util.configurationhelper import InvalidConfigurationParameterException
 from paasmaker.util.configurationhelper import InvalidConfigurationFormatException
+from paasmaker.util.configurationhelper import StrictAboutExtraKeysColanderMappingSchema
 from paasmaker.common.controller import BaseControllerTest
 
 from paasmaker.common.core import constants
@@ -19,7 +20,7 @@ VALID_IDENTIFIER = re.compile("[-A-Za-z0-9.]{1,}")
 VALID_PLUGIN_NAME = re.compile("[-a-z0-9.]")
 
 # Schema definition.
-class Service(colander.MappingSchema):
+class Service(StrictAboutExtraKeysColanderMappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Service name",
 		description="Your name for the service to identify it",
@@ -33,7 +34,7 @@ class Service(colander.MappingSchema):
 class Services(colander.SequenceSchema):
 	service = Service()
 
-class Placement(colander.MappingSchema):
+class Placement(StrictAboutExtraKeysColanderMappingSchema):
 	strategy = colander.SchemaNode(colander.String(),
 		title="Placement strategy",
 		description="The placement strategy to use",
@@ -44,7 +45,7 @@ class Placement(colander.MappingSchema):
 	def default():
 		return {'strategy': 'paasmaker.placement.default', 'parameters': {}}
 
-class Runtime(colander.MappingSchema):
+class Runtime(StrictAboutExtraKeysColanderMappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Runtime name",
 		description="The runtime plugin name.",
@@ -58,7 +59,7 @@ class Runtime(colander.MappingSchema):
 		title="Runtime version",
 		description="The requested runtime version.")
 
-class PrepareCommand(colander.MappingSchema):
+class PrepareCommand(StrictAboutExtraKeysColanderMappingSchema):
 	plugin = colander.SchemaNode(colander.String(),
 		title="Plugin name",
 		description="The plugin to be used for this prepare action.",
@@ -72,7 +73,7 @@ class PrepareCommand(colander.MappingSchema):
 class Prepares(colander.SequenceSchema):
 	command = PrepareCommand()
 
-class PrepareSection(colander.MappingSchema):
+class PrepareSection(StrictAboutExtraKeysColanderMappingSchema):
 	commands = Prepares(missing=[], default=[])
 	runtime = Runtime(missing={'name': None}, default={'name': None})
 
@@ -80,7 +81,7 @@ class PrepareSection(colander.MappingSchema):
 	def default():
 		return {'commands': [], 'runtime': {'name': None}}
 
-class Application(colander.MappingSchema):
+class Application(StrictAboutExtraKeysColanderMappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Application name",
 		decription="The name of the application",
@@ -88,7 +89,7 @@ class Application(colander.MappingSchema):
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
 	prepare = PrepareSection(default=PrepareSection.default(), missing=PrepareSection.default())
 
-class Cron(colander.MappingSchema):
+class Cron(StrictAboutExtraKeysColanderMappingSchema):
 	# TODO: Place an epic regex on this field to validate it.
 	runspec = colander.SchemaNode(colander.String(),
 		title="Run specification",
@@ -110,12 +111,12 @@ class Cron(colander.MappingSchema):
 class Crons(colander.SequenceSchema):
 	crons = Cron()
 
-class Manifest(colander.MappingSchema):
+class Manifest(StrictAboutExtraKeysColanderMappingSchema):
 	format = colander.SchemaNode(colander.Integer(),
 		title="Manifest format",
 		description="The manifest format version number.")
 
-class Instance(colander.MappingSchema):
+class Instance(StrictAboutExtraKeysColanderMappingSchema):
 	name = colander.SchemaNode(
 		colander.String(),
 		title="Name",
@@ -145,7 +146,7 @@ class Instance(colander.MappingSchema):
 class Instances(colander.SequenceSchema):
 	instance = Instance()
 
-class ConfigurationSchema(colander.MappingSchema):
+class ConfigurationSchema(StrictAboutExtraKeysColanderMappingSchema):
 	application = Application()
 	services = Services(default=[], missing=[])
 	# NOTE: We validate the instances ApplicationConfiguration.post_load(), because
