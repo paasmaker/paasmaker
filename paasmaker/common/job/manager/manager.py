@@ -832,8 +832,8 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		#self.dump_job_tree(root_id, self.manager.backend)
 		#self.wait()
 
-		# Wait for it to settle down.
-		self.short_wait_hack(length=0.2)
+		# Wait for it to settle down; TODO: this should actually detect when the job is finished
+		self.short_wait_hack(length=0.5)
 
 		subsub1_status = self.get_state(subsub1_id)
 		sub1_status = self.get_state(sub1_id)
@@ -991,7 +991,7 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.manager.allow_execution(job_id, callback=self.stop)
 		self.wait()
 
-		self.short_wait_hack()
+		self.short_wait_hack(length=0.3)
 
 		#self.dump_job_tree(job_id, self.manager.backend)
 		#self.wait()

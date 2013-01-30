@@ -69,7 +69,7 @@ class AsyncDNSTest(tornado.testing.AsyncTestCase):
 		lookup.lookup('localhost')
 
 		result = self.wait()
-		self.assertIn(result, ["::1", "127.0.1.1"], "Unexpected lookup.")
+		self.assertIn(result, ["::1", "127.0.0.1"], "Unexpected lookup.")
 
 	def test_failed(self):
 		lookup = AsyncDNS(self.io_loop, self.stop, self._error)

@@ -252,7 +252,9 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		# Verify the instance was set up.
 		self.assertTrue(instance is not None, "Should have one registered instance.")
-		self.assertTrue(instance.port in range(42600, 42699), "Port not in expected range.")
+		self.assertTrue(instance.port in \
+			range(self.configuration.get_flat('misc_ports.minimum'), self.configuration.get_flat('misc_ports.maximum')),
+			"Port not in expected range.")
 
 		# Deregister the whole lot. This is just to make sure the register task
 		# works properly. StartupRootJob will reselect and register instances again.
@@ -350,7 +352,9 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# Verify the instance was set up.
 		self.assertNotEquals(other_instance_id, instance.id, "Should be a new instance.")
 		self.assertTrue(instance is not None, "Should have one running instance.")
-		self.assertTrue(instance.port in range(42600, 42699), "Port not in expected range.")
+		self.assertTrue(instance.port in \
+			range(self.configuration.get_flat('misc_ports.minimum'), self.configuration.get_flat('misc_ports.maximum')),
+			"Port not in expected range.")
 
 		# Confirm that the entry exists in the routing table.
 		self.configuration.get_router_table_redis(self.stop, self.stop)
