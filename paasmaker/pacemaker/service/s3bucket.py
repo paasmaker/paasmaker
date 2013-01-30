@@ -131,6 +131,7 @@ class S3BucketService(BaseService):
 			callback(credentials, message)
 
 		self.logger.info("Sending bucket create request...")
+		self.logger.info("Please be patient, this can take a while.")
 		creator = S3BucketServiceAsyncCreate(
 			self.configuration.io_loop,
 			success_create,
@@ -148,12 +149,13 @@ class S3BucketService(BaseService):
 		self.logger.info("Sending delete request for bucket %s.", bucket_name)
 
 		self.logger.info("Sending bucket delete request...")
-		creator = S3BucketServiceAsyncDelete(
+		self.logger.info("Please be patient, this can take a while.")
+		deletor = S3BucketServiceAsyncDelete(
 			self.configuration.io_loop,
 			callback,
 			error_callback
 		)
-		creator.work(bucket_name, self.options, self.parameters)
+		deletor.work(bucket_name, self.options)
 
 class S3BucketServiceAsyncCreate(paasmaker.util.threadcallback.ThreadCallback):
 
@@ -174,7 +176,7 @@ class S3BucketServiceAsyncCreate(paasmaker.util.threadcallback.ThreadCallback):
 
 class S3BucketServiceAsyncDelete(paasmaker.util.threadcallback.ThreadCallback):
 
-	def _work(self, name, options, parameters):
+	def _work(self, name, options):
 		# Delete the S3 Bucket.
 		connection = S3Connection(
 			options['access_key'],
