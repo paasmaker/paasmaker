@@ -101,16 +101,31 @@ class S3BucketService(BaseService):
 			self.options['postfix']
 		)
 
+		region = self.parameters['region']
+		if len(region) == 0:
+			region = self.options['default_region']
+
 		self.logger.info("Chosen bucket name %s", bucket_name)
 
 		def success_create(message):
 			# Done! Let's emit the service credentials.
 			self.logger.info("Successfully created bucket.")
+
+			# From http://docs.aws.amazon.com/general/latest/gr/rande.html#s3_region
+			# TODO: Test properly.
+			if region == '':
+				endpoint = "s3.amazonaws.com"
+			elif region == 'EU':
+				endpoint = "s3-eu-west-1.amazonaws.com"
+			else:
+				endpoint = "s3-%s.amazonaws.com" % region
+
 			credentials = {
 				"protocol": 's3',
 				"bucket": bucket_name,
 				"access_key": self.options['access_key'],
-				"secret_key": self.options['secret_key']
+				"secret_key": self.options['secret_key'],
+				"endpoint": endpoint
 			}
 
 			callback(credentials, message)
@@ -121,7 +136,7 @@ class S3BucketService(BaseService):
 			success_create,
 			error_callback
 		)
-		creator.work(bucket_name, self.options, self.parameters)
+		creator.work(bucket_name, region, self.options, self.parameters)
 
 	def update(self, name, existing_credentials, callback, error_callback):
 		callback(existing_credentials)
@@ -142,12 +157,8 @@ class S3BucketService(BaseService):
 
 class S3BucketServiceAsyncCreate(paasmaker.util.threadcallback.ThreadCallback):
 
-	def _work(self, name, options, parameters):
+	def _work(self, name, region, options, parameters):
 		# Create the S3 bucket.
-		region = parameters['region']
-		if len(region) == 0:
-			region = options['default_region']
-
 		connection = S3Connection(
 			options['access_key'],
 			options['secret_key']
@@ -208,7 +219,7 @@ class S3BucketServiceTest(BaseServiceTest):
 		self.wait()
 
 		self.assertTrue(self.success, "S3Service creation was not successful.")
-		self.assertEquals(len(self.credentials), 4, "S3Service did not return expected number of keys.")
+		self.assertEquals(len(self.credentials), 5, "S3Service did not return expected number of keys.")
 		self.assertTrue('bucket' in self.credentials, "S3Service did not return the bucket it created.")
 
 		service.remove('test', self.credentials, self.success_remove_callback, self.failure_callback)
