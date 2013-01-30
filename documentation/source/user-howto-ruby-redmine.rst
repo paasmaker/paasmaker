@@ -240,3 +240,73 @@ which means autoreloading will work correctly.
 
 Now, you can access your Redmine installation using the default username and password, admin/admin.
 It may take a few seconds to load the front page the first time as the caches are populated.
+
+Storing attachments on Amazon S3
+--------------------------------
+
+By default, Redmine will store uploaded files onto the filesystem alongside the code. For
+many installations this works well; however, on Paasmaker, it will delete all the instance
+files once it's done. This poses a problem for long term file storage with Redmine.
+
+However, there is a plugin for Redmine that allows uploading files to Amazon S3. Combine
+this with Paasmaker's S3 Bucket service, and we can have it upload files to S3 automatically.
+
+For this example, we're assuming that:
+
+* You have an Amazon S3 account.
+* Your development PaaS is configured with the Amazon S3 Bucket service plugin.
+* You already have a working Redmine installation created with the method above.
+
+We are using the `redmine_s3 <https://github.com/ka8725/redmine_s3>`_ plugin to handle the
+Redmine side of it.
+
+First, update your ``manifest.yml`` file, so the services section looks like as follows. You should
+choose an appropriate region for your new bucket.
+
+.. code-block:: yaml
+
+	services:
+	  - name: postgres
+	    provider: paasmaker.service.postgres
+	  - name: pmredmine
+	    provider: paasmaker.service.s3bucket
+	    parameters:
+	      region: ap-southeast-2
+
+You'll then need to deploy a new version of your development directory with Paasmaker, to
+get it to create the new service.
+
+Then, following the redmine_s3 plugin's install guide:
+
+.. code-block:: bash
+
+	$ git clone git://github.com/ka8725/redmine_s3.git plugins/redmine_s3
+	$ rm -rf plugins/redmine_s3/.git
+	$ cp plugins/redmine_s3/config/s3.yml.example config/s3.yml
+	$ ./paasmaker_env_web.sh bundle install
+
+Now edit ``config/s3.yml`` to hook up the bucket it created for you:
+
+.. code-block:: yaml
+
+	<% interface = $PAASMAKER_INTERFACE %>
+	<% s3 = interface.get_service('pmredmine') %>
+
+	production:
+	  access_key_id: "<%= s3['access_key'] %>"
+	  secret_access_key: "<%= s3['secret_key'] %>"
+	  bucket: "<%= s3['bucket'] %>"
+	  endpoint: "<%= s3['endpoint'] %>"
+
+	development:
+	  access_key_id: "<%= s3['access_key'] %>"
+	  secret_access_key: "<%= s3['secret_key'] %>"
+	  bucket: "<%= s3['bucket'] %>"
+	  endpoint: "<%= s3['endpoint'] %>"
+
+Restart the application, and then try to upload some files. You should see
+a brand new bucket in your Amazon S3 account, and when you attach files, they
+should appear in the bucket automatically. Note that the upload will make Redmine
+slower to upload files.
+
+Check in your changes, and deploy as appropriate.
