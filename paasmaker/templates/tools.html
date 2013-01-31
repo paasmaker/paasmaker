@@ -4,8 +4,10 @@
 	<h1>Application manifest editor</h1>
 
 	<style type="text/css">
-		#pm_manifest_yaml_form { position: relative; width: 300px; height: 400px; margin: 5px; padding: 0; font-family: monospace; }
-		#pm_manifest_yaml_block { width: 290px; height: 390px; margin: 0; padding: 5px; }
+		/*@font-face { font-family: Inconsolata; src: url('{{ static_url("font/Inconsolata.ttf") }}'); font-weight: normal; font-style: normal; }*/
+
+		#pm_manifest_yaml_form { position: relative; width: 300px; height: 400px; margin: 5px; padding: 0; }
+		#pm_manifest_yaml_block { width: 290px; height: 390px; margin: 0; padding: 5px; font-family: monospace; }
 
 		.pm-manifest-error { position: absolute; padding: 2px 8px; background: #e06666; color: #ffffff; font-size: 11px; line-height: 13px; }
 	</style>
@@ -15,6 +17,8 @@
 		<textarea id="pm_manifest_yaml_block">
 			hello
 		</textarea>
+
+		<div id="pm_manifest_rendered"></div>
 	</form>
 {% end %}
 
