@@ -9,9 +9,12 @@ import tempfile
 import subprocess
 import os
 
+import paasmaker
+
 import coverage
 import argparse
 
+########################################
 # How to invoke the tests:
 # * Normal run of a default set of tests:
 #   ./testsuite.py
@@ -24,31 +27,7 @@ import argparse
 #   coverage report -m
 # * Change the log level to assist with debugging:
 #   ./testsuite.py -l INFO
-
-parser = argparse.ArgumentParser()
-parser.add_argument('tags', default="normal", help="A comma seperated list of unit test tags to run.")
-parser.add_argument("-c", "--coverage", default=False, help="Compute and store coverage information.", action="store_true")
-parser.add_argument("-m", "--module", default=False, help="Run only the given module.", action="store_true")
-parser.add_argument("-t", "--temporaryoutput", default=None, help="Temporary output file for a module run.")
-parser.add_argument("-l", "--loglevel", default="CRITICAL", help="Log level, one of DEBUG|INFO|WARNING|ERROR|CRITICAL.")
-
-args = parser.parse_args()
-
-# If coverage is turned on, record coverage for "import paasmaker"
-# only in the parent test suite - otherwise it uses a lot of CPU time
-# and makes the tests take longer.
-if args.coverage and not args.module:
-	cov = coverage.coverage(source=["paasmaker"], auto_data=True)
-	cov.start()
-
-import paasmaker
-
-if args.coverage and not args.module:
-	cov.stop()
-	cov.save()
-
-# Set the log level.
-logging.basicConfig(level=getattr(logging, args.loglevel))
+########################################
 
 # Define the tests to run. The keys are the modules to search
 # in for test cases, and the array is a set of tags that will
@@ -164,9 +143,68 @@ test_sets = {
 	paasmaker.heart.helper.instancemanager: ['normal', 'application', 'heart']
 }
 
+########################################
+
+def tags_with_count():
+	all_tags = {}
+	for module, tags in test_sets.iteritems():
+		for tag in tags:
+			if tag in all_tags:
+				all_tags[tag] += 1
+			else:
+				all_tags[tag] = 1
+	return all_tags
+
+def tag_help():
+	all_tags = tags_with_count()
+	sorted_tags = sorted(all_tags.keys())
+
+	retval = "available tags:\n"
+	for tag in sorted_tags:
+		if all_tags[tag] == 1:
+			retval += "  %s (1 test)\n" % tag
+		else:
+			retval += "  %s (%d tests)\n" % (tag, all_tags[tag])
+
+	return retval
+
 string_test_sets = {}
 for key in test_sets:
 	string_test_sets[key.__name__] = key
+
+########################################
+
+parser = argparse.ArgumentParser(epilog=tag_help(), formatter_class=argparse.RawDescriptionHelpFormatter)
+parser.add_argument('tags', help="list of unit test tags to run (separated by commas or spaces), or \"all\"", nargs=argparse.REMAINDER)
+parser.add_argument("-c", "--coverage", default=False, help="compute and store coverage information while running tests; display with `coverage report -m`", action="store_true")
+parser.add_argument("-m", "--module", default=False, help="run only the given module")
+parser.add_argument("-t", "--temporaryoutput", default=None, help="temporary output file for a module run", metavar="FILE")
+parser.add_argument("-l", "--loglevel", default="CRITICAL", help="log output verbosity level", choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"])
+
+if len(sys.argv) == 1:
+	# hackish override for argparse.error()
+	parser.print_help(sys.stderr)
+	sys.exit(1)
+
+args = parser.parse_args()
+
+# If coverage is turned on, record coverage for "import paasmaker"
+# only in the parent test suite - otherwise it uses a lot of CPU time
+# and makes the tests take longer.
+if args.coverage and not args.module:
+	cov = coverage.coverage(source=["paasmaker"], auto_data=True)
+	cov.start()
+
+# reload(paasmaker)
+
+# if args.coverage and not args.module:
+# 	cov.stop()
+# 	cov.save()
+
+# Set the log level.
+logging.basicConfig(level=getattr(logging, args.loglevel))
+
+########################################
 
 def run_test(module_name):
 	print
@@ -191,12 +229,12 @@ def run_test(module_name):
 		'skipped': len(result.skipped)
 	}
 
+########################################
+
 if __name__ == '__main__':
 	# See if we're in the subprocess-run-only-one module mode.
 	if args.module:
-		module_name = args.tags
-
-		result = run_test(module_name)
+		result = run_test(args.module)
 
 		if args.temporaryoutput:
 			output = open(args.temporaryoutput, 'wb')
@@ -205,7 +243,11 @@ if __name__ == '__main__':
 		sys.exit(0)
 
 	# Otherwise, choose the tests to run.
-	selected = args.tags.split(',')
+	selected = []
+	for item in args.tags:
+		selected.extend(item.split(','))
+	if selected[0] == 'all':
+		selected = tags_with_count().keys()
 
 	print "Selecting unit tests with tags: %s" % str(selected)
 
@@ -227,7 +269,7 @@ if __name__ == '__main__':
 	try:
 		for module in modules:
 			temporary_name = tempfile.mkstemp()[1]
-			arguments = [sys.argv[0], module, '-m', '-t', temporary_name]
+			arguments = [sys.argv[0], '-m', module, '-t', temporary_name]
 			if args.coverage:
 				arguments.append("-c")
 			arguments.extend(['-l', args.loglevel])
@@ -255,8 +297,10 @@ if __name__ == '__main__':
 
 	print "Overall, %d run, %d errors, %d failed, %d skipped. Took %0.2fs." % (run, errors, failed, skipped, time_taken)
 
+	if args.coverage and not args.module:
+		cov.stop()
+		cov.save()
+		print "Run `coverage report -m` to see coverage results"
+
 	if failed > 0 or errors > 0:
 		sys.exit(1)
-
-	# Once the tests are completed, use "coverage report -m" to
-	# show the coverage.
