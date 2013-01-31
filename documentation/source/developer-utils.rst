@@ -14,10 +14,14 @@ Process Utilities
 .. autoclass:: paasmaker.util.commandsupervisor.CommandSupervisorLauncher
     :members:
 
+.. _paasmaker.util.processcheck.ProcessCheck:
 .. autoclass:: paasmaker.util.processcheck.ProcessCheck
     :members:
 
 .. autoclass:: paasmaker.util.popen.Popen
+    :members:
+
+.. autoclass:: paasmaker.util.darwinsubprocess.DarwinSubprocess
     :members:
 
 Configuration

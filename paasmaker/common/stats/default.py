@@ -143,8 +143,8 @@ class DefaultStats(BaseStats):
 		result = {}
 
 		# page size is also returned in vm_stat, but is basically always 4096
-		result['page_size'] = int(subprocess.check_output(['sysctl', '-n', 'hw.pagesize']))
-		result['mem_total'] = int(subprocess.check_output(['sysctl', '-n', 'hw.memsize']))
+		result['page_size'] = int(paasmaker.util.DarwinSubprocess.check_output(['sysctl', '-n', 'hw.pagesize']))
+		result['mem_total'] = int(paasmaker.util.DarwinSubprocess.check_output(['sysctl', '-n', 'hw.memsize']))
 
 		raw_memory = subprocess.check_output("vm_stat")
 		raw_memory = raw_memory.split("\n")
@@ -168,7 +168,7 @@ class DefaultStats(BaseStats):
 		return result
 
 	def _darwin_swap_used(self):
-		raw_swap = subprocess.check_output(['du', '-ak', '/private/var/vm'])
+		raw_swap = paasmaker.util.DarwinSubprocess.check_output(['du', '-ak', '/private/var/vm'])
 		raw_swap = raw_swap.split("\n")
 		swap_subtotal = 0;
 
@@ -181,7 +181,7 @@ class DefaultStats(BaseStats):
 
 	def _darwin_loadavg(self):
 		# TODO: performance test me, since this also works on Linux
-		uptime_raw = subprocess.check_output("uptime")
+		uptime_raw = paasmaker.util.DarwinSubprocess.check_output("uptime")
 		averages = self.uptime_wrangler.findall(uptime_raw)
 
 		return float(averages[0][0])

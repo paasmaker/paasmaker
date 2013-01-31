@@ -21,3 +21,7 @@ from asyncdns import AsyncDNS
 from multipaas import MultiPaas
 from flattenizr import Flattenizr
 from threadcallback import ThreadCallback
+
+import platform
+if platform.system() == 'Darwin':
+	from darwinsubprocess import DarwinSubprocess
