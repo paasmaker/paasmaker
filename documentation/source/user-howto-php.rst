@@ -23,6 +23,11 @@ Integrating with any PHP project
 If you're using your own PHP framework, or a framework not documented, you should
 be able to integrate Paasmaker easily into that system.
 
+.. note::
+	The published Paasmaker PHP interface requires PHP 5.3. The only 5.3 feature
+	that it uses is namespaces, so you may be able to modify it easily to work with
+	PHP 5.2.
+
 If you're using composer in your project, you can install the interface easily with
 the following command:
 
@@ -57,3 +62,5 @@ using composer or an autoloader), you can start it up and query it as follows:
 
 	// Get other application metadata.
 	$application = $interface->getApplicationName();
+
+With this interface, you should be able to set up Paasmaker on any project.
