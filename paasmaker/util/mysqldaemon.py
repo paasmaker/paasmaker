@@ -18,19 +18,31 @@ from manageddaemon import ManagedDaemon, ManagedDaemonError
 import tornado.testing
 import tornadoredis
 
-# TODO: CAUTION: AppArmor interferes with this unit test.
-
 class MySQLDaemonError(ManagedDaemonError):
-	pass
+    def __init__(self, cmd, returncode, working_dir):
+        self.returncode = returncode
+        self.working_dir = working_dir
+        self.cmd = cmd
+    def __str__(self):
+        return "Error starting MySQL daemon; check that AppArmor is not preventing writes to %s - got exit status %d from %s" % (self.working_dir, self.returncode, self.cmd)
 
 class MySQLDaemon(ManagedDaemon):
 	"""
 	A class to start and manage a MySQL daemon with a custom
 	data directory.
 
-	Note that this implementation currently does not work correctly.
+	Note that this implementation is incomplete: among other bugs,
 	MySQL's permissions are not set up correctly, so any user can
 	connect without a password.
+
+	.. warning::
+	   On Ubuntu, `AppArmor <https://wiki.ubuntu.com/AppArmor>`_ is
+	   configured by default to prevent mysqld from writing outside
+	   of ``/var``, which will prevent this service from starting.
+	   You will have to add Paasmaker's scratch directory to
+	   ``/etc/apparmor.d/usr.sbin.mysqld`` like so::
+	   		/path/to/paasmaker/scratch/ r,
+  			/path/to/paasmaker/scratch/** rwk,
 	"""
 	def _eat_output(self):
 		return open("%s/%s" % (self.parameters['working_dir'], str(uuid.uuid4())), 'w')
@@ -54,18 +66,23 @@ class MySQLDaemon(ManagedDaemon):
 		if not os.path.exists(working_dir):
 			os.makedirs(working_dir)
 
-		# Set up a new database.
+		# Set up a new database with mysql_install_db; we have to change
+		# permissions because that script assumes it's running as root.
 		command_line = [
 			'mysql_install_db',
 			'--datadir=' + working_dir,
 			'--user=%s' % getpass.getuser(),
 			'--skip-name-resolve'
 		]
-		subprocess.check_call(
-			command_line,
-			stdout=self._eat_output(),
-			stderr=self._eat_output(),
-		)
+
+		try:
+			subprocess.check_call(
+				command_line,
+				stdout=self._eat_output(),
+				stderr=self._eat_output(),
+			)
+		except subprocess.CalledProcessError, ex:
+			raise MySQLDaemonError(ex.cmd, ex.returncode, working_dir)
 
 		self.save_parameters()
 
