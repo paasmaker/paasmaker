@@ -1,0 +1,31 @@
+is_heart: true
+is_router: true
+is_pacemaker: true
+
+cluster_hostname: local.paasmaker.net
+frontend_domain_postfix: ":42530"
+
+master_node: localhost
+master_port: 42500
+
+shutdown_daemons_on_exit: false
+
+install_init_script: true
+enable_init_script: true
+init_redirect_port80: true
+
+runtime_php_enable: true
+runtime_php_disable_system_apache: true
+
+runtime_rbenv_enable: true,
+runtime_rbenv_versions: ['1.9.3-p327']
+
+service_managedmysql_enable: true
+service_managedmysql_disable_system_mysql: true
+
+service_managedpostgres_enable: true
+service_managedmysql_disable_system_postgres: true
+
+service_managedredis_enable: true
+
+write_paasmaker_configuration: true

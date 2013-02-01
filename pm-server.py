@@ -5,6 +5,26 @@ import os
 import sys
 import platform
 
+# TODO: What happens to this virtualenv activation when Torndao's
+# autoreload kicks in?
+
+# Check our current directory. Many things expect to be in the path
+# of the server file, so switch directory if we need to.
+paasmaker_home = os.path.dirname(os.path.abspath(__file__))
+if paasmaker_home != os.getcwd():
+	# Make the current directory the one where the script is.
+	os.chdir(paasmaker_home)
+
+if not os.path.exists("thirdparty/python/bin/pip"):
+	print "virtualenv not installed. Run install.py to set up this directory properly."
+	sys.exit(1)
+
+# Activate the environment now, inside this script.
+bootstrap_script = "thirdparty/python/bin/activate_this.py"
+execfile(bootstrap_script, dict(__file__=bootstrap_script))
+
+# Continue with normal startup.
+
 # External library imports.
 import tornado.ioloop
 import tornado.web

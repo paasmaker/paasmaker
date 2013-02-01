@@ -284,13 +284,13 @@ class RedisConnectionSchema(StrictAboutExtraKeysColanderMappingSchema):
 
 	@staticmethod
 	def default_router_table():
-		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_MASTER, 'managed': False, 'shutdown': False}
+		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_MASTER, 'password': None, 'managed': False, 'shutdown': False}
 	@staticmethod
 	def default_router_stats():
-		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_STATS, 'managed': False, 'shutdown': False}
+		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_STATS, 'password': None, 'managed': False, 'shutdown': False}
 	@staticmethod
 	def default_jobs():
-		return {'host': 'localhost', 'port': DEFAULT_REDIS_JOBS, 'managed': False, 'shutdown': False}
+		return {'host': 'localhost', 'port': DEFAULT_REDIS_JOBS, 'password': None, 'managed': False, 'shutdown': False}
 
 class RedisConnectionSlaveSchema(RedisConnectionSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),

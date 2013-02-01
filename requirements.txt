@@ -15,6 +15,7 @@ alembic
 
 # MySQL service.
 torndb
+MySQL-python
 
 # Postgres service
 momoko==0.5.0

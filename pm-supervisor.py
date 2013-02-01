@@ -9,6 +9,10 @@ import signal
 import urllib2
 import time
 
+# NOTE: This doesn't use the virtualenv, because it doesn't rely on
+# anything inside the virtualenv. If this changes in the future,
+# then we will need to start up the virtualenv.
+
 # Expected arguments:
 # 1: control file
 

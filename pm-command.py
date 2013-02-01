@@ -1,19 +1,41 @@
 #!/usr/bin/env python
 
-# External library imports.
-import tornado.ioloop
-import argparse
-
 import sys
+import os
 import json
+
+# Check our current directory. Many things expect to be in the path
+# of the server file, so switch directory if we need to.
+paasmaker_home = os.path.dirname(os.path.abspath(__file__))
+previous_cwd = os.getcwd()
+if paasmaker_home != os.getcwd():
+	# Make the current directory the one where the script is.
+	os.chdir(paasmaker_home)
+
+if not os.path.exists("thirdparty/python/bin/pip"):
+	print "virtualenv not installed. Run install.py to set up this directory properly."
+	sys.exit(1)
+
+# Activate the environment now, inside this script.
+bootstrap_script = "thirdparty/python/bin/activate_this.py"
+execfile(bootstrap_script, dict(__file__=bootstrap_script))
 
 # Internal imports.
 import paasmaker
 from paasmaker.common.core import constants
 
+# External library imports.
+import tornado.ioloop
+import argparse
+
 # Logging setup.
 import logging
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO, stream=sys.stderr)
+
+# Change the CWD back, as you might have specified a file to upload
+# relative to where you currently are.
+if previous_cwd != os.getcwd():
+	os.chdir(previous_cwd)
 
 # TODO: Write tests for all the actions in this file. Integration tests might cover this off
 # though? But need to make sure we have appropriate coverage.

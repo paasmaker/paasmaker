@@ -31,8 +31,8 @@ Optional for now. This is from and based on rbenv: https://github.com/sstephenso
 	sudo apt-get install zlib1g-dev libssl-dev libreadline-dev
 	git clone git://github.com/sstephenson/rbenv.git ~/.rbenv
 	git clone git://github.com/sstephenson/ruby-build.git ~/.rbenv/plugins/ruby-build
-	echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.bash_profile
-	echo 'eval "$(rbenv init -)"' >> ~/.bash_profile
+	echo 'export PATH="$HOME/.rbenv/bin:$PATH"' >> ~/.profile
+	echo 'eval "$(rbenv init -)"' >> ~/.profile
 	exec $SHELL -l
 	rbenv install 1.9.3-p327
 	rbenv rehash
@@ -69,14 +69,11 @@ For the postgres service, you will need libpq-dev.
 
 The target version is 2.7.
 
-Ubuntu 12.04 comes with Python 2.7 by default. However, you will need to install pip packages.
-At this time, I'm not currently using virtualenv or equivalents; however this should
-be easily possible. NOTE: python-mysqldb is required here because it doesn't seem to be
-available via pip.
+Ubuntu 12.04 comes with Python 2.7 by default. The installer will set up a virtual environment
+for you and invoke it when starting the server. So the instructions below should not be used.
 
 	sudo apt-get install python-pip
 	sudo apt-get install python-dev
-	sudo apt-get install python-mysqldb
 	sudo pip install -r requirements.txt
     sudo pip install coverage
 
