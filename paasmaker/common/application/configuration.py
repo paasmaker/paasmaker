@@ -21,66 +21,53 @@ VALID_IDENTIFIER = re.compile("[-A-Za-z0-9.]{1,}")
 VALID_PLUGIN_NAME = re.compile("[-a-z0-9.]")
 
 # Schema definition.
-class Service(StrictAboutExtraKeysColanderMappingSchema):
+class Plugin(StrictAboutExtraKeysColanderMappingSchema):
+	name = colander.SchemaNode(
+		colander.String(),
+		title="Plugin name",
+		description="Descriptive name for this plugin (to identify it in the web console)",
+		missing='', default='',
+		validator=colander.Regex(VALID_IDENTIFIER, "Plugin name must match " + VALID_IDENTIFIER.pattern)
+	)
+	plugin = colander.SchemaNode(colander.String(),
+		title="Symbolic plugin name",
+		description="Symbolic name of this plugin, as defined in the main paasmaker options file",
+		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern))
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
+
+class ServicePlugin(Plugin):
+	# Service definitions are identical to normal plugins, except that the
+	# name field is required (as well as the plugin field)
 	name = colander.SchemaNode(colander.String(),
 		title="Service name",
 		description="Your name for the service to identify it",
 		validator=colander.Regex(VALID_IDENTIFIER, "Service names must match " + VALID_IDENTIFIER.pattern))
-	provider = colander.SchemaNode(colander.String(),
-		title="Provider name",
-		description="Provider symbolic name",
-		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern))
-	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
 
-class Services(colander.SequenceSchema):
-	service = Service()
-
-class Placement(StrictAboutExtraKeysColanderMappingSchema):
-	strategy = colander.SchemaNode(colander.String(),
-		title="Placement strategy",
-		description="The placement strategy to use",
-		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern))
-	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
-
-	@staticmethod
-	def default():
-		return {'strategy': 'paasmaker.placement.default', 'parameters': {}}
-
-class Runtime(StrictAboutExtraKeysColanderMappingSchema):
-	name = colander.SchemaNode(colander.String(),
-		title="Runtime name",
-		description="The runtime plugin name.",
-		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern))
-	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Runtime parameters",
-		description="Any parameters to the runtime.",
-		default={},
-		missing={})
+class RuntimePlugin(Plugin):
+	# Runtime plugins have a required version field.
 	version = colander.SchemaNode(colander.String(),
 		title="Runtime version",
 		description="The requested runtime version.")
 
-class PrepareCommand(StrictAboutExtraKeysColanderMappingSchema):
-	plugin = colander.SchemaNode(colander.String(),
-		title="Plugin name",
-		description="The plugin to be used for this prepare action.",
-		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern))
-	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Plugin Parameters",
-		description="Parameters for this particular plugin",
-		missing={},
-		default={})
+class PlacementPlugin(Plugin):
+	# Placement plugin doesn't have to be defined; just use the default if it isn't.
+	@staticmethod
+	def default():
+		return {'plugin': 'paasmaker.placement.default', 'parameters': {}}
+
+class Services(colander.SequenceSchema):
+	service = ServicePlugin()
 
 class Prepares(colander.SequenceSchema):
-	command = PrepareCommand()
+	command = Plugin()
 
 class PrepareSection(StrictAboutExtraKeysColanderMappingSchema):
 	commands = Prepares(missing=[], default=[])
-	runtime = Runtime(missing={'name': None}, default={'name': None})
+	runtime = RuntimePlugin(missing={'plugin': None}, default={'plugin': None})
 
 	@staticmethod
 	def default():
-		return {'commands': [], 'runtime': {'name': None}}
+		return {'commands': [], 'runtime': {'plugin': None}}
 
 class Application(StrictAboutExtraKeysColanderMappingSchema):
 	name = colander.SchemaNode(colander.String(),
@@ -128,9 +115,9 @@ class Instance(StrictAboutExtraKeysColanderMappingSchema):
 		description="The quantity of instances to start with.",
 		missing=1,
 		default=1)
-	runtime = Runtime()
+	runtime = RuntimePlugin()
 	startup = Prepares(default=[], missing=[])
-	placement = Placement(default=Placement.default(), missing=Placement.default())
+	placement = PlacementPlugin(default=PlacementPlugin.default(), missing=PlacementPlugin.default())
 	hostnames = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()), title="Hostnames", default=[], missing=[])
 	exclusive = colander.SchemaNode(colander.Boolean(),
 		title="Version Exclusive",
@@ -170,9 +157,9 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 	def post_load(self):
 		error_list = []
 
-		if self.get_flat("application.prepare.runtime.name") is not None:
+		if self.get_flat("application.prepare.runtime.plugin") is not None:
 			error_list.extend(
-				self.check_plugin_exists("application.prepare.runtime.name", MODE.RUNTIME_ENVIRONMENT)
+				self.check_plugin_exists("application.prepare.runtime.plugin", MODE.RUNTIME_ENVIRONMENT)
 			)
 
 		if len(self["application"]["prepare"]["commands"]) > 0:
@@ -183,10 +170,10 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 
 		for i in range(len(self["instances"])):
 			error_list.extend(
-				self.check_plugin_exists("instances.%d.runtime.name" % i, MODE.RUNTIME_EXECUTE)
+				self.check_plugin_exists("instances.%d.runtime.plugin" % i, MODE.RUNTIME_EXECUTE)
 			)
 			error_list.extend(
-				self.check_plugin_exists("instances.%d.placement.strategy" % i, MODE.PLACEMENT)
+				self.check_plugin_exists("instances.%d.placement.plugin" % i, MODE.PLACEMENT)
 			)
 			if len(self["instances"][i]["startup"]) > 0:
 				for j in range(len(self["instances"][i]["startup"])):
@@ -196,7 +183,7 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 
 		for i in range(len(self["services"])):
 			error_list.extend(
-				self.check_plugin_exists("services.%d.provider" % i, MODE.SERVICE_CREATE)
+				self.check_plugin_exists("services.%d.plugin" % i, MODE.SERVICE_CREATE)
 			)
 
 		if len(error_list) > 0:
@@ -267,12 +254,12 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 			instance_type.standalone = imetadata['standalone']
 
 			# Runtime information.
-			instance_type.runtime_name = imetadata['runtime']['name']
+			instance_type.runtime_name = imetadata['runtime']['plugin']
 			instance_type.runtime_parameters = imetadata['runtime']['parameters']
 			instance_type.runtime_version = imetadata['runtime']['version']
 
 			# Placement data.
-			instance_type.placement_provider = imetadata['placement']['strategy']
+			instance_type.placement_provider = imetadata['placement']['plugin']
 			instance_type.placement_parameters = imetadata['placement']['parameters']
 
 			# Startup data.
@@ -304,7 +291,7 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 				application,
 				servicemeta['name']
 			)
-			service.provider = servicemeta['provider']
+			service.provider = servicemeta['plugin']
 			service.parameters = servicemeta['parameters']
 
 			version.services.append(service)
@@ -324,7 +311,7 @@ application:
     tag: value
   prepare:
     runtime:
-      name: paasmaker.runtime.shell
+      plugin: paasmaker.runtime.shell
       version: 1
     commands:
       - plugin: paasmaker.prepare.shell
@@ -337,7 +324,7 @@ instances:
   - name: web
     quantity: 1
     runtime:
-      name: paasmaker.runtime.php
+      plugin: paasmaker.runtime.php
       parameters:
         document_root: web
       version: 5.4
@@ -348,7 +335,7 @@ instances:
             - php app/console cache:warm
             - php app/console assets:deploy
     placement:
-      strategy: paasmaker.placement.default
+      plugin: paasmaker.placement.default
     hostnames:
       - foo.com
       - foo.com.au
@@ -364,11 +351,11 @@ instances:
 
 services:
   - name: test
-    provider: paasmaker.service.test
+    plugin: paasmaker.service.test
     parameters:
       bar: foo
   - name: test-two
-    provider: paasmaker.service.test
+    plugin: paasmaker.service.test
     parameters:
       bar: foo
 """
@@ -381,18 +368,18 @@ application:
   name: foobar.com
   prepare:
     runtime:
-      name: paasmaker.runtime.lalala_notlistening
+      plugin: paasmaker.runtime.lalala_notlistening
       version: 1
 
 instances:
   - name: web
     runtime:
-      name: paasmaker.runtime.zomg_what_plugin_is_this
+      plugin: paasmaker.runtime.zomg_what_plugin_is_this
       version: 1
 
 services:
   - name: busted
-    provider: paasmaker.service.icantbelieveitsnot_aplugin
+    plugin: paasmaker.service.icantbelieveitsnot_aplugin
 """
 
 	empty_config = """
@@ -446,15 +433,15 @@ services:
 			self.assertTrue(False, "Invalid plugin config should have thrown an exception.")
 		except InvalidConfigurationParameterException, ex:
 			self.assertIn(
-				"Plugin paasmaker.runtime.lalala_notlistening not enabled or doesn't exist (referenced in application.prepare.runtime.name)",
+				"Plugin paasmaker.runtime.lalala_notlistening not enabled or doesn't exist (referenced in application.prepare.runtime.plugin)",
 				ex.message, "Invalid plugin config threw an exception without the expected error message"
 			)
 			self.assertIn(
-				"Plugin paasmaker.runtime.zomg_what_plugin_is_this not enabled or doesn't exist (referenced in instances.0.runtime.name)",
+				"Plugin paasmaker.runtime.zomg_what_plugin_is_this not enabled or doesn't exist (referenced in instances.0.runtime.plugin)",
 				ex.message, "Invalid plugin config threw an exception without the expected error message"
 			)
 			self.assertIn(
-				"Plugin paasmaker.service.icantbelieveitsnot_aplugin not enabled or doesn't exist (referenced in services.0.provider)",
+				"Plugin paasmaker.service.icantbelieveitsnot_aplugin not enabled or doesn't exist (referenced in services.0.plugin)",
 				ex.message, "Invalid plugin config threw an exception without the expected error message"
 			)
 			

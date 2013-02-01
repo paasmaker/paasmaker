@@ -7,7 +7,7 @@ application:
     tag: value
   prepare:
     runtime:
-      name: paasmaker.runtime.shell
+      plugin: paasmaker.runtime.shell
       version: 1
     commands:
       - plugin: paasmaker.prepare.shell
@@ -19,7 +19,7 @@ instances:
   - name: web
     quantity: 1
     runtime:
-      name: paasmaker.runtime.php
+      plugin: paasmaker.runtime.php
       parameters:
         document_root: web
       version: 5.3
@@ -29,7 +29,7 @@ instances:
           commands:
             - echo "startup" > web/startup.txt
     placement:
-      strategy: paasmaker.placement.default
+      plugin: paasmaker.placement.default
     hostnames:
       - php-simple.local.paasmaker.net
     crons:
@@ -38,6 +38,6 @@ instances:
 
 services:
   - name: variables
-    provider: paasmaker.service.parameters
+    plugin: paasmaker.service.parameters
     parameters:
       one: two

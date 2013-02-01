@@ -44,7 +44,7 @@ class SourcePreparerJob(BaseJob):
 		# If supplied with a runtime, get that runtime to set up the environment
 		# before we continue. It can be None, so check for that too.
 		runtime_data = self.parameters['data']['runtime']
-		runtime_name = runtime_data['name']
+		runtime_name = runtime_data['plugin']
 		if runtime_name:
 			if not self.configuration.plugins.exists(runtime_name, paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT):
 				error_message = "No such runtime plugin %s" % runtime_name

@@ -7,7 +7,7 @@ application:
     tag: value
   prepare:
     runtime:
-      name: paasmaker.runtime.ruby.rbenv
+      plugin: paasmaker.runtime.ruby.rbenv
       version: 1.9.3
     commands:
       - plugin: paasmaker.prepare.shell
@@ -19,7 +19,7 @@ instances:
   - name: web
     quantity: 1
     runtime:
-      name: paasmaker.runtime.ruby.rbenv
+      plugin: paasmaker.runtime.ruby.rbenv
       parameters:
         launch_command: "bundle exec ruby app.rb -p %(port)d"
       version: 1.9.3
@@ -30,7 +30,7 @@ instances:
             - bundle install
             - ruby -v > ruby-startup-version
     placement:
-      strategy: paasmaker.placement.default
+      plugin: paasmaker.placement.default
     hostnames:
       - sinatra-simple.local.paasmaker.net
     crons:
@@ -39,6 +39,6 @@ instances:
 
 services:
   - name: variables
-    provider: paasmaker.service.parameters
+    plugin: paasmaker.service.parameters
     parameters:
       one: two
