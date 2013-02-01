@@ -2,6 +2,7 @@
 *.*~
 *.swp
 /.coverage
+/htmlcov/
 /paasmaker.pid
 /documentation/build/
 /documentation/websupport/
