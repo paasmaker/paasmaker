@@ -20,7 +20,7 @@ class ManagedMySQLServiceConfigurationSchema(colander.MappingSchema):
 		description="The address to bind to. If you only will use the databases on this host, use 127.0.0.1. Otherwise, use 0.0.0.0.",
 		default="127.0.0.1",
 		missing="127.0.0.1")
-	password = colander.SchemaNode(colander.String(),
+	root_password = colander.SchemaNode(colander.String(),
 		title="The server's administrative password",
 		description="The administrative password for this instance. You must supply one, and the plugin can't change it after it's started up a server.")
 	shutdown = colander.SchemaNode(colander.Boolean(),
@@ -77,7 +77,7 @@ class ManagedMySQLService(MySQLService):
 				mysql_path,
 				port,
 				self.options['host'],
-				self.options['password']
+				self.options['root_password']
 			)
 
 		def on_delay():
@@ -90,6 +90,7 @@ class ManagedMySQLService(MySQLService):
 
 			self.options['hostname'] = '127.0.0.1' #self.configuration.get_flat('my_route')
 			self.options['username'] = 'root'
+			self.options['password'] = self.options['root_password']
 
 			# Wait a little bit for MySQL to settle down.
 			self.configuration.io_loop.add_timeout(time.time() + 0.5, on_delay)
@@ -169,7 +170,7 @@ class ManagedMySQLServiceTest(MySQLServiceTest):
 			'paasmaker.pacemaker.service.managedmysql.ManagedMySQLService',
 			{
 				'port': self.configuration.get_free_port(),
-				'password': 'supersecret',
+				'root_password': 'supersecret',
 				'shutdown': True
 			},
 			'MySQL Service'
