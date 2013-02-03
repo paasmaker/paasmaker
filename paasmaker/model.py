@@ -265,6 +265,8 @@ class User(OrmBase, Base):
 
 	apikey = Column(String, nullable=True, index=True)
 
+	_userdata = Column("userdata", Text, nullable=True)
+
 	def __init__(self):
 		self.generate_api_key()
 
@@ -288,6 +290,17 @@ class User(OrmBase, Base):
 	@auth_meta.setter
 	def auth_meta(self, val):
 		self._auth_meta = json.dumps(val)
+
+	@hybrid_property
+	def userdata(self):
+		if self._userdata:
+			return json.loads(self._userdata)
+		else:
+			return {}
+
+	@userdata.setter
+	def userdata(self, val):
+		self._userdata = json.dumps(val)
 
 	def flatten(self, field_list=None):
 		return super(User, self).flatten(['login', 'email', 'auth_source', 'name', 'enabled'])
