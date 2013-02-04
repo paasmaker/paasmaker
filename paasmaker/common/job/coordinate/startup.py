@@ -172,4 +172,4 @@ class StartupRequestJob(InstanceJobHelper):
 			self.configuration.job_manager.allow_execution(self.job_metadata['root_id'], callback=on_tree_executable)
 
 		# Add that entire tree into the job manager.
-		self.configuration.job_manager.add_tree(container, on_tree_added, parent=self.job_metadata['root_id'])
+		self.configuration.job_manager.add_tree(container, on_tree_added, parent=self.job_metadata['parent_id'])

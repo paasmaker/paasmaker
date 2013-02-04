@@ -59,7 +59,7 @@ class DeRegisterRootJob(InstanceRootBase):
 			registerer.set_job(
 				'paasmaker.job.coordinate.deregisterrequest',
 				parameters,
-				"Deregister requests",
+				"Deregister request creator for %s" % instance_type.name,
 				tags=type_tags
 			)
 

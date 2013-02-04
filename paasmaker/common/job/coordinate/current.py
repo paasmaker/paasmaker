@@ -142,17 +142,18 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 						{},
 						"Start and stop exclusive instances"
 					)
-					exclusive_startup_container = exclusive_container.add_child()
-					exclusive_startup_container.set_job(
-						'paasmaker.job.container',
-						{},
-						"Start exclusive instances"
-					)
 
 					# Jobs to select locations for starting exclusive instances,
 					# if required.
 					parameters = {}
 					parameters['application_instance_type_id'] = instance_type.id
+
+					exclusive_startup_container = exclusive_container.add_child()
+					exclusive_startup_container.set_job(
+						'paasmaker.job.coordinate.startuprequest',
+						parameters,
+						"Startup requests for %s" % instance_type.name
+					)
 
 					registerer = exclusive_startup_container.add_child()
 					registerer.set_job(
@@ -213,45 +214,6 @@ class CurrentVersionRequestJob(InstanceJobHelper):
 								},
 								"Update routing for %s" % instance.instance_id
 							)
-
-				# Startup instances of the new version.
-				instances = self.get_instances(
-					session,
-					instance_type,
-					constants.INSTANCE_CAN_START_STATES,
-					context
-				)
-
-				for instance in instances:
-					routing = exclusive_startup_container.add_child()
-					routing.set_job(
-						'paasmaker.job.routing.update',
-						{
-							'instance_id': instance.id,
-							'add': True
-						},
-						"Update routing for %s" % instance.instance_id
-					)
-
-					startup = routing.add_child()
-					startup.set_job(
-						'paasmaker.job.heart.startup',
-						{
-							'instance_id': instance.instance_id
-						},
-						"Startup instance %s on node %s" % (instance.instance_id, instance.node.name),
-						node=instance.node.uuid
-					)
-
-					prestartup = startup.add_child()
-					prestartup.set_job(
-						'paasmaker.job.heart.prestartup',
-						{
-							'instance_id': instance.instance_id
-						},
-						"Pre startup instance %s on node %s" % (instance.instance_id, instance.node.name),
-						node=instance.node.uuid
-					)
 			else:
 				# Non-exclusive instance type.
 				instances = self.get_instances(
