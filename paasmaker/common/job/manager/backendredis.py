@@ -314,7 +314,6 @@ class RedisJobBackend(JobBackend):
 	def set_attrs(self, job_id, attrs, callback):
 		def on_complete(result):
 			# The last result is the whole job object.
-			print str(result)
 			job_data = self._from_json(result[-1])
 			callback(job_data)
 
