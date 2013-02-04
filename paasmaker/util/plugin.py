@@ -206,7 +206,14 @@ class PluginRegistry(object):
 			plugin to the user.
 		"""
 		# Find the class object that matches the supplied string name.
-		former = get_class(klass)
+		try:
+			former = get_class(klass)
+		except AttributeError, ex:
+			# Module doesn't contain that class file.
+			raise ValueError("The module for %s does not contain the named class." % klass)
+		except ImportError, ex:
+			# No such module.
+			raise ValueError("The module for %s does not exist." % klass)
 
 		# Make sure it's a subclass of the plugin.
 		if not issubclass(former, Plugin):
@@ -449,6 +456,38 @@ class TestExample(unittest.TestCase):
 		self.assertEquals(instance.configuration, 2, "Configuration was not passed to instance.")
 		self.assertEquals(instance.get_flat_option('option1'), 'test', 'Flat option not present.')
 		self.assertEquals(instance.get_flat_parameter('parameter1'), 'test', 'Flat parameter not present.')
+
+	def test_plugin_registration_bad_class(self):
+		#print str(registry)
+		registry = PluginRegistry(2)
+
+		# Valid module, bad class.
+		try:
+			registry.register(
+				'paasmaker.test',
+				'paasmaker.util.PluginExampleNot',
+				{'option1': 'test'},
+				"Test Plugin"
+			)
+
+			self.assertTrue(False, "Should have raised exception.")
+		except ValueError, ex:
+			self.assertIn("does not contain the named class", str(ex))
+			self.assertTrue(True, "Raised exception correctly.")
+
+		# Invalid module.
+		try:
+			registry.register(
+				'paasmaker.test',
+				'paasmaker.invalid.PluginExampleNot',
+				{'option1': 'test'},
+				"Test Plugin"
+			)
+
+			self.assertTrue(False, "Should have raised exception.")
+		except ValueError, ex:
+			self.assertIn("does not exist", str(ex))
+			self.assertTrue(True, "Raised exception correctly.")
 
 	def test_plugin_deregistration(self):
 		#print str(registry)
