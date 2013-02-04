@@ -4,6 +4,7 @@ import sys
 import json
 import subprocess
 import os
+import fcntl
 import datetime
 import signal
 import urllib2
@@ -67,6 +68,13 @@ class CommandSupervisor(object):
 		try:
 			self.log_helper("INFO", "Running command: %s" % str(self.data['command']))
 			self.log_fp.flush()
+
+			# Attempt to disable output buffering.
+			# Ref: http://stackoverflow.com/questions/107705/python-output-buffering/1736047#1736047
+			fl = fcntl.fcntl(self.log_fp.fileno(), fcntl.F_GETFL)
+			fl |= os.O_SYNC
+			fcntl.fcntl(self.log_fp.fileno(), fcntl.F_SETFL, fl)
+
 			self.process = subprocess.Popen(
 				self.data['command'],
 				stdin=None,

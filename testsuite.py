@@ -42,7 +42,7 @@ test_sets = {
 	paasmaker.util.joblogging: ['normal', 'util', 'job', 'logging'],
 	paasmaker.util.port: ['normal', 'util', 'network'],
 	paasmaker.util.plugin: ['normal', 'quick', 'util', 'configuration', 'plugin'],
-	paasmaker.util.commandsupervisor: ['normal', 'util', 'process'],
+	paasmaker.util.commandsupervisor: ['normal', 'util', 'process', 'supervisor'],
 	#paasmaker.util.temporaryrabbitmq: ['slow', 'util', 'messaging', 'rabbitmq'],
 	paasmaker.util.popen: ['normal', 'util', 'process'],
 	paasmaker.util.streamingchecksum: ['normal', 'util', 'checksum'],
