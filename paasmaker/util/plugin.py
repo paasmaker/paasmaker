@@ -80,6 +80,8 @@ MODE_REQUIRE_PARAMS = {
 # Mode constants.
 MODE = Enum(MODE_REQUIRE_PARAMS.keys())
 
+API_VERSION = "0.9.0"
+
 class Plugin(object):
 	"""
 	A subclass for your classes to make them into plugins.
@@ -222,6 +224,12 @@ class PluginRegistry(object):
 		# See if we have an options schema.
 		if not former.OPTIONS_SCHEMA:
 			raise ValueError("Supplied class has no options schema.")
+
+		# Check the API version.
+		if not hasattr(former, 'API_VERSION'):
+			raise ValueError("Supplied plugin does not specify an API version.")
+		if former.API_VERSION < API_VERSION:
+			raise ValueError("Plugin's API version %s does not match our API version %s." % (former.API_VERSION, API_VERSION))
 
 		# Validate the options supplied.
 		try:
@@ -394,6 +402,7 @@ class PluginExample(Plugin):
 		MODE.TEST_NOPARAM: None
 	}
 	OPTIONS_SCHEMA = PluginExampleOptionsSchema()
+	API_VERSION = "0.9.0"
 
 	def do_nothing(self):
 		# Various base plugins will define the signatures of functions
