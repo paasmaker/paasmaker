@@ -13,7 +13,7 @@ from upload import UploadController
 from application import ApplicationListController
 from job import JobListController, JobAbortController, JobStreamHandler
 from version import VersionController, VersionInstancesController
-from router import NginxController
+from router import TableDumpController, RouterStatsStreamHandler
 from package import PackageDownloadController, PackageSizeController
 from scmlist import ScmListController
 from configuration import ConfigurationDumpController, PluginInformationController

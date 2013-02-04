@@ -104,7 +104,7 @@ http {
 	"""
 
 	@staticmethod
-	def get_nginx_config(configuration, managed_params=None):
+	def get_nginx_config(configuration, managed_params):
 		"""
 		Create and return a NGINX configuration file based on
 		the supplied configuration object.
@@ -142,22 +142,13 @@ http {
 		"""
 		parameters = {}
 
-		if managed_params:
-			parameters['temp_dir'] = managed_params['temp_path']
-			parameters['listen_port_direct'] = managed_params['port_direct']
-			parameters['listen_port_80'] = managed_params['port_80']
-			parameters['log_path'] = managed_params['log_path']
-			parameters['temp_paths'] = NginxRouter.TEMP_PATHS % {'temp_dir': managed_params['temp_path']}
-			parameters['pid_path'] = managed_params['pid_path']
-			parameters['log_level'] = managed_params['log_level']
-		else:
-			parameters['listen_port_direct'] = 42530
-			parameters['listen_port_80'] = 80
-			# TODO: This is Linux specific.
-			parameters['log_path'] = '/var/log/nginx'
-			parameters['pid_path'] = '/var/run/nginx.pid'
-			parameters['temp_paths'] = ""
-			parameters['log_level'] = 'info'
+		parameters['temp_dir'] = managed_params['temp_path']
+		parameters['listen_port_direct'] = managed_params['port_direct']
+		parameters['listen_port_80'] = managed_params['port_80']
+		parameters['log_path'] = managed_params['log_path']
+		parameters['temp_paths'] = NginxRouter.TEMP_PATHS % {'temp_dir': managed_params['temp_path']}
+		parameters['pid_path'] = managed_params['pid_path']
+		parameters['log_level'] = managed_params['log_level']
 
 		parameters['redis_host'] = configuration.get_flat('redis.table.host')
 		parameters['redis_port'] = configuration.get_flat('redis.table.port')
