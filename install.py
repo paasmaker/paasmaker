@@ -363,7 +363,7 @@ if context['service_managedpostgres_enable']:
 			'class': 'paasmaker.pacemaker.service.managedpostgres.ManagedPostgresService',
 			'title': 'Managed Postgres Service',
 			'parameters': {
-				'password': 'paasmaker',
+				'root_password': 'paasmaker',
 				'shutdown': context['shutdown_daemons_on_exit']
 			}
 		}
@@ -377,7 +377,7 @@ if context['service_managedmysql_enable']:
 			'class': 'paasmaker.pacemaker.service.managedmysql.ManagedMySQLService',
 			'title': 'Managed MySQL Service',
 			'parameters': {
-				'password': 'paasmaker',
+				'root_password': 'paasmaker',
 				'shutdown': context['shutdown_daemons_on_exit']
 			}
 		}
