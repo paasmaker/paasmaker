@@ -8,7 +8,7 @@ frontend_domain_postfix: ":42530"
 master_node: localhost
 master_port: 42500
 
-shutdown_daemons_on_exit: false
+shutdown_daemons_on_exit: true
 
 install_init_script: true
 enable_init_script: true
@@ -17,7 +17,7 @@ init_redirect_port80: true
 runtime_php_enable: true
 runtime_php_disable_system_apache: true
 
-runtime_rbenv_enable: true
+runtime_rbenv_enable: false
 runtime_rbenv_versions: ['1.9.3-p327']
 
 service_managedmysql_enable: true
