@@ -314,6 +314,7 @@ class RedisJobBackend(JobBackend):
 	def set_attrs(self, job_id, attrs, callback):
 		def on_complete(result):
 			# The last result is the whole job object.
+			print str(result)
 			job_data = self._from_json(result[-1])
 			callback(job_data)
 
@@ -341,7 +342,10 @@ class RedisJobBackend(JobBackend):
 		else:
 			# Just go ahead and update it.
 			encoded = self._to_json(attrs)
-			self.redis.hmset(job_id, encoded, on_complete)
+			pipeline = self.redis.pipeline(True)
+			pipeline.hmset(job_id, encoded)
+			pipeline.hgetall(job_id)
+			pipeline.execute(on_complete)
 
 	def get_attr(self, job_id, attr, callback):
 		def on_hmget(values):
