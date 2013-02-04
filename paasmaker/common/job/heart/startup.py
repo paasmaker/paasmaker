@@ -72,5 +72,12 @@ class InstanceStartupJob(BaseJob):
 		self.instance_data['instance']['state'] = constants.INSTANCE.ERROR
 		self.configuration.instances.save()
 
-		self.logger.error(message)
+		# Include the log entries from that instance.
+		# TODO: Only include some of this data.
+		instance_log_file = self.configuration.get_job_log_path(self.instance_id, False)
+		if os.path.exists(instance_log_file):
+			fp = open(instance_log_file, 'r')
+			self.logger.info("Instance log file:\n%s", fp.read())
+			fp.close()
+
 		self.failed(message)
