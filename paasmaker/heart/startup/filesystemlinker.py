@@ -35,6 +35,7 @@ class FilesystemLinker(BasePrepare):
 		paasmaker.util.plugin.MODE.RUNTIME_STARTUP: FilesystemLinkerParametersSchema()
 	}
 	OPTIONS_SCHEMA = FilesystemLinkerConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	# - parse services out of environment variable
 	# - look for protocol: directory (and only one, else error callback)
@@ -215,7 +216,7 @@ class FilesystemLinkerTest(BasePrepareTest):
 
 		self.assertTrue(os.path.islink(os.path.join(self.instance_directory, parameters['directories'][0])), "Symlink was not created in the instance directory.")
 		self.assertTrue(os.path.exists(os.path.join(self.persistent_directory, parameters['directories'][0])), "Target directory does not appear to exist.")
-		
+
 	def test_invalid_directory_parameters(self):
 		# Linked directories nested at multiple levels don't make sense (if a is a symlink, then a/b can't also be a symlink)
 		parameters = {
@@ -265,7 +266,7 @@ class FilesystemLinkerTest(BasePrepareTest):
 		for dirname in parameters['directories']:
 			self.assertTrue(os.path.islink(os.path.join(self.instance_directory, dirname)), "Symlink %s was not created in the instance directory." % dirname)
 			self.assertTrue(os.path.exists(os.path.join(self.persistent_directory, dirname)), "Target directory %s does not appear to exist." % dirname)
-		
+
 	def test_has_target_no_source(self):
 		# Create the target dir beforehand, and make sure the symlink still works.
 		parameters = {
@@ -295,7 +296,7 @@ class FilesystemLinkerTest(BasePrepareTest):
 		self.assertTrue(os.path.islink(source_symlink), "Symlink was not created in the instance directory.")
 		self.assertTrue(os.path.exists(target_directory), "Target directory does not appear to exist.")
 		self.assertEqual(target_directory, os.path.realpath(source_symlink), "Symlink in instance directory does not point to target directory.")
-		
+
 	def test_no_target_has_source(self):
 		# Create the source dir beforehand, insert two small files, and check that they're copied.
 		parameters = {
@@ -339,10 +340,10 @@ class FilesystemLinkerTest(BasePrepareTest):
 			fp = open(copied_test_file)
 			copied_contents = fp.read()
 			fp.close()
-			self.assertEqual(test_string, copied_contents, "Target directory does not appear to exist.")		
+			self.assertEqual(test_string, copied_contents, "Target directory does not appear to exist.")
 
 			self.assertEqual(copied_test_file, os.path.realpath(test_file + str(i)), "File path with symlink in instance directory does not point to file in target directory.")
-		
+
 	def test_has_target_and_has_source(self):
 		# If both directories exist beforehand, check that a test file is copied correctly and that the subsequent symlink works.
 		parameters = {
@@ -387,7 +388,7 @@ class FilesystemLinkerTest(BasePrepareTest):
 		fp = open(test_file)
 		contents_via_symlink = fp.read()
 		fp.close()
-		self.assertEqual(test_string, contents_via_symlink, "Target directory does not appear to exist.")		
+		self.assertEqual(test_string, contents_via_symlink, "Target directory does not appear to exist.")
 
 		self.assertEqual(target_directory, os.path.realpath(source_location), "Symlink in instance directory does not point to target directory.")
 		self.assertEqual(copied_test_file, os.path.realpath(test_file), "File path with symlink in instance directory does not point to file in target directory.")

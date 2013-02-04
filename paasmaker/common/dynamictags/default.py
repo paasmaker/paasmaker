@@ -5,6 +5,7 @@ import paasmaker
 from base import BaseDynamicTags, BaseDynamicTagsTest
 
 class DefaultDynamicTags(BaseDynamicTags):
+	API_VERSION = "0.9.0"
 
 	def fetch(self, existing_tags, callback):
 		# Store a few possibly helpful tags for the node.

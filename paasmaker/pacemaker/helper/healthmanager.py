@@ -270,10 +270,14 @@ class HealthCheckMarkCompletedJob(paasmaker.common.job.base.BaseJob):
 ##
 
 class HealthCheckTestPlugin(BaseHealthCheck):
+	API_VERSION = "0.9.0"
+
 	def check(self, parent_job_id, callback, error_callback):
 		callback({}, "Successfully checked health.")
 
 class HealthCheckTestFailPlugin(BaseHealthCheck):
+	API_VERSION = "0.9.0"
+
 	def check(self, parent_job_id, callback, error_callback):
 		error_callback("Generated an error.")
 

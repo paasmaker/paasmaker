@@ -20,6 +20,7 @@ class DownNodesHealthCheck(BaseHealthCheck):
 	MODES = {
 		paasmaker.util.plugin.MODE.HEALTH_CHECK: DownNodesHealthCheckParametersSchema(),
 	}
+	API_VERSION = "0.9.0"
 
 	def check(self, parent_job_id, callback, error_callback):
 		timeout = self.parameters['node_timeout']

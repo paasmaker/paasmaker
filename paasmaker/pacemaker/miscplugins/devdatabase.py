@@ -51,6 +51,7 @@ class DevDatabasePlugin(paasmaker.util.plugin.Plugin):
 		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None
 	}
 	OPTIONS_SCHEMA = DevDatabaseConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def startup_async_prelisten(self, callback, error_callback):
 		# Look for some defaults, and create them if missing.
@@ -61,7 +62,7 @@ class DevDatabasePlugin(paasmaker.util.plugin.Plugin):
 		).filter(
 			paasmaker.model.User.login == self.options['login']
 		).first()
-		
+
 		self.logger.info("************************************************************")
 		self.logger.info("Running development bootstrap plugin")
 		self.logger.info("----------------")
@@ -70,7 +71,7 @@ class DevDatabasePlugin(paasmaker.util.plugin.Plugin):
 			# Create the user and set default name/password etc.
 			new_user = True
 			user = paasmaker.model.User()
-			
+
 			user.login = self.options['login']
 			user.email = self.options['email']
 			user.enabled = True
@@ -81,7 +82,7 @@ class DevDatabasePlugin(paasmaker.util.plugin.Plugin):
 			meta = user.auth_meta
 			meta['dev_user'] = self.called_name
 			user.auth_meta = meta
-			
+
 			self.logger.info("New user created for testing!")
 			self.logger.info("username: %s", self.options['login'])
 			self.logger.info("password: %s", self.options['password'])

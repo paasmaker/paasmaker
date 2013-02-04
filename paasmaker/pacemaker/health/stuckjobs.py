@@ -16,6 +16,7 @@ class StuckJobsHealthCheck(BaseHealthCheck):
 	MODES = {
 		paasmaker.util.plugin.MODE.HEALTH_CHECK: StuckJobsHealthCheckParametersSchema(),
 	}
+	API_VERSION = "0.9.0"
 
 	def check(self, parent_job_id, callback, error_callback):
 		# Find jobs that are on nodes that are down.

@@ -8,6 +8,8 @@ import paasmaker
 import colander
 
 class TarballPacker(BasePacker):
+	API_VERSION = "0.9.0"
+
 	def pack(self, directory, pack_name_prefix, callback, error_callback):
 		# Generate the full name for the package.
 		package_full_name = "%s.tar.gz" % pack_name_prefix

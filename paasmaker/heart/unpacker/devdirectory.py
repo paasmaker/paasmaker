@@ -8,6 +8,7 @@ import paasmaker
 import colander
 
 class DevDirectoryUnpacker(BaseUnpacker):
+	API_VERSION = "0.9.0"
 
 	def unpack(self, package_path, target_path, original_url, callback, error_callback):
 		# We need to parse the directory out of the original URL.

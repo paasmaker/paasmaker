@@ -8,6 +8,7 @@ from base import BaseSCM, BaseSCMTest
 import paasmaker
 
 class TarballSCM(BaseSCM):
+	API_VERSION = "0.9.0"
 
 	def create_working_copy(self, callback, error_callback):
 		# Make a directory to extract to.

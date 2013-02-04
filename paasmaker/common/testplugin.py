@@ -60,6 +60,7 @@ class TestPlugin(Plugin):
 		MODE.STORER: None
 	}
 	OPTIONS_SCHEMA = TestPluginOptionsSchema()
+	API_VERSION = "0.9.0"
 
 	def do_nothing(self):
 		pass

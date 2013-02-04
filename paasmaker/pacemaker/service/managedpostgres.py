@@ -50,6 +50,7 @@ class ManagedPostgresService(PostgresService):
 		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None
 	}
 	OPTIONS_SCHEMA = ManagedPostgresServiceConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def _postgres_path(self):
 		return self.configuration.get_scratch_path_exists(

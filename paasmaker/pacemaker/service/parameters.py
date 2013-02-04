@@ -22,6 +22,7 @@ class ParametersService(BaseService):
 		paasmaker.util.plugin.MODE.SERVICE_DELETE: None
 	}
 	OPTIONS_SCHEMA = ParametersServiceConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def create(self, name, callback, error_callback):
 		# Does the same thing as update.

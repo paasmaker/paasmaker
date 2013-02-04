@@ -89,6 +89,7 @@ class S3BucketService(BaseService):
 		paasmaker.util.plugin.MODE.SERVICE_DELETE: None
 	}
 	OPTIONS_SCHEMA = S3BucketServiceConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def create(self, name, callback, error_callback):
 		# Generate a bucket name.

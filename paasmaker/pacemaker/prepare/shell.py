@@ -22,6 +22,7 @@ class ShellPrepare(BasePrepare):
 		paasmaker.util.plugin.MODE.RUNTIME_STARTUP: ShellPrepareParametersSchema()
 	}
 	OPTIONS_SCHEMA = ShellPrepareConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def prepare(self, environment, directory, callback, error_callback):
 		# Unpack the commands we've been supplied into a shell script.
@@ -97,5 +98,4 @@ class ShellPrepareTestTest(BasePrepareTest):
 		self.assertTrue(self.success, "Did not prepare properly.")
 		self.assertTrue(os.path.exists(os.path.join(self.tempdir, 'bar.txt')), "bar.txt does not exist.")
 		self.assertTrue(os.path.exists(os.path.join(self.tempdir, 'sum.txt')), "sum.txt does not exist.")
-		
-		
+

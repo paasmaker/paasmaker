@@ -42,6 +42,7 @@ class FilesystemService(BaseService):
 		paasmaker.util.plugin.MODE.SERVICE_DELETE: None
 	}
 	OPTIONS_SCHEMA = FilesystemServiceConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def _check_options(self):
 		super(FilesystemService, self)._check_options()

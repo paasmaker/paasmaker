@@ -8,6 +8,7 @@ import paasmaker
 import colander
 
 class PaasmakerNodeFetcher(BaseFetcher):
+	API_VERSION = "0.9.0"
 
 	def fetch(self, url, remote_filename, target_filename, callback, error_callback):
 		# Use the API to fetch it from the appropriate node.

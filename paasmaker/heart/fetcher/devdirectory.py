@@ -7,6 +7,8 @@ import paasmaker
 import colander
 
 class DevDirectoryFetcher(BaseFetcher):
+	API_VERSION = "0.9.0"
+
 	def fetch(self, url, remote_filename, target_filename, callback, error_callback):
 		parsed = urlparse.urlparse(url)
 

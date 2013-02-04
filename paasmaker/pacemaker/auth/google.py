@@ -21,6 +21,7 @@ class GoogleAuthMetadata(paasmaker.util.plugin.Plugin):
 		paasmaker.util.plugin.MODE.STARTUP_ROUTES: None,
 	}
 	OPTIONS_SCHEMA = GoogleAuthConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def add_routes(self, routes, route_extras):
 		# Add the additional route required.

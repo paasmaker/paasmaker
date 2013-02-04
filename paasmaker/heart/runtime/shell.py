@@ -43,6 +43,7 @@ class ShellRuntime(BaseRuntime):
 		paasmaker.util.plugin.MODE.RUNTIME_VERSIONS: None
 	}
 	OPTIONS_SCHEMA = ShellRuntimeOptionsSchema()
+	API_VERSION = "0.9.0"
 
 	def get_versions(self, callback):
 		# Just return this version.

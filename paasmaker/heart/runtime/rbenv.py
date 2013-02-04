@@ -47,6 +47,7 @@ class RbenvRuntime(BaseRuntime):
 		paasmaker.util.plugin.MODE.RUNTIME_VERSIONS: None
 	}
 	OPTIONS_SCHEMA = RbenvRuntimeOptionsSchema()
+	API_VERSION = "0.9.0"
 
 	def _get_rbenv_root_path(self):
 		raw_path = self.options['rbenv_path']

@@ -31,6 +31,7 @@ class PostgresService(BaseService):
 		paasmaker.util.plugin.MODE.SERVICE_CREATE: PostgresServiceParametersSchema()
 	}
 	OPTIONS_SCHEMA = PostgresServiceConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def create(self, name, callback, error_callback):
 		# Choose a username, password, and database name.

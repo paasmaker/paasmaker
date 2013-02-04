@@ -32,6 +32,7 @@ class MySQLService(BaseService):
 		paasmaker.util.plugin.MODE.SERVICE_CREATE: MySQLServiceParametersSchema()
 	}
 	OPTIONS_SCHEMA = MySQLServiceConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def create(self, name, callback, error_callback):
 		# Choose a username, password, and database name.

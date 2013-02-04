@@ -44,6 +44,7 @@ class ManagedMongoService(BaseService):
 		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None
 	}
 	OPTIONS_SCHEMA = ManagedMongoServiceConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def create(self, name, callback, error_callback):
 		instance_name = self._safe_name(name)

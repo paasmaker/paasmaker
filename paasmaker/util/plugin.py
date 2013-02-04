@@ -227,9 +227,9 @@ class PluginRegistry(object):
 
 		# Check the API version.
 		if not hasattr(former, 'API_VERSION'):
-			raise ValueError("Supplied plugin does not specify an API version.")
+			raise ValueError("Plugin %s does not specify an API version." % plugin)
 		if former.API_VERSION < API_VERSION:
-			raise ValueError("Plugin's API version %s does not match our API version %s." % (former.API_VERSION, API_VERSION))
+			raise ValueError("Plugin's API version %s does not match our API version %s - in plugin %s." % (former.API_VERSION, API_VERSION, plugin))
 
 		# Validate the options supplied.
 		try:

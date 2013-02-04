@@ -182,10 +182,14 @@ class PeriodicRunJob(BaseJob):
 ##
 
 class PeriodicTestPlugin(BasePeriodic):
+	API_VERSION = "0.9.0"
+
 	def on_interval(self, callback, error_callback):
 		callback("Successfully cleaned up.")
 
 class PeriodicTestFailPlugin(BasePeriodic):
+	API_VERSION = "0.9.0"
+
 	def on_interval(self, callback, error_callback):
 		error_callback("Generated an error.")
 

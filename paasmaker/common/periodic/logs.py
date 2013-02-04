@@ -19,6 +19,7 @@ class LogsCleanerConfigurationSchema(colander.MappingSchema):
 
 class LogsCleaner(BasePeriodic):
 	OPTIONS_SCHEMA = LogsCleanerConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def on_interval(self, callback, error_callback):
 		# Start by making a list of directories at the top level.

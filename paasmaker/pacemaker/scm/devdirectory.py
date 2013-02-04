@@ -11,6 +11,7 @@ class DevDirectorySCM(BaseSCM):
 		paasmaker.util.plugin.MODE.SCM_FORM: None,
 		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None
 	}
+	API_VERSION = "0.9.0"
 
 	def create_working_copy(self, callback, error_callback):
 		directory = self.parameters['location']

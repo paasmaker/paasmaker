@@ -22,6 +22,7 @@ class BaseJob(Plugin):
 		MODE.JOB: BaseJobParametersSchema()
 	}
 	OPTIONS_SCHEMA = BaseJobOptionsSchema()
+	API_VERSION = "0.9.0"
 
 	def configure(self, manager, job_id, metadata):
 		"""

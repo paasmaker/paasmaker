@@ -29,6 +29,7 @@ class GitSCM(BaseSCM):
 		paasmaker.util.plugin.MODE.SCM_EXPORT: GitSCMParametersSchema(),
 		paasmaker.util.plugin.MODE.SCM_FORM: None
 	}
+	API_VERSION = "0.9.0"
 
 	def create_working_copy(self, callback, error_callback):
 		self.git_in_progress = False

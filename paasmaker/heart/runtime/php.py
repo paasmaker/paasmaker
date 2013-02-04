@@ -54,6 +54,7 @@ class PHPRuntime(BaseRuntime):
 		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None
 	}
 	OPTIONS_SCHEMA = PHPRuntimeOptionsSchema()
+	API_VERSION = "0.9.0"
 
 	VHOST_TEMPLATE = """
 NameVirtualHost *:%(port)d

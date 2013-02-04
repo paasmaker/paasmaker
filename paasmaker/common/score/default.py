@@ -7,6 +7,8 @@ import paasmaker
 from base import BaseScore, BaseScoreTest
 
 class DefaultScore(BaseScore):
+	API_VERSION = "0.9.0"
+
 	def score(self, stats):
 		# TODO: Do different things based on the platform for the stats.
 		# TODO: Evaluate if this algorithm chooses good results or not.

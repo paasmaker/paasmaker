@@ -84,6 +84,7 @@ class DummySCMList(BaseSCMList):
 	MODES = {
 		paasmaker.util.plugin.MODE.SCM_LIST: None
 	}
+	API_VERSION = "0.9.0"
 
 	def get_repo_list(self, bypass_cache, callback, error_callback):
 		callback([
@@ -101,6 +102,7 @@ class DummySCMErrorList(BaseSCMList):
 	MODES = {
 		paasmaker.util.plugin.MODE.SCM_LIST: None
 	}
+	API_VERSION = "0.9.0"
 
 	def get_repo_list(self, bypass_cache, callback, error_callback):
 		error_callback("Failed to fetch list.")

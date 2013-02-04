@@ -39,6 +39,8 @@ def get_total_space(path):
 		return s.f_bsize * s.f_blocks
 
 class DefaultStats(BaseStats):
+	API_VERSION = "0.9.0"
+
 	def stats(self, existing_stats, callback):
 		# Include the platform - this allows score plugins to make
 		# more informed decisions.

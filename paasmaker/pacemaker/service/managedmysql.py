@@ -50,6 +50,7 @@ class ManagedMySQLService(MySQLService):
 		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None
 	}
 	OPTIONS_SCHEMA = ManagedMySQLServiceConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def _mysql_path(self):
 		return self.configuration.get_scratch_path_exists(

@@ -15,6 +15,7 @@ class JobsCleanerConfigurationSchema(colander.MappingSchema):
 
 class JobsCleaner(BasePeriodic):
 	OPTIONS_SCHEMA = JobsCleanerConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def on_interval(self, callback, error_callback):
 		if not self.configuration.is_pacemaker():

@@ -8,6 +8,7 @@ import paasmaker
 import colander
 
 class TarballUnpacker(BaseUnpacker):
+	API_VERSION = "0.9.0"
 
 	def unpack(self, package_path, target_path, original_url, callback, error_callback):
 		command = ['tar', 'zxvf', package_path]

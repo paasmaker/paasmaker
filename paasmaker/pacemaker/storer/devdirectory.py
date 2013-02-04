@@ -8,6 +8,7 @@ import paasmaker
 import colander
 
 class DevDirectoryStorer(BaseStorer):
+	API_VERSION = "0.9.0"
 
 	def store(self, package_file, package_checksum, package_type, callback, error_callback):
 		# Just generate a URL to that directory.

@@ -26,6 +26,7 @@ class DefaultPlacement(BasePlacement):
 		paasmaker.util.plugin.MODE.PLACEMENT: DefaultPlacementParametersSchema()
 	}
 	OPTIONS_SCHEMA = DefaultPlacementConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def _fail_if_none(self, nodes, callback, reason):
 		if len(nodes) == 0:

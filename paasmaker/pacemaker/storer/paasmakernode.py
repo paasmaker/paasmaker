@@ -8,6 +8,7 @@ import paasmaker
 import colander
 
 class PaasmakerNodeStorer(BaseStorer):
+	API_VERSION = "0.9.0"
 
 	def store(self, package_file, package_checksum, package_type, callback, error_callback):
 		# Well, this one is easy.

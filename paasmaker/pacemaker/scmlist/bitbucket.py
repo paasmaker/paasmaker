@@ -35,6 +35,7 @@ class BitbucketSCMList(BaseSCMList):
 		paasmaker.util.plugin.MODE.SCM_LIST: None
 	}
 	OPTIONS_SCHEMA = BitbucketSCMListOptionsSchema()
+	API_VERSION = "0.9.0"
 
 	def get_repo_list(self, bypass_cache, callback, error_callback):
 		def got_list(response):

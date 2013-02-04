@@ -16,6 +16,7 @@ class InternalAuth(BaseAuth):
 		paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN: None
 	}
 	OPTIONS_SCHEMA = InternalUserConfigurationSchema()
+	API_VERSION = "0.9.0"
 
 	def authenticate(self, session, username, password, callback, error_callback):
 		# Search for user, where the source matches our name.
