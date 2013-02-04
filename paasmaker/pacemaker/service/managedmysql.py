@@ -112,6 +112,7 @@ class ManagedMySQLService(MySQLService):
 		# TODO: don't hack this quite so badly
 		self.options['hostname'] = '127.0.0.1'
 		self.options['username'] = 'root'
+		self.options['password'] = self.options['root_password']
 
 		super(ManagedMySQLService, self).remove(name, existing_credentials, callback, error_callback)
 
