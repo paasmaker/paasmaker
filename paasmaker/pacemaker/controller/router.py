@@ -102,6 +102,7 @@ class RouterStatsStreamHandler(BaseWebsocketHandler):
 
 	def handle_update(self, message):
 		def got_stats(stats):
+			stats['as_at'] = time.time()
 			self.send_success('update', stats)
 
 		def failed_stats(error, exception=None):
