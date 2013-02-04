@@ -1,0 +1,5 @@
+periodics:
+  - plugin: paasmaker.periodic.logs
+    interval: 3600
+  - plugin: paasmaker.periodic.jobs
+    interval: 3600

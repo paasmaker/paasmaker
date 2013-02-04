@@ -81,15 +81,15 @@ class JobListController(BaseController):
 			name = "Health Checks"
 			ret = None
 			ret_name = None
-		elif job_list_type == 'cleaner':
+		elif job_list_type == 'periodic':
 			# You must have SYSTEM_ADMINISTRATION permission.
 			self.require_permission(constants.PERMISSION.SYSTEM_ADMINISTRATION)
 
 			# Ignore the argument.
-			tag = "cleaner"
+			tag = "periodic"
 			if len(sub_type) > 0:
 				tag += ":" + sub_type[0:-1]
-			name = "Cleaner Tasks"
+			name = "Periodic Tasks"
 			ret = None
 			ret_name = None
 		elif job_list_type == 'instancetype':
@@ -141,7 +141,7 @@ class JobListController(BaseController):
 		routes = []
 		# The route for, eg, /job/list/workspace/1
 		routes.append((r"/job/list/(workspace|application|version|instancetype)/(\d+)", JobListController, configuration))
-		routes.append((r"/job/list/(health|cleaner)", JobListController, configuration))
+		routes.append((r"/job/list/(health|periodic)", JobListController, configuration))
 		# The route for job detail. Eg, /job/detail/<jobid>
 		routes.append((r"/job/(detail)/([-\w\d]+)", JobListController, configuration))
 		return routes

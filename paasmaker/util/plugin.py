@@ -65,7 +65,7 @@ MODE_REQUIRE_PARAMS = {
 	'JOB': True,
 
 	'HEALTH_CHECK': True,
-	'CLEANER': False,
+	'PERIODIC': False,
 
 	'NODE_DYNAMIC_TAGS': False,
 	'NODE_STATS': False,

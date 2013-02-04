@@ -4,32 +4,28 @@ import paasmaker
 import tornado.testing
 import colander
 
-class BaseCleanerConfigurationSchema(colander.MappingSchema):
+class BasePeriodicConfigurationSchema(colander.MappingSchema):
 	# No options defined.
 	pass
 
-class BaseCleaner(paasmaker.util.plugin.Plugin):
+class BasePeriodic(paasmaker.util.plugin.Plugin):
 	MODES = {
-		paasmaker.util.plugin.MODE.CLEANER: None
+		paasmaker.util.plugin.MODE.PERIODIC: None
 	}
-	OPTIONS_SCHEMA = BaseCleanerConfigurationSchema()
+	OPTIONS_SCHEMA = BasePeriodicConfigurationSchema()
 
-	def clean(self, callback, error_callback):
+	def on_interval(self, callback, error_callback):
 		"""
-		Perform your cleanup tasks. You must cooperate with the IO loop
+		Perform your periodic tasks. You must cooperate with the IO loop
 		if your tasks will take some time or be IO bound. Call the callback
 		with a message when complete, or the error_callback if you failed
 		for some critical reason.
-
-		If you don't need to run (for example, if the task is not appropriate
-		for your node type) just call the normal callback with a message to
-		that effect, rather than using the error_callback.
 		"""
-		raise NotImplementedError("You must implement clean().")
+		raise NotImplementedError("You must implement on_interval().")
 
-class BaseCleanerTest(tornado.testing.AsyncTestCase):
+class BasePeriodicTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
-		super(BaseCleanerTest, self).setUp()
+		super(BasePeriodicTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'], io_loop=self.io_loop)
 		self.success = False
 		self.message = None
@@ -37,7 +33,7 @@ class BaseCleanerTest(tornado.testing.AsyncTestCase):
 
 	def tearDown(self):
 		self.configuration.cleanup()
-		super(BaseCleanerTest, self).tearDown()
+		super(BasePeriodicTest, self).tearDown()
 
 	def success_callback(self, message):
 		self.success = True

@@ -128,9 +128,9 @@ test_sets = {
 	paasmaker.pacemaker.health.adjustinstances: ['normal', 'health', 'repair'],
 	paasmaker.pacemaker.health.stuckjobs: ['normal', 'health', 'stuckjobs'],
 
-	paasmaker.common.helper.cleanupmanager: ['normal', 'cleanup', 'cleanupmanager'],
-	paasmaker.common.cleaner.logs: ['normal', 'cleanup'],
-	paasmaker.common.cleaner.jobs: ['normal', 'cleanup'],
+	paasmaker.common.helper.periodicmanager: ['normal', 'periodic', 'periodicmanager'],
+	paasmaker.common.periodic.logs: ['normal', 'periodic'],
+	paasmaker.common.periodic.jobs: ['normal', 'periodic'],
 
 	paasmaker.common.job.prepare.prepareroot: ['normal', 'application', 'prepare'],
 	paasmaker.common.job.coordinate.selectlocations: ['normal', 'application', 'coordinate'],
@@ -262,7 +262,7 @@ if __name__ == '__main__':
 	try:
 		for module in modules:
 			temporary_name = tempfile.mkstemp()[1]
-			
+
 			if args.coverage:
 				arguments = [
 					'coverage', 'run',

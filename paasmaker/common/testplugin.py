@@ -48,7 +48,7 @@ class TestPlugin(Plugin):
 		MODE.JOB: TestPluginParametersSchema(),
 
 		MODE.HEALTH_CHECK: TestPluginParametersSchema(),
-		MODE.CLEANER: None,
+		MODE.PERIODIC: None,
 
 		MODE.NODE_DYNAMIC_TAGS: None,
 		MODE.NODE_STATS: None,

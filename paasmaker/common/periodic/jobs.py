@@ -2,7 +2,7 @@
 import time
 
 import paasmaker
-from base import BaseCleaner, BaseCleanerTest
+from base import BasePeriodic, BasePeriodicTest
 
 import colander
 
@@ -13,10 +13,10 @@ class JobsCleanerConfigurationSchema(colander.MappingSchema):
 		default=86400 * 7,
 		missing=86400 * 7)
 
-class JobsCleaner(BaseCleaner):
+class JobsCleaner(BasePeriodic):
 	OPTIONS_SCHEMA = JobsCleanerConfigurationSchema()
 
-	def clean(self, callback, error_callback):
+	def on_interval(self, callback, error_callback):
 		if not self.configuration.is_pacemaker():
 			callback("Not a pacemaker, so not cleaning up jobs.")
 			return
@@ -58,13 +58,13 @@ class JobsCleaner(BaseCleaner):
 			# No more to process. Find some more.
 			self._fetch_old_jobs()
 
-class JobsCleanerTest(BaseCleanerTest):
+class JobsCleanerTest(BasePeriodicTest):
 	def setUp(self):
 		super(JobsCleanerTest, self).setUp()
 
 		self.configuration.plugins.register(
-			'paasmaker.cleaner.jobs',
-			'paasmaker.common.cleaner.jobs.JobsCleaner',
+			'paasmaker.periodic.jobs',
+			'paasmaker.common.periodic.jobs.JobsCleaner',
 			{},
 			'Log Cleanup Plugin'
 		)
@@ -91,11 +91,11 @@ class JobsCleanerTest(BaseCleanerTest):
 
 		# Do a cleanup. This job should not be removed.
 		plugin = self.configuration.plugins.instantiate(
-			'paasmaker.cleaner.jobs',
-			paasmaker.util.plugin.MODE.CLEANER
+			'paasmaker.periodic.jobs',
+			paasmaker.util.plugin.MODE.PERIODIC
 		)
 
-		plugin.clean(self.success_callback, self.failure_callback)
+		plugin.on_interval(self.success_callback, self.failure_callback)
 		self.wait()
 
 		self.assertTrue(self.success)
@@ -109,19 +109,19 @@ class JobsCleanerTest(BaseCleanerTest):
 
 		# Change the plugins options. Use a negative time to get it to purge the database.
 		self.configuration.plugins.register(
-			'paasmaker.cleaner.jobs',
-			'paasmaker.common.cleaner.jobs.JobsCleaner',
+			'paasmaker.periodic.jobs',
+			'paasmaker.common.periodic.jobs.JobsCleaner',
 			{'max_age': -10},
 			'Log Cleanup Plugin'
 		)
 
 		# Run it again.
 		plugin = self.configuration.plugins.instantiate(
-			'paasmaker.cleaner.jobs',
-			paasmaker.util.plugin.MODE.CLEANER
+			'paasmaker.periodic.jobs',
+			paasmaker.util.plugin.MODE.PERIODIC
 		)
 
-		plugin.clean(self.success_callback, self.failure_callback)
+		plugin.on_interval(self.success_callback, self.failure_callback)
 		self.wait()
 
 		self.assertTrue(self.success)

@@ -169,17 +169,17 @@ plugins:
     class: paasmaker.common.score.default.DefaultScore
     title: Default Node Scoring
 
-  # CLEANUP JOB
-  - name: paasmaker.job.cleaner
-    class: paasmaker.common.helper.cleanupmanager.CleanerRunJob
-    title: Cleaner run Job
+  # PERIODIC JOB
+  - name: paasmaker.job.periodic
+    class: paasmaker.common.helper.periodicmanager.PeriodicRunJob
+    title: Periodic run Job
 
-  # CLEANUP PLUGINS
-  - name: paasmaker.cleaner.logs
-    class: paasmaker.common.cleaner.logs.LogsCleaner
+  # PERIODIC PLUGINS
+  - name: paasmaker.periodic.logs
+    class: paasmaker.common.periodic.logs.LogsCleaner
     title: Logs Cleaner
-  - name: paasmaker.cleaner.jobs
-    class: paasmaker.common.cleaner.jobs.JobsCleaner
+  - name: paasmaker.periodic.jobs
+    class: paasmaker.common.periodic.jobs.JobsCleaner
     title: Jobs Cleaner
 
   # SOURCE CODE PACKERS

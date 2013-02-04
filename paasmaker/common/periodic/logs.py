@@ -6,7 +6,7 @@ import time
 import logging
 
 import paasmaker
-from base import BaseCleaner, BaseCleanerTest
+from base import BasePeriodic, BasePeriodicTest
 
 import colander
 
@@ -17,10 +17,10 @@ class LogsCleanerConfigurationSchema(colander.MappingSchema):
 		default=86400 * 7,
 		missing=86400 * 7)
 
-class LogsCleaner(BaseCleaner):
+class LogsCleaner(BasePeriodic):
 	OPTIONS_SCHEMA = LogsCleanerConfigurationSchema()
 
-	def clean(self, callback, error_callback):
+	def on_interval(self, callback, error_callback):
 		# Start by making a list of directories at the top level.
 		self.paths = glob.glob(os.path.join(self.configuration.get_flat('log_directory'), '*'))
 
@@ -95,13 +95,13 @@ class LogsCleaner(BaseCleaner):
 	def _handle_file(self, file):
 		self.configuration.io_loop.add_callback(self._fetch_file)
 
-class LogsCleanerTest(BaseCleanerTest):
+class LogsCleanerTest(BasePeriodicTest):
 	def setUp(self):
 		super(LogsCleanerTest, self).setUp()
 
 		self.configuration.plugins.register(
-			'paasmaker.cleaner.logs',
-			'paasmaker.common.cleaner.logs.LogsCleaner',
+			'paasmaker.periodic.logs',
+			'paasmaker.common.periodic.logs.LogsCleaner',
 			{},
 			'Log Cleanup Plugin'
 		)
@@ -132,12 +132,12 @@ class LogsCleanerTest(BaseCleanerTest):
 		job_logger.finished()
 
 		plugin = self.configuration.plugins.instantiate(
-			'paasmaker.cleaner.logs',
-			paasmaker.util.plugin.MODE.CLEANER
+			'paasmaker.periodic.logs',
+			paasmaker.util.plugin.MODE.PERIODIC
 		)
 
 		# This should remove nothing.
-		plugin.clean(self.success_callback, self.failure_callback)
+		plugin.on_interval(self.success_callback, self.failure_callback)
 		self.wait()
 
 		self.assertTrue(self.success)
@@ -149,7 +149,7 @@ class LogsCleanerTest(BaseCleanerTest):
 			os.utime(log_file, (expected_age, expected_age))
 
 		# Now clean.
-		plugin.clean(self.success_callback, self.failure_callback)
+		plugin.on_interval(self.success_callback, self.failure_callback)
 		self.wait()
 
 		self.assertTrue(self.success)

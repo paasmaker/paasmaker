@@ -277,8 +277,8 @@ def on_completed_startup():
 			logger.info("Starting up health manager, because it's configured to run on this node.")
 			configuration.startup_health_manager()
 
-		# Set up the cleanup tasks.
-		configuration.startup_cleanup_manager()
+		# Set up the periodic tasks.
+		configuration.startup_periodic_manager()
 
 def on_intermediary_started(message):
 	logger.debug(message)
