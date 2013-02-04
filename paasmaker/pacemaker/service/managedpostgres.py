@@ -28,6 +28,11 @@ class ManagedPostgresServiceConfigurationSchema(colander.MappingSchema):
 		description="If true, shut down the managed postgres when the node stops. You won't want to do this normally.",
 		default=False,
 		missing=False)
+	binary_path = colander.SchemaNode(colander.String(),
+		title="Postgres Binary path",
+		description="The location of the Postgres binaries 'initdb' and 'pg_ctl'.",
+		default="/usr/lib/postgresql/9.1/bin",
+		missing="/usr/lib/postgresql/9.1/bin")
 
 class ManagedPostgresServiceParametersSchema(colander.MappingSchema):
 	# No options available for runtime configuration.
@@ -76,6 +81,7 @@ class ManagedPostgresService(PostgresService):
 			# Doesn't yet exist. Create it.
 			manager.configure(
 				postgres_path,
+				self.options['binary_path'],
 				port,
 				self.options['host'],
 				self.options['root_password']
@@ -91,6 +97,7 @@ class ManagedPostgresService(PostgresService):
 
 			self.options['hostname'] = '127.0.0.1' #self.configuration.get_flat('my_route')
 			self.options['username'] = 'postgres'
+			self.options['password'] = self.options['root_password']
 
 			# Wait a little bit for Postgres to settle down.
 			self.configuration.io_loop.add_timeout(time.time() + 0.5, on_delay)
@@ -111,6 +118,7 @@ class ManagedPostgresService(PostgresService):
 		# TODO: don't hack this quite so badly
 		self.options['hostname'] = '127.0.0.1'
 		self.options['username'] = 'postgres'
+		self.options['password'] = self.options['root_password']
 
 		super(ManagedPostgresService, self).remove(name, existing_credentials, callback, error_callback)
 

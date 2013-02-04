@@ -30,30 +30,24 @@ class PostgresDaemon(ManagedDaemon):
 
 	You should use a port other than 5432 for it, so as to
 	not conflict with any system installation of Postgres.
-
-	This class contains hard coded paths that are currently
-	Ubuntu 12.04 specific, and rely on having Postgres 9.1
-	installed.
 	"""
-
-	# TODO: Don't hardcode this.
-	PG_CTL = "/usr/lib/postgresql/9.1/bin/pg_ctl"
-	INITDB = "/usr/lib/postgresql/9.1/bin/initdb"
 
 	def _eat_output(self):
 		return open("%s/%s" % (self.parameters['working_dir'], str(uuid.uuid4())), 'w')
 
-	def configure(self, working_dir, port, bind_host, password=None):
+	def configure(self, working_dir, postgres_binaries_path, port, bind_host, password=None):
 		"""
 		Configure this instance.
 
 		:arg str working_dir: The working directory.
+		:arg str postgres_binaries_path: The path to the binaries for Postgres.
 		:arg int port: The port to listen on.
 		:arg str bind_host: The address to bind to.
 		:arg str|None password: An optional password for the
 			postgres user.
 		"""
 		self.parameters['working_dir'] = working_dir
+		self.parameters['postgres_binaries_path'] = postgres_binaries_path
 		self.parameters['port'] = port
 		self.parameters['host'] = bind_host
 		self.parameters['password'] = password
@@ -64,7 +58,7 @@ class PostgresDaemon(ManagedDaemon):
 
 		# Now, we actually need to run pg_ctl initdb to get it all set up.
 		command_line = "%s -D %s --username=postgres" % (
-			self.INITDB,
+			os.path.join(self.parameters['postgres_binaries_path'], 'initdb'),
 			working_dir
 		)
 
@@ -97,7 +91,7 @@ class PostgresDaemon(ManagedDaemon):
 		# Use a string here isntead of an array, because it was munging the
 		# sub arguments.
 		command_line = "%s start -D %s -o '-p %d -k %s'" % (
-			self.PG_CTL,
+			os.path.join(self.parameters['postgres_binaries_path'], 'pg_ctl'),
 			self.parameters['working_dir'],
 			self.parameters['port'],
 			self.parameters['working_dir']
@@ -120,7 +114,12 @@ class PostgresDaemon(ManagedDaemon):
 		)
 
 	def is_running(self, keyword=None):
-		command_line = [self.PG_CTL, 'status', '-D', self.parameters['working_dir']]
+		command_line = [
+			os.path.join(self.parameters['postgres_binaries_path'], 'pg_ctl'),
+			'status',
+			'-D',
+			self.parameters['working_dir']
+		]
 		code = subprocess.call(
 			command_line,
 			stdout=self._eat_output(),
@@ -132,7 +131,12 @@ class PostgresDaemon(ManagedDaemon):
 		"""
 		Stop this instance of the Postgres server, allowing for it to be restarted later.
 		"""
-		command_line = [self.PG_CTL, 'status', '-D', self.parameters['working_dir']]
+		command_line = [
+			os.path.join(self.parameters['postgres_binaries_path'], 'pg_ctl'),
+			'status',
+			'-D',
+			self.parameters['working_dir']
+		]
 		try:
 			output = subprocess.check_output(command_line)
 			# From the output, fetch the PID.
@@ -165,6 +169,7 @@ class PostgresDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.server = PostgresDaemon(self.configuration)
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('postgres'),
+			'/usr/lib/postgresql/9.1/bin', # TODO: Ubuntu Specific.
 			self.configuration.get_free_port(),
 			'127.0.0.1' # TODO: This doesn't work yet.
 		)

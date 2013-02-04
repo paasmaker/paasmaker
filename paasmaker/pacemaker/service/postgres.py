@@ -137,6 +137,7 @@ class PostgresServiceTest(BaseServiceTest):
 		self.server = paasmaker.util.postgresdaemon.PostgresDaemon(self.configuration)
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('postgres'),
+			'/usr/lib/postgresql/9.1/bin', # TODO: Ubuntu Specific.
 			self.configuration.get_free_port(),
 			'127.0.0.1',
 			password="test"
