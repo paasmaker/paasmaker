@@ -1,4 +1,242 @@
 
+var WebsocketHandler = function(endpoint)
+{
+	var _self = this;
+	this.connected = false;
+	this.connecting = false;
+	this.endpoint = endpoint;
+	this.mode = 'auto';
+
+	this._queue = [];
+}
+
+WebsocketHandler.prototype.connect = function()
+{
+	// Don't try to connect if we're in longpoll mode.
+	if(this.mode != 'auto' && this.mode != 'websocket')
+	{
+		return;
+	}
+	if(this.connected || this.connecting)
+	{
+		return;
+	}
+
+	this.connecting = true;
+	var _self = this;
+	this.websocket = new WebSocket(this.getWebsocketUrl());
+	this.websocket.onopen = function()
+	{
+		_self.connected = true;
+		_self.connecting = false;
+		_self.mode = 'websocket';
+
+		// Send along the contents of the queue.
+		var thisQueue = _self._queue;
+		_self._queue = [];
+		for(var i = 0; i < thisQueue.length; i++)
+		{
+			_self.send(thisQueue[i]);
+		}
+
+		_self.onopen();
+	};
+	this.websocket.onmessage = function(evt)
+	{
+		//console.log(evt.data);
+		_self.onmessage($.parseJSON(evt.data), evt);
+	}
+	this.websocket.onerror = function(evt)
+	{
+		//console.log("Error");
+		//console.log(evt);
+
+		// Switch between 'not supported' and 'disconnected'.
+		// TODO: Find a reliable way to do this.
+		// For now, we assume that if we previously connected
+		// as a websocket, then it's supported. Otherwise, switch
+		// to longpoll.
+
+		this.connected = false;
+		this.connecting = false;
+
+		if(_self.mode == 'auto')
+		{
+			// Websockets not supported. Fallback to long poll mode.
+			_self.mode = 'longpoll';
+			_self.doLongPoll();
+		}
+		else
+		{
+			// Retry connection shortly.
+			setTimeout(
+				function()
+				{
+					_self.connect();
+				},
+				1000
+			);
+		}
+	}
+
+	this.websocket.onclose = function(evt)
+	{
+		// Remote end closed.
+		// Wait a second, and then try again.
+		setTimeout(
+			function()
+			{
+				_self.connect();
+			},
+			1000
+		);
+	}
+}
+
+WebsocketHandler.prototype.getWebsocketUrl = function()
+{
+	return "ws://" + window.location.host + this.endpoint;
+}
+
+WebsocketHandler.prototype.onmessage = function(data, evt)
+{
+	//console.log("onmessage() not implemented.");
+	//console.log(data);
+	//console.log(evt);
+}
+
+WebsocketHandler.prototype.onopen = function()
+{
+}
+
+WebsocketHandler.prototype.onerror = function()
+{
+	// Handle your errors here.
+}
+
+WebsocketHandler.prototype.send = function(message)
+{
+	if(this.connected && this.mode == 'websocket')
+	{
+		this.websocket.send($.toJSON(message));
+	}
+	else
+	{
+		this._queue.push(message);
+
+		if(this.mode == 'longpoll')
+		{
+			// Send it off to the server.
+			this.doLongPoll(this.connected);
+		}
+	}
+}
+
+WebsocketHandler.prototype.doLongPoll = function(sendOnly)
+{
+	// Force convert to a boolean.
+	// TODO: Oh, the hacks.
+	sendOnly = !!sendOnly;
+
+	if(this.connected && !sendOnly)
+	{
+		// Already connected, and not sending only.
+		// Take no action here.
+	}
+	else
+	{
+		// Not connected - send along the data.
+		if(!sendOnly)
+		{
+			this.connected = true;
+		}
+
+		// Get all entries on the queue right now.
+		var thisQueue = this._queue;
+		// Empty it out.
+		this._queue = [];
+
+		var _self = this;
+		var body = {
+			data: {
+				endpoint: _self.endpoint,
+				commands: thisQueue,
+				send_only: sendOnly
+			}
+		};
+
+		// Send along the session ID, if we have one.
+		if(this.session_id)
+		{
+			body.data.session_id = this.session_id;
+		}
+
+		$.ajax(
+			'/websocket/longpoll?format=json',
+			{
+				type: 'POST',
+				data: $.toJSON(body),
+				success: function(data)
+				{
+					// Send along all the messages.
+					for(var i = 0; i < data.data.messages.length; i++)
+					{
+						var thisMessage = data.data.messages[i];
+						if(thisMessage.session_id)
+						{
+							_self.session_id = thisMessage.session_id;
+						}
+						else
+						{
+							_self.onmessage(thisMessage);
+						}
+					}
+
+					if(!sendOnly)
+					{
+						// Start long polling again.
+						_self.connected = false;
+						_self.doLongPoll();
+					}
+				},
+				error: function(xhr, status, error)
+				{
+					_self.connected = false;
+
+					if(xhr.status == 400)
+					{
+						// Bad session ID. Clear it and
+						// create a new session.
+						_self.session_id = false;
+						_self.doLongPoll();
+					}
+					else
+					{
+						// It didn't work.
+						console.log(xhr);
+						console.log(status);
+						console.log(error);
+
+						_self.onerror();
+
+						// Put the messages back onto the queue.
+						_self._queue = thisQueue.concat(_self._queue);
+
+						// Try again in a short while.
+						setTimeout(
+							function()
+							{
+								_self.doLongPoll(false);
+							},
+							1000
+						);
+					}
+				}
+			}
+		);
+	}
+}
+
 var SimpleTagEditor = function(form, container)
 {
 	this.form = form;
@@ -137,56 +375,29 @@ var FileUploader = function(container)
 	});
 }
 
-var JobRootStreamHandler = function()
+JobRootStreamHandler.prototype = new WebsocketHandler("/job/stream");
+JobRootStreamHandler.prototype.constructor = JobRootStreamHandler;
+
+function JobRootStreamHandler(endpoint)
 {
-	this.subscriptions = [];
+	// Call the parent.
+	WebsocketHandler.call(this, "/job/stream");
+
+	// And now set up other internal variables.
 	this.handlers = {};
-	this.remote = null;
-	this.connecting = false;
+
+	// Connect.
+	this.connect();
 }
 
 JobRootStreamHandler.prototype.subscribe = function(job_id, displayHandler)
 {
-	var _self = this;
 	this.handlers[job_id] = displayHandler;
-	if( !this.remote )
-	{
-		// We're not connected, so start connecting.
-		this.connecting = true;
-		this.remote = new WebSocket("ws://" + window.location.host + "/job/stream");
-		this.remote.onopen = function() { _self.onopen(); };
-		this.remote.onmessage = function (evt) { _self.onmessage(evt); };
-	}
-
-	if( this.connecting )
-	{
-		// Add it to the queue to be subscribed on startup.
-		this.subscriptions.push(job_id);
-	}
-	else
-	{
-		// Subscribe!
-		this.remote.send($.toJSON({request: 'subscribe', data: {'job_id': job_id}}));
-	}
+	this.send({request: 'subscribe', data: {'job_id': job_id}});
 }
 
-JobRootStreamHandler.prototype.onopen = function()
+JobRootStreamHandler.prototype.onmessage = function(message)
 {
-	// Mark us as connected.
-	this.connecting = false;
-	// Send through initial subscriptions.
-	for( var i = 0; i < this.subscriptions.length; i++ )
-	{
-		this.subscribe(this.subscriptions[i], this.handlers[this.subscriptions[i]]);
-	}
-}
-
-JobRootStreamHandler.prototype.onmessage = function (evt)
-{
-	// Parse the message.
-	var message = $.parseJSON(evt.data);
-	//console.log(message);
-
 	switch(message.type)
 	{
 		case 'tree':
@@ -206,12 +417,20 @@ JobRootStreamHandler.prototype.onmessage = function (evt)
 	}
 }
 
-var LogRootStreamHandler = function()
+LogRootStreamHandler.prototype = new WebsocketHandler("/log/stream");
+LogRootStreamHandler.prototype.constructor = LogRootStreamHandler;
+
+function LogRootStreamHandler(endpoint)
 {
+	// Call the parent.
+	WebsocketHandler.call(this, "/log/stream");
+
+	// And now set up other internal variables.
 	this.subscriptions = [];
 	this.handlers = {};
-	this.remote = null;
-	this.connecting = false;
+
+	// Connect.
+	this.connect();
 }
 
 LogRootStreamHandler.prototype.isSubscribed = function(job_id)
@@ -229,42 +448,16 @@ LogRootStreamHandler.prototype.isSubscribed = function(job_id)
 
 LogRootStreamHandler.prototype.subscribe = function(job_id, displayHandler, position, startup)
 {
-	var _self = this;
+	if(!position)
+	{
+		position = 0;
+	}
 	this.handlers[job_id] = displayHandler;
-	if( !this.remote )
+	if( !this.isSubscribed(job_id) )
 	{
-		// We're not connected, so start connecting.
-		this.connecting = true;
-		this.remote = new WebSocket("ws://" + window.location.host + "/log/stream");
-		this.remote.onopen = function() { _self.onopen(); };
-		this.remote.onmessage = function (evt) { _self.onmessage(evt); };
+		this.subscriptions.push(job_id);
 	}
-
-	if( this.connecting )
-	{
-		// Add it to the queue to be subscribed on startup.
-		if( !this.isSubscribed(job_id) )
-		{
-			this.subscriptions.push(job_id);
-		}
-	}
-	else
-	{
-		if( !this.isSubscribed(job_id) || startup )
-		{
-			if( !this.isSubscribed(job_id) )
-			{
-				this.subscriptions.push(job_id);
-			}
-
-			// Subscribe!
-			if( !position )
-			{
-				position = 0;
-			}
-			this.remote.send($.toJSON({request: 'subscribe', data: {'job_id': job_id, 'position': position}}));
-		}
-	}
+	this.send({request: 'subscribe', data: {'job_id': job_id, 'position': position}});
 }
 
 LogRootStreamHandler.prototype.unsubscribe = function(job_id)
@@ -279,30 +472,11 @@ LogRootStreamHandler.prototype.unsubscribe = function(job_id)
 		}
 	}
 
-	if( !this.connecting )
-	{
-		// It's connected, so send unsubscribe.
-		this.remote.send($.toJSON({request: 'unsubscribe', data: {'job_id': job_id}}));
-	}
+	this.send({request: 'unsubscribe', data: {'job_id': job_id}});
 }
 
-LogRootStreamHandler.prototype.onopen = function()
+LogRootStreamHandler.prototype.onmessage = function(message)
 {
-	// Mark us as connected.
-	this.connecting = false;
-	// Send through initial subscriptions.
-	for( var i = 0; i < this.subscriptions.length; i++ )
-	{
-		this.subscribe(this.subscriptions[i], this.handlers[this.subscriptions[i]], 0, true);
-	}
-}
-
-LogRootStreamHandler.prototype.onmessage = function (evt)
-{
-	// Parse the message.
-	var message = $.parseJSON(evt.data);
-	console.log(message);
-
 	// Find a handler to work with it.
 	var handler = this.handlers[message.data.job_id];
 
@@ -640,40 +814,21 @@ InstanceLogDisplayHandler.prototype.handleNewLines = function(stream, message)
 	this.pre.attr('data-position', message.position);
 }
 
-var RouterStatsStreamHandler = function(container)
+RouterStatsStreamHandler.prototype = new WebsocketHandler("/router/stats/stream");
+RouterStatsStreamHandler.prototype.constructor = RouterStatsStreamHandler;
+
+function RouterStatsStreamHandler(container)
 {
+	// Call the parent.
+	WebsocketHandler.call(this, "/router/stats/stream");
+
+	// And now set up other internal variables.
 	this.container = container;
 	this.input_name = container.attr('data-name');
 	this.input_id = container.attr('data-inputid');
 
 	var _self = this;
 	this.ready = false;
-	this.routerStatsRemote = new WebSocket("ws://" + window.location.host + "/router/stats/stream");
-	this.routerStatsRemote.onopen = function() {
-		// It will send us a ready message when we can start.
-	};
-	this.routerStatsRemote.onmessage = function (evt) {
-		var message = $.parseJSON(evt.data);
-		//console.log(message);
-		switch(message.type)
-		{
-			case 'update':
-				_self.showUpdate(message.data);
-				break;
-			case 'history':
-				_self.showGraph(message.data);
-				break;
-			case 'ready':
-				this.ready = true;
-				// Start updating.
-				_self.requestUpdate();
-				if( _self.isGraphing )
-				{
-					_self.requestGraph();
-				}
-				break;
-		}
-	};
 
 	// For speed later, pre-lookup the value instances.
 	this.requests = $('.stat-requests .value', container);
@@ -732,6 +887,32 @@ var RouterStatsStreamHandler = function(container)
 		// because it's likely not ready yet.
 		this.isGraphing = true;
 	}
+
+	// Connect.
+	this.connect();
+}
+
+RouterStatsStreamHandler.prototype.onmessage = function(message)
+{
+	//console.log(message);
+	switch(message.type)
+	{
+		case 'update':
+			this.showUpdate(message.data);
+			break;
+		case 'history':
+			this.showGraph(message.data);
+			break;
+		case 'ready':
+			this.ready = true;
+			// Start updating.
+			this.requestUpdate();
+			if( this.isGraphing )
+			{
+				this.requestGraph();
+			}
+			break;
+	}
 }
 
 RouterStatsStreamHandler.prototype.setupGraphArea = function()
@@ -746,25 +927,23 @@ RouterStatsStreamHandler.prototype.setupGraphArea = function()
 
 RouterStatsStreamHandler.prototype.requestUpdate = function()
 {
-	this.routerStatsRemote.send($.toJSON({request: 'update', data: {'name': this.input_name, 'input_id': this.input_id}}));
+	this.send({request: 'update', data: {'name': this.input_name, 'input_id': this.input_id}});
 }
 
 RouterStatsStreamHandler.prototype.requestGraph = function()
 {
 	var now = new Date();
 	// TODO: Allow more configuration, less assumptions.
-	this.routerStatsRemote.send(
-		$.toJSON(
-			{
-				request: 'history',
-				data: {
-					'name': this.input_name,
-					'input_id': this.input_id,
-					'metric': 'requests',
-					'start': (now.getTime() / 1000) - 60
-				}
+	this.send(
+		{
+			request: 'history',
+			data: {
+				'name': this.input_name,
+				'input_id': this.input_id,
+				'metric': 'requests',
+				'start': (now.getTime() / 1000) - 60
 			}
-		)
+		}
 	);
 }
 

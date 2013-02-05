@@ -1101,6 +1101,8 @@ class WebsocketLongpollSessionmanager(object):
 		extra_headers = {}
 		if 'Auth-Paasmaker' in source_request.headers:
 			extra_headers['Auth-Paasmaker'] = source_request.headers['Auth-Paasmaker']
+		if 'Cookie' in source_request.headers:
+			extra_headers['Cookie'] = source_request.headers['Cookie']
 
 		# Create the remote.
 		remote_url = "ws://localhost:%d%s" % (self.configuration.get_flat('http_port'), endpoint)
@@ -1158,9 +1160,10 @@ class WebsocketLongpollSessionmanager(object):
 		# you can't pass args to the add_timeout callback.
 		def clean_session():
 			# Close the session.
-			session_data = self.sessions[session_id]
-			del self.sessions[session_id]
-			session_data['remote'].close()
+			if session_id in self.sessions:
+				session_data = self.sessions[session_id]
+				del self.sessions[session_id]
+				session_data['remote'].close()
 
 		# Remove the existing cleanup timeout.
 		if self.sessions[session_id]['timeout']:
@@ -1242,10 +1245,17 @@ class WebsocketLongpollWrapper(BaseLongpollController):
 
 	def _on_pub_message(self, session_id):
 		# Send that message back, and terminate the request.
-		pub.unsubscribe(self._on_pub_message, 'websocketwrapper.message')
-		self.configuration.io_loop.add_callback(self._send_pending_messages)
+		# But only if it's for our session.
+		if self.session_id == session_id:
+			pub.unsubscribe(self._on_pub_message, 'websocketwrapper.message')
+			self.configuration.io_loop.add_callback(self._send_pending_messages)
 
 	def _send_pending_messages(self):
+		if self._finished:
+			# Don't try to send data if the request is
+			# already finished. Otherwise the data might disappear.
+			return
+
 		messages = self.SESSIONS.get_messages(self.session_id)
 		for message in messages:
 			self.send_message(message, queue=True)
@@ -1254,9 +1264,18 @@ class WebsocketLongpollWrapper(BaseLongpollController):
 		self._finish_request(False)
 
 	def cleanup(self, callback, timeout_expired):
+		if self._finished:
+			# Don't try to send data if the request is
+			# already finished.
+			return
+
 		if timeout_expired:
 			# Unsubscribe before returning.
-			pub.unsubscribe(self._on_pub_message, 'websocketwrapper.message')
+			try:
+				pub.unsubscribe(self._on_pub_message, 'websocketwrapper.message')
+			except pub.UndefinedTopic, ex:
+				# No such topic. No worries then.
+				pass
 
 		# Make sure to return the session ID.
 		if hasattr(self, 'session_id'):
