@@ -142,99 +142,113 @@ WebsocketHandler.prototype.doLongPoll = function(sendOnly)
 	{
 		// Already connected, and not sending only.
 		// Take no action here.
+		return;
 	}
-	else
+	if(this.connected && !this.session_id)
 	{
-		// Not connected - send along the data.
-		if(!sendOnly)
-		{
-			this.connected = true;
+		// No session ID yet, but we have a request in progress.
+		// Just queue the request, because we don't want
+		// to double up on session IDs.
+		return;
+	}
+	if(!this.connected && sendOnly)
+	{
+		// We're not currently connected, but are sending
+		// only. So make this request not-sendOnly.
+		sendOnly = false;
+	}
+
+	// Not connected - send along the data.
+	if(!sendOnly)
+	{
+		this.connected = true;
+	}
+
+	// Get all entries on the queue right now.
+	var thisQueue = this._queue;
+	// Empty it out.
+	this._queue = [];
+
+	var _self = this;
+	var body = {
+		data: {
+			endpoint: _self.endpoint,
+			commands: thisQueue,
+			send_only: sendOnly
 		}
+	};
 
-		// Get all entries on the queue right now.
-		var thisQueue = this._queue;
-		// Empty it out.
-		this._queue = [];
+	// Send along the session ID, if we have one.
+	if(this.session_id)
+	{
+		body.data.session_id = this.session_id;
+	}
 
-		var _self = this;
-		var body = {
-			data: {
-				endpoint: _self.endpoint,
-				commands: thisQueue,
-				send_only: sendOnly
-			}
-		};
-
-		// Send along the session ID, if we have one.
-		if(this.session_id)
+	$.ajax(
+		// Adding 'endpoint=' is purely to assist debugging in the log files.
+		'/websocket/longpoll?format=json&endpoint=' + escape(_self.endpoint),
 		{
-			body.data.session_id = this.session_id;
-		}
-
-		$.ajax(
-			'/websocket/longpoll?format=json',
+			type: 'POST',
+			data: $.toJSON(body),
+			success: function(data)
 			{
-				type: 'POST',
-				data: $.toJSON(body),
-				success: function(data)
+				// Send along all the messages.
+				for(var i = 0; i < data.data.messages.length; i++)
 				{
-					// Send along all the messages.
-					for(var i = 0; i < data.data.messages.length; i++)
+					var thisMessage = data.data.messages[i];
+					if(thisMessage.session_id && !_self.session_id)
 					{
-						var thisMessage = data.data.messages[i];
-						if(thisMessage.session_id)
-						{
-							_self.session_id = thisMessage.session_id;
-						}
-						else
-						{
-							_self.onmessage(thisMessage);
-						}
-					}
-
-					if(!sendOnly)
-					{
-						// Start long polling again.
-						_self.connected = false;
-						_self.doLongPoll();
-					}
-				},
-				error: function(xhr, status, error)
-				{
-					_self.connected = false;
-
-					if(xhr.status == 400)
-					{
-						// Bad session ID. Clear it and
-						// create a new session.
-						_self.session_id = false;
-						_self.doLongPoll();
+						_self.session_id = thisMessage.session_id;
+						console.log("Endpoint " + _self.endpoint + " sid " + _self.session_id);
 					}
 					else
 					{
-						// It didn't work.
-						console.log(xhr);
-						console.log(status);
-						console.log(error);
-
-						_self.onerror();
-
-						// Put the messages back onto the queue.
-						_self._queue = thisQueue.concat(_self._queue);
-
-						// Try again in a short while.
-						setTimeout(
-							function()
-							{
-								_self.doLongPoll(false);
-							},
-							1000
-						);
+						_self.onmessage(thisMessage);
 					}
 				}
+
+				if(!sendOnly)
+				{
+					// Start long polling again.
+					_self.connected = false;
+					_self.doLongPoll();
+				}
+			},
+			error: function(xhr, status, error)
+			{
+				_self.connected = false;
+
+				if(xhr.status == 400)
+				{
+					// Bad session ID. Clear it and
+					// create a new session.
+					_self.session_id = false;
+					_self.doLongPoll();
+				}
+				else
+				{
+					// It didn't work.
+					console.log(xhr);
+					console.log(status);
+					console.log(error);
+
+					_self.onerror();
+
+					// Put the messages back onto the queue.
+					_self._queue = thisQueue.concat(_self._queue);
+
+					// Try again in a short while.
+					setTimeout(
+						function()
+						{
+							_self.doLongPoll(false);
+						},
+						1000
+					);
+				}
 			}
-		);
-	}
+		}
+	);
 }
 
 var SimpleTagEditor = function(form, container)
