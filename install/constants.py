@@ -138,7 +138,6 @@ DEFAULT_PAASMAKER_CONFIGURATION = {
 	},
 	'pacemaker': {
 		'enabled': False,
-		'cluster_hostname': '',
 		'dsn': 'sqlite:///scratch/paasmaker.db'
 	},
 	'router': {
@@ -191,6 +190,7 @@ PAASMAKER_HOME="%(paasmaker_home)s"
 ENABLE_IPTABLES="%(enable_iptables)s"
 PID_FILE="%(paasmaker_home)s/paasmaker.pid"
 PAASMAKER_USER="%(paasmaker_user)s"
+LOG_PATH="/var/log/paasmaker.log"
 
 # Body of the script.
 ACTION="$1"
@@ -202,13 +202,22 @@ then
 fi
 
 function fix_iptables() {
-	if [ "$ENABLE_IPTABLES" == "true" ];
+	if [ "$ENABLE_IPTABLES" == "True" ];
 	then
 		echo "Inserting iptables rules..."
-		# The "-C" argument to iptables says to only add the rule if it's
-		# not already present. This saves doubling up.
+
 		iptables -t nat -C PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 42531
+		if [ "$?" == "1" ];
+		then
+			iptables -t nat -A PREROUTING -p tcp --dport 80 -j REDIRECT --to-port 42531
+		fi
+
 		iptables -t nat -C OUTPUT -p tcp -d 127.0.0.0/8 --dport 80 -j REDIRECT --to-ports 42531
+		if [ "$?" == "1" ];
+		then
+			iptables -t nat -I OUTPUT -p tcp -d 127.0.0.0/8 --dport 80 -j REDIRECT --to-ports 42531
+		fi
+
 		echo "iptables rules are up to date."
 	fi
 }
@@ -217,11 +226,19 @@ function start() {
 	# This will fork into the background once it's ready,
 	# or fail otherwise.
 	echo "Starting up..."
-	su -l "$PAASMAKER_USER" -c "cd $PAASMAKER_HOME; ./pm-server.py"
+	su -l "$PAASMAKER_USER" -c "cd $PAASMAKER_HOME; ./pm-server.py" > "$LOG_PATH" 2>&1
 
-	fix_iptables()
+	CODE=$?
+	if [ "$CODE" == "0" ];
+	then
+		fix_iptables
 
-	echo "Started successfully."
+		echo "Started successfully."
+	else
+		echo "Failed to start up!"
+		echo "Check $LOG_PATH to find out why."
+		exit 1
+	fi
 }
 
 function status() {
@@ -233,7 +250,7 @@ function status() {
 		PIDCHECKPATH="/proc/$PID/cmdline"
 		if [ ! -e "$PIDCHECKPATH" ];
 		then
-			echo "Paasmaker has a PID file but is not running.
+			echo "Paasmaker has a PID file but is not running."
 		else
 			echo "Paasmaker is running."
 		fi
@@ -243,14 +260,23 @@ function status() {
 function stop() {
 	if [ ! -e "$PID_FILE" ];
 	then
-		echo "Paasmaker not running (no PID file found at $PID_FILE)."
+		echo "Paasmaker not running - no PID file found at $PID_FILE."
 		exit 0
 	else
 		PID=`cat $PID_FILE`
 		echo "Sending kill signal..."
 		kill $PID
 		echo "Waiting for shutdown..."
-		wait $PID
+		while [ 1 ];
+		do
+			if [ ! -e "$PID_FILE" ];
+			then
+				# It's shut down.
+				break
+			fi
+			echo "Waiting longer..."
+			sleep 1
+		done
 		echo "Stopped."
 	fi
 }
