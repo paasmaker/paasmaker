@@ -21,7 +21,10 @@ class NginxRouter(object):
 
 	It is used by unit tests to generate a test NGINX instance,
 	and also by the managed NGINX server.
+
+	This code closely mirrors the design of the managed service plugins.
 	"""
+
 	NGINX_CONFIG = """
 worker_processes 1;
 error_log %(log_path)s/error.log %(log_level)s;
@@ -103,8 +106,76 @@ http {
 	scgi_temp_path %(temp_dir)s/;
 	"""
 
-	@staticmethod
-	def get_nginx_config(configuration, managed_params):
+	def __init__(self, configuration):
+		self.configuration = configuration
+
+	def startup(self, callback, error_callback):
+		daemon = paasmaker.util.nginxdaemon.NginxDaemon(self.configuration)
+
+		working_dir = self.configuration.get_scratch_path_exists('nginx')
+
+		# Create the working dir. If this fails, let it bubble up.
+		if not os.path.exists(working_dir):
+			os.makedirs(working_dir)
+
+		# And create a directory for temp files.
+		temp_file_dir = os.path.join(working_dir, 'temp')
+		if not os.path.exists(temp_file_dir):
+			os.makedirs(temp_file_dir)
+
+		parameters = {}
+		parameters['port_direct'] = self.configuration.get_flat('router.nginx.port_direct')
+		parameters['port_80'] = self.configuration.get_flat('router.nginx.port_80')
+		parameters['temp_path'] = temp_file_dir
+		parameters['pid_path'] = working_dir
+		parameters['log_level'] = 'info'
+		parameters['log_path'] = working_dir
+
+		self.generated_config = self.get_nginx_config(
+			self.configuration, managed_params=parameters
+		)
+
+		try:
+			daemon.load_parameters(working_dir)
+		except paasmaker.util.ManagedDaemonError, ex:
+			# Doesn't yet exist. Create it.
+			daemon.configure(
+				working_dir,
+				parameters['port_direct'],
+				self.generated_config['configuration']
+			)
+
+		def on_nginx_started(message):
+			# Set the stats log path manually.
+			self.configuration['router']['stats_log'] = os.path.join(working_dir, 'access.log.paasmaker')
+			self.configuration.update_flat()
+
+			# And let the caller know we're ready.
+			callback(message)
+
+		daemon.start_if_not_running(on_nginx_started, error_callback)
+
+	def get_configuration(self):
+		return self.generated_config
+
+	def shutdown(self):
+		"""
+		If configured, shutdown an associated managed NGINX instance
+		on exit. TODO: take callbacks
+		"""
+		if self.configuration.get_flat('router.nginx.managed') and self.configuration.get_flat('router.nginx.shutdown'):
+			daemon = paasmaker.util.nginxdaemon.NginxDaemon(self.configuration)
+			working_dir = self.configuration.get_scratch_path_exists('nginx')
+
+			try:
+				daemon.load_parameters(working_dir)
+				if daemon.is_running():
+					daemon.stop()
+			except paasmaker.util.ManagedDaemonError, ex:
+				# No daemon is running, so nothing to do
+				pass
+
+	def get_nginx_config(self, configuration, managed_params):
 		"""
 		Create and return a NGINX configuration file based on
 		the supplied configuration object.
@@ -188,48 +259,28 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 	def setUp(self):
 		super(RouterTest, self).setUp()
 
-		managed_params = {}
-		managed_params['port_direct'] = self.configuration.get_free_port()
-		managed_params['port_80'] = self.configuration.get_free_port()
-		managed_params['log_path'] = tempfile.mkdtemp()
-		managed_params['temp_path'] = self.configuration.get_scratch_path_exists('nginx')
-		managed_params['pid_path'] = managed_params['temp_path']
-		managed_params['log_level'] = 'debug'
+		self.configuration['router']['nginx']['port_direct'] = self.configuration.get_free_port()
+		self.configuration['router']['nginx']['port_80'] = self.configuration.get_free_port()
+		self.configuration.update_flat()
 
-		self.nginx = NginxRouter.get_nginx_config(self.configuration, managed_params=managed_params)
+		self.router = NginxRouter(self.configuration)
+		self.router.startup(self.stop, self.stop)
+		result = self.wait()
 
-		# Fire up an nginx instance.
-		self.nginxconfig = tempfile.mkstemp()[1]
-		self.nginxpidfile = os.path.join(self.nginx['pid_path'], 'nginx.pid')
-		self.nginxport = self.nginx['listen_port_direct']
+		config = self.router.get_configuration()
+
+		# Save some parameters for other tests
+		self.nginxport = self.configuration['router']['nginx']['port_direct']
 
 		# For debugging... they are unlinked in tearDown()
 		# but you can inspect them in the meantime.
-		self.errorlog = os.path.join(self.nginx['log_path'], 'error.log')
-		self.accesslog_stats = os.path.join(self.nginx['log_path'], 'access.log.paasmaker')
-		self.accesslog_combined = os.path.join(self.nginx['log_path'], 'access.log')
-
-		# Hack the configuration to insert the access log into it.
-		self.configuration['router']['stats_log'] = self.accesslog_stats
-		self.configuration.update_flat()
-
-		open(self.nginxconfig, 'w').write(self.nginx['configuration'])
-
-		# Kick off the instance. It will fork in the background once it's
-		# successfully started.
-		# check_call throws an exception if it failed to start.
-		subprocess.check_call([self.configuration.get_flat('nginx_binary'), '-c', self.nginxconfig], stderr=subprocess.PIPE)
+		self.errorlog = os.path.join(config['log_path'], 'error.log')
+		self.accesslog_stats = os.path.join(config['log_path'], 'access.log.paasmaker')
+		self.accesslog_combined = os.path.join(config['log_path'], 'access.log')
 
 	def tearDown(self):
 		# Kill off the nginx instance.
-		pid = int(open(self.nginxpidfile, 'r').read())
-		os.kill(pid, signal.SIGTERM)
-
-		# Remove all the temp files.
-		os.unlink(self.nginxconfig)
-		os.unlink(self.errorlog)
-		os.unlink(self.accesslog_stats)
-		os.unlink(self.accesslog_combined)
+		self.router.shutdown()
 
 		super(RouterTest, self).tearDown()
 

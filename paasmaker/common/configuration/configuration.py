@@ -1167,54 +1167,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					while meta['manager'].is_running():
 						time.sleep(0.1)
 
-
-	def setup_managed_nginx(self, callback, error_callback):
-		"""
-		Setup, and start if nessecary a managed NGINX instance
-		for this node, calling the callback when this task is complete.
-
-		Has no action if this node is not managing an NGINX instance.
-		"""
-		if self.get_flat('router.nginx.managed'):
-			# Fire up the managed version, if it's not already running.
-			self.nginx_server = paasmaker.util.nginxdaemon.NginxDaemon(self)
-			directory = self.get_scratch_path('nginx')
-			try:
-				self.nginx_server.load_parameters(directory)
-			except paasmaker.util.ManagedDaemonError, ex:
-				# Doesn't yet exist. Create it.
-				self.nginx_server.configure(
-					directory,
-					self.get_flat('router.nginx.port_direct'),
-					self.get_flat('router.nginx.port_80')
-				)
-
-			def on_nginx_started(message):
-				# Set the stats log path manually.
-				self['router']['stats_log'] = os.path.join(directory, 'access.log.paasmaker')
-				self.update_flat()
-
-				# And let the caller know we're ready.
-				callback(message)
-
-			def on_nginx_failed(message, exception=None):
-				error_callback(message, exception)
-
-			self.nginx_server.start_if_not_running(on_nginx_started, on_nginx_failed)
-		else:
-			# It's not managed. Do nothing.
-			callback("NGINX not managed - no action taken.")
-
-	def shutdown_managed_nginx(self):
-		"""
-		If configured, shutdown an associated managed NGINX instance
-		on exit.
-		"""
-		if self.get_flat('router.nginx.managed') and self.get_flat('router.nginx.shutdown'):
-			# Shut down the managed nginx, if it's running.
-			if self.nginx_server.is_running():
-				self.nginx_server.stop()
-
 	def get_tornado_configuration(self):
 		"""
 		Return a dict of settings that are passed to Tornado's HTTP

@@ -358,7 +358,8 @@ def on_ioloop_started():
 
 	with tornado.stack_context.StackContext(handle_startup_exception):
 		# Managed NGINX.
-		configuration.setup_managed_nginx(on_intermediary_started, on_intermediary_failed)
+		nginx = paasmaker.router.router.NginxRouter(configuration)
+		nginx.startup(on_intermediary_started, on_intermediary_failed)
 
 		# Kick off all the async startup plugins.
 		for plugin in async_startup_plugins:
@@ -543,7 +544,9 @@ def on_exit_postnotify_complete(message, exception=None):
 
 def on_actual_exit():
 	# Now stop any managed daemons.
-	configuration.shutdown_managed_nginx()
+	nginx = paasmaker.router.router.NginxRouter(configuration)
+	nginx.shutdown()
+
 	configuration.shutdown_managed_redis()
 
 	# And really, really exit.
