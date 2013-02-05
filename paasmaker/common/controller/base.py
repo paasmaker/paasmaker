@@ -474,6 +474,13 @@ class BaseController(tornado.web.RequestHandler):
 		self.session = self.configuration.get_database_session()
 		return self.session
 
+	def on_finish(self):
+		super(BaseController, self).on_finish()
+
+		# Shut down any active database session.
+		if self.session:
+			self.session.close()
+
 	def _set_format(self, format):
 		if format != 'json' and format != 'html':
 			raise ValueError("Invalid format '%s' supplied." % format)
