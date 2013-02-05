@@ -162,7 +162,8 @@ class RouterStatsStreamHandler(BaseWebsocketHandler):
 			)
 
 	def on_close(self):
-		pass
+		if self.ready:
+			self.stats_output.close()
 
 	@staticmethod
 	def get_routes(configuration):
