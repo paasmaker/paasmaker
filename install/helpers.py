@@ -111,7 +111,7 @@ def enable_service(context, name):
 		raise InstallationError("Unsupported platform.")
 
 def _enable_service_linux_ubuntu(context, name):
-	generic_command(context, ['sudo', 'update-rc.d', name, 'enable'])
+	generic_command(context, ['sudo', 'update-rc.d', name, 'defaults'])
 
 def disable_service(context, name):
 	"""
@@ -138,7 +138,7 @@ def generic_command(context, command):
 	:arg list command: The command to run.
 	"""
 	try:
-		logging.info("About to run %s...", " ".join(command))
+		logging.info("About to run %s ...", " ".join(command))
 		subprocess.check_call(command)
 
 	except subprocess.CalledProcessError, ex:
@@ -156,7 +156,7 @@ def generic_command_shell(context, command):
 	:arg str command: The command to run.
 	"""
 	try:
-		logging.info("About to run %s...", command)
+		logging.info("About to run %s ...", command)
 		subprocess.check_call(command, shell=True)
 
 	except subprocess.CalledProcessError, ex:

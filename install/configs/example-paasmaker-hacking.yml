@@ -10,9 +10,9 @@ master_port: 42500
 
 shutdown_daemons_on_exit: true
 
-install_init_script: true
-enable_init_script: true
-init_redirect_port80: true
+install_init_script: false
+enable_init_script: false
+init_redirect_port80: false
 
 runtime_php_enable: true
 runtime_php_disable_system_apache: true

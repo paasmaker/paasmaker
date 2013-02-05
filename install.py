@@ -20,6 +20,8 @@ import os
 import uuid
 import subprocess
 import copy
+import tempfile
+import getpass
 
 if len(sys.argv) == 1:
 	# No arguments.
@@ -28,6 +30,10 @@ if len(sys.argv) == 1:
 
 # Set up logging.
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
+
+if getpass.getuser() == 'root':
+	logging.error("Please do not run this script as root. Doing so is not currently supported.")
+	sys.exit(1)
 
 # Check our current directory. At this time we only currently
 # support installing to the same directory as the files are stored.
@@ -174,7 +180,7 @@ if context['runtime_rbenv_enable']:
 			if not 'eval "$(rbenv init -)"' in bash_profile:
 				install.helpers.generic_command_shell(
 					context,
-					'PATH=$HOME/.rbenv/bin:$PATH" echo \'eval "$(rbenv init -)"\' >> ~/.profile'
+					'PATH="$HOME/.rbenv/bin:$PATH" echo \'eval "$(rbenv init -)"\' >> ~/.profile'
 				)
 
 	# Install any ruby versions we've been asked to install.
@@ -191,6 +197,8 @@ if context['runtime_rbenv_enable']:
 				context,
 				'export PATH="%s/bin:$PATH"; rbenv rehash; rbenv shell %s; gem install bundler; rbenv rehash' % (rbenv_path, version)
 			)
+
+			# TODO: Figure out why the above command causes the install script to terminate.
 		else:
 			logging.info("Ruby version %s is already installed.", version)
 
@@ -413,5 +421,33 @@ open('paasmaker.yml', 'w').write(serialized)
 
 logging.info("Completed writing out configuration file.")
 
-# TODO: Write out init script.
-# TODO: Enable init script.
+if context['install_init_script']:
+	init_script_body = install.constants.INIT_SCRIPT % {
+		'paasmaker_home': paasmaker_home,
+		'enable_iptables': context['init_redirect_port80'],
+		'paasmaker_user': getpass.getuser()
+	}
+
+	init_script_path = '/etc/init.d/paasmaker'
+
+	temp_file = tempfile.NamedTemporaryFile(delete=False)
+	temp_file.write(init_script_body)
+
+	# Move that temp file into place with sudo.
+	install.helpers.generic_command(context, ['sudo', 'mv', temp_file.name, init_script_path])
+	install.helpers.generic_command(context, ['sudo', 'chmod', '755', init_script_path])
+
+if context['enable_init_script']:
+	install.helpers.enable_service(context, 'paasmaker')
+
+print
+print
+print
+print
+
+print "Paasmaker is now installed!"
+if context['enable_init_script']:
+	print "To start, run sudo /etc/init.d/paasmaker start"
+else:
+	print "To start, run ./pm-server.py"
+	print "And then visit http://pacemaker.local.paasmaker.net:42530 in your web browser."
