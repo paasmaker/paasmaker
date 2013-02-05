@@ -955,8 +955,9 @@ RouterStatsStreamHandler.prototype.displayIncludingLast = function(key, values, 
 	if( this.lastNumbers )
 	{
 		var difference = values[key] - this.lastNumbers[key];
+		var deltaTime = values['as_at'] - this.lastNumbers['as_at'];
 
-		value += ' - <span class="diff">' + number_format(difference) + '/s</span>';
+		value += ' - <span class="diff">' + number_format(difference / deltaTime) + '/s</span>';
 	}
 
 	container.html(value);
