@@ -1,0 +1,252 @@
+
+if (!window.pm) { var pm = {}; }	// TODO: module handling
+if (!pm.jobs) { pm.jobs = {}; }
+
+pm.jobs.display = function(container, jobStream, logStream)
+{
+	this.container = container;
+	this.jobStream = jobStream;
+	this.logStream = logStream;
+	this.job_id = container.attr('data-job');
+
+	this.jobStream.subscribe(this.job_id, this);
+}
+
+pm.jobs.display.prototype.handleZeroSizeLog = function(stream, message)
+{
+	var container = $('.' + message.job_id + ' .log');
+	container.html("No log entries for this job.")
+	container.addClass('no-data');
+}
+
+pm.jobs.display.prototype.handleNewLines = function(stream, message)
+{
+	var container = $('.' + message.job_id + ' .log');
+	container.removeClass('no-data');
+	var formatted = stream.formatLogLines(message.lines.join(''));
+	container.append(formatted);
+	container.attr('data-position', message.position);
+}
+
+pm.jobs.display.prototype.renderJobTree = function(tree, level, container)
+{
+	// Empty out the container.
+	var workingContainer = this.container;
+	if( container )
+	{
+		workingContainer = container;
+	}
+	workingContainer.empty();
+
+	// Sort my tree by time.
+	tree.sort(function(a, b) {
+		return a.time - b.time;
+	});
+
+	var _self = this;
+	$.each(tree, function(index, element)
+	{
+		var thisContainer = _self.createContainer(element.job_id, level, element);
+		workingContainer.append(thisContainer);
+	});
+}
+
+pm.jobs.display.prototype.newJob = function(data)
+{
+	// Find the parent container.
+	var parentId = data['parent_id'];
+	var parentChildContainer = $('.children-' + parentId, this.container);
+	var levelParent = parseInt(parentChildContainer.parent().attr('data-level'), 10) + 1;
+	var newJobContainer = this.createContainer(data.job_id, levelParent, data);
+	parentChildContainer.append(newJobContainer);
+}
+
+pm.jobs.display.prototype.createContainer = function(job_id, level, data)
+{
+	var thisJobContainer = $('<div class="job-status level' + level + '"></div>');
+	thisJobContainer.attr('data-level', level);
+
+	var details = $('<div class="details clearfix"></div>');
+	details.addClass(job_id);
+	details.append($('<span class="state"></span>'));
+	details.append($('<span class="toolbox"></span>'));
+	details.append($('<span class="title"></span>'));
+	details.append($('<span class="summary"></span>'));
+	details.append($('<span class="time"></span>'));
+	details.append($('<pre class="log"></pre>'));
+	thisJobContainer.append(details);
+
+	var childrenContainer = $('<div class="children"></div>');
+	childrenContainer.addClass('children-' + job_id);
+	thisJobContainer.append(childrenContainer);
+
+	$('.title', thisJobContainer).text(data.title);
+	if( data.summary && data.state != 'SUCCESS' )
+	{
+		$('.summary', thisJobContainer).text('Summary: ' + data.summary);
+	}
+	else
+	{
+		$('.summary', thisJobContainer).text('');
+	}
+
+	/*var thisTime = new Date();
+	thisTime.setTime(data.time * 1000);
+	$('.time', thisJobContainer).text(thisTime.toString());*/
+
+	var stateContainer = $('.state', thisJobContainer);
+	this.setStateClass(stateContainer, data.state);
+	this.setStateIcon(stateContainer, data.state);
+	var logContainer = $('.log', thisJobContainer);
+
+	var toolbox = $('.toolbox', thisJobContainer);
+	var _self = this;
+	if( false == toolbox.hasClass('populated') )
+	{
+		// Populate and hook up the toolbox.
+		var logExpander = $('<a href="#" title="View log for this job"><i class="icon-list"></i></a>');
+		logExpander.click(
+			function(e)
+			{
+				_self.toggleSubscribeLog(data.job_id, logContainer);
+
+				e.preventDefault();
+			}
+		);
+		toolbox.append(logExpander);
+
+		if( data.state != 'SUCCESS' && data.state != 'FAILED' && data.state != 'ABORTED' )
+		{
+			var aborter = $('<a class="aborter" href="#" title="Abort Job"><i class="icon-off"></i></a>');
+			aborter.click(
+				function(e)
+				{
+					$.getJSON(
+						'/job/abort/' + job_id + '?format=json',
+						function( data )
+						{
+							// No action to date.
+							console.log(data);
+						}
+					);
+					e.preventDefault();
+				}
+			);
+			toolbox.append(aborter);
+		}
+
+		toolbox.addClass('populated');
+	}
+
+	// Recurse into the children.
+	if( data.children )
+	{
+		var childContainer = $('.children', thisJobContainer);
+		_self.renderJobTree(data.children, level + 1, childContainer);
+	}
+
+	return thisJobContainer;
+}
+
+BOOTSTRAP_CLASS_MAP = {
+	'FAILED': 'important', // Er, ok.
+	'ABORTED': 'warning',
+	'SUCCESS': 'success',
+	'WAITING': 'info',
+	'RUNNING': 'primary'
+}
+
+BOOTSTRAP_ICON_MAP = {
+	'FAILED': 'icon-remove',
+	'ABORTED': 'icon-ban-circle',
+	'SUCCESS': 'icon-ok',
+	'WAITING': 'icon-time',
+	'RUNNING': 'icon-loading',
+	'NEW': 'icon-certificate'
+}
+
+pm.jobs.display.prototype.setStateClass = function(element, state)
+{
+	var oldState = element.attr('data-state');
+	if( oldState )
+	{
+		element.removeClass('state-' + oldState);
+		var oldBootstrapClass = BOOTSTRAP_CLASS_MAP[oldState];
+		if( oldBootstrapClass )
+		{
+			element.removeClass('label-' + oldBootstrapClass);
+		}
+	}
+	element.addClass('state-' + state);
+	element.attr('data-state', state);
+
+	// And add a class that inherits a bootstrap colour.
+	var bootstrapClass = BOOTSTRAP_CLASS_MAP[state];
+	if( !bootstrapClass )
+	{
+		bootstrapClass = 'default';
+	}
+
+	element.addClass('label');
+	element.addClass('label-' + bootstrapClass);
+}
+
+pm.jobs.display.prototype.setStateIcon = function(element, state)
+{
+	var icon = $('<i></i>');
+
+	var oldState = element.attr('data-state');
+	if( oldState )
+	{
+		element.removeClass('state-' + oldState);
+		var oldBootstrapClass = BOOTSTRAP_ICON_MAP[oldState];
+		if( oldBootstrapClass )
+		{
+			element.removeClass('label-' + oldBootstrapClass);
+		}
+	}
+
+	icon.addClass('icon-white');
+	icon.addClass(BOOTSTRAP_ICON_MAP[state]);
+
+	element.html(icon);
+	var textual = $('<span></span>');
+	textual.text(state);
+	element.append(textual);
+}
+
+pm.jobs.display.prototype.updateStatus = function(status)
+{
+	// Find the appropriate status element.
+	var el = $('.' + status.job_id + ' .state', this.container);
+	this.setStateClass(el, status.state);
+	this.setStateIcon(el, status.state);
+	el.attr('data-state', status.state);
+
+	if( status.state == 'SUCCESS' || status.state == 'FAILED' || status.state == 'ABORTED' )
+	{
+		// Remove the abort button, if present.
+		$('.' + status.job_id + ' .aborter', this.container).remove();
+	}
+
+	if( status.summary && status.state != 'SUCCESS' )
+	{
+		var summaryEl = $('.' + status.job_id + ' .summary', this.container);
+		summaryEl.text('Summary: ' + status.summary);
+	}
+}
+
+pm.jobs.display.prototype.toggleSubscribeLog = function(job_id, container)
+{
+	if( this.logStream.isSubscribed(job_id) )
+	{
+		container.slideUp();
+		this.logStream.unsubscribe(job_id);
+	}
+	else
+	{
+		var position = container.attr('data-position');
+		this.logStream.subscribe(job_id, this, position);
+		container.slideDown();
+	}
+}
