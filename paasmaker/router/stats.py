@@ -459,6 +459,12 @@ class ApplicationStats(object):
 		self.redis = redis
 		self.ready_callback()
 
+	def close(self):
+		"""
+		Close the attached Redis connection and any other resources.
+		"""
+		self.redis.disconnect()
+
 	def vtset_for_name(self, name, input_id, callback):
 		"""
 		Fetch a version type ID list for the given
