@@ -87,7 +87,8 @@ class StatsLogReader(object):
 			# Log file must have been rotated.
 			# TODO: We might have lost stats here.
 			position = 0
-		elif position == size:
+
+		if position == size:
 			# Nothing's changed. No need to read the file at all.
 			self.reading = False
 			self.callback("No new log entries.")
