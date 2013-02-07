@@ -125,7 +125,6 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.profile.ProfileResetAPIKeyController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceEditController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceListController.get_routes(route_extras))
-	routes.extend(paasmaker.common.controller.base.WebsocketLongpollWrapper.get_routes(route_extras))
 
 	routes.extend(paasmaker.pacemaker.controller.tools.ToolsController.get_routes(route_extras))
 
