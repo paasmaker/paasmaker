@@ -1,258 +1,6 @@
 
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 
-var WebsocketHandler = function(endpoint)
-{
-	var _self = this;
-	this.connected = false;
-	this.connecting = false;
-	this.endpoint = endpoint;
-	this.mode = 'auto';
-
-	this._queue = [];
-}
-
-WebsocketHandler.prototype.connect = function()
-{
-	// Don't try to connect if we're in longpoll mode.
-	if(this.mode != 'auto' && this.mode != 'websocket')
-	{
-		return;
-	}
-	if(this.connected || this.connecting)
-	{
-		return;
-	}
-
-	this.connecting = true;
-	var _self = this;
-	this.websocket = new WebSocket(this.getWebsocketUrl());
-	this.websocket.onopen = function()
-	{
-		_self.connected = true;
-		_self.connecting = false;
-		_self.mode = 'websocket';
-
-		// Send along the contents of the queue.
-		var thisQueue = _self._queue;
-		_self._queue = [];
-		for(var i = 0; i < thisQueue.length; i++)
-		{
-			_self.send(thisQueue[i]);
-		}
-
-		_self.onopen();
-	};
-	this.websocket.onmessage = function(evt)
-	{
-		//console.log(evt.data);
-		_self.onmessage($.parseJSON(evt.data), evt);
-	}
-	this.websocket.onerror = function(evt)
-	{
-		//console.log("Error");
-		//console.log(evt);
-
-		// Switch between 'not supported' and 'disconnected'.
-		// TODO: Find a reliable way to do this.
-		// For now, we assume that if we previously connected
-		// as a websocket, then it's supported. Otherwise, switch
-		// to longpoll.
-
-		this.connected = false;
-		this.connecting = false;
-
-		if(_self.mode == 'auto')
-		{
-			// Websockets not supported. Fallback to long poll mode.
-			_self.mode = 'longpoll';
-			_self.doLongPoll();
-		}
-		else
-		{
-			// Retry connection shortly.
-			setTimeout(
-				function()
-				{
-					_self.connect();
-				},
-				1000
-			);
-		}
-	}
-
-	this.websocket.onclose = function(evt)
-	{
-		// Remote end closed.
-		// Wait a second, and then try again.
-		setTimeout(
-			function()
-			{
-				_self.connect();
-			},
-			1000
-		);
-	}
-}
-
-WebsocketHandler.prototype.getWebsocketUrl = function()
-{
-	return "ws://" + window.location.host + this.endpoint;
-}
-
-WebsocketHandler.prototype.onmessage = function(data, evt)
-{
-	//console.log("onmessage() not implemented.");
-	//console.log(data);
-	//console.log(evt);
-}
-
-WebsocketHandler.prototype.onopen = function()
-{
-}
-
-WebsocketHandler.prototype.onerror = function()
-{
-	// Handle your errors here.
-}
-
-WebsocketHandler.prototype.send = function(message)
-{
-	if(this.connected && this.mode == 'websocket')
-	{
-		this.websocket.send($.toJSON(message));
-	}
-	else
-	{
-		this._queue.push(message);
-
-		if(this.mode == 'longpoll')
-		{
-			// Send it off to the server.
-			this.doLongPoll(this.connected);
-		}
-	}
-}
-
-WebsocketHandler.prototype.doLongPoll = function(sendOnly)
-{
-	// Force convert to a boolean.
-	// TODO: Oh, the hacks.
-	sendOnly = !!sendOnly;
-
-	if(this.connected && !sendOnly)
-	{
-		// Already connected, and not sending only.
-		// Take no action here.
-		return;
-	}
-	if(this.connected && !this.session_id)
-	{
-		// No session ID yet, but we have a request in progress.
-		// Just queue the request, because we don't want
-		// to double up on session IDs.
-		return;
-	}
-	if(!this.connected && sendOnly)
-	{
-		// We're not currently connected, but are sending
-		// only. So make this request not-sendOnly.
-		sendOnly = false;
-	}
-
-	// Not connected - send along the data.
-	if(!sendOnly)
-	{
-		this.connected = true;
-	}
-
-	// Get all entries on the queue right now.
-	var thisQueue = this._queue;
-	// Empty it out.
-	this._queue = [];
-
-	var _self = this;
-	var body = {
-		data: {
-			endpoint: _self.endpoint,
-			commands: thisQueue,
-			send_only: sendOnly
-		}
-	};
-
-	// Send along the session ID, if we have one.
-	if(this.session_id)
-	{
-		body.data.session_id = this.session_id;
-	}
-
-	$.ajax(
-		// Adding 'endpoint=' is purely to assist debugging in the log files.
-		'/websocket/longpoll?format=json&endpoint=' + escape(_self.endpoint),
-		{
-			type: 'POST',
-			data: $.toJSON(body),
-			success: function(data)
-			{
-				// Send along all the messages.
-				for(var i = 0; i < data.data.messages.length; i++)
-				{
-					var thisMessage = data.data.messages[i];
-					if(thisMessage.session_id && !_self.session_id)
-					{
-						_self.session_id = thisMessage.session_id;
-						console.log("Endpoint " + _self.endpoint + " sid " + _self.session_id);
-					}
-					else
-					{
-						_self.onmessage(thisMessage);
-					}
-				}
-
-				if(!sendOnly)
-				{
-					// Start long polling again.
-					_self.connected = false;
-					_self.doLongPoll();
-				}
-			},
-			error: function(xhr, status, error)
-			{
-				_self.connected = false;
-
-				if(xhr.status == 400)
-				{
-					// Bad session ID. Clear it and
-					// create a new session.
-					_self.session_id = false;
-					_self.doLongPoll();
-				}
-				else
-				{
-					// It didn't work.
-					console.log(xhr);
-					console.log(status);
-					console.log(error);
-
-					_self.onerror();
-
-					// Put the messages back onto the queue.
-					_self._queue = thisQueue.concat(_self._queue);
-
-					// Try again in a short while.
-					setTimeout(
-						function()
-						{
-							_self.doLongPoll(false);
-						},
-						1000
-					);
-				}
-			}
-		}
-	);
-}
-
 function testBrowserFeatures(resultContainer)
 {
 	resultContainer.empty();
@@ -297,14 +45,23 @@ $(document).ready(
 			);
 		}
 
-		var jobStream = new pm.jobs.stream();
-		var logStream = new pm.logs.stream();
+		// TODO: This connection timeout is low to force it to fallback to XHR quickly
+		// when websocket fails. This may be too short though for production use.
+		// Maybe we can more intelligently decide this and give socket.io a better hint?
+		var streamSocket = new io.connect('http://' + window.location.host, {'connect timeout': 1000});
+		streamSocket.on('disconnect',
+			function()
+			{
+				streamSocket.socket.reconnect();
+			}
+		);
+
 		if( $('.job-root').length > 0 )
 		{
 			$('.job-root').each(
 				function(index, element)
 				{
-					new pm.jobs.display($(element), jobStream, logStream);
+					new pm.jobs.display($(element), streamSocket);
 				}
 			);
 		}
@@ -313,7 +70,7 @@ $(document).ready(
 			$('.instance-log-container').each(
 				function(index, element)
 				{
-					new pm.logs.instance(logStream, $(element).attr('data-instance'));
+					new pm.logs.instance(streamSocket, $(element).attr('data-instance'));
 				}
 			);
 		}
@@ -323,7 +80,7 @@ $(document).ready(
 			$('.router-stats').each(
 				function(index, element)
 				{
-					new pm.stats.router($(element));
+					new pm.stats.router(streamSocket, $(element));
 				}
 			);
 		}

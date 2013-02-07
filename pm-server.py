@@ -32,6 +32,7 @@ from tornado.options import options
 from pubsub import pub
 from pubsub.utils.exchandling import IExcHandler
 from paasmaker.thirdparty.safeclose import safeclose
+import tornadio2
 
 # Internal imports.
 import paasmaker
@@ -183,11 +184,21 @@ routes.extend(paasmaker.common.controller.example.ExampleWebsocketHandler.get_ro
 routes.extend(paasmaker.common.controller.information.InformationController.get_routes(route_extras))
 routes.extend(paasmaker.common.controller.log.LogStreamHandler.get_routes(route_extras))
 
+socketio_router = tornadio2.TornadioRouter(
+	paasmaker.pacemaker.controller.stream.StreamConnection
+)
+# Hack to store the configuration on the socket.io router.
+socketio_router.configuration = configuration
+
 # Set up the application object.
+# NOTE: What's happening here is that the socket.io router takes
+# over routing, and passes through requests to the normal HTTP endpoints.
 logging.info("Setting up the application.")
 application_settings = configuration.get_tornado_configuration()
-#print str(application_settings)
-application = tornado.web.Application(routes, **application_settings)
+application = tornado.web.Application(
+	socketio_router.apply_routes(routes),
+	**application_settings
+)
 
 @tornado.stack_context.contextlib.contextmanager
 def handle_runtime_exception():
@@ -561,4 +572,7 @@ if __name__ == "__main__":
 
 	# Start up the IO loop.
 	with safeclose.section(on_exit_request):
-		tornado.ioloop.IOLoop.instance().start()
+		# This is the socket.io launcher, which routes between
+		# socket.io requests and normal HTTP requests. It also
+		# starts the IO loop for us.
+		tornadio2.SocketServer(application)

@@ -2,10 +2,11 @@
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 if (!pm.logs) { pm.logs = {}; }
 
-pm.logs.instance = function(logStream, instance_id)
+pm.logs.instance = function(streamSocket, instance_id)
 {
-	this.logStream = logStream;
+	this.streamSocket = streamSocket;
 	this.instance_id = instance_id;
+	this.isSubscribed = false;
 
 	// Set up the container.
 	this.toggle = $('.toggle.' + instance_id);
@@ -23,33 +24,78 @@ pm.logs.instance = function(logStream, instance_id)
 			e.preventDefault();
 		}
 	);
+
+	this.streamSocket.on('log.lines',
+		function(job_id, lines, position)
+		{
+			if(job_id == _self.instance_id)
+			{
+				_self.handleNewLines(job_id, lines, position);
+			}
+		}
+	);
+
+	this.streamSocket.on('log.zerosize',
+		function(job_id)
+		{
+			if(job_id == _self.instance_id)
+			{
+				_self.handleZeroSizeLog(job_id);
+			}
+		}
+	);
 }
 
 pm.logs.instance.prototype.toggleSubscribe = function()
 {
-	if( this.logStream.isSubscribed(this.instance_id) )
+	if( this.isSubscribed )
 	{
 		this.container.slideUp();
-		this.logStream.unsubscribe(this.instance_id);
+		this.isSubscribed = false;
+		this.streamSocket.emit('log.unsubscribe', this.instance_id);
 	}
 	else
 	{
+		this.isSubscribed = true;
 		var position = this.pre.attr('data-position');
-		this.logStream.subscribe(this.instance_id, this, position);
+		this.streamSocket.emit('log.subscribe', this.instance_id, position);
 		this.container.slideDown();
 	}
 }
 
-pm.logs.instance.prototype.handleZeroSizeLog = function(stream, message)
+pm.logs.instance.prototype.handleZeroSizeLog = function(job_id)
 {
 	this.pre.html("No log entries for this job.")
 	this.pre.addClass('no-data');
 }
 
-pm.logs.instance.prototype.handleNewLines = function(stream, message)
+pm.logs.instance.prototype.handleNewLines = function(job_id, lines, position)
 {
 	this.pre.removeClass('no-data');
-	var formatted = stream.formatLogLines(message.lines.join(''));
+	var formatted = this.formatLogLines(lines.join(''));
 	this.pre.append(formatted);
-	this.pre.attr('data-position', message.position);
+	this.pre.attr('data-position', position);
+}
+
+// TODO: This is duplicated code. Refactor this so it isn't.
+pm.logs.instance.prototype.formatLogLines = function(lines)
+{
+	var LOG_LEVEL_MAP = [
+		['DEBUG', 'label'],
+		['INFO', 'label label-info'],
+		['WARNING', 'label label-warning'],
+		['ERROR', 'label label-important'],
+		['CRITICAL', 'label label-important']
+	]
+
+	var output = lines;
+	output = htmlEscape(output);
+	for( var i = 0; i < LOG_LEVEL_MAP.length; i++ )
+	{
+		output = output.replace(
+			new RegExp('\\s' + LOG_LEVEL_MAP[i][0] + '\\s', 'g'),
+			' <span class="' + LOG_LEVEL_MAP[i][1] + '">' + LOG_LEVEL_MAP[i][0] + '</span> '
+		);
+	}
+	return output;
 }

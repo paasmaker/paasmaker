@@ -2,30 +2,78 @@
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 if (!pm.jobs) { pm.jobs = {}; }
 
-pm.jobs.display = function(container, jobStream, logStream)
+pm.jobs.display = function(container, streamSocket)
 {
 	this.container = container;
-	this.jobStream = jobStream;
-	this.logStream = logStream;
+	this.streamSocket;
 	this.job_id = container.attr('data-job');
+	this.logSubscribed = {};
 
-	this.jobStream.subscribe(this.job_id, this);
+	var _self = this;
+
+	// Subscribe to the events we want.
+	this.streamSocket = streamSocket;
+	this.streamSocket.on('job.tree',
+		function(job_id, tree)
+		{
+			if(_self.job_id == job_id)
+			{
+				_self.renderJobTree([tree], 0);
+			}
+		}
+	);
+
+	this.streamSocket.on('job.new',
+		function(data)
+		{
+			_self.newJob(data);
+		}
+	);
+
+	this.streamSocket.on('job.status',
+		function(job_id, status)
+		{
+			_self.updateStatus(status);
+		}
+	);
+
+	this.streamSocket.on('log.lines',
+		function(job_id, lines, position)
+		{
+			if(_self.logSubscribed[job_id])
+			{
+				_self.handleNewLines(job_id, lines, position);
+			}
+		}
+	);
+
+	this.streamSocket.on('log.zerosize',
+		function(job_id)
+		{
+			if(_self.logSubscribed[job_id])
+			{
+				_self.handleZeroSizeLog(job_id);
+			}
+		}
+	);
+
+	_self.streamSocket.emit('job.subscribe', _self.job_id);
 }
 
-pm.jobs.display.prototype.handleZeroSizeLog = function(stream, message)
+pm.jobs.display.prototype.handleZeroSizeLog = function(job_id)
 {
-	var container = $('.' + message.job_id + ' .log');
+	var container = $('.' + job_id + ' .log', this.container);
 	container.html("No log entries for this job.")
 	container.addClass('no-data');
 }
 
-pm.jobs.display.prototype.handleNewLines = function(stream, message)
+pm.jobs.display.prototype.handleNewLines = function(job_id, lines, position)
 {
-	var container = $('.' + message.job_id + ' .log');
+	var container = $('.' + job_id + ' .log', this.container);
 	container.removeClass('no-data');
-	var formatted = stream.formatLogLines(message.lines.join(''));
+	var formatted = this.formatLogLines(lines.join(''));
 	container.append(formatted);
-	container.attr('data-position', message.position);
+	container.attr('data-position', position);
 }
 
 pm.jobs.display.prototype.renderJobTree = function(tree, level, container)
@@ -238,15 +286,40 @@ pm.jobs.display.prototype.updateStatus = function(status)
 
 pm.jobs.display.prototype.toggleSubscribeLog = function(job_id, container)
 {
-	if( this.logStream.isSubscribed(job_id) )
+	if( this.logSubscribed[job_id] )
 	{
 		container.slideUp();
-		this.logStream.unsubscribe(job_id);
+		this.streamSocket.emit('log.unsubscribe', job_id);
+		this.logSubscribed[job_id] = false;
 	}
 	else
 	{
 		var position = container.attr('data-position');
-		this.logStream.subscribe(job_id, this, position);
+		this.logSubscribed[job_id] = true;
+		this.streamSocket.emit('log.subscribe', job_id, position);
 		container.slideDown();
 	}
+}
+
+// TODO: This is duplicated code. Refactor this so it isn't.
+pm.jobs.display.prototype.formatLogLines = function(lines)
+{
+	var LOG_LEVEL_MAP = [
+		['DEBUG', 'label'],
+		['INFO', 'label label-info'],
+		['WARNING', 'label label-warning'],
+		['ERROR', 'label label-important'],
+		['CRITICAL', 'label label-important']
+	]
+
+	var output = lines;
+	output = htmlEscape(output);
+	for( var i = 0; i < LOG_LEVEL_MAP.length; i++ )
+	{
+		output = output.replace(
+			new RegExp('\\s' + LOG_LEVEL_MAP[i][0] + '\\s', 'g'),
+			' <span class="' + LOG_LEVEL_MAP[i][1] + '">' + LOG_LEVEL_MAP[i][0] + '</span> '
+		);
+	}
+	return output;
 }

@@ -2,10 +2,9 @@
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 pm.stats = {};
 
-pm.stats.router = function(container)
+pm.stats.router = function(streamSocket, container)
 {
-	// Call the parent.
-	WebsocketHandler.call(this, "/router/stats/stream");
+	this.streamSocket = streamSocket;
 
 	// And now set up other internal variables.
 	this.container = container;
@@ -73,33 +72,32 @@ pm.stats.router = function(container)
 		this.isGraphing = true;
 	}
 
-	// Connect.
-	this.connect();
-}
-
-pm.stats.router.prototype = new WebsocketHandler("/router/stats/stream");
-pm.stats.router.prototype.constructor = pm.stats.router;
-
-pm.stats.router.prototype.onmessage = function(message)
-{
-	//console.log(message);
-	switch(message.type)
-	{
-		case 'update':
-			this.showUpdate(message.data);
-			break;
-		case 'history':
-			this.showGraph(message.data);
-			break;
-		case 'ready':
-			this.ready = true;
-			// Start updating.
-			this.requestUpdate();
-			if( this.isGraphing )
+	this.streamSocket.on('router.stats.update',
+		function(input_name, input_id, stats)
+		{
+			if(_self.input_name == input_name && _self.input_id == input_id)
 			{
-				this.requestGraph();
+				_self.showUpdate(stats);
 			}
-			break;
+		}
+	);
+
+	this.streamSocket.on('router.stats.history',
+		function(input_name, input_id, start, end, history)
+		{
+			if(_self.input_name == input_name && _self.input_id == input_id)
+			{
+				_self.showGraph(start, end, history);
+			}
+		}
+	);
+
+	// Ask for an update immediately.
+	this.requestUpdate();
+
+	if(this.isGraphing)
+	{
+		this.requestGraph();
 	}
 }
 
@@ -115,23 +113,19 @@ pm.stats.router.prototype.setupGraphArea = function()
 
 pm.stats.router.prototype.requestUpdate = function()
 {
-	this.send({request: 'update', data: {'name': this.input_name, 'input_id': this.input_id}});
+	this.streamSocket.emit('router.stats.update', this.input_name, this.input_id);
 }
 
 pm.stats.router.prototype.requestGraph = function()
 {
 	var now = new Date();
 	// TODO: Allow more configuration, less assumptions.
-	this.send(
-		{
-			request: 'history',
-			data: {
-				'name': this.input_name,
-				'input_id': this.input_id,
-				'metric': 'requests',
-				'start': (now.getTime() / 1000) - 60
-			}
-		}
+	this.streamSocket.emit(
+		'router.stats.history',
+		this.input_name,
+		this.input_id,
+		'requests',
+		(now.getTime() / 1000) - 60 // Start - 60 seconds ago to now.
 	);
 }
 
@@ -177,29 +171,28 @@ pm.stats.router.prototype.showUpdate = function(update)
 	this.lastNumbers = update;
 }
 
-pm.stats.router.prototype.showGraph = function(graphdata)
+pm.stats.router.prototype.showGraph = function(start, end, graphPoints)
 {
 	//console.log(graphdata.points);
-	var graphPoints = graphdata.points;
 	if( graphPoints.length == 0 )
 	{
 		// No data returned. Fake it!
-		graphPoints.push([graphdata.start, 0]);
-		graphPoints.push([graphdata.end, 0]);
+		graphPoints.push([start, 0]);
+		graphPoints.push([end, 0]);
 	}
 	else
 	{
-		if( graphPoints[0][0] != graphdata.start )
+		if( graphPoints[0][0] != start )
 		{
 			// Doesn't start with the start time. Insert
 			// a point to make it make sense.
-			graphPoints.splice(0, 0, [graphdata.start, 0])
+			graphPoints.splice(0, 0, [start, 0])
 		}
-		if( graphPoints[graphPoints.length - 1][0] != graphdata.end )
+		if( graphPoints[graphPoints.length - 1][0] != end )
 		{
 			// Doesn't end with the end time. Insert a
 			// point to make it make sense.
-			graphPoints.push([graphdata.end, 0])
+			graphPoints.push([end, 0])
 		}
 	}
 
