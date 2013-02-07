@@ -8,10 +8,6 @@ import paasmaker
 from paasmaker.common.core import constants
 from base import BaseWebsocketHandler
 from base import BaseControllerTest
-from base import BaseLongpollController
-
-# Only required for testing.
-from base import WebsocketLongpollWrapper
 
 import tornado
 import tornado.testing
@@ -286,7 +282,6 @@ class LogStreamHandlerTest(BaseControllerTest):
 	def get_app(self):
 		self.late_init_configuration(self.io_loop)
 		routes = LogStreamHandler.get_routes({'configuration': self.configuration})
-		routes.extend(WebsocketLongpollWrapper.get_routes({'configuration': self.configuration}))
 		routes.extend(paasmaker.common.controller.example.ExampleController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
@@ -561,6 +556,7 @@ class LogStreamHandlerTest(BaseControllerTest):
 
 		self.assertEquals(2, len(lines), "Didn't download the expected number of lines.")
 
+	@unittest.skip("Skipped until socket.io tornado client is written.")
 	def test_longpoll_log(self):
 		# Make a job number, and log to it.
 		job_id = str(uuid.uuid4())

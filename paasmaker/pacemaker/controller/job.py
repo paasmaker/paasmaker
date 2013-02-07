@@ -1,8 +1,9 @@
 import logging
 import json
+import unittest
 
 import paasmaker
-from paasmaker.common.controller.base import BaseController, BaseControllerTest, BaseWebsocketHandler, WebsocketLongpollWrapper
+from paasmaker.common.controller.base import BaseController, BaseControllerTest, BaseWebsocketHandler
 from paasmaker.common.core import constants
 
 from pubsub import pub
@@ -276,7 +277,6 @@ class JobStreamHandlerTest(BaseControllerTest):
 	def get_app(self):
 		self.late_init_configuration(self.io_loop)
 		routes = JobStreamHandler.get_routes({'configuration': self.configuration})
-		routes.extend(WebsocketLongpollWrapper.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
@@ -361,6 +361,7 @@ class JobStreamHandlerTest(BaseControllerTest):
 		for i in range(len(expected_types)):
 			self.assertEquals(client.messages[i]['type'], expected_types[i], "Wrong type for message %d" % i)
 
+	@unittest.skip("Skipped until socket.io tornado client is written.")
 	def test_job_stream_longpoll(self):
 
 		self.manager.add_job('paasmaker.job.success', {}, "Example root job.", self.stop)
