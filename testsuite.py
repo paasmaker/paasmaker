@@ -10,6 +10,15 @@ import tempfile
 import subprocess
 import os
 
+# Check that the virtualenv exists.
+if not os.path.exists("thirdparty/python/bin/pip"):
+	print "virtualenv not installed. Run install.py to set up this directory properly."
+	sys.exit(1)
+
+# Activate the environment now, inside this script.
+bootstrap_script = "thirdparty/python/bin/activate_this.py"
+execfile(bootstrap_script, dict(__file__=bootstrap_script))
+
 import paasmaker
 
 import coverage
