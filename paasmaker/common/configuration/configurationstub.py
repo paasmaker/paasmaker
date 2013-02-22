@@ -11,6 +11,7 @@ import subprocess
 
 import tornadoredis
 import tornado
+import yaml
 
 import configuration
 import paasmaker
@@ -159,6 +160,18 @@ router:
 
         # And then load the config.
         super(ConfigurationStub, self).load_from_file([self.configname])
+
+        # Load paasmaker.yml, if found, and merge in a few select values.
+        if os.path.exists('paasmaker.yml'):
+          contents = open('paasmaker.yml', 'r').read()
+          parsed = yaml.safe_load(contents)
+
+          if 'redis_binary' in parsed:
+              self['redis_binary'] = parsed['redis_binary']
+          if 'nginx_binary' in parsed:
+              self['nginx_binary'] = parsed['nginx_binary']
+
+          self.update_flat()
 
         # Choose a UUID for ourself.
         #self.set_node_uuid(str(uuid.uuid4()))
