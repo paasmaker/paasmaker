@@ -9,6 +9,19 @@ class BaseDynamicTagsConfigurationSchema(colander.MappingSchema):
 	pass
 
 class BaseDynamicTags(paasmaker.util.plugin.Plugin):
+	"""
+	This plugin type is used to build a set of tags for the node
+	programatically. For example, EC2 nodes might use this to submit
+	additional tags about the region that the node is in, which applications
+	or placement algorithms can use to better locate applications.
+
+	You only need to implement the fetch() function in your subclass.
+
+	Note that Paasmaker will only call your plugin once per server startup,
+	and cache the results to be used for any future registration updates.
+
+	For an example, have a look at the default dynamic tags plugin.
+	"""
 	MODES = {
 		paasmaker.util.plugin.MODE.NODE_DYNAMIC_TAGS: None
 	}
@@ -17,7 +30,10 @@ class BaseDynamicTags(paasmaker.util.plugin.Plugin):
 	def fetch(self, existing_tags, callback):
 		"""
 		Alter or insert into the provided existing tags array. Call the callback
-		once completed with the tags.
+		once completed with the tags. The callback allows you to perform asynchronous
+		actions to fetch your tags.
+
+		Note that you alter the given existing_tags dict directly.
 
 		For example::
 

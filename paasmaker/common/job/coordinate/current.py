@@ -35,6 +35,12 @@ import tornado
 # TODO: Thoroughly test the exclusive instance handling.
 
 class CurrentVersionRequestJob(InstanceJobHelper):
+	"""
+	A job to make a specific version of an application the current one.
+
+	This will adjust routing, and start and stop exclusive instances
+	to ensure the system ends up in the correct state.
+	"""
 
 	@staticmethod
 	def setup_version(configuration, application_version_id, callback, parent=None):

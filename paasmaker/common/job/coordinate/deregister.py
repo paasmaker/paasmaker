@@ -22,6 +22,12 @@ import colander
 #   - Deregister - Instance B
 
 class DeRegisterRootJob(InstanceRootBase):
+	"""
+	A job to set up de-registration request jobs.
+
+	NOTE: All this job does is submit more jobs to de-register instances.
+	"""
+
 	@classmethod
 	def setup_version(cls, configuration, application_version, callback, limit_instances=None, parent=None):
 		# List all the instance types.
@@ -79,6 +85,11 @@ class DeRegisterRequestJobParametersSchema(colander.MappingSchema):
 	application_instance_type_id = colander.SchemaNode(colander.Integer())
 
 class DeRegisterRequestJob(InstanceJobHelper):
+	"""
+	A job that queues deregistration jobs for a specific instance type ID.
+
+	This queues the actual jobs that run on the heart nodes to perform the deregistration.
+	"""
 	MODES = {
 		MODE.JOB: DeRegisterRequestJobParametersSchema()
 	}

@@ -16,7 +16,7 @@ class DeRegisterInstanceJobSchema(colander.MappingSchema):
 class DeRegisterInstanceJob(BaseJob):
 	"""
 	A job to de-register an instance on the node.
-	This means deleting it and all it's files.
+	This means deleting it and all its files.
 	"""
 	MODES = {
 		MODE.JOB: DeRegisterInstanceJobSchema()

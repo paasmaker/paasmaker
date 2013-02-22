@@ -24,6 +24,9 @@ import colander
 #     - Update Routing - Instance B
 
 class ShutdownRootJob(InstanceRootBase):
+	"""
+	A container job to submit other jobs to shutdown an application version.
+	"""
 	@classmethod
 	def setup_version(cls, configuration, application_version, callback, limit_instances=None, parent=None):
 		# List all the instance types.
@@ -81,6 +84,9 @@ class ShutdownRequestJobParametersSchema(colander.MappingSchema):
 	application_instance_type_id = colander.SchemaNode(colander.Integer())
 
 class ShutdownRequestJob(InstanceJobHelper):
+	"""
+	A job to submit shutdown requests on specific heart nodes to shutdown instances.
+	"""
 	MODES = {
 		MODE.JOB: ShutdownRequestJobParametersSchema()
 	}

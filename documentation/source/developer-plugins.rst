@@ -10,15 +10,15 @@ as many options as possible.
 Plugin Modes
 ------------
 
-The following plugin modes are available inside Paasmaker:
+There are many plugin modes available, each with their own base classes
+to keep the API the same. The following documents cover how to write plugins
+roughly based on a grouping of what they do.
 
-TODO: Complete this list.
+.. toctree::
+   :maxdepth: 2
 
-SERVICE_CREATE
-    This mode is for plugins that can create or update
-    application services. It requires runtime parameters
-    to operate. Plugins of this sort should be subclasses
-    of ``paasmaker.pacemaker.service.base.BaseService``.
+   developer-plugins-node
+   developer-plugins-health
 
 Example Plugin
 --------------

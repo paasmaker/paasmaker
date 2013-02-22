@@ -9,6 +9,15 @@ class BasePeriodicConfigurationSchema(colander.MappingSchema):
 	pass
 
 class BasePeriodic(paasmaker.util.plugin.Plugin):
+	"""
+	Periodic plugins are jobs that run periodically. Paasmaker organises
+	to run these on the schedule you have defined, and report the output
+	as a job that can be seen for later auditing.
+
+	You only need to override ``on_interval()``, and then register your plugin,
+	and finally, make sure it appears in the ``periodics`` section in your
+	configuration file.
+	"""
 	MODES = {
 		paasmaker.util.plugin.MODE.PERIODIC: None
 	}
@@ -20,6 +29,12 @@ class BasePeriodic(paasmaker.util.plugin.Plugin):
 		if your tasks will take some time or be IO bound. Call the callback
 		with a message when complete, or the error_callback if you failed
 		for some critical reason.
+
+		If you call the error_callback, it will mark the containing job
+		as failed.
+
+		:arg callable callback: The callback to call once done.
+		:arg callable error_callback: A callback to call when a critical error occurs.
 		"""
 		raise NotImplementedError("You must implement on_interval().")
 

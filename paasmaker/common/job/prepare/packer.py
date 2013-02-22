@@ -6,6 +6,10 @@ from paasmaker.common.core import constants
 from ..base import BaseJob
 
 class SourcePackerJob(BaseJob):
+	"""
+	A job to pack up and store a prepare source code tree.
+	"""
+
 	def start_job(self, context):
 		output_context = {}
 		# This is the working directory for this.

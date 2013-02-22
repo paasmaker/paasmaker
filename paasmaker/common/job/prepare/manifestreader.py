@@ -12,6 +12,10 @@ from paasmaker.util.configurationhelper import InvalidConfigurationFormatExcepti
 import sqlalchemy
 
 class ManifestReaderJob(BaseJob):
+	"""
+	A job to read the application manifest, and spawn other jobs based on that
+	manifest. For example, it will spawn jobs to create services as required.
+	"""
 
 	def start_job(self, context):
 		output_context = {}

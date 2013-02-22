@@ -18,6 +18,9 @@ class LogsCleanerConfigurationSchema(colander.MappingSchema):
 		missing=86400 * 7)
 
 class LogsCleaner(BasePeriodic):
+	"""
+	A plugin to remove log files once they reach a certain age.
+	"""
 	OPTIONS_SCHEMA = LogsCleanerConfigurationSchema()
 	API_VERSION = "0.9.0"
 

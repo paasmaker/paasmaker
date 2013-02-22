@@ -16,6 +16,10 @@ class StorePortJobParametersSchema(colander.MappingSchema):
 	database_id = colander.SchemaNode(colander.Integer())
 
 class StorePortJob(BaseJob):
+	"""
+	A helper job to store the port that a heart allocated for an instance
+	inside the pacemakers database.
+	"""
 	MODES = {
 		MODE.JOB: StorePortJobParametersSchema()
 	}

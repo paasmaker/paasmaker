@@ -4,8 +4,25 @@ import paasmaker
 from ..base import BaseJob
 
 class InstanceRootBase(BaseJob):
+	"""
+	A superclass that provides helpers for coordinate jobs that spawn off
+	other jobs. This contains common functionality that was being
+	duplicated between the jobs.
+	"""
+
 	@classmethod
 	def setup_instances(cls, configuration, instances, callback, parent=None):
+		"""
+		For the given list of instances, look up the application versions,
+		and then call ``setup_version`` for each of those, limiting their actions
+		to just those instances supplied.
+
+		:arg Configuration configuration: The configuration object.
+		:arg list instances: A list of ApplicationInstance objects.
+		:arg callable callback: The callback called once done.
+		:arg str parent: The parent ID of all the jobs, or None if this is a new
+			top level job.
+		"""
 		# Sanity check: Pass at least one instance object.
 		if len(instances) == 0:
 			raise ValueError("You must pass at least one instance object.")

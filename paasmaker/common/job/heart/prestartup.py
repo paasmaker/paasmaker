@@ -10,6 +10,10 @@ class PreInstanceStartupJobParametersSchema(colander.MappingSchema):
 	instance_id = colander.SchemaNode(colander.String())
 
 class PreInstanceStartupJob(BaseJob):
+	"""
+	A job to run pre-startup commands. These are plugins defined
+	in the application that should run just prior to starting up an instance.
+	"""
 	MODES = {
 		MODE.JOB: PreInstanceStartupJobParametersSchema()
 	}

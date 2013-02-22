@@ -14,6 +14,10 @@ class JobsCleanerConfigurationSchema(colander.MappingSchema):
 		missing=86400 * 7)
 
 class JobsCleaner(BasePeriodic):
+	"""
+	A plugin to remove old job entries from the jobs Redis.
+	"""
+
 	OPTIONS_SCHEMA = JobsCleanerConfigurationSchema()
 	API_VERSION = "0.9.0"
 

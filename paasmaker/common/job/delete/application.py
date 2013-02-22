@@ -35,6 +35,9 @@ class ApplicationDeleteJobParametersSchema(colander.MappingSchema):
 	)
 
 class ApplicationDeleteRootJob(BaseJob):
+	"""
+	A job to delete an application.
+	"""
 	MODES = {
 		MODE.JOB: ApplicationDeleteJobParametersSchema()
 	}
@@ -99,6 +102,9 @@ class ApplicationDeleteServiceParametersSchema(colander.MappingSchema):
 	)
 
 class ApplicationDeleteServiceJob(BaseJob):
+	"""
+	A job to delete a service that an application uses.
+	"""
 	MODES = {
 		MODE.JOB: ApplicationDeleteServiceParametersSchema()
 	}

@@ -32,6 +32,13 @@ import sqlalchemy
 #   - ... and so forth.
 
 class RegisterRootJob(InstanceRootBase):
+	"""
+	A job to set up registration requests for instances.
+
+	NOTE: This job is just a container that submits other jobs to actually
+	register the instances.
+	"""
+
 	@classmethod
 	def setup_version(cls, configuration, application_version, callback, limit_instances=None, parent=None):
 		# List all the instance types.
@@ -95,6 +102,9 @@ class RegisterRequestJobParametersSchema(colander.MappingSchema):
 	application_instance_type_id = colander.SchemaNode(colander.Integer())
 
 class RegisterRequestJob(BaseJob):
+	"""
+	A job to submit more jobs on actual heart nodes to register instances.
+	"""
 	MODES = {
 		MODE.JOB: RegisterRequestJobParametersSchema()
 	}

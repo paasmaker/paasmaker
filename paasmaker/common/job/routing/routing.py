@@ -21,6 +21,12 @@ class RoutingUpdateJobParametersSchema(colander.MappingSchema):
 	add = colander.SchemaNode(colander.Boolean())
 
 class RoutingUpdateJob(BaseJob):
+	"""
+	A job to update routing for a single instance.
+
+	This job reads all data from the instance itself, and acts
+	according to the instance state.
+	"""
 	MODES = {
 		MODE.JOB: RoutingUpdateJobParametersSchema()
 	}

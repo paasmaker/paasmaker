@@ -13,6 +13,9 @@ class ServiceJobParametersSchema(colander.MappingSchema):
 	service_id = colander.SchemaNode(colander.Integer())
 
 class ServiceContainerJob(BaseJob):
+	"""
+	A container job to build the environment for a set of created services.
+	"""
 	def start_job(self, context):
 		# Fetch all the relevant services and put them into the environment
 		# for the prepare tasks.
@@ -30,6 +33,9 @@ class ServiceContainerJob(BaseJob):
 		self.success({'environment': environment}, "All services created and updated.")
 
 class ServiceJob(BaseJob):
+	"""
+	A job to create services during application preparation.
+	"""
 	MODES = {
 		MODE.JOB: ServiceJobParametersSchema()
 	}

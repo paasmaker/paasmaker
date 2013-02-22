@@ -5,7 +5,18 @@ from paasmaker.common.core import constants
 from ..base import BaseJob
 
 class InstanceJobHelper(BaseJob):
+	"""
+	A superclass for various coordinate jobs, that provides common helpers
+	that those jobs use.
+	"""
+
 	def get_instance_type(self, session):
+		"""
+		From the supplied job parameters, fetch and hydrate the
+		application instance type we are working on.
+
+		:arg Session session: The SQLAlchemy session to work in.
+		"""
 		instance_type = session.query(
 			paasmaker.model.ApplicationInstanceType
 		).get(self.parameters['application_instance_type_id'])
@@ -16,6 +27,11 @@ class InstanceJobHelper(BaseJob):
 		"""
 		Find instances for the given application, in the given state,
 		and return a destroyable list of instances for queueing.
+
+		:arg Session session: The SQLAlchemy session to work in.
+		:arg ApplicationInstnaceType instance_type: The instance type to fetch instances for.
+		:arg list states: The states of instances to fetch.
+		:arg dict context: The job's context, used to control the listing parameters.
 		"""
 		self.logger.info("Looking for instances in states %s, on active nodes.", str(states))
 
@@ -46,7 +62,10 @@ class InstanceJobHelper(BaseJob):
 
 	def get_tags_for(self, instance_type):
 		"""
-		Return a set of job tags for the given instance type ID.
+		Return a set of job tags for the given instance type.
+
+		:arg ApplicationInstanceType instance_type: The instance type
+			to work on.
 		"""
 		tags = []
 		tags.append('workspace:%d' % instance_type.application_version.application.workspace.id)

@@ -10,6 +10,9 @@ class SourceSCMJobParametersSchema(colander.MappingSchema):
 	scm_parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'))
 
 class SourceSCMJob(BaseJob):
+	"""
+	A job to fetch source code from an SCM, so it can be read and prepared.
+	"""
 	MODES = {
 		MODE.JOB: SourceSCMJobParametersSchema()
 	}

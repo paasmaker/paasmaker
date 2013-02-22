@@ -16,6 +16,14 @@ class SelectLocationsJobParametersSchema(colander.MappingSchema):
 	application_instance_type_id = colander.SchemaNode(colander.Integer())
 
 class SelectLocationsJob(BaseJob):
+	"""
+	A job to select instance locations for a given application version.
+
+	This job will use the appropriate placement algorithm for that application
+	to place instances, and will only allocate new instances to meet the correct
+	number for an application. If there are too many instances, no action
+	will be taken - other parts of Paasmaker handle this case.
+	"""
 	MODES = {
 		MODE.JOB: SelectLocationsJobParametersSchema()
 	}

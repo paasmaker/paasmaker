@@ -14,6 +14,10 @@ from pubsub import pub
 # TODO: Implement abort features for all of these jobs.
 
 class ApplicationPrepareRootJob(BaseJob):
+	"""
+	The root job to prepare a new application, or a new version
+	of an existing application.
+	"""
 	@staticmethod
 	def setup(configuration,
 			name,

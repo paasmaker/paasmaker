@@ -28,6 +28,9 @@ import colander
 #       - Pre-startup - Instance B
 
 class StartupRootJob(InstanceRootBase):
+	"""
+	A container job to submit more jobs to start up instances for a given application version.
+	"""
 	@classmethod
 	def setup_version(cls, configuration, application_version, callback, limit_instances=None, parent=None):
 		# List all the instance types.
@@ -106,6 +109,9 @@ class StartupRequestJobParametersSchema(colander.MappingSchema):
 	application_instance_type_id = colander.SchemaNode(colander.Integer())
 
 class StartupRequestJob(InstanceJobHelper):
+	"""
+	A job to submit more jobs to start an instance on a specific heart node.
+	"""
 	MODES = {
 		MODE.JOB: StartupRequestJobParametersSchema()
 	}

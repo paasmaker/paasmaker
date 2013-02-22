@@ -9,6 +9,9 @@ class SourcePreparerJobParametersSchema(colander.MappingSchema):
 	data = colander.SchemaNode(colander.Mapping(unknown='preserve'))
 
 class SourcePreparerJob(BaseJob):
+	"""
+	A job to run prepare plugins against a clean source tree.
+	"""
 	MODES = {
 		MODE.JOB: SourcePreparerJobParametersSchema()
 	}

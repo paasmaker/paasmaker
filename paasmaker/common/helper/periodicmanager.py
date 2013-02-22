@@ -132,6 +132,9 @@ class PeriodicRunJobParametersSchema(colander.MappingSchema):
 	plugin = colander.SchemaNode(colander.String())
 
 class PeriodicRunJob(BaseJob):
+	"""
+	A job to run periodic plugins, and log their output.
+	"""
 	MODES = {
 		MODE.JOB: PeriodicRunJobParametersSchema()
 	}
