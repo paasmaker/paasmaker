@@ -88,6 +88,9 @@ appendonly no
 		"""
 		Start up the server for this instance.
 		"""
+		if not self.configuration.get_flat('redis_binary'):
+			raise ValueError("Unable to find redis binary. It needs to be in the path, or manually configured in the configuration file.")
+
 		# Write out the configuration.
 		configfile = self.get_configuration_path(self.parameters['working_dir'])
 		if self.parameters['password']:
