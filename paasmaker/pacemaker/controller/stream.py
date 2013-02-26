@@ -2,8 +2,12 @@
 import logging
 import os
 import time
+import unittest
+import uuid
 
 import paasmaker
+from ...common.controller.base import BaseControllerTest
+from paasmaker.common.core import constants
 
 import tornado
 from pubsub import pub
@@ -30,32 +34,54 @@ class StreamConnection(tornadio2.SocketConnection):
 		# AUTHORIZATION
 		# Check that the user is allowed.
 		self.authenticated = False
-		user_cookie_raw = request.get_cookie('user').value
-		if user_cookie_raw:
-			# Decode the cookie.
-			tornado_settings = self.configuration.get_tornado_configuration()
-			user_id = tornado.web.decode_signed_value(
-				tornado_settings['cookie_secret'],
-				'user',
-				unicode(user_cookie_raw),
-				max_age_days=self.configuration.get_flat('pacemaker.login_age')
-			)
+		self.auth_method = None
+		if self.configuration.is_pacemaker():
+			user_cookie_raw = request.get_cookie('user')
+			if user_cookie_raw:
+				# Decode the cookie.
+				user_cookie_raw = user_cookie_raw.value
+				tornado_settings = self.configuration.get_tornado_configuration()
+				user_id = tornado.web.decode_signed_value(
+					tornado_settings['cookie_secret'],
+					'user',
+					unicode(user_cookie_raw),
+					max_age_days=self.configuration.get_flat('pacemaker.login_age')
+				)
 
-			if user_id:
-				session = self.configuration.get_database_session()
-				user = session.query(
-					paasmaker.model.User
-				).get(int(user_id))
+				if user_id:
+					session = self.configuration.get_database_session()
+					user = session.query(
+						paasmaker.model.User
+					).get(int(user_id))
 
-				if user and user.enabled and not user.deleted:
-					self.authenticated = True
-				session.close()
+					if user and user.enabled and not user.deleted:
+						self.authenticated = True
+						self.auth_method = 'user'
+					session.close()
 
 		auth_raw = request.get_argument('auth')
 		if auth_raw:
-			# Check against super token. No other auth is supported.
-			if auth_raw == self.configuration.get_flat('pacemaker.super_token'):
+			# Check against super token.
+			if self.configuration.is_pacemaker() and auth_raw == self.configuration.get_flat('pacemaker.super_token'):
 				self.authenticated = True
+				self.auth_method = 'super'
+			# And against the node token.
+			if auth_raw == self.configuration.get_flat('node_token'):
+				self.authenticated = True
+				self.auth_method = 'node'
+			# And against the user token.
+			if self.configuration.is_pacemaker():
+				session = self.configuration.get_database_session()
+				user = session.query(
+					paasmaker.model.User
+				).filter(
+					paasmaker.model.User.apikey == auth_raw
+				).first()
+
+				if user and user.enabled and not user.deleted:
+					self.authenticated = True
+					self.auth_method = 'user'
+				session.close()
 
 		# According to the docs, we're allowed to raise this to indicate to
 		# the client that access is denied.
@@ -131,6 +157,10 @@ class StreamConnection(tornadio2.SocketConnection):
 			self.configuration.job_manager.get_jobs([job_id], on_got_job)
 			self.job_subscribed[message.job_id] = True
 
+	@tornadio2.event('bounce')
+	def bounce(self, message):
+		self.emit('bounce', message)
+
 	@tornadio2.event('job.subscribe')
 	def job_subscribe(self, job_id):
 		"""
@@ -142,6 +172,11 @@ class StreamConnection(tornadio2.SocketConnection):
 		job tree in flat format, and job.tree, which is the entire job
 		tree in pretty format.
 		"""
+		if not self.configuration.is_pacemaker():
+			# We don't relay job information if we're not a pacemaker.
+			self.emit('error', 'This node is not a pacemaker.')
+			return
+
 		# Start listening to job status's after the first subscribe request.
 		if not self.job_listening:
 			pub.subscribe(self.on_job_status, 'job.status')
@@ -166,6 +201,11 @@ class StreamConnection(tornadio2.SocketConnection):
 		Unsubscribe from the given job ID, and also the
 		entire tree that it belongs to.
 		"""
+		if not self.configuration.is_pacemaker():
+			# We don't relay job information if we're not a pacemaker.
+			self.emit('error', 'This node is not a pacemaker.')
+			return
+
 		if not job_id in self.job_subscribed:
 			# Take no action.
 			return
@@ -255,25 +295,24 @@ class StreamConnection(tornadio2.SocketConnection):
 			# No existing connection. Make one.
 			logger.info("Creating connection to node %s", node.uuid)
 
-			def this_remote_error(error):
-				self.emit('log.error', job_id, error)
+			def remote_error(remote_job_id, error):
+				self.emit('log.cantfind', remote_job_id, error)
+
+			def remote_zerosize(job_id):
+				self.emit('log.zerosize', job_id)
 
 			# Now we try to connect to it.
 			# TODO: Test connection errors and handling of those errors.
 			# Although we're already filtered to active instances,
 			# so that will help a lot.
-			# TODO: Switch this to using socket.io to connect to remote nodes.
 			logger.debug("Starting connection to %s", str(node))
-			remote = LogStreamRemoteClient(
-				"ws://%s:%d/log/stream" % (node.route, node.apiport),
-				io_loop=self.configuration.io_loop
-			)
-			remote.configure(
-				self.configuration,
-				self.handle_remote_lines,
-				this_remote_error
-			)
+			remote = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
+			remote.set_lines_callback(self.handle_remote_lines)
+			remote.set_zerosize_callback(remote_zerosize)
+			remote.set_cantfind_callback(remote_error)
+
 			remote.subscribe(job_id, position=position)
+			remote.connect()
 
 			self.log_remote_connections[node.uuid] = {
 				'connection': remote,
@@ -364,6 +403,8 @@ class StreamConnection(tornadio2.SocketConnection):
 			del self.router_stats_output
 			self.emit('router.stats.error', error)
 
+			# end of router_stats_error()
+
 		def router_stats_ready():
 			self.router_stats_ready = True
 
@@ -375,6 +416,13 @@ class StreamConnection(tornadio2.SocketConnection):
 
 			# Plus the one that kicked this one off.
 			callback(self.router_stats_output)
+
+			# end of router_stats_ready()
+
+		if not self.configuration.is_pacemaker():
+			# We don't relay job information if we're not a pacemaker.
+			self.emit('error', 'This node is not a pacemaker.')
+			return
 
 		# See if we're connecting. If we are,
 		# queue up your request.
@@ -415,6 +463,12 @@ class StreamConnection(tornadio2.SocketConnection):
 				int(input_id),
 				got_set
 			)
+			# end of stats_ready()
+
+		if not self.configuration.is_pacemaker():
+			# We don't relay job information if we're not a pacemaker.
+			self.emit('error', 'This node is not a pacemaker.')
+			return
 
 		self.get_router_stats_handler(stats_ready)
 
@@ -439,6 +493,8 @@ class StreamConnection(tornadio2.SocketConnection):
 					history
 				)
 
+				# end of got_history()
+
 			def failed_history(error, exception=None):
 				self.emit('router.stats.error', error)
 
@@ -453,6 +509,8 @@ class StreamConnection(tornadio2.SocketConnection):
 					end
 				)
 
+				# end of got_set()
+
 			# Request some stats.
 			# TODO: Check permissions!
 			stats_output.vtset_for_name(
@@ -461,4 +519,327 @@ class StreamConnection(tornadio2.SocketConnection):
 				got_set
 			)
 
+			# end of stats_ready()
+
+		if not self.configuration.is_pacemaker():
+			# We don't relay job information if we're not a pacemaker.
+			self.emit('error', 'This node is not a pacemaker.')
+			return
+
 		self.get_router_stats_handler(stats_ready)
+
+
+
+
+class StreamConnectionTest(BaseControllerTest):
+	config_modules = ['pacemaker']
+
+	def get_app(self):
+		self.late_init_configuration(self.io_loop)
+		routes = []
+
+		socketio_router = tornadio2.TornadioRouter(
+			paasmaker.pacemaker.controller.stream.StreamConnection
+		)
+		# Hack to store the configuration on the socket.io router.
+		socketio_router.configuration = self.configuration
+
+		application_settings = self.configuration.get_tornado_configuration()
+		application = tornado.web.Application(
+			socketio_router.apply_routes(routes),
+			**application_settings
+		)
+
+		return application
+
+	def setUp(self):
+		# Call the parent setup...
+		super(StreamConnectionTest, self).setUp()
+
+		# Get the job logger, as we need to adjust a few things...
+		self.logger = logging.getLogger('job')
+		# Prevent propagation to the parent. This prevents extra messages
+		# during unit tests.
+		self.logger.propagate = False
+		# Clean out all handlers. Otherwise multiple tests fail.
+		self.logger.handlers = []
+		# And set up the logger.
+		paasmaker.util.joblogging.JobLoggerAdapter.setup_joblogger(self.configuration)
+
+		# Setup the job manager, for testing remote logs fetching.
+		# Register sample jobs.
+		self.configuration.plugins.register(
+			'paasmaker.job.success',
+			'paasmaker.common.job.manager.manager.TestSuccessJobRunner',
+			{},
+			'Test Success Job'
+		)
+		self.manager = self.configuration.job_manager
+
+		# Wait for it to start up.
+		self.manager.prepare(self.stop, self.stop)
+		self.wait()
+
+	def tearDown(self):
+		if hasattr(self, 'client'):
+			self.client.close()
+
+		super(BaseControllerTest, self).tearDown()
+
+	def test_no_job(self):
+		# Make a job number, and log to it.
+		job_id = str(uuid.uuid4())
+
+		# Also, make us not a pacemaker for this one.
+		# This is a hack...
+		self.configuration['pacemaker']['enabled'] = False
+		self.configuration.update_flat()
+
+		def no_job(job_id, message):
+			self.stop(message)
+
+		# Now, connect to it and stream the log.
+		self.client = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
+		self.client.set_cantfind_callback(no_job)
+		self.client.subscribe(job_id)
+
+		self.client.connect()
+
+		error = self.wait()
+		self.assertIn("not a pacemaker", error, "Error message is not as expected.")
+
+	def test_get_remote(self):
+		def got_lines(job_id, lines, position):
+			logging.debug("Job ID: %s", job_id)
+			logging.debug("Lines: %s", str(lines))
+			logging.debug("Position: %d", position)
+			# Store the last position on this function.
+			got_lines.position = position
+			self.stop(lines)
+
+		# Give ourselves a node record.
+		nodeuuid = str(uuid.uuid4())
+		self.configuration.set_node_uuid(nodeuuid)
+		node = paasmaker.model.Node('test', 'localhost', self.get_http_port(), nodeuuid, constants.NODE.ACTIVE)
+		session = self.configuration.get_database_session()
+		session.add(node)
+		session.commit()
+
+		# Add a dummy job.
+		self.manager.add_job('paasmaker.job.success', {}, "Example root job.", self.stop)
+		job_id = self.wait()
+
+		# Log to this dummy job a bit.
+		number_lines = 10
+		log = self.configuration.get_job_logger(job_id)
+		for i in range(number_lines):
+			log.info("Log message %d", i)
+
+		# Now, connect to ourselves, and attempt to get it.
+		self.client = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
+		self.client.set_lines_callback(got_lines)
+		self.client.subscribe(job_id, None, True)
+
+		self.client.connect()
+
+		lines = self.wait()
+
+		self.assertEquals(number_lines, len(lines), "Didn't download the expected number of lines.")
+
+		# Unsubscribe, send more logs, then try again.
+		self.client.unsubscribe(job_id)
+
+		log.info("Another additional log entry.")
+		log.info("And Another additional log entry.")
+
+		self.client.subscribe(job_id, position=got_lines.position)
+
+		lines = self.wait()
+
+		self.assertEquals(2, len(lines), "Didn't download the expected number of lines.")
+
+	def test_remote_instance_log(self):
+		instance_type = self.create_sample_application(
+			self.configuration,
+			'paasmaker.runtime.shell',
+			{},
+			'1',
+			'tornado-simple'
+		)
+
+		nodeuuid = str(uuid.uuid4())
+		self.configuration.set_node_uuid(nodeuuid)
+		node = paasmaker.model.Node('test', 'localhost', self.get_http_port(), nodeuuid, constants.NODE.ACTIVE)
+		session = self.configuration.get_database_session()
+		session.add(node)
+		session.commit()
+		instance_type = session.query(paasmaker.model.ApplicationInstanceType).get(instance_type.id)
+
+		instance = self.create_sample_application_instance(
+			self.configuration,
+			session,
+			instance_type,
+			node
+		)
+
+		log = self.configuration.get_job_logger(instance.instance_id)
+		log.info("Test instance output.")
+
+		def got_lines(job_id, lines, position):
+			logging.debug("Instance ID: %s", job_id)
+			logging.debug("Lines: %s", str(lines))
+			logging.debug("Position: %d", position)
+			# Store the last position on this function.
+			got_lines.position = position
+			self.stop(lines)
+
+		self.client = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
+		self.client.set_lines_callback(got_lines)
+		self.client.subscribe(instance.instance_id, None, True)
+
+		self.client.connect()
+
+		lines = self.wait()
+
+		self.assertEquals(len(lines), 1, "Didn't download the expected number of lines.")
+
+		# Unsubscribe, send more logs, then try again.
+		self.client.unsubscribe(instance.instance_id)
+
+		log.info("Another additional log entry.")
+		log.info("And Another additional log entry.")
+
+		self.client.subscribe(instance.instance_id, position=got_lines.position)
+
+		lines = self.wait()
+
+		self.assertEquals(2, len(lines), "Didn't download the expected number of lines.")
+
+		# Now try to subscibe to something that doesn't exist.
+		def cantfind(job_id, message):
+			self.stop(message)
+
+		self.client.set_cantfind_callback(cantfind)
+
+		noexist = str(uuid.uuid4())
+		self.client.subscribe(noexist)
+
+		message = self.wait()
+
+		self.assertIn("No such job", message, "Error message not as expected.")
+
+	def test_get_log(self):
+		# Make a job number, and log to it.
+		job_id = str(uuid.uuid4())
+		number_lines = 10
+
+		log = self.configuration.get_job_logger(job_id)
+
+		for i in range(number_lines):
+			log.info("Log message %d", i)
+
+		def got_lines(job_id, lines, position):
+			logging.debug("Job ID: %s", job_id)
+			logging.debug("Lines: %s", str(lines))
+			logging.debug("Position: %d", position)
+			# Store the last position on this function.
+			got_lines.position = position
+			self.stop(lines)
+
+		def on_error(error):
+			print error
+
+		# Now, connect to it and stream the log.
+		remote_request = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
+		remote_request.set_superkey_auth()
+		remote_request.set_lines_callback(got_lines)
+		remote_request.subscribe(job_id)
+
+		remote_request.connect()
+
+		lines = self.wait()
+
+		self.assertEquals(number_lines, len(lines), "Didn't download the expected number of lines.")
+
+		# Send another log entry.
+		# This one should come back automatically because the websocket is subscribed.
+		log.info("Additional log entry.")
+
+		lines = self.wait()
+
+		self.assertEquals(1, len(lines), "Didn't download the expected number of lines.")
+
+		# Unsubscribe.
+		remote_request.unsubscribe(job_id)
+
+		# Send a new log entry. This one won't come back, because we've unsubscribed.
+		log.info("Another additional log entry.")
+		log.info("And Another additional log entry.")
+
+		# Now subscribe again. It will send us everything since the
+		# end of the last subscribe.
+		remote_request.subscribe(job_id, position=got_lines.position)
+
+		lines = self.wait()
+
+		self.assertEquals(2, len(lines), "Didn't download the expected number of lines.")
+
+	@unittest.skip("Skipped until socket.io tornado client is written and has long poll ability.")
+	def test_longpoll_log(self):
+		# Make a job number, and log to it.
+		job_id = str(uuid.uuid4())
+		number_lines = 10
+
+		log = self.configuration.get_job_logger(job_id)
+
+		for i in range(number_lines):
+			log.info("Log message %d", i)
+
+		def got_lines(job_id, lines, position):
+			logging.debug("Job ID: %s", job_id)
+			logging.debug("Lines: %s", str(lines))
+			logging.debug("Position: %d", position)
+			# Store the last position on this function.
+			got_lines.position = position
+			self.stop(lines)
+
+		def on_message(message):
+			if message['type'] == 'lines':
+				got_lines(message['data']['job_id'], message['data']['lines'], message['data']['position'])
+
+		def on_error(error):
+			print error
+
+		# Now, connect to it and stream the log.
+		remote_request = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
+		remote_request.set_superkey_auth()
+		remote_request.set_callbacks(on_message, on_error)
+		remote_request.set_stream_mode('longpoll')
+		remote_request.subscribe(job_id)
+
+		lines = self.wait()
+
+		self.assertEquals(number_lines, len(lines), "Didn't download the expected number of lines.")
+
+		# Send another log entry.
+		# This one should come back automatically because the websocket is subscribed.
+		log.info("Additional log entry.")
+
+		lines = self.wait()
+
+		self.assertEquals(1, len(lines), "Didn't download the expected number of lines.")
+
+		# Unsubscribe.
+		remote_request.unsubscribe(job_id)
+
+		# Send a new log entry. This one won't come back, because we've unsubscribed.
+		log.info("Another additional log entry.")
+		log.info("And Another additional log entry.")
+
+		# Now subscribe again. It will send us everything since the
+		# end of the last subscribe.
+		remote_request.subscribe(job_id, position=got_lines.position)
+
+		lines = self.wait()
+
+		self.assertEquals(2, len(lines), "Didn't download the expected number of lines.")

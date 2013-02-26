@@ -183,6 +183,7 @@ routes.extend(paasmaker.common.controller.example.ExampleWebsocketHandler.get_ro
 routes.extend(paasmaker.common.controller.information.InformationController.get_routes(route_extras))
 routes.extend(paasmaker.common.controller.log.LogStreamHandler.get_routes(route_extras))
 
+# The socketio routers. It's all in a single controller for the moment.
 socketio_router = tornadio2.TornadioRouter(
 	paasmaker.pacemaker.controller.stream.StreamConnection
 )

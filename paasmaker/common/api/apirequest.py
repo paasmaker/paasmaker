@@ -1,6 +1,8 @@
 
 import json
 import logging
+import urlparse
+import urllib
 
 import paasmaker
 
@@ -273,239 +275,120 @@ class APIRequest(object):
 		# And then the async part.
 		self.async_build_payload(sync_payload, payload_ready)
 
-class StreamAPIWebsocketWrapper(paasmaker.thirdparty.twc.websocket.WebSocket):
-	def configure(self, on_connected, on_message_handler, on_closed, on_no_websockets):
-		self.connected = False
-		self.on_connected = on_connected
-		self.on_message_handler = on_message_handler
-		self.on_closed = on_closed
-		self.on_no_websockets = on_no_websockets
-
-	def on_open(self):
-		self.connected = True
-		self.on_connected(self)
-
-	def on_close(self):
-		self.connected = False
-		self.on_closed(self)
-
-	def send_message(self, message):
-		self.write_message(json.dumps(message))
-
-	def on_message(self, message):
-		parsed = json.loads(message)
-		self.on_message_handler(self, parsed)
-
-	def on_unsupported(self):
-		self.on_no_websockets(self)
-
 class StreamAPIRequest(APIRequest):
+	"""
+	A base class for API requests that stream data from the remote end,
+	by using the socket.io protocol.
+
+	This superclass handles some authentication, queuing, and event handling.
+	"""
 	def __init__(self, *args):
 		super(StreamAPIRequest, self).__init__(*args)
 
-		self.stream_mode = 'websocket'
-		self.active = True
-		self.connected = False
-		self.websocket = None
-		self.message_callback = None
+		self.remote_connected = False
+		self.event_queue = []
+		self.emit_queue = []
 		self.error_callback = None
-		self.send_queue = []
-		self.session_id = None
-
-	def set_stream_mode(self, mode):
-		if mode not in ['websocket', 'longpoll']:
-			raise ValueError("Invalid mode - try 'websocket' or 'longpoll'")
-
-		self.stream_mode = mode
-
-	def set_callbacks(self, message_callback, error_callback):
-		self.message_callback = message_callback
-		self.error_callback = error_callback
-
-	def deactivate(self):
-		self.active = False
 
 	def send(self, *args, **kwargs):
 		raise Exception("You should not use send() on StreamAPIRequest.")
 
-	def send_message(self, request, body):
-		logging.debug("Got message request %s, body %s", request, body)
+	def set_error_callback(self, error_callback):
+		"""
+		Set the callback to call on a connection or access denied error.
 
-		# Queue it up.
-		self.send_queue.append((request, body))
+		:arg callable error_callback: The callback, called with a single
+			str argument, that indicates the error.
+		"""
+		self.error_callback = error_callback
 
-		# And then really send it.
-		self._real_send()
+	def connect(self):
+		"""
+		Establish a connection to the remote server. When it is connected,
+		it will call the ``connected()`` function of this class, which can
+		be overridden in your subclasses.
 
-	def _format_request(self, message):
-		complete_message = {
-			'request': message[0],
-			'data': message[1],
-			'auth': self.authvalue
-		}
-
-		return complete_message
-
-	def _real_send(self):
-		if not self.connected:
-			if self.stream_mode == 'websocket':
-				logging.debug("Not connected, websocket mode.")
-				# Connect to the websocket.
-				# And then fallback if we can't.
-
-				if not self.target:
-					self.target = self.get_master()
-
-				# Build and make the request.
-				endpoint = self.target + self.get_endpoint()
-				endpoint = endpoint.replace("http", "ws")
-
-				logging.debug("Websocket endpoint: %s", endpoint)
-
-				auth_headers = {}
-				auth_headers['Auth-Paasmaker'] = self.authvalue
-
-				self.websocket = StreamAPIWebsocketWrapper(
-					endpoint,
-					io_loop=self.io_loop,
-					extra_headers=auth_headers
-				)
-
-				def not_supported(client):
-					# The server doesn't support websockets, or there
-					# is a proxy between us and it that prevents it from
-					# working. Switch back to long poll mode.
-					self.set_stream_mode('longpoll')
-					self._real_send()
-
-				self.websocket.configure(
-					self._websocket_opened,
-					self._websocket_incoming_message,
-					self._websocket_closed,
-					not_supported
-				)
-				logging.debug("Connecting...")
-			else:
-				# Just send along the current message queue.
-				logging.debug("Not connected, long poll mode.")
-				self._send_long_poll()
-		else:
-			# Connected, just use the existing backend.
-			if self.stream_mode == 'websocket':
-				logging.debug("Connected, websocket mode.")
-				messages = self.send_queue
-				self.send_queue = []
-				for request in messages:
-					complete_message = self._format_request(request)
-					self.websocket.send_message(complete_message)
-			else:
-				# Use an out of band send-only request to get
-				# the message to the server.
-				logging.debug("Connected, long poll mode.")
-				self._send_long_poll(send_only=True)
-
-	def _send_long_poll(self, send_only=False):
+		If it is unable to connect, it will call the error callback that
+		was set with ``set_error_callback()``.
+		"""
 		if not self.target:
 			self.target = self.get_master()
 
-		endpoint = self.target + '/websocket/longpoll?format=json'
+		# Parse the URL - we need the hostname and port seperately.
+		parsed = urlparse.urlparse(self.target)
 
-		logging.debug("Commencing long poll. send_only=%s", send_only)
-		logging.debug("Long poll endpoint: %s", endpoint)
+		self.connection = paasmaker.thirdparty.socketioclient.SocketIO(
+			parsed.hostname,
+			parsed.port,
+			io_loop=self.io_loop,
+			query="auth=%s" % urllib.quote(self.authvalue)
+		)
 
-		request_arguments = {}
-		request_arguments['method'] = 'POST'
-		request_arguments['headers'] = {}
-		request_arguments['follow_redirects'] = False
-		request_arguments['headers'] = {}
-		request_arguments['headers']['Auth-Paasmaker'] = self.authvalue
+		# Hook up a few events to get started.
+		self.connection.on('connect', self._connected)
+		self.connection.on('connection_error', self._connection_error)
+		self.connection.on('access_denied', self._access_denied)
 
-		# TODO: Probably should remove the commands once we've confirmed
-		# that the server has them, rather than right now.
-		commands = self.send_queue
-		self.send_queue = []
+		# And now connect. We'll be called back when it's ready.
+		self.connection.connect()
 
-		formatted_commands = []
-		for command in commands:
-			formatted_commands.append(self._format_request(command))
+	def _connection_error(self, response):
+		if self.error_callback:
+			self.error_callback(str(response.error))
 
-		body = {}
-		body['data'] = {
-			'endpoint': self.get_endpoint(),
-			'commands': formatted_commands,
-			'send_only': send_only
-		}
+	def _access_denied(self, message):
+		if self.error_callback:
+			self.error_callback(message)
 
-		if self.session_id:
-			body['data']['session_id'] = self.session_id
+	def on(self, *args):
+		"""
+		Hook up an event callback. Typically called as so::
 
-		request_arguments['body'] = json.dumps(body, cls=paasmaker.util.jsonencoder.JsonEncoder)
+			client.on('event.name', callback)
 
-		def long_poll_result(response):
-			if not send_only:
-				self.connected = False
+		If you call this before you call ``connect()``, it
+		is queued and applied after the connection is established.
+		"""
+		if self.remote_connected:
+			self.connection.on(*args)
+		else:
+			self.event_queue.append(args)
 
-			if response.error:
-				# Error.
-				logger.error("Long Poll request failed with error: %s", response.error)
-				if self.error_callback:
-					self.error_callback(response.error)
-			else:
-				logger.debug("Raw Long Poll response body: %s", response.body)
-				if response.body and response.body[0] == '{' and response.body[-1] == '}':
-					try:
-						parsed = json.loads(response.body)
+	def emit(self, *args):
+		"""
+		Emit an event to the remote end. Equivalent to the ``emit()``
+		in the JavaScript library.
+		"""
+		if self.remote_connected:
+			self.connection.emit(*args)
+		else:
+			self.emit_queue.append(args)
 
-						data = parsed['data']
+	def _connected(self, socket):
+		# Hook up all the events that we queued.
+		for event in self.event_queue:
+			self.connection.on(*event)
+		self.event_queue = []
 
-						for message in data['messages']:
-							if message.has_key('session_id'):
-								self.session_id = message['session_id']
-							else:
-								if self.message_callback:
-									self.message_callback(message)
+		# Send all emitted events that we queued.
+		for event in self.emit_queue:
+			self.connection.emit(*event)
+		self.emit_queue = []
 
-						# NOTE: If you don't set a message callback, these messages
-						# disappear into the ether.
+		# Mark us as connected.
+		self.remote_connected = True
+		self.connected(self.connection)
 
-						# And start polling again.
-						if not send_only and self.active:
-							logger.debug("Long poll is reconnecting...")
-							self._send_long_poll()
+	def connected(self, socket):
+		# Override in your subclasses to subscribe to events.
+		pass
 
-					except ValueError, ex:
-						logger.error("Unable to parse JSON:", exc_info=ex)
-						if self.error_callback:
-							self.error_callback("Unable to parse JSON: " + str(ex))
-					except KeyError, ex:
-						logger.error("Response was malformed:", exc_info=ex)
-						if self.error_callback:
-							self.error_callback("Response was malformed: " + str(ex))
-				else:
-					lgoger.error("Response was not JSON.")
-					if self.error_callback:
-						self.error_callback("Response was not JSON.")
-
-		request = tornado.httpclient.HTTPRequest(endpoint, **request_arguments)
-		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
-		if not send_only:
-			self.connected = True
-		client.fetch(request, long_poll_result)
-
-	def _websocket_opened(self, client):
-		logging.debug("Websocket opened.")
-		self.connected = True
-		# Clear the queue.
-		self._real_send()
-
-	def _websocket_incoming_message(self, client, message):
-		logging.debug("Websocket incoming message - %s.", message)
-		if self.message_callback:
-			self.message_callback(message)
-
-	def _websocket_closed(self, client, code, reason):
-		logging.debug("Websocket closed - %s, %s.", code, reason)
-		self.connected = False
+	def close(self):
+		"""
+		Close the connection to the remote server.
+		"""
+		if self.remote_connected:
+			self.connection.disconnect()
 
 # TODO: There are no unit tests here. It's expected that the other
 # unit tests for API requests and controllers cover off the code in here.

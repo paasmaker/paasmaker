@@ -134,7 +134,7 @@ class RootAction(object):
 			self.on_message(message)
 
 		def on_error(error):
-			self.logger.error(error)
+			logging.error(error)
 
 		# Follow the rabbit hole...
 		self.client = paasmaker.common.api.job.JobStreamAPIRequest(None)
@@ -142,6 +142,10 @@ class RootAction(object):
 		self.client.set_callbacks(on_status, on_error)
 		self.client.subscribe(job_id)
 		self.job_id = job_id
+
+	def _stream_error_callback(self, message):
+		logging.error(message)
+		self.exit(1)
 
 class UserCreateAction(RootAction):
 	def options(self, parser):
@@ -658,18 +662,20 @@ class LogStreamAction(RootAction):
 	def process(self, args):
 		logger.info("** Press CTRL+C to cancel.")
 		request = paasmaker.common.api.log.LogStreamAPIRequest(None)
+		request.set_error_callback(self._stream_error_callback)
 		self.point_and_auth(args, request)
 
-		def on_message(message):
-			if message['type'] == 'lines':
-				print "".join(message['data']['lines']),
+		def on_message(job_id, lines, position):
+			print "".join(lines),
 
-		def on_error(error):
+		def on_error(job_id, error):
 			logger.error(error)
 			self.exit(1)
 
-		request.set_callbacks(on_message, on_error)
+		request.set_lines_callback(on_message)
+		request.set_cantfind_callback(on_error)
 		request.subscribe(args.job_id, position=args.position)
+		request.connect()
 
 class HelpAction(RootAction):
 	def options(self, parser):
