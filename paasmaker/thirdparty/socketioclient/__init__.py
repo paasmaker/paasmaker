@@ -148,7 +148,7 @@ class SocketIO(object):
         # Start the heartbeat timer.
         self.heartbeat_periodic = tornado.ioloop.PeriodicCallback(
             self._send_heartbeat,
-            self.heartbeatTimeout * 1000,
+            (self.heartbeatTimeout - 2) * 1000,
             io_loop=self.io_loop
         )
         self.heartbeat_periodic.start()
