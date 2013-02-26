@@ -118,29 +118,36 @@ class RootAction(object):
 			self.prettyprint(response.data)
 			self.exit(1)
 
-	def on_message(self, message):
-		if message['type'] == 'status':
-			if message['data']['job_id'] == self.job_id and message['data']['state'] in constants.JOB_FINISHED_STATES:
-				if message['data']['state'] == constants.JOB.SUCCESS:
-					logging.info("Completed successfully.")
-					self.exit(0)
-				else:
-					logging.error("Failed to complete job.")
-					self.exit(1)
+	def _on_job_status(self, job_id, job_data):
+		self.prettyprint(job_data)
+
+		if job_data['job_id'] == self.job_id and job_data['state'] in constants.JOB_FINISHED_STATES:
+			if job_data['state'] == constants.JOB.SUCCESS:
+				logging.info("Completed successfully.")
+				self.exit(0)
+			else:
+				logging.error("Failed to complete job.")
+				self.exit(1)
+
+	def _sink_event(self, *args):
+		pass
 
 	def _follow_job(self, job_id):
-		def on_status(message):
-			self.prettyprint(message)
-			self.on_message(message)
-
 		def on_error(error):
 			logging.error(error)
+			self.exit(1)
 
 		# Follow the rabbit hole...
 		self.client = paasmaker.common.api.job.JobStreamAPIRequest(None)
 		self.point_and_auth(self.args, self.client)
-		self.client.set_callbacks(on_status, on_error)
+		self.client.set_error_callback(on_error)
+		self.client.set_status_callback(self._on_job_status)
+		self.client.set_tree_callback(self._sink_event)
+		self.client.set_new_callback(self._sink_event)
+		self.client.set_subscribed_callback(self._sink_event)
 		self.client.subscribe(job_id)
+		self.client.connect()
+
 		self.job_id = job_id
 
 	def _stream_error_callback(self, message):
