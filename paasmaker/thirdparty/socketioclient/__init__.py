@@ -6,10 +6,14 @@ from json import dumps, loads
 from time import sleep
 from urllib import urlopen, quote
 import traceback
+import logging
 
 import tornado
 
 from ..twc.websocket import WebSocket
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 
 __version__ = '0.3-tornado'
@@ -34,25 +38,25 @@ class BaseNamespace(object):  # pragma: no cover
         pass
 
     def on_error(self, reason, advice):
-        print '[Error] %s' % advice
+        logger.debug('[SocketIO client unhandled] [Error] %s' % advice)
 
     def on_message(self, messageData):
-        print '[Message] %s' % messageData
+        logger.debug('[SocketIO client unhandled] [Message] %s' % messageData)
 
     def on_(self, eventName, *eventArguments):
-        print '[Event] %s%s' % (eventName, eventArguments)
+        logger.debug('[SocketIO client unhandled] [Event] %s%s' % (eventName, eventArguments))
 
     def on_open(self, *args):
-        print '[Open]', args
+        logger.debug('[SocketIO client unhandled] [Open] %s', args)
 
     def on_close(self, *args):
-        print '[Close]', args
+        logger.debug('[SocketIO client unhandled] [Close] %s', args)
 
     def on_retry(self, *args):
-        print '[Retry]', args
+        logger.debug('[SocketIO client unhandled] [Retry] %s', args)
 
     def on_reconnect(self, *args):
-        print '[Reconnect]', args
+        logger.debug('[SocketIO client unhandled] [Reconnect] %s', args)
 
 class WebsocketTransport(WebSocket):
 
