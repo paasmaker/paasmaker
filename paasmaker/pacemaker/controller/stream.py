@@ -414,9 +414,6 @@ class StreamConnection(tornadio2.SocketConnection):
 					entry(self.router_stats_output)
 				self.router_stats_queue = []
 
-			# Plus the one that kicked this one off.
-			callback(self.router_stats_output)
-
 			# end of router_stats_ready()
 
 		if not self.configuration.is_pacemaker():
@@ -424,16 +421,21 @@ class StreamConnection(tornadio2.SocketConnection):
 			self.emit('error', 'This node is not a pacemaker.')
 			return
 
-		# See if we're connecting. If we are,
-		# queue up your request.
-		if hasattr(self, 'router_stats_output') and not self.router_stats_ready:
+		# See if we're connecting. If we are, queue up your request.
+		if hasattr(self, 'router_stats_output') and self.router_stats_ready:
+			# We have one and it's ready.
+			callback(self.router_stats_output)
+
+		elif hasattr(self, 'router_stats_output') and not self.router_stats_ready:
+			# We're still connecting, so queue up your request.
 			self.router_stats_queue.append(callback)
 
 		else:
-			# Set up the stats provider.
+			# Set up the stats provider, as we don't have one.
 			self.router_stats_output = paasmaker.router.stats.ApplicationStats(
 				self.configuration
 			)
+			self.router_stats_queue.append(callback)
 			self.router_stats_ready = False
 			self.router_stats_output.setup(
 				router_stats_ready,
@@ -481,6 +483,8 @@ class StreamConnection(tornadio2.SocketConnection):
 		if end is None:
 			end = int(time.time())
 
+		# TODO: Limit start/end to prevent DoS style attacks.
+
 		def stats_ready(stats_output):
 
 			def got_history(history):
@@ -522,7 +526,7 @@ class StreamConnection(tornadio2.SocketConnection):
 			# end of stats_ready()
 
 		if not self.configuration.is_pacemaker():
-			# We don't relay job information if we're not a pacemaker.
+			# We don't relay router stats information if we're not a pacemaker.
 			self.emit('error', 'This node is not a pacemaker.')
 			return
 
@@ -975,3 +979,48 @@ class StreamConnectionTest(BaseControllerTest):
 		self.assertEquals(len(expected_types), len(messages), "Not the right number of messages.")
 		for i in range(len(expected_types)):
 			self.assertEquals(messages[i]['type'], expected_types[i], "Wrong type for message %d" % i)
+
+	def test_router_stream(self):
+		def history(name, input_id, start, end, values):
+			self.stop(('history', name, input_id, start, end, values))
+
+		def update(name, input_id, values):
+			self.stop(('update', name, input_id, values))
+
+		def error(message):
+			#print message
+			self.stop(('error', message))
+
+		remote = paasmaker.common.api.router.RouterStreamAPIRequest(self.configuration)
+		remote.set_superkey_auth()
+
+		remote.set_history_callback(history)
+		remote.set_update_callback(update)
+		remote.set_stats_error_callback(error)
+
+		remote.connect()
+
+		# Ask for updates.
+		remote.stats('workspace', 1)
+		response = self.wait()
+		self.assertEquals(response[0], 'error', "Wrong response - got %s." % response[0])
+
+		remote.stats('version_type', 1)
+		response = self.wait()
+		self.assertEquals(response[0], 'update', "Wrong response - got %s." % response[0])
+
+		remote.history('workspace', 1, 'requests', time.time() - 60)
+		response = self.wait()
+		self.assertEquals(response[0], 'history', "Wrong response - got %s." % response[0])
+
+		remote.history('version_type', 1, 'requests', time.time() - 60)
+		response = self.wait()
+		self.assertEquals(response[0], 'history', "Wrong response - got %s." % response[0])
+
+		remote.history('workspace', 1, 'requests', time.time() - 60, time.time())
+		response = self.wait()
+		self.assertEquals(response[0], 'history', "Wrong response - got %s." % response[0])
+
+		remote.history('version_type', 1, 'requests', time.time() - 60, time.time())
+		response = self.wait()
+		self.assertEquals(response[0], 'history', "Wrong response - got %s." % response[0])

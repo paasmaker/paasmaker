@@ -13,3 +13,4 @@ from version import VersionGetAPIRequest
 from package import PackageSizeAPIRequest, PackageDownloadAPIRequest
 from job import JobAbortAPIRequest
 from log import LogStreamAPIRequest
+from router import RouterStreamAPIRequest
