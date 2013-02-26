@@ -67,6 +67,7 @@ class RouterStreamAPIRequest(StreamAPIRequest):
 
 			def update(name, input_id, stats):
 				# stats is a dict of stats.
+				pass
 
 		"""
 		self.on('router.stats.update', callback)

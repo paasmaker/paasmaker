@@ -39,7 +39,8 @@ class LogStreamAPIRequest(StreamAPIRequest):
 
 			def got_lines(job_id, lines, position):
 				# lines is a list.
-				print "\n".join(lines)
+				print "\\n".join(lines)
+
 		"""
 		self.on('log.lines', callback)
 
@@ -52,6 +53,7 @@ class LogStreamAPIRequest(StreamAPIRequest):
 
 			def cantfind(job_id, message):
 				pass
+
 		"""
 		self.on('log.cantfind', callback)
 
@@ -59,7 +61,7 @@ class LogStreamAPIRequest(StreamAPIRequest):
 		"""
 		Sets the callback called when the log file is zero size. Later on, log lines
 		might appear, so it's possible to have this callback called, and then later
-		have lines callbacks called.
+		have the lines callbacks called.
 
 		The callback looks like this::
 

@@ -7,6 +7,9 @@ These classes provide ready to go Python API adaptors for Paasmaker.
 They are designed to be used with a tornado IO loop, and will not work
 otherwise.
 
+Each of the API classes descend from a base class, which handles
+authentication and pointing the requests at the correct server.
+
 Workspace
 ---------
 
@@ -130,6 +133,19 @@ Misc
 .. autoclass:: paasmaker.common.api.information.InformationAPIRequest
     :members:
 
+Streaming Updates
+-----------------
+
+.. autoclass:: paasmaker.common.api.log.LogStreamAPIRequest
+    :members:
+
+.. autoclass:: paasmaker.common.api.job.JobStreamAPIRequest
+    :members:
+
+.. autoclass:: paasmaker.common.api.router.RouterStreamAPIRequest
+    :members:
+
+
 Base Classes
 --------------------
 
@@ -137,6 +153,9 @@ Base Classes
     :members:
 
 .. autoclass:: paasmaker.common.api.APIResponse
+    :members:
+
+.. autoclass:: paasmaker.common.api.StreamAPIRequest
     :members:
 
 Internal APIs

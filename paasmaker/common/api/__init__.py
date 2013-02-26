@@ -1,5 +1,5 @@
 
-from apirequest import APIRequest, APIResponse
+from apirequest import APIRequest, APIResponse, StreamAPIRequest
 from information import InformationAPIRequest
 from noderegister import NodeRegisterAPIRequest, NodeUpdateAPIRequest, NodeUpdatePeriodicManager, NodeShutdownAPIRequest
 from nodelist import NodeListAPIRequest

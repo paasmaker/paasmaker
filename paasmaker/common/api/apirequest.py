@@ -297,6 +297,11 @@ class StreamAPIRequest(APIRequest):
 		"""
 		Set the callback to call on a connection or access denied error.
 
+		The signature is as follows::
+
+			def error(message):
+				pass
+
 		:arg callable error_callback: The callback, called with a single
 			str argument, that indicates the error.
 		"""
@@ -356,7 +361,7 @@ class StreamAPIRequest(APIRequest):
 
 	def emit(self, *args):
 		"""
-		Emit an event to the remote end. Equivalent to the ``emit()``
+		Emit an event to the remote end. Equivalent to ``emit()``
 		in the JavaScript library.
 		"""
 		if self.remote_connected:
