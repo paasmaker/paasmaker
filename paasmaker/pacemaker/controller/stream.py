@@ -152,7 +152,7 @@ class StreamConnection(tornadio2.SocketConnection):
 			# Brand new job on an existing job that's been subscribed to.
 			# Send that along to the client.
 			def on_got_job(data):
-				self.send_success('job.new', data[job_id])
+				self.emit('job.new', data[job_id])
 
 			self.configuration.job_manager.get_jobs([job_id], on_got_job)
 			self.job_subscribed[message.job_id] = True
@@ -576,6 +576,28 @@ class StreamConnectionTest(BaseControllerTest):
 		)
 		self.manager = self.configuration.job_manager
 
+		# Register sample jobs for the jobs stream tests.
+		self.configuration.plugins.register(
+			'paasmaker.job.success',
+			'paasmaker.common.job.manager.manager.TestSuccessJobRunner',
+			{},
+			'Test Success Job'
+		)
+		self.configuration.plugins.register(
+			'paasmaker.job.failure',
+			'paasmaker.common.job.manager.manager.TestFailJobRunner',
+			{},
+			'Test Fail Job'
+		)
+		self.configuration.plugins.register(
+			'paasmaker.job.aborted',
+			'paasmaker.common.job.manager.manager.TestAbortJobRunner',
+			{},
+			'Test Abort Job'
+		)
+
+		self.manager = self.configuration.job_manager
+
 		# Wait for it to start up.
 		self.manager.prepare(self.stop, self.stop)
 		self.wait()
@@ -843,3 +865,113 @@ class StreamConnectionTest(BaseControllerTest):
 		lines = self.wait()
 
 		self.assertEquals(2, len(lines), "Didn't download the expected number of lines.")
+
+	def test_job_stream(self):
+		def job_subscribed(jobs):
+			self.stop(('subscribed', jobs))
+
+		def job_new(data):
+			self.stop(('new', data))
+
+		def job_tree(job_id, tree):
+			self.stop(('tree', tree))
+
+		def job_status(job_id, data):
+			self.stop(('status', data))
+
+		remote = paasmaker.common.api.job.JobStreamAPIRequest(self.configuration)
+		remote.set_superkey_auth()
+
+		remote.set_subscribed_callback(job_subscribed)
+		remote.set_status_callback(job_status)
+		remote.set_new_callback(job_new)
+		remote.set_tree_callback(job_tree)
+
+		remote.connect()
+
+		self.manager.add_job('paasmaker.job.success', {}, "Example root job.", self.stop)
+		root_id = self.wait()
+
+		remote.subscribe(root_id)
+
+		# TODO: Make these tests more exhaustive.
+		def lose_the_job_id(job_id):
+			pass
+
+		# We don't know what order tree/subscribed will come back in,
+		# so either is acceptable - as long as we get two of them.
+		response = self.wait()
+		self.assertIn(response[0], ['tree', 'subscribed'], 'Wrong response.')
+		response = self.wait()
+		self.assertIn(response[0], ['tree', 'subscribed'], 'Wrong response.')
+
+		self.manager.add_job('paasmaker.job.success', {}, "Example sub1 job.", lose_the_job_id, parent=root_id, tags=['test'])
+		self.manager.add_job('paasmaker.job.success', {}, "Example sub2 job.", lose_the_job_id, parent=root_id)
+
+		# Start processing them.
+		self.manager.allow_execution(root_id)
+
+		expected_types = ['new', 'status']
+		expected_qty = 6
+
+		for i in range(expected_qty):
+			response = self.wait()
+			self.assertIn(response[0], expected_types, 'Wrong response - got %s.' % response[0])
+
+	@unittest.skip("Skipped until socket.io tornado client is written.")
+	def test_job_stream_longpoll(self):
+
+		self.manager.add_job('paasmaker.job.success', {}, "Example root job.", self.stop)
+		root_id = self.wait()
+
+		messages = []
+
+		def on_message(message):
+			messages.append(message)
+
+		def on_error(error):
+			print error
+
+		remote_request = paasmaker.common.api.job.JobStreamAPIRequest(self.configuration)
+		remote_request.set_superkey_auth()
+		remote_request.set_callbacks(on_message, on_error)
+		remote_request.set_stream_mode('longpoll')
+		remote_request.subscribe(root_id)
+
+		self.manager.add_job('paasmaker.job.success', {}, "Example sub1 job.", self.stop, parent=root_id, tags=['test'])
+		sub1_id = self.wait()
+		self.manager.add_job('paasmaker.job.success', {}, "Example sub2 job.", self.stop, parent=root_id)
+		sub2_id = self.wait()
+		self.manager.add_job('paasmaker.job.success', {}, "Example subsub1 job.", self.stop, parent=sub1_id)
+		subsub1_id = self.wait()
+
+		#print json.dumps(messages, indent=4, sort_keys=True)
+
+		# Start processing them.
+		self.manager.allow_execution(root_id, callback=self.stop)
+		self.wait()
+
+		# Wait for it all to complete.
+		self.short_wait_hack(length=0.4)
+
+		#print json.dumps(messages, indent=4, sort_keys=True)
+
+		# Now, analyze what happened.
+		# TODO: Make this clearer and more exhaustive.
+		expected_types = [
+			'subscribed',
+			'status',
+			'new',
+			'tree',
+			'new',
+			'new',
+			'status',
+			'status',
+			'status',
+			'status',
+			'status'
+		]
+
+		self.assertEquals(len(expected_types), len(messages), "Not the right number of messages.")
+		for i in range(len(expected_types)):
+			self.assertEquals(messages[i]['type'], expected_types[i], "Wrong type for message %d" % i)
