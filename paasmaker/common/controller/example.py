@@ -4,7 +4,6 @@ import urllib
 
 from base import BaseController
 from base import BaseControllerTest
-from base import BaseWebsocketHandler
 
 import paasmaker
 
@@ -69,39 +68,9 @@ class ExamplePostController(BaseController):
 		routes.append((r"/example-post", ExamplePostController, configuration))
 		return routes
 
-class ExampleWebsocketHandler(BaseWebsocketHandler):
-	events = []
-
-	def open(self):
-		self.events.append('Opened')
-
-	def on_message(self, message):
-		# CAUTION: message is not a string! You will need to explicitly str() it
-		# if you want to JSON decode it.
-		self.write_message(u"You said: " + message)
-		self.events.append(message)
-
-	def on_closed(self):
-		self.events.append('Closed')
-
-	@staticmethod
-	def get_routes(configuration):
-		routes = []
-		routes.append((r"/example-websocket", ExampleWebsocketHandler, configuration))
-		return routes
-
 ##
 ## TEST CODE
 ##
-
-class ExampleWebsocketHandlerTestClient(paasmaker.thirdparty.twc.websocket.WebSocket):
-	events = []
-	def on_open(self):
-		self.events.append('Opened')
-	def on_close(self, code, reason):
-		self.events.append('Closed: %d %s' % (code, reason))
-	def on_message(self, m):
-		self.events.append('Got message: %s' % m)
 
 class ExampleControllerTest(BaseControllerTest):
 	def get_app(self):
@@ -109,7 +78,6 @@ class ExampleControllerTest(BaseControllerTest):
 		routes = ExampleController.get_routes({'configuration': self.configuration})
 		routes.extend(ExampleFailController.get_routes({'configuration': self.configuration}))
 		routes.extend(ExamplePostController.get_routes({'configuration': self.configuration}))
-		routes.extend(ExampleWebsocketHandler.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
@@ -188,16 +156,3 @@ class ExampleControllerTest(BaseControllerTest):
 		response = self.wait()
 
 		self.failIf(response.error)
-
-	def test_example_websocket(self):
-		client = ExampleWebsocketHandlerTestClient("ws://localhost:%d/example-websocket" % self.get_http_port(), io_loop=self.io_loop)
-		self.short_wait_hack() # Waiting for everything to settle.
-
-		# Send it a short message.
-		client.write_message('test')
-		self.short_wait_hack() # Wait for processing of that message.
-
-		client.close()
-		self.short_wait_hack() # Wait for closing.
-
-		self.assertEquals(len(client.events), 2, "Missing events.")

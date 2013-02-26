@@ -3,7 +3,7 @@ import json
 import time
 
 import paasmaker
-from paasmaker.common.controller import BaseController, BaseControllerTest, BaseWebsocketHandler
+from paasmaker.common.controller import BaseController, BaseControllerTest
 from paasmaker.common.core import constants
 
 import tornado

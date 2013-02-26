@@ -147,10 +147,8 @@ if configuration.is_pacemaker():
 
 	routes.extend(paasmaker.pacemaker.controller.job.JobListController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.job.JobAbortController.get_routes(route_extras))
-	routes.extend(paasmaker.pacemaker.controller.job.JobStreamHandler.get_routes(route_extras))
 
 	routes.extend(paasmaker.pacemaker.controller.router.TableDumpController.get_routes(route_extras))
-	routes.extend(paasmaker.pacemaker.controller.router.RouterStatsStreamHandler.get_routes(route_extras))
 
 	routes.extend(paasmaker.pacemaker.controller.version.VersionController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.version.VersionInstancesController.get_routes(route_extras))
@@ -179,9 +177,7 @@ if configuration.is_router():
 	pass
 
 logging.info("Setting up common routes...")
-routes.extend(paasmaker.common.controller.example.ExampleWebsocketHandler.get_routes(route_extras))
 routes.extend(paasmaker.common.controller.information.InformationController.get_routes(route_extras))
-routes.extend(paasmaker.common.controller.log.LogStreamHandler.get_routes(route_extras))
 
 # The socketio routers. It's all in a single controller for the moment.
 socketio_router = tornadio2.TornadioRouter(
