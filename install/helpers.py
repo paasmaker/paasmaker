@@ -75,6 +75,8 @@ def install_packages(context, packages):
 			_install_packages_linux_ubuntu(context, packages)
 		else:
 			raise InstallationError("Unsupported platform.")
+	elif context['PLATFORM'] == constants.DARWIN:
+		_install_packages_darwin_homebrew(context, packages)
 	else:
 		raise InstallationError("Unsupported platform.")
 
@@ -95,6 +97,23 @@ def _install_packages_linux_ubuntu(context, packages):
 	except subprocess.CalledProcessError, ex:
 		raise InstallationError(str(ex))
 
+def _install_packages_darwin_homebrew(context, packages):
+	for package in packages:
+		try:
+			environment = copy.deepcopy(os.environ)
+
+			logging.info("About to install %s...", package)
+			command = ['brew', 'install']
+			command.append(package)
+			subprocess.check_call(command, env=environment)
+
+		except subprocess.CalledProcessError, ex:
+			if ex.returncode == 1:
+				# Already installed. No worries then.
+				continue
+			else:
+				raise InstallationError(str(ex))
+
 def enable_service(context, name):
 	"""
 	Enable the supplied system service.
@@ -107,6 +126,9 @@ def enable_service(context, name):
 			_enable_service_linux_ubuntu(context, name)
 		else:
 			raise InstallationError("Unsupported platform.")
+	elif context['PLATFORM'] == constants.DARWIN:
+		# Don't take any action. This is not a supported deployment platform.
+		pass
 	else:
 		raise InstallationError("Unsupported platform.")
 
@@ -125,6 +147,9 @@ def disable_service(context, name):
 			_disable_service_linux_ubuntu(context, name)
 		else:
 			raise InstallationError("Unsupported platform.")
+	elif context['PLATFORM'] == constants.DARWIN:
+		# Don't take any action. This is not a supported deployment platform.
+		pass
 	else:
 		raise InstallationError("Unsupported platform.")
 
@@ -188,9 +213,6 @@ def generic_builder(context, pre_path, instructions):
 		checksum = subprocess.check_output(['sha1sum', source_package])
 		checksum.split(" ")
 		checksum = checksum[0]
-		print "Checksum"
-		print checksum
-		print instructions['sha1']
 
 		if checksum != instructions['sha1']:
 			needs_download = True
@@ -203,7 +225,10 @@ def generic_builder(context, pre_path, instructions):
 	subprocess.check_call(['tar', 'zxvf', source_package, '-C', pre_path])
 
 	# Configure it.
-	if 'configure_command' in instructions:
+	configure_platform_key = '%s_%s_configure_command' % (context['PLATFORM'].lower(), context['SUBPLATFORM'].lower())
+	if configure_platform_key in instructions:
+		subprocess.check_call(instructions[configure_platform_key], cwd=unpacked_dir, shell=True)
+	elif 'configure_command' in instructions:
 		subprocess.check_call(instructions['configure_command'], cwd=unpacked_dir, shell=True)
 
 	# Build it.

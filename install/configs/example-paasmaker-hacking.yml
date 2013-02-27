@@ -14,7 +14,7 @@ install_init_script: false
 enable_init_script: false
 init_redirect_port80: false
 
-runtime_php_enable: true
+runtime_php_enable: false
 runtime_php_disable_system_apache: true
 
 runtime_rbenv_enable: false
@@ -29,3 +29,24 @@ service_managedmysql_disable_system_postgres: true
 service_managedredis_enable: true
 
 write_paasmaker_configuration: true
+
+extra_plugins:
+  - name: paasmaker.misc.devdatabase
+    title: Development Database Bootstrap plugin
+    class: paasmaker.pacemaker.miscplugins.devdatabase.DevDatabasePlugin
+  - name: paasmaker.scm.zip
+    class: paasmaker.pacemaker.scm.zip.ZipSCM
+    title: Zip file SCM
+  - name: paasmaker.scm.tarball
+    class: paasmaker.pacemaker.scm.tarball.TarballSCM
+    title: Tarball SCM
+  - name: paasmaker.scm.git
+    class: paasmaker.pacemaker.scm.git.GitSCM
+    title: Git SCM
+  - name: paasmaker.service.parameters
+    class: paasmaker.pacemaker.service.parameters.ParametersService
+    title: Parameters Service
+  - name: paasmaker.service.managedredis
+    class: paasmaker.pacemaker.service.managedredis.ManagedRedisService
+    title: Managed Redis Service
+

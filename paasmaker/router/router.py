@@ -45,7 +45,7 @@ http {
 	%(temp_paths)s
 
 	server {
-		listen       %(listen_port_direct)d;
+		listen       [::]:%(listen_port_direct)d;
 		server_name  localhost;
 
 		location / {
@@ -71,7 +71,7 @@ http {
 	}
 
 	server {
-		listen       %(listen_port_80)d;
+		listen       [::]:%(listen_port_80)d;
 		server_name  localhost;
 
 		location / {

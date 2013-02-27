@@ -7,6 +7,7 @@ import logging
 import subprocess
 import time
 import unittest
+from distutils.spawn import find_executable
 
 import paasmaker
 from ..common.testhelpers import TestHelpers
@@ -109,6 +110,16 @@ Include %(config_file_dir)s/
 	def get_pid_path(self):
 		return os.path.join(self.parameters['working_dir'], 'apache2.pid')
 
+	def _get_binary_path(self):
+		binary = find_executable("apache2")
+		if not binary:
+			binary = find_executable("httpd")
+
+		if not binary:
+			raise ValueError("Can't find installation of apache - looked for apache2 and httpd.")
+
+		return binary
+
 	def start(self, callback, error_callback):
 		"""
 		Start up the server for this instance.
@@ -128,10 +139,10 @@ Include %(config_file_dir)s/
 
 		# Fire up the server.
 		logging.info("Starting up apache2 server on port %d." % self.parameters['port'])
+		binary = self._get_binary_path()
 		subprocess.check_call(
 			[
-				# TODO: Don't hardcode this.
-				'/usr/sbin/apache2',
+				binary,
 				'-f',
 				configfile,
 				'-k',

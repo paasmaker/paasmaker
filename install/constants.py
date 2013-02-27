@@ -11,6 +11,7 @@ LINUX = 'Linux'
 
 # MINOR PLATFORM NAMES
 UBUNTU = 'Ubuntu'
+GENERIC = 'Generic'
 
 # SYSTEM PACKAGE LISTS
 SYSTEM_PACKAGES = {
@@ -56,6 +57,34 @@ SYSTEM_PACKAGES = {
 				'postgresql'
 			]
 		}
+	},
+	DARWIN: {
+		GENERIC: {
+			'core': [
+				# Real core.
+				'wget',
+				'md5sha1sum',
+
+				# For the MySQL python module.
+				'mysql-connector-c',
+
+				# Nginx.
+				'pcre',
+				'openssl',
+			],
+			'runtime-php': [
+				# Already ships with OSX.
+			],
+			'runtime-rbenv': [
+				# TODO: Make this work on OSX.
+			],
+			'service-mysql': [
+				'mysql'
+			],
+			'service-postgres': [
+				'postgresql'
+			]
+		}
 	}
 }
 
@@ -66,7 +95,9 @@ OPENRESTY = {
 	'unpacked_name': 'ngx_openresty-1.2.6.1',
 	'sha1': '6e25cf573faf58deb233f04dafde35c612cadcc7',
 	'binary': 'ngx_openresty-1.2.6.1/nginx/sbin/nginx',
-	'configure_command': './configure --with-luajit --prefix=`pwd`',
+	'configure_command': './configure --with-luajit --prefix=`pwd` --with-ipv6',
+	# TODO: This mentions a specific version of PCRE - unlikely that you'll have it.
+	'darwin_generic_configure_command': './configure --with-ipv6 --with-luajit --prefix=`pwd`  --with-cc-opt="-I/usr/local/Cellar/pcre/8.32/include" --with-ld-opt="-L/usr/local/Cellar/pcre/8.32/lib"',
 	'make_command': 'make -j 16',
 	'install_command': 'make install' # NOTE: No sudo here - we're installing to the build location.
 }
