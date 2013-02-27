@@ -282,8 +282,13 @@ class StreamAPIRequest(APIRequest):
 
 	This superclass handles some authentication, queuing, and event handling.
 	"""
-	def __init__(self, *args):
-		super(StreamAPIRequest, self).__init__(*args)
+	def __init__(self, *args, **kwargs):
+		self.force_longpoll = False
+		if 'force_longpoll' in kwargs:
+			self.force_longpoll = kwargs['force_longpoll']
+			del kwargs['force_longpoll']
+
+		super(StreamAPIRequest, self).__init__(*args, **kwargs)
 
 		self.remote_connected = False
 		self.event_queue = []
@@ -326,7 +331,8 @@ class StreamAPIRequest(APIRequest):
 			parsed.hostname,
 			parsed.port,
 			io_loop=self.io_loop,
-			query="auth=%s" % urllib.quote(self.authvalue)
+			query="auth=%s" % urllib.quote(self.authvalue),
+			force_longpoll=self.force_longpoll
 		)
 
 		# Hook up a few events to get started.

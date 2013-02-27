@@ -755,6 +755,12 @@ class StreamConnectionTest(BaseControllerTest):
 		self.assertIn("No such job", message, "Error message not as expected.")
 
 	def test_get_log(self):
+		# Test the websocket version.
+		self._test_get_log(False)
+		# Test the longpoll version.
+		self._test_get_log(True)
+
+	def _test_get_log(self, force_longpoll):
 		# Make a job number, and log to it.
 		job_id = str(uuid.uuid4())
 		number_lines = 10
@@ -776,7 +782,7 @@ class StreamConnectionTest(BaseControllerTest):
 			print error
 
 		# Now, connect to it and stream the log.
-		remote_request = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
+		remote_request = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration, force_longpoll=force_longpoll)
 		remote_request.set_superkey_auth()
 		remote_request.set_lines_callback(got_lines)
 		remote_request.subscribe(job_id)
@@ -810,67 +816,13 @@ class StreamConnectionTest(BaseControllerTest):
 
 		self.assertEquals(2, len(lines), "Didn't download the expected number of lines.")
 
-	@unittest.skip("Skipped until socket.io tornado client is written and has long poll ability.")
-	def test_longpoll_log(self):
-		# Make a job number, and log to it.
-		job_id = str(uuid.uuid4())
-		number_lines = 10
-
-		log = self.configuration.get_job_logger(job_id)
-
-		for i in range(number_lines):
-			log.info("Log message %d", i)
-
-		def got_lines(job_id, lines, position):
-			logging.debug("Job ID: %s", job_id)
-			logging.debug("Lines: %s", str(lines))
-			logging.debug("Position: %d", position)
-			# Store the last position on this function.
-			got_lines.position = position
-			self.stop(lines)
-
-		def on_message(message):
-			if message['type'] == 'lines':
-				got_lines(message['data']['job_id'], message['data']['lines'], message['data']['position'])
-
-		def on_error(error):
-			print error
-
-		# Now, connect to it and stream the log.
-		remote_request = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
-		remote_request.set_superkey_auth()
-		remote_request.set_callbacks(on_message, on_error)
-		remote_request.set_stream_mode('longpoll')
-		remote_request.subscribe(job_id)
-
-		lines = self.wait()
-
-		self.assertEquals(number_lines, len(lines), "Didn't download the expected number of lines.")
-
-		# Send another log entry.
-		# This one should come back automatically because the websocket is subscribed.
-		log.info("Additional log entry.")
-
-		lines = self.wait()
-
-		self.assertEquals(1, len(lines), "Didn't download the expected number of lines.")
-
-		# Unsubscribe.
-		remote_request.unsubscribe(job_id)
-
-		# Send a new log entry. This one won't come back, because we've unsubscribed.
-		log.info("Another additional log entry.")
-		log.info("And Another additional log entry.")
-
-		# Now subscribe again. It will send us everything since the
-		# end of the last subscribe.
-		remote_request.subscribe(job_id, position=got_lines.position)
-
-		lines = self.wait()
-
-		self.assertEquals(2, len(lines), "Didn't download the expected number of lines.")
-
 	def test_job_stream(self):
+		# Test the websocket version.
+		self._test_job_stream(False)
+		# And then the long poll version.
+		self._test_job_stream(True)
+
+	def _test_job_stream(self, force_longpoll):
 		def job_subscribed(jobs):
 			self.stop(('subscribed', jobs))
 
@@ -883,7 +835,7 @@ class StreamConnectionTest(BaseControllerTest):
 		def job_status(job_id, data):
 			self.stop(('status', data))
 
-		remote = paasmaker.common.api.job.JobStreamAPIRequest(self.configuration)
+		remote = paasmaker.common.api.job.JobStreamAPIRequest(self.configuration, force_longpoll=force_longpoll)
 		remote.set_superkey_auth()
 
 		remote.set_subscribed_callback(job_subscribed)
@@ -922,65 +874,13 @@ class StreamConnectionTest(BaseControllerTest):
 			response = self.wait()
 			self.assertIn(response[0], expected_types, 'Wrong response - got %s.' % response[0])
 
-	@unittest.skip("Skipped until socket.io tornado client is written.")
-	def test_job_stream_longpoll(self):
-
-		self.manager.add_job('paasmaker.job.success', {}, "Example root job.", self.stop)
-		root_id = self.wait()
-
-		messages = []
-
-		def on_message(message):
-			messages.append(message)
-
-		def on_error(error):
-			print error
-
-		remote_request = paasmaker.common.api.job.JobStreamAPIRequest(self.configuration)
-		remote_request.set_superkey_auth()
-		remote_request.set_callbacks(on_message, on_error)
-		remote_request.set_stream_mode('longpoll')
-		remote_request.subscribe(root_id)
-
-		self.manager.add_job('paasmaker.job.success', {}, "Example sub1 job.", self.stop, parent=root_id, tags=['test'])
-		sub1_id = self.wait()
-		self.manager.add_job('paasmaker.job.success', {}, "Example sub2 job.", self.stop, parent=root_id)
-		sub2_id = self.wait()
-		self.manager.add_job('paasmaker.job.success', {}, "Example subsub1 job.", self.stop, parent=sub1_id)
-		subsub1_id = self.wait()
-
-		#print json.dumps(messages, indent=4, sort_keys=True)
-
-		# Start processing them.
-		self.manager.allow_execution(root_id, callback=self.stop)
-		self.wait()
-
-		# Wait for it all to complete.
-		self.short_wait_hack(length=0.4)
-
-		#print json.dumps(messages, indent=4, sort_keys=True)
-
-		# Now, analyze what happened.
-		# TODO: Make this clearer and more exhaustive.
-		expected_types = [
-			'subscribed',
-			'status',
-			'new',
-			'tree',
-			'new',
-			'new',
-			'status',
-			'status',
-			'status',
-			'status',
-			'status'
-		]
-
-		self.assertEquals(len(expected_types), len(messages), "Not the right number of messages.")
-		for i in range(len(expected_types)):
-			self.assertEquals(messages[i]['type'], expected_types[i], "Wrong type for message %d" % i)
-
 	def test_router_stream(self):
+		# Test the websocket version.
+		self._test_router_stream(False)
+		# And then the longpoll version.
+		self._test_router_stream(True)
+
+	def _test_router_stream(self, force_longpoll):
 		def history(name, input_id, start, end, values):
 			self.stop(('history', name, input_id, start, end, values))
 
@@ -991,7 +891,7 @@ class StreamConnectionTest(BaseControllerTest):
 			#print message
 			self.stop(('error', message))
 
-		remote = paasmaker.common.api.router.RouterStreamAPIRequest(self.configuration)
+		remote = paasmaker.common.api.router.RouterStreamAPIRequest(self.configuration, force_longpoll=force_longpoll)
 		remote.set_superkey_auth()
 
 		remote.set_history_callback(history)
