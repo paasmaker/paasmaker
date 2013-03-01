@@ -9,6 +9,8 @@ Contents:
 
    introduction
 
+   installation
+
    user
    administrator
    developer
