@@ -13,12 +13,39 @@ class BaseService(paasmaker.util.plugin.Plugin):
 		"""
 		Create the service, using the parameters supplied by the application.
 
-		:arg str name: The user-selected name for the service. If possible,
-			use that name when creating the service - you can use the helper
-			function ``_safe_name()`` to make it safe for many uses.
-		:arg callable callback: The callback to call once created. It
-			should be supplied with two arguments; a dict of credentials
-			that the application uses to connect with, and a string message.
+		Call the callback with a dict of credentials that the application
+		will use to connect to the service. You should try to return a dict
+		with the keys ``hostname``, ``username``, ``password``, ``database``,
+		``protocol``, and ``port`` where appropriate for your service.
+
+		The ``protocol`` key is quite important, as it allows the application
+		to figure out what type a service is.
+
+		Where possible, use the user-supplied name to create the service,
+		so the service is later identifyable outside of Paasmaker - for example,
+		if you query the MySQL server directly for a list of databases.
+		The BaseService provides a helper function, called ``_safe_name()``
+		that can convert the name parameter into a safe name for common
+		systems.
+
+		Your code might look as follows::
+
+			def create(self, name, callback, error_callback):
+				database_name = self._safe_name(name, max_length=16)
+				# ... create your database here ...
+				credentials = {
+					'hostname': 'localhost',
+					'username': database_name,
+					'database': database_name,
+					'password': 'super secret password',
+					'port': 12345,
+					'protocol': 'mysql'
+				}
+
+				callback(credentials, "Created successfully.")
+
+		:arg str name: The user-selected name for the service.
+		:arg callable callback: The callback to call once created.
 		:arg callable error_callback: A callback to call if an error occurs.
 		"""
 		raise NotImplementedError("You must implement create().")
@@ -27,7 +54,13 @@ class BaseService(paasmaker.util.plugin.Plugin):
 		"""
 		Update the service (if required) returning new credentials. In many
 		cases this won't make sense for a service, but is provided for a few
-		services for which it does make sense.
+		services for which it does make sense. If you don't need it, just
+		call the callback immediately.
+
+		For example::
+
+			def update(self, name, existing_credentials, callback, error_callback):
+				callback(existing_credentials, "Updated successfully.")
 
 		:arg str name: The user-selected name for the service.
 		:arg dict existing_credentials: The existing service credentials.
@@ -40,6 +73,13 @@ class BaseService(paasmaker.util.plugin.Plugin):
 		"""
 		Remove the service, using the options supplied by the application,
 		and the credentials created when the service was created.
+
+		You should delete any associated database. The user would have already
+		been informed of this action and what it will do, so you do not need
+		to ask for permission here.
+
+		The supplied existing_credentials can be used to figure out what database
+		to remove.
 
 		:arg str name: The user-supplied name for the service.
 		:arg dict existing_credentials: The existing service credentials.

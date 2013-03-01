@@ -19,6 +19,8 @@ roughly based on a grouping of what they do.
 
    developer-plugins-node
    developer-plugins-health
+   developer-plugins-runtime
+   developer-plugins-service
 
 Example Plugin
 --------------
