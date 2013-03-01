@@ -65,6 +65,8 @@ Listen %(port)d
 	DocumentRoot %(document_root)s
 	ErrorLog %(error_log)s
 
+	DirectoryIndex index.php index.html index.htm
+
 	%(environment)s
 </VirtualHost>
 """
@@ -304,7 +306,7 @@ class PHPRuntimeTest(BaseRuntimeTest):
 			'paasmaker.runtime.php',
 			paasmaker.util.plugin.MODE.RUNTIME_VERSIONS
 		)
-		instance._get_managed_instance(self.stop, self.stop)
+		instance._get_managed_instance(self.stop, self.failure_callback)
 		self.wait()
 		instance._shutdown_managed()
 
@@ -370,7 +372,7 @@ class PHPRuntimeTest(BaseRuntimeTest):
 
 		# Wait until it's started.
 		self.wait()
-		self.assertTrue(self.success)
+		self.assertTrue(self.success, "Failed to start instance.")
 
 		# It should be running if we ask.
 		runtime.status(

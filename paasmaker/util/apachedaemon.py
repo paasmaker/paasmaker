@@ -8,6 +8,7 @@ import subprocess
 import time
 import unittest
 from distutils.spawn import find_executable
+import platform
 
 import paasmaker
 from ..common.testhelpers import TestHelpers
@@ -40,6 +41,8 @@ ServerRoot "%(server_root)s"
 LockFile %(server_root)s/accept.lock
 PidFile %(server_root)s/apache2.pid
 
+%(platform_darwin)s
+
 Timeout 300
 KeepAlive On
 MaxKeepAliveRequests 100
@@ -66,9 +69,7 @@ DefaultType text/plain
 HostnameLookups Off
 ErrorLog %(server_root)s/error.log
 LogLevel warn
-# TODO: Debian specific paths.
-Include /etc/apache2/mods-enabled/*.load
-Include /etc/apache2/mods-enabled/*.conf
+%(platform_ubuntu)s
 
 NameVirtualHost *:%(port)d
 Listen %(port)d
@@ -82,6 +83,58 @@ Include %(config_file_dir)s/
 #LogFormat "%%h %%l %%u %%t \"%%r\" %%>s %%O" common
 #LogFormat "%%{Referer}i -> %%U" referer
 #LogFormat "%%{User-agent}i" agent
+"""
+
+	PLATFORM_UBUNTU = """
+Include /etc/apache2/mods-enabled/*.load
+Include /etc/apache2/mods-enabled/*.conf
+"""
+
+	PLATFORM_DARWIN = """
+LoadModule authn_file_module /usr/libexec/apache2/mod_authn_file.so
+LoadModule authn_anon_module /usr/libexec/apache2/mod_authn_anon.so
+LoadModule authn_default_module /usr/libexec/apache2/mod_authn_default.so
+LoadModule authz_host_module /usr/libexec/apache2/mod_authz_host.so
+LoadModule authz_groupfile_module /usr/libexec/apache2/mod_authz_groupfile.so
+LoadModule authz_user_module /usr/libexec/apache2/mod_authz_user.so
+LoadModule authz_owner_module /usr/libexec/apache2/mod_authz_owner.so
+LoadModule authz_default_module /usr/libexec/apache2/mod_authz_default.so
+LoadModule auth_basic_module /usr/libexec/apache2/mod_auth_basic.so
+LoadModule auth_digest_module /usr/libexec/apache2/mod_auth_digest.so
+LoadModule include_module /usr/libexec/apache2/mod_include.so
+LoadModule deflate_module /usr/libexec/apache2/mod_deflate.so
+LoadModule env_module /usr/libexec/apache2/mod_env.so
+LoadModule mime_magic_module /usr/libexec/apache2/mod_mime_magic.so
+LoadModule expires_module /usr/libexec/apache2/mod_expires.so
+LoadModule headers_module /usr/libexec/apache2/mod_headers.so
+LoadModule setenvif_module /usr/libexec/apache2/mod_setenvif.so
+LoadModule ssl_module /usr/libexec/apache2/mod_ssl.so
+LoadModule mime_module /usr/libexec/apache2/mod_mime.so
+LoadModule status_module /usr/libexec/apache2/mod_status.so
+LoadModule autoindex_module /usr/libexec/apache2/mod_autoindex.so
+LoadModule vhost_alias_module /usr/libexec/apache2/mod_vhost_alias.so
+LoadModule negotiation_module /usr/libexec/apache2/mod_negotiation.so
+LoadModule dir_module /usr/libexec/apache2/mod_dir.so
+LoadModule alias_module /usr/libexec/apache2/mod_alias.so
+LoadModule rewrite_module /usr/libexec/apache2/mod_rewrite.so
+LoadModule php5_module /usr/libexec/apache2/libphp5.so
+
+<IfModule mod_php5.c>
+    <FilesMatch "\.ph(p3?|tml)$">
+        SetHandler application/x-httpd-php
+    </FilesMatch>
+    <FilesMatch "\.phps$">
+        SetHandler application/x-httpd-php-source
+    </FilesMatch>
+    # To re-enable php in user directories comment the following lines
+    # (from <IfModule ...> to </IfModule>.) Do NOT set it to On as it
+    # prevents .htaccess files from disabling it.
+    <IfModule mod_userdir.c>
+        <Directory /home/*/public_html>
+            php_admin_value engine Off
+        </Directory>
+    </IfModule>
+</IfModule>
 """
 
 	def configure(self, working_dir, port):
@@ -130,6 +183,14 @@ Include %(config_file_dir)s/
 		parameters['port'] = self.parameters['port']
 		parameters['server_root'] = self.parameters['working_dir']
 		parameters['config_file_dir'] = self.parameters['config_file_dir']
+		parameters['platform_darwin'] = ''
+		parameters['platform_ubuntu'] = ''
+		if platform.system() == 'Darwin':
+			parameters['platform_darwin'] = self.PLATFORM_DARWIN
+		if platform.system() == 'Linux' and 'Ubuntu' in platform.system():
+			parameters['platform_ubuntu'] = self.PLATFORM_UBUNTU
+		# TODO: Support Centos.
+
 		configuration = self.CONFIGURATION % parameters
 		#print configuration
 
@@ -138,6 +199,7 @@ Include %(config_file_dir)s/
 		fp.close()
 
 		# Fire up the server.
+		# For debugging, you might like to comment out the stderr redirection.
 		logging.info("Starting up apache2 server on port %d." % self.parameters['port'])
 		binary = self._get_binary_path()
 		subprocess.check_call(
@@ -185,10 +247,10 @@ Include %(config_file_dir)s/
 		# Perform a graceful restart of the server.
 		# TODO: Make this call Async.
 		configfile = self.get_configuration_path(self.parameters['working_dir'])
+		binary = self._get_binary_path()
 		output = subprocess.check_output(
 			[
-				# TODO: Don't hardcode this path.
-				'/usr/sbin/apache2',
+				binary,
 				'-f',
 				configfile,
 				'-k',
