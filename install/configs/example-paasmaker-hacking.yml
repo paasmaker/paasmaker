@@ -14,7 +14,7 @@ install_init_script: false
 enable_init_script: false
 init_redirect_port80: false
 
-runtime_php_enable: false
+runtime_php_enable: true
 runtime_php_disable_system_apache: true
 
 runtime_rbenv_enable: false
