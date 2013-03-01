@@ -5,6 +5,7 @@
 # Notes:
 # * Currently supported platforms:
 #   - Ubuntu Linux, 12.04.
+#   - Darwin (Mac OSX) - only tested vs 10.8.
 # * Why not use Chef, and Chef-Solo to do this instead? As this script
 #   does quite a bit of what Chef does. It was decided at this stage
 #   of development that Chef is slightly more advanced to install than
@@ -134,71 +135,103 @@ if not context['use_system_redis']:
 	install.helpers.generic_builder(context, "thirdparty", install.constants.REDIS)
 
 if not context['use_system_openresty']:
-	install.helpers.generic_builder(context, "thirdparty", install.constants.OPENRESTY)
+	instructions = copy.deepcopy(install.constants.OPENRESTY)
+
+	if context['PLATFORM'] == install.constants.DARWIN:
+		# Figure out the correct pcre headers path - we want to use the homebrew
+		# installed one, not the systems one - otherwise they conflict.
+		# TODO: This is a bit hacky. Why not use the --json=v1 option? Because
+		# that doesn't output the installed path - but just plain info does...
+		raw_info = subprocess.check_output(['brew', 'info', 'pcre'])
+		lines = raw_info.split("\n")
+		for line in lines:
+			if line.startswith("/usr"):
+				bits = line.split(" ")
+				path = bits[0]
+
+				instructions['darwin_generic_configure_command'] = instructions['darwin_generic_configure_command'] % {'homebrew_pcre_path': path}
+
+	install.helpers.generic_builder(context, "thirdparty", instructions)
 
 # Install the various runtimes.
 # RBENV
 if context['runtime_rbenv_enable']:
-	# TODO: On OSX, install rbenv with homebrew instead.
-
-	# Is it already installed?
-	rbenv_path = os.path.expanduser('~/.rbenv')
-	if not context['runtime_rbenv_for_user']:
-		# Install it into thirdparty/ instead.
-		rbenv_path = 'thirdparty/rbenv'
+	if context['PLATFORM'] == install.constants.DARWIN:
+		# Just use homebrew's version.
+		install.helpers.install_packages(context, ['rbenv', 'ruby-build'])
+		rbenv_path = os.path.expanduser('~/.rbenv')
 	else:
-		# See if they have RVM installed.
-		# Exit with an error if they do and let
-		# them decide what to do.
-		if os.path.exists(os.path.expanduser('~/.rvm')):
-			logging.error("You have RVM installed, and have selected to install rbenv for your user.")
-			logging.error("You either need to disable this, or remove RVM.")
+		# Is it already installed?
+		rbenv_path = os.path.expanduser('~/.rbenv')
+		if not context['runtime_rbenv_for_user']:
+			# Install it into thirdparty/ instead.
+			rbenv_path = 'thirdparty/rbenv'
+		else:
+			# See if they have RVM installed.
+			# Exit with an error if they do and let
+			# them decide what to do.
+			if os.path.exists(os.path.expanduser('~/.rvm')):
+				logging.error("You have RVM installed, and have selected to install rbenv for your user.")
+				logging.error("You either need to disable this, or remove RVM.")
 
-	if not os.path.exists(rbenv_path):
-		# Need to install rbenv.
-		# Install required packages.
-		install.helpers.install_packages(context, context.get_package_set('runtime-rbenv'))
+		if not os.path.exists(rbenv_path):
+			# Need to install rbenv.
+			# Install required packages.
+			install.helpers.install_packages(context, context.get_package_set('runtime-rbenv'))
 
-		# Now install rbenv.
-		install.helpers.generic_command_shell(
-			context,
-			'git clone git://github.com/sstephenson/rbenv.git %s' % rbenv_path
-		)
-		install.helpers.generic_command_shell(
-			context,
-			'git clone git://github.com/sstephenson/ruby-build.git %s' % os.path.join(rbenv_path, 'plugins', 'ruby-build')
-		)
+			# Now install rbenv.
+			install.helpers.generic_command_shell(
+				context,
+				'git clone git://github.com/sstephenson/rbenv.git %s' % rbenv_path
+			)
+			install.helpers.generic_command_shell(
+				context,
+				'git clone git://github.com/sstephenson/ruby-build.git %s' % os.path.join(rbenv_path, 'plugins', 'ruby-build')
+			)
 
-		# If we're installing it for the user, update the bash profile.
-		if context['runtime_rbenv_for_user']:
-			bash_profile = open(os.path.expanduser('~/.profile'), 'r').read()
-			if not 'export PATH="$HOME/.rbenv/bin:$PATH"' in bash_profile:
-				install.helpers.generic_command_shell(
-					context,
-					'echo \'export PATH="$HOME/.rbenv/bin:$PATH"\' >> ~/.profile'
-				)
-			if not 'eval "$(rbenv init -)"' in bash_profile:
-				install.helpers.generic_command_shell(
-					context,
-					'PATH="$HOME/.rbenv/bin:$PATH" echo \'eval "$(rbenv init -)"\' >> ~/.profile'
-				)
+			# If we're installing it for the user, update the bash profile.
+			if context['runtime_rbenv_for_user']:
+				bash_profile = open(os.path.expanduser('~/.profile'), 'r').read()
+				if not 'export PATH="$HOME/.rbenv/bin:$PATH"' in bash_profile:
+					install.helpers.generic_command_shell(
+						context,
+						'echo \'export PATH="$HOME/.rbenv/bin:$PATH"\' >> ~/.profile'
+					)
+				if not 'eval "$(rbenv init -)"' in bash_profile:
+					install.helpers.generic_command_shell(
+						context,
+						'PATH="$HOME/.rbenv/bin:$PATH" echo \'eval "$(rbenv init -)"\' >> ~/.profile'
+					)
 
 	# Install any ruby versions we've been asked to install.
-	rbenv_current_versions = subprocess.check_output('export PATH="%s/bin:$PATH"; rbenv versions' % rbenv_path, shell=True)
+	if context['PLATFORM'] == install.constants.LINUX:
+		rbenv_locator = 'export PATH="%s/bin:$PATH"; ' % rbenv_path
+	else:
+		rbenv_locator = ''
+
+	rbenv_current_versions = subprocess.check_output('%srbenv versions' % rbenv_locator, shell=True)
+
+	rbenv_configure_options = ""
+	if context['PLATFORM'] == install.constants.DARWIN:
+		# See https://github.com/sstephenson/ruby-build/issues/285 and
+		# https://github.com/sstephenson/ruby-build/issues/287 for this.
+		# TODO: What are the ramifications of using this option?
+		rbenv_configure_options = 'CFLAGS=-Wno-error=shorten-64-to-32'
 
 	for version in context['runtime_rbenv_versions']:
 		if version not in rbenv_current_versions:
 			logging.info("Installing Ruby version %s. This will take a while; please be patient.", version)
 			install.helpers.generic_command_shell(
 				context,
-				'PATH="%s/bin:$PATH" rbenv install --verbose %s' % (rbenv_path, version)
+				'%s %s rbenv install --verbose %s' % (rbenv_locator, rbenv_configure_options, version)
 			)
 			install.helpers.generic_command_shell(
 				context,
-				'export PATH="%s/bin:$PATH"; rbenv rehash; rbenv shell %s; gem install bundler; rbenv rehash' % (rbenv_path, version)
+				'%s rbenv rehash; rbenv shell %s; gem install bundler; rbenv rehash' % (rbenv_locator, version)
 			)
 
 			# TODO: Figure out why the above command causes the install script to terminate.
+			# On Linux/Ubuntu at least.
 		else:
 			logging.info("Ruby version %s is already installed.", version)
 
