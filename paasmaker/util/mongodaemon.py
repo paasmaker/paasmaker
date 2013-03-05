@@ -58,7 +58,7 @@ smallfiles = true
 		self.parameters['binary_path'] = binary_path
 		self.parameters['port'] = port
 		self.parameters['host'] = bind_host
-		
+
 		# TODO: allow this to be configured by service users
 		# journal_str = "journal = true" if enabled else "nojournal = true"
 
@@ -115,7 +115,7 @@ smallfiles = true
 			return self.client
 
 		# Create a client for it.
-		
+
 		self.client = MongoClient(
 			self.parameters['host'],
 			self.parameters['port']
@@ -163,9 +163,9 @@ class MongoDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.stop()
 
 	def test_configure_and_run(self):
-		# TODO: the testsuite will eventually either load paasmaker.yml, and/or
-		# use locally-installed versions of daemons from the install script.
-		self.assertIsNotNone(self.mongodb_binary, "mongoDB server is not in your PATH; this test cannot run")
+		if not self.mongodb_binary:
+			self.skipTest("mongodb is not installed; so we can't test this service.")
+			return
 
 		working_dir = self.configuration.get_scratch_path_exists('mongodb')
 		port = self.configuration.get_free_port()

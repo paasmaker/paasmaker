@@ -215,9 +215,9 @@ class ManagedMongoServiceTest(BaseServiceTest):
 			{}
 		)
 
-		# TODO: the testsuite will eventually either load paasmaker.yml, and/or
-		# use locally-installed versions of daemons from the install script.
-		self.assertIsNotNone(service.options['binary'], "mongoDB server is not in your PATH; this test cannot run")
+		if not service.options['binary']:
+			self.skipTest("mongodb is not installed; so we can't test this service.")
+			return
 
 		service.create('test', self.success_callback, self.failure_callback)
 
