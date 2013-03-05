@@ -344,3 +344,7 @@ class BaseRuntimeTest(paasmaker.common.controller.BaseControllerTest):
 		self.message = message
 		self.exception = exception
 		self.stop()
+
+	def _get_error_log(self, instance_id):
+		error_path = self.configuration.get_job_log_path(instance_id)
+		return error_path

@@ -189,27 +189,42 @@ if context['runtime_rbenv_enable']:
 				'git clone git://github.com/sstephenson/ruby-build.git %s' % os.path.join(rbenv_path, 'plugins', 'ruby-build')
 			)
 
-			# If we're installing it for the user, update the bash profile.
-			if context['runtime_rbenv_for_user']:
-				bash_profile = open(os.path.expanduser('~/.profile'), 'r').read()
-				if not 'export PATH="$HOME/.rbenv/bin:$PATH"' in bash_profile:
-					install.helpers.generic_command_shell(
-						context,
-						'echo \'export PATH="$HOME/.rbenv/bin:$PATH"\' >> ~/.profile'
-					)
-				if not 'eval "$(rbenv init -)"' in bash_profile:
-					install.helpers.generic_command_shell(
-						context,
-						'PATH="$HOME/.rbenv/bin:$PATH" echo \'eval "$(rbenv init -)"\' >> ~/.profile'
-					)
+	# If we're installing it for the user, update the bash profile.
+	if context['runtime_rbenv_for_user']:
+		if context['PLATFORM'] == install.constants.LINUX:
+			bash_profile = open(os.path.expanduser('~/.profile'), 'r').read()
+			if not 'export PATH="$HOME/.rbenv/bin:$PATH"' in bash_profile:
+				install.helpers.generic_command_shell(
+					context,
+					'echo \'export PATH="$HOME/.rbenv/bin:$PATH"\' >> ~/.profile'
+				)
+			if not 'eval "$(rbenv init -)"' in bash_profile:
+				install.helpers.generic_command_shell(
+					context,
+					'PATH="$HOME/.rbenv/bin:$PATH" echo \'eval "$(rbenv init -)"\' >> ~/.profile'
+				)
+		else:
+			profile_path = os.path.expanduser('~/.bash_profile')
+			if os.path.exists(profile_path):
+				bash_profile = open(profile_path, 'r').read()
+			else:
+				bash_profile = ""
+
+			if not 'eval "$(rbenv init -)"' in bash_profile:
+				install.helpers.generic_command_shell(
+					context,
+					'PATH="$HOME/.rbenv/bin:$PATH" echo \'eval "$(rbenv init -)"\' >> %s' % profile_path
+				)
 
 	# Install any ruby versions we've been asked to install.
 	if context['PLATFORM'] == install.constants.LINUX:
-		rbenv_locator = 'export PATH="%s/bin:$PATH"; ' % rbenv_path
+		rbenv_locator = 'export PATH="%s/bin:$PATH"' % rbenv_path
 	else:
-		rbenv_locator = ''
+		# For OSX, point the ruby binary at the correct location.
+		# TODO: Fix this.
+		rbenv_locator = 'export PATH="$HOME/.rbenv/shims:$PATH"'
 
-	rbenv_current_versions = subprocess.check_output('%srbenv versions' % rbenv_locator, shell=True)
+	rbenv_current_versions = subprocess.check_output('%s; rbenv versions' % rbenv_locator, shell=True)
 
 	rbenv_configure_options = ""
 	if context['PLATFORM'] == install.constants.DARWIN:
@@ -223,11 +238,11 @@ if context['runtime_rbenv_enable']:
 			logging.info("Installing Ruby version %s. This will take a while; please be patient.", version)
 			install.helpers.generic_command_shell(
 				context,
-				'%s %s rbenv install --verbose %s' % (rbenv_locator, rbenv_configure_options, version)
+				'%s; %s rbenv install --verbose %s' % (rbenv_locator, rbenv_configure_options, version)
 			)
 			install.helpers.generic_command_shell(
 				context,
-				'%s rbenv rehash; rbenv shell %s; gem install bundler; rbenv rehash' % (rbenv_locator, version)
+				'%s; export RBENV_VERSION="%s"; rbenv rehash; gem install bundler; rbenv rehash' % (rbenv_locator, version)
 			)
 
 			# TODO: Figure out why the above command causes the install script to terminate.

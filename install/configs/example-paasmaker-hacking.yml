@@ -19,6 +19,7 @@ runtime_php_disable_system_apache: true
 
 runtime_rbenv_enable: false
 runtime_rbenv_versions: ['1.9.3-p327']
+runtime_rbenv_for_user: false
 
 service_managedmysql_enable: true
 service_managedmysql_disable_system_mysql: true

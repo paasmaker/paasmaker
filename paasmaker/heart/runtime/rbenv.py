@@ -186,7 +186,7 @@ class RbenvRuntime(BaseRuntime):
 			)
 
 			def errored_out(message):
-				error_callback("Failed to start up instance inside timeout.")
+				error_callback(message)
 
 			def timed_out(message):
 				# Failed to start up in time. Stop the instance.
@@ -332,6 +332,9 @@ class RbenvRuntimeTest(BaseRuntimeTest):
 		self.assertTrue('1.9.3-p' in environment['RBENV_VERSION'], "Missing specific version.")
 
 	def test_startup(self):
+		# TODO: This unit test doesn't work until you've started the application
+		# normally and done 'bundle install' on it.
+
 		# Put together the barest of possible information to start up the system.
 		instance_id = str(uuid.uuid4())
 		instance = {}
@@ -378,9 +381,16 @@ class RbenvRuntimeTest(BaseRuntimeTest):
 			self.failure_callback
 		)
 
+		# For debugging, print out the log.
+		log_path = self._get_error_log(instance_id)
+		#print open(log_path, 'r').read()
+
 		# Wait until it's started.
 		self.wait()
-		self.assertTrue(self.success)
+		# TODO: NOTE: If this fails, it's probably because your setup is missing
+		# the gems. This unit test doesn't run 'bundle install' to keep it a bit
+		# simpler, but it should.
+		self.assertTrue(self.success, "Failed to start up application.")
 
 		# It should be running if we ask.
 		runtime.status(
@@ -392,7 +402,7 @@ class RbenvRuntimeTest(BaseRuntimeTest):
 		self.assertTrue(self.success)
 
 		# For debugging, print out the log.
-		log_path = self.configuration.get_job_log_path(instance_id)
+		log_path = self._get_error_log(instance_id)
 		#print open(log_path, 'r').read()
 
 		# And see if it's really working.
