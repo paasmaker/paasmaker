@@ -54,8 +54,12 @@ class DeRegisterInstanceJob(BaseJob):
 
 			# Sanity check - make sure that the instance path is a subpath of the heart
 			# directory. For safety.
-			absdir = os.path.abspath(self.instance_path)
-			absdir = os.path.realpath(absdir)
+			# NOTE: We stopped doing abspath() below, because on OSX the temporary
+			# dirs (during unit tests) were actually symlinked, so the paths didn't
+			# match properly. TODO: Is this still safe enough?
+			#absdir = os.path.abspath(self.instance_path)
+			#absdir = os.path.realpath(absdir)
+			absdir = self.instance_path
 			working_dir = self.configuration.get_flat('heart.working_dir')
 
 			if not absdir.startswith(working_dir):
