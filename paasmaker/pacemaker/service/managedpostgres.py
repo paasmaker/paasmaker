@@ -1,6 +1,7 @@
 
 import os
 import time
+import platform
 
 from base import BaseService, BaseServiceTest
 from postgres import PostgresService, PostgresServiceTest
@@ -31,8 +32,11 @@ class ManagedPostgresServiceConfigurationSchema(colander.MappingSchema):
 	binary_path = colander.SchemaNode(colander.String(),
 		title="Postgres Binary path",
 		description="The location of the Postgres binaries 'initdb' and 'pg_ctl'.",
-		default="/usr/lib/postgresql/9.1/bin",
-		missing="/usr/lib/postgresql/9.1/bin")
+		# Why make the default auto? If you pass an empty string for binary_path,
+		# then colander helpfully inserts the default value. You want to pass
+		# an empty string if all the Postgres binaries are in the path.
+		default="auto",
+		missing="auto")
 
 class ManagedPostgresServiceParametersSchema(colander.MappingSchema):
 	# No options available for runtime configuration.
@@ -56,6 +60,21 @@ class ManagedPostgresService(PostgresService):
 	}
 	OPTIONS_SCHEMA = ManagedPostgresServiceConfigurationSchema()
 	API_VERSION = "0.9.0"
+
+	def _check_options(self):
+		# Overriden check_options to handle binary_path correctly.
+		super(ManagedPostgresService, self)._check_options()
+
+		if self.options['binary_path'] == 'auto':
+			self.options['binary_path'] = self._postgres_binary_path()
+
+	def _postgres_binary_path(self):
+		if platform.system() == 'Darwin':
+			# Postgres binaries are in the path on OSX.
+			return ""
+		else:
+			# TODO: This is Ubuntu specific.
+			return "/usr/lib/postgresql/9.1/bin"
 
 	def _postgres_path(self):
 		return self.configuration.get_scratch_path_exists(

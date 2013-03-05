@@ -9,6 +9,7 @@ import subprocess
 import time
 import unittest
 import uuid
+import platform
 
 import paasmaker
 from ..common.testhelpers import TestHelpers
@@ -155,6 +156,14 @@ class PostgresDaemon(ManagedDaemon):
 		shutil.rmtree(self.parameters['working_dir'])
 
 class PostgresDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
+	def _postgres_path(self):
+		if platform.system() == 'Darwin':
+			# Postgres binaries are in the path on OSX.
+			return ""
+		else:
+			# TODO: This is Ubuntu specific.
+			return "/usr/lib/postgresql/9.1/bin"
+
 	def setUp(self):
 		super(PostgresDaemonTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, [], io_loop=self.io_loop)
@@ -169,7 +178,7 @@ class PostgresDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.server = PostgresDaemon(self.configuration)
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('postgres'),
-			'/usr/lib/postgresql/9.1/bin', # TODO: Ubuntu Specific.
+			self._postgres_path(),
 			self.configuration.get_free_port(),
 			'127.0.0.1' # TODO: This doesn't work yet.
 		)

@@ -1,4 +1,6 @@
 
+import platform
+
 from base import BaseService, BaseServiceTest
 import paasmaker
 
@@ -131,13 +133,21 @@ class PostgresService(BaseService):
 		)
 
 class PostgresServiceTest(BaseServiceTest):
+	def _postgres_path(self):
+		if platform.system() == 'Darwin':
+			# Postgres binaries are in the path on OSX.
+			return ""
+		else:
+			# TODO: This is Ubuntu specific.
+			return "/usr/lib/postgresql/9.1/bin"
+
 	def setUp(self):
 		super(PostgresServiceTest, self).setUp()
 
 		self.server = paasmaker.util.postgresdaemon.PostgresDaemon(self.configuration)
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('postgres'),
-			'/usr/lib/postgresql/9.1/bin', # TODO: Ubuntu Specific.
+			self._postgres_path(),
 			self.configuration.get_free_port(),
 			'127.0.0.1',
 			password="test"
@@ -156,7 +166,8 @@ class PostgresServiceTest(BaseServiceTest):
 				'hostname': '127.0.0.1',
 				'port': self.server.get_port(),
 				'username': 'postgres',
-				'password': 'test'
+				'password': 'test',
+				'binary_path': self._postgres_path()
 			},
 			'Postgres Service'
 		)
