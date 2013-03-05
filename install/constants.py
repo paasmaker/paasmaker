@@ -65,8 +65,13 @@ SYSTEM_PACKAGES = {
 				'wget',
 				'md5sha1sum',
 
-				# For the MySQL python module.
-				'mysql-connector-c',
+				# TODO: In homebrew, in theory we should be able to just
+				# install the mysql-connector-c to allow the Python library
+				# to link. However, mysql and mysql-connector-c conflict
+				# in homebrew, so we just install mysql (which comes with
+				# the connecting libraries) although this takes more time
+				# and disk space.
+				'mysql',
 
 				# Nginx.
 				'pcre',

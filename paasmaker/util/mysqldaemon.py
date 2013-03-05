@@ -10,6 +10,7 @@ import time
 import unittest
 import uuid
 import getpass
+import platform
 
 import paasmaker
 from ..common.testhelpers import TestHelpers
@@ -74,6 +75,14 @@ class MySQLDaemon(ManagedDaemon):
 			'--user=%s' % getpass.getuser(),
 			'--skip-name-resolve'
 		]
+
+		if platform.system() == 'Darwin':
+			# Need to point mysql_install_db at the correct
+			# "my_print_defaults" path.
+			# NOTE: This is not Async; but OSX is not a production
+			# platform.
+			homebrew_prefix_path = subprocess.check_output(['brew', '--prefix', 'mysql']).strip()
+			command_line.append("--basedir=%s" % homebrew_prefix_path)
 
 		try:
 			subprocess.check_call(
@@ -167,7 +176,7 @@ class MySQLDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.server.stop()
 
 		# Give it a little time to stop.
-		time.sleep(1)
+		time.sleep(2)
 		self.assertFalse(self.server.is_running())
 
 		# Start it again.

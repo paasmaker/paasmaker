@@ -22,7 +22,7 @@ class ProcessCheck(object):
 
 		if platform.system() == 'Linux':
 			pid_path = "/proc/%d/cmdline" % pid
-	
+
 			if os.path.exists(pid_path):
 				# Path exists, so now, if supplied, check the keyword.
 				if keyword:
@@ -45,7 +45,7 @@ class ProcessCheck(object):
 			# (DarwinSubprocess doesn't use check_output because that throws an exception
 			# on non-zero exit codes, and `ps` returns exit 1 if -p isn't matched)
 			output = DarwinSubprocess.check_output(["ps", "-p", str(pid), "-o", "command="])
-			
+
 			if output:
 				if keyword:
 					return (keyword in output)
@@ -75,16 +75,15 @@ class ProcessCheckTest(unittest.TestCase):
 	def test_create_and_destroy_process(self):
 		proc = subprocess.Popen("yes", stdout=subprocess.PIPE)
 		pid = proc.pid
-		
+
 		result = ProcessCheck.is_running(pid)
 		self.assertTrue(result, ("Created process with pid %d but couldn't find it with is_running" % pid))
-		
+
 		result = ProcessCheck.is_running(pid, "yes")
 		self.assertTrue(result, ("Called 'yes' with pid %d but couldn't match command line with is_running" % pid))
-		
+
 		proc.kill()
 		unused_output = proc.communicate()
-		
+
 		result = ProcessCheck.is_running(pid)
 		self.assertFalse(result, ("Terminated process with pid %d but still found it with is_running" % pid))
-		
