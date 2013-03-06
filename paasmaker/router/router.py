@@ -95,6 +95,33 @@ http {
 			proxy_pass                  http://$upstream;
 		}
 	}
+
+	server {
+		listen       [::]:%(listen_port_443)d;
+		server_name  localhost;
+
+		location / {
+			set $redis_host %(redis_host)s;
+			set $redis_port %(redis_port)d;
+			set $upstream "";
+			set $versiontypekey "null";
+			set $nodekey "null";
+			set $instancekey "null";
+			rewrite_by_lua_file %(router_root)s/rewrite.lua;
+
+			proxy_set_header            Host $host;
+			proxy_buffering             off;
+			proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
+			proxy_set_header            X-Forwarded-Port 443;
+			proxy_set_header            X-Forwarded-Host $host;
+			proxy_set_header            X-Forwarded-Proto https;
+			proxy_redirect              off;
+			proxy_connect_timeout       10;
+			proxy_send_timeout          60;
+			proxy_read_timeout          60;
+			proxy_pass                  http://$upstream;
+		}
+	}
 }
 """
 
@@ -126,6 +153,7 @@ http {
 		parameters = {}
 		parameters['port_direct'] = self.configuration.get_flat('router.nginx.port_direct')
 		parameters['port_80'] = self.configuration.get_flat('router.nginx.port_80')
+		parameters['port_443'] = self.configuration.get_flat('router.nginx.port_443')
 		parameters['temp_path'] = temp_file_dir
 		parameters['pid_path'] = working_dir
 		parameters['log_level'] = 'info'
@@ -199,6 +227,8 @@ http {
 		  listen on for direct connections.
 		* listen_port_80: The port that the NGINX server will
 		  listen on for port 80 connections.
+		* listen_port_443: The port that the NGINX server will
+		  listen on for port 443 connections.
 		* log_path: The path where log files will be placed.
 		* pid_path: The full path to the NGINX server PID.
 		* log_level: The NGINX log level.
@@ -216,6 +246,7 @@ http {
 		parameters['temp_dir'] = managed_params['temp_path']
 		parameters['listen_port_direct'] = managed_params['port_direct']
 		parameters['listen_port_80'] = managed_params['port_80']
+		parameters['listen_port_443'] = managed_params['port_443']
 		parameters['log_path'] = managed_params['log_path']
 		parameters['temp_paths'] = NginxRouter.TEMP_PATHS % {'temp_dir': managed_params['temp_path']}
 		parameters['pid_path'] = managed_params['pid_path']
@@ -260,6 +291,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 		self.configuration['router']['nginx']['port_direct'] = self.configuration.get_free_port()
 		self.configuration['router']['nginx']['port_80'] = self.configuration.get_free_port()
+		self.configuration['router']['nginx']['port_443'] = self.configuration.get_free_port()
 		self.configuration.update_flat()
 
 		self.router = NginxRouter(self.configuration)

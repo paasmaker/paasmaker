@@ -53,6 +53,7 @@ DEFAULT_REDIS_JOBS = 42513
 
 DEFAULT_NGINX_DIRECT = 42530
 DEFAULT_NGINX_PORT80 = 42531
+DEFAULT_NGINX_PORT443 = 42532
 
 DEFAULT_APPLICATION_MIN = 42600
 DEFAULT_APPLICATION_MAX = 42699
@@ -315,10 +316,15 @@ class NginxSchema(StrictAboutExtraKeysColanderMappingSchema):
 		default=DEFAULT_NGINX_DIRECT,
 		missing=DEFAULT_NGINX_DIRECT)
 	port_80 = colander.SchemaNode(colander.Integer(),
-		title="Managed NGINX port",
+		title="Managed NGINX port - port 80",
 		description="The port to run the managed NGINX on. This port sends X-Forwarded-Port: 80 to applications.",
 		default=DEFAULT_NGINX_PORT80,
 		missing=DEFAULT_NGINX_PORT80)
+	port_443 = colander.SchemaNode(colander.Integer(),
+		title="Managed NGINX port - port 443",
+		description="The port to run the managed NGINX on. This port sends X-Forwarded-Port: 443 and X-Forwarded-Proto: https to applications.",
+		default=DEFAULT_NGINX_PORT443,
+		missing=DEFAULT_NGINX_PORT443)
 	shutdown = colander.SchemaNode(colander.Boolean(),
 		title="Shutdown with node",
 		description="If true, this managed nginx instance is shut down when the node is shut down.",
