@@ -154,11 +154,11 @@ class Node(OrmBase, Base):
 	__tablename__ = 'node'
 
 	id = Column(Integer, primary_key=True)
-	name = Column(String, nullable=False)
-	route = Column(String, nullable=False)
+	name = Column(String(255), nullable=False)
+	route = Column(String(255), nullable=False)
 	apiport = Column(Integer, nullable=False)
-	uuid = Column(String, nullable=False, unique=True, index=True)
-	state = Column(String, nullable=False, index=True)
+	uuid = Column(String(255), nullable=False, unique=True, index=True)
+	state = Column(String(255), nullable=False, index=True)
 	last_heard = Column(DateTime, nullable=False)
 	start_time = Column(DateTime, nullable=False)
 
@@ -254,16 +254,16 @@ class User(OrmBase, Base):
 	__tablename__ = 'user'
 
 	id = Column(Integer, primary_key=True)
-	login = Column(String, nullable=False, index=True, unique=True)
-	email = Column(String, nullable=False, index=True, unique=True)
-	auth_source = Column(String, nullable=False, default="paasmaker.auth.internal")
+	login = Column(String(255), nullable=False, index=True, unique=True)
+	email = Column(String(255), nullable=False, index=True, unique=True)
+	auth_source = Column(String(255), nullable=False, default="paasmaker.auth.internal")
 	_auth_meta = Column("auth_meta", Text, nullable=True)
 	enabled = Column(Boolean, nullable=False, default=True)
 
-	_password = Column('password', String, nullable=True)
-	name = Column(String, nullable=True)
+	_password = Column('password', String(255), nullable=True)
+	name = Column(String(255), nullable=True)
 
-	apikey = Column(String, nullable=True, index=True)
+	apikey = Column(String(255), nullable=True, index=True)
 
 	_userdata = Column("userdata", Text, nullable=True)
 
@@ -356,7 +356,7 @@ class Role(OrmBase, Base):
 	__tablename__ = 'role'
 
 	id = Column(Integer, primary_key=True)
-	name = Column(String, nullable=False, unique=True)
+	name = Column(String(255), nullable=False, unique=True)
 	_permissions = relationship("RolePermission", backref="role", cascade="all, delete, delete-orphan")
 
 	def add_permission(self, name):
@@ -433,7 +433,7 @@ class RolePermission(OrmBase, Base):
 
 	id = Column(Integer, primary_key=True)
 	role_id = Column(Integer, ForeignKey('role.id'), nullable=False, index=True)
-	permission = Column(String, nullable=False, index=True)
+	permission = Column(String(255), nullable=False, index=True)
 
 	def __repr__(self):
 		return "<RolePermission('%s':'%s')>" % (self.role, self.permission)
@@ -453,8 +453,8 @@ class Workspace(OrmBase, Base):
 	__tablename__ = 'workspace'
 
 	id = Column(Integer, primary_key=True)
-	name = Column(String, nullable=False, unique=True)
-	stub = Column(String, nullable=False, unique=True)
+	name = Column(String(255), nullable=False, unique=True)
+	stub = Column(String(255), nullable=False, unique=True)
 	_tags = Column('tags', Text, nullable=True)
 
 	def __repr__(self):
@@ -521,7 +521,7 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 	role = relationship("Role")
 	user_id = Column(Integer, ForeignKey('user.id'), index=True)
 	user = relationship("User")
-	permission = Column(String, nullable=False, index=True)
+	permission = Column(String(255), nullable=False, index=True)
 
 	def __repr__(self):
 		return "<WorkspaceUserRoleFlat('%s'@'%s' -> '%s')>" % (self.user, self.workspace, self.role)
@@ -731,8 +731,8 @@ class Application(OrmBase, Base):
 	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=False, index=True)
 	workspace = relationship("Workspace", backref=backref('applications', order_by=id))
 	# Names are unique per workspace.
-	name = Column(String, index=True)
-	manifest_path = Column(String, nullable=True)
+	name = Column(String(255), index=True)
+	manifest_path = Column(String(255), nullable=True)
 
 	def __repr__(self):
 		return "<Application('%s')>" % self.name
@@ -807,13 +807,13 @@ class ApplicationVersion(OrmBase, Base):
 	is_current = Column(Boolean, nullable=False)
 	statistics = Column(Text, nullable=True)
 	manifest = Column(Text, nullable=False)
-	source_path = Column(String, nullable=True)
-	source_checksum = Column(String, nullable=True)
-	source_package_type = Column(String, nullable=True)
-	scm_name = Column(String, nullable=False)
+	source_path = Column(String(255), nullable=True)
+	source_checksum = Column(String(255), nullable=True)
+	source_package_type = Column(String(255), nullable=True)
+	scm_name = Column(String(255), nullable=False)
 	_scm_parameters = Column("scm_parameters", Text, nullable=False)
 
-	state = Column(String, nullable=False, index=True)
+	state = Column(String(255), nullable=False, index=True)
 
 	services = relationship('Service', secondary=application_version_services, backref='application_versions')
 
@@ -1001,7 +1001,7 @@ class ApplicationInstanceType(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	application_version_id = Column(Integer, ForeignKey('application_version.id'), nullable=False, index=True)
 	application_version = relationship("ApplicationVersion", backref=backref('instance_types', order_by=id, cascade="all, delete"))
-	name = Column(String, nullable=False, index=True)
+	name = Column(String(255), nullable=False, index=True)
 	quantity = Column(Integer, nullable=False)
 	runtime_name = Column(Text, nullable=False)
 	_runtime_parameters = Column("runtime_parameters", Text, nullable=False)
@@ -1161,13 +1161,13 @@ class ApplicationInstance(OrmBase, Base):
 	__tablename__ = 'application_instance'
 
 	id = Column(Integer, primary_key=True)
-	instance_id = Column(String, nullable=False, index=True)
+	instance_id = Column(String(255), nullable=False, index=True)
 	application_instance_type_id = Column(Integer, ForeignKey('application_instance_type.id'), nullable=False, index=True)
 	application_instance_type = relationship("ApplicationInstanceType", backref=backref('instances', order_by=id, lazy="dynamic", cascade="all, delete"))
 	node_id = Column(Integer, ForeignKey('node.id'), nullable=False, index=True)
 	node = relationship("Node", backref=backref('instances', order_by=id))
 	port = Column(Integer, nullable=True, index=True)
-	state = Column(String, nullable=False, index=True)
+	state = Column(String(255), nullable=False, index=True)
 	_statistics = Column("statistics", Text, nullable=True)
 
 	def __repr__(self):
@@ -1238,7 +1238,7 @@ class ApplicationInstanceTypeHostname(OrmBase, Base):
 	application_instance_type_id = Column(Integer, ForeignKey('application_instance_type.id'), nullable=False, index=True)
 	application_instance_type = relationship("ApplicationInstanceType", backref=backref('hostnames', order_by=id, cascade="all, delete"))
 
-	hostname = Column(String, nullable=False, index=True)
+	hostname = Column(String(255), nullable=False, index=True)
 	statistics = Column(Text, nullable=True)
 
 	def __repr__(self):
@@ -1258,7 +1258,7 @@ class ApplicationInstanceTypeCron(OrmBase, Base):
 	application_instance_type_id = Column(Integer, ForeignKey('application_instance_type.id'), nullable=False, index=True)
 	application_instance_type = relationship("ApplicationInstanceType", backref=backref('crons', order_by=id, cascade="all, delete"))
 
-	runspec = Column(String, nullable=False)
+	runspec = Column(String(255), nullable=False)
 	uri = Column(Text, nullable=False)
 	username = Column(Text, nullable=True)
 	password = Column(Text, nullable=True)
@@ -1286,11 +1286,11 @@ class Service(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	application_id = Column(Integer, ForeignKey('application.id'), nullable=False, index=True)
 	application = relationship("Application", backref=backref('services', order_by=id, cascade="all, delete"))
-	name = Column(String, nullable=False, index=True)
-	provider = Column(String, nullable=False, index=True)
+	name = Column(String(255), nullable=False, index=True)
+	provider = Column(String(255), nullable=False, index=True)
 	_parameters = Column('parameters', Text, nullable=False)
 	_credentials = Column('credentials', Text, nullable=True)
-	state = Column(String, nullable=False, index=True)
+	state = Column(String(255), nullable=False, index=True)
 
 	# For future use.
 	shared = Column(Boolean, nullable=False, default=False)
