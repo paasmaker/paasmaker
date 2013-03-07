@@ -368,6 +368,9 @@ def on_ioloop_started():
 		if configuration.get_flat('router.enabled') and configuration.get_flat('router.nginx.managed'):
 			nginx = paasmaker.router.router.NginxRouter(configuration)
 			nginx.startup(on_intermediary_started, on_intermediary_failed)
+		else:
+			# Call the intermediary to decrement the list of jobs.
+			on_intermediary_started("Don't need to start managed NGINX.")
 
 		# Kick off all the async startup plugins.
 		for plugin in async_startup_plugins:
