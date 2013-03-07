@@ -1043,7 +1043,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			meta_key = "%s_%d" % (credentials['host'], credentials['port'])
 			if not hasattr(self, 'redis_meta'):
 				self.redis_meta = {}
-			if not self.redis_meta.has_key(meta_key):
+			if not meta_key in self.redis_meta:
 				self.redis_meta[meta_key] = {
 					'state': 'CREATE',
 					'queue': [],
@@ -1111,8 +1111,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					meta['manager'].load_parameters(directory)
 				except paasmaker.util.ManagedDaemonError, ex:
 					# Doesn't yet exist. Create it.
+					logger.debug("Creating redis for %s", name)
 					meta['manager'].configure(directory, credentials['port'], credentials['host'], credentials['password'])
 
+				logger.debug("Starting redis for %s", name)
 				meta['manager'].start_if_not_running(on_redis_started, on_redis_startup_failure)
 
 			elif meta['state'] == 'STARTING':

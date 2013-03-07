@@ -193,8 +193,8 @@ router:
         # Shut down any services we used.
         if hasattr(self, 'redis_meta'):
             for key, meta in self.redis_meta.iteritems():
-                if meta['state'] == 'STARTED':
-                    logger.info("Killing off test redis instance.")
+                if meta['state'] == 'STARTED' or meta['state'] == 'STARTING':
+                    logger.debug("Killing off test redis instance for %s" % key)
                     meta['manager'].destroy()
 
         # Remove files that we created.
