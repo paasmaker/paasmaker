@@ -4,6 +4,7 @@ import re
 import os
 import shlex
 import uuid
+import glob
 
 import paasmaker
 from base import BaseRuntime, BaseRuntimeTest
@@ -272,7 +273,10 @@ Listen %(port)d
 
 	def startup_async_prelisten(self, callback, error_callback):
 		# If we're managed, set up and start up the managed apache instance.
-		if self._is_managed():
+		# But only if we have applications. Otherwise, no need to start it up -
+		# we'll start it on demand.
+		config_count = len(glob.glob("%s/*.conf" % self.options['config_dir']))
+		if self._is_managed() and config_count > 0:
 			self._get_managed_instance(callback, error_callback)
 
 	def shutdown_postnotify(self, callback, error_callback):
@@ -285,7 +289,7 @@ Listen %(port)d
 				callback("Stopped managed apache.")
 			self._get_managed_instance(got_managed, error_callback)
 		else:
-			callback("No managed apache to stop.")
+			callback("No managed apache to stop, or not required to shutdown.")
 
 class PHPRuntimeTest(BaseRuntimeTest):
 
@@ -296,7 +300,9 @@ class PHPRuntimeTest(BaseRuntimeTest):
 		self.configuration.plugins.register(
 			'paasmaker.runtime.php',
 			'paasmaker.heart.runtime.PHPRuntime',
-			{},
+			{
+				'shutdown': True
+			},
 			'PHP Runtime'
 		)
 
@@ -409,6 +415,41 @@ class PHPRuntimeTest(BaseRuntimeTest):
 		self.failIf(response.error)
 		self.assertIn("PM_METADATA", response.body, "Missing response.")
 
+		# Shutdown the managed Apache.
+		runtime.shutdown_postnotify(
+			self.success_callback,
+			self.failure_callback
+		)
+		self.wait()
+		self.assertTrue(self.success, "Managed apache did not shutdown successfully.")
+
+		self.short_wait_hack(length=1)
+
+		# The application won't be running any more.
+		runtime.status(
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+		self.wait()
+		self.assertFalse(self.success, "Managed apache did not shutdown - application still running.")
+
+		# Start up the managed Apache.
+		runtime.startup_async_prelisten(
+			self.success_callback,
+			self.failure_callback
+		)
+
+		runtime.status(
+			instance_id,
+			self.success_callback,
+			self.failure_callback
+		)
+		self.wait()
+		self.assertTrue(self.success, "Managed apache did not restart - application not running.")
+
+		self.short_wait_hack(length=1)
+
 		# Stop the instance.
 		runtime.stop(
 			instance_id,
@@ -427,7 +468,7 @@ class PHPRuntimeTest(BaseRuntimeTest):
 			self.failure_callback
 		)
 		self.wait()
-		self.assertFalse(self.success)
+		self.assertFalse(self.success, "Application did not stop.")
 
 		# And see if it's really stopped.
 		request = tornado.httpclient.HTTPRequest(

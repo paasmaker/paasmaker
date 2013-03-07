@@ -230,7 +230,9 @@ LoadModule php5_module /usr/libexec/apache2/libphp5.so
 		)
 
 	def is_running(self, keyword=None):
-		return super(ApacheDaemon, self).is_running('apache2')
+		binary = self._get_binary_path()
+		binary = os.path.basename(binary)
+		return super(ApacheDaemon, self).is_running(binary)
 
 	def destroy(self):
 		"""
