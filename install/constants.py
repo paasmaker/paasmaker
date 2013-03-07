@@ -261,7 +261,7 @@ function start() {
 	# This will fork into the background once it's ready,
 	# or fail otherwise.
 	echo "Starting up..."
-	su -l "$PAASMAKER_USER" -c 'cd $PAASMAKER_HOME; ./pm-server.py; exit $?' > "$LOG_PATH" 2>&1
+	su -l "$PAASMAKER_USER" -c "cd $PAASMAKER_HOME; ./pm-server.py; exit \$?" > "$LOG_PATH" 2>&1
 
 	CODE=$?
 	if [ "$CODE" == "0" ];
