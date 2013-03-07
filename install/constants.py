@@ -296,7 +296,6 @@ function stop() {
 	if [ ! -e "$PID_FILE" ];
 	then
 		echo "Paasmaker not running - no PID file found at $PID_FILE."
-		exit 0
 	else
 		PID=`cat $PID_FILE`
 		echo "Sending kill signal..."
