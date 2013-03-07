@@ -164,6 +164,10 @@ LoadModule php5_module /usr/libexec/apache2/libphp5.so
 		return os.path.join(self.parameters['working_dir'], 'apache2.pid')
 
 	def _get_binary_path(self):
+		# Short circuit for Ubuntu systems.
+		if os.path.exists('/usr/sbin/apache2'):
+			return '/usr/sbin/apache2'
+
 		binary = find_executable("apache2")
 		if not binary:
 			binary = find_executable("httpd")
@@ -187,7 +191,7 @@ LoadModule php5_module /usr/libexec/apache2/libphp5.so
 		parameters['platform_ubuntu'] = ''
 		if platform.system() == 'Darwin':
 			parameters['platform_darwin'] = self.PLATFORM_DARWIN
-		if platform.system() == 'Linux' and 'Ubuntu' in platform.system():
+		if platform.system() == 'Linux' and 'Ubuntu' in platform.platform():
 			parameters['platform_ubuntu'] = self.PLATFORM_UBUNTU
 		# TODO: Support Centos.
 
@@ -202,6 +206,10 @@ LoadModule php5_module /usr/libexec/apache2/libphp5.so
 		# For debugging, you might like to comment out the stderr redirection.
 		logging.info("Starting up apache2 server on port %d." % self.parameters['port'])
 		binary = self._get_binary_path()
+		# TODO: The output isn't captured here, because otherwise
+		# debugging is too hard. Fix this in the future - the CalledProcessError
+		# doesn't have an output attribute that we can read, even if we switch
+		# check_call() for check_output() (as per the documentation).
 		subprocess.check_call(
 			[
 				binary,
@@ -209,9 +217,7 @@ LoadModule php5_module /usr/libexec/apache2/libphp5.so
 				configfile,
 				'-k',
 				'start'
-			],
-			stderr=subprocess.STDOUT,
-			stdout=subprocess.PIPE
+			]
 		)
 
 		# Wait for the port to come into use.
