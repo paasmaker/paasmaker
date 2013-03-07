@@ -47,7 +47,7 @@ save 900 1
 save 300 10
 save 60 10000
 
-dbfilename dump.rdb
+dbfilename %(working_dir)s/dump.rdb
 
 # Optional password line.
 %(auth_line)s
