@@ -300,7 +300,7 @@ def on_intermediary_started(message):
 		else:
 			on_completed_startup()
 	else:
-		logger.debug("Still waiting on %d other things for startup.", on_intermediary_started.required)
+		logger.info("Still waiting on %d other things for startup.", on_intermediary_started.required)
 
 on_intermediary_started.required = 0
 
