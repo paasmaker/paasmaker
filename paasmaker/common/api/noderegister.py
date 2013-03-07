@@ -1,5 +1,6 @@
 
 import logging
+import time
 
 import paasmaker
 from apirequest import APIRequest, APIResponse
@@ -196,7 +197,8 @@ class NodeUpdatePeriodicManager(object):
 			logger.error("Unable to register with the master node.")
 			for error in response.errors:
 				logger.error(error)
-			logger.info("Waiting until the next report interval and then we'll try again.")
+			logger.info("Waiting for 5 seconds and then we'll try again.")
+			self.configuration.io_loop.add_timeout(time.time() + 5, self.trigger)
 
 			pub.sendMessage('node.registrationerror')
 		else:
