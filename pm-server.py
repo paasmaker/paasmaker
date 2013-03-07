@@ -291,7 +291,7 @@ def on_intermediary_started(message):
 	logger.debug(message)
 	on_intermediary_started.required -= 1
 	# See if everything is ready.
-	if on_intermediary_started.required == 0:
+	if on_intermediary_started.required <= 0:
 		# Check instances, if we're a heart.
 		# We don't do this until the intermediaries are started,
 		# as instances may depend on those intermediaries.
