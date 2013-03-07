@@ -1,25 +1,35 @@
 {% extends "layout/main.html" %}
 
 {% block body %}
+	{% if not has_permission(PERMISSION.SYSTEM_ADMINISTRATION) %}
+		<h1>Warning: you don't have sufficient permissions to use all features on this page</h1>
+	{% end %}
+
+
 	<h1>Application manifest editor</h1>
 
 	<style type="text/css">
 		/*@font-face { font-family: Inconsolata; src: url('{{ static_url("font/Inconsolata.ttf") }}'); font-weight: normal; font-style: normal; }*/
 
-		#pm_manifest_yaml_form { position: relative; width: 300px; height: 400px; margin: 5px; padding: 0; }
-		#pm_manifest_yaml_block { width: 290px; height: 390px; margin: 0; padding: 5px; font-family: monospace; }
+		#pm_manifest_yaml_form { position: relative; width: 46%; height: 400px; padding: 5px; margin: 0; float: left; }
+		#pm_manifest_yaml_block { width: 100%; height: 400px; margin: 0; padding: 5px; font-family: monospace; }
 
-		.pm-manifest-error { position: absolute; padding: 2px 8px; background: #e06666; color: #ffffff; font-size: 11px; line-height: 13px; }
+		#pm_manifest_rendered { width: 46%; margin: 0 0 0 4%; padding: 0; float: left; }
+
+		.pm-manifest-error { position: absolute; left: 8px; padding: 2px 8px 2px 19px; text-indent: -16px; background: #e06666; color: #ffffff; font-size: 11px; line-height: 13px; }
 	</style>
 
-	<form id="pm_manifest_yaml_form">
-		<!-- wrap="off" ??? -->
-		<textarea id="pm_manifest_yaml_block">
-			hello
-		</textarea>
+	<div id="pm_manifest_container">
+		<form id="pm_manifest_yaml_form">
+			<!-- wrap="off" ??? -->
+			<textarea id="pm_manifest_yaml_block" wrap="off">
+				hello
+			</textarea>
+		</form>
 
-		<div id="pm_manifest_rendered"></div>
-	</form>
+		<form id="pm_manifest_rendered"></form>
+	</div>
+
 {% end %}
 
 {% block scripts %}
