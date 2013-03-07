@@ -155,6 +155,7 @@ def disable_service(context, name):
 
 def _disable_service_linux_ubuntu(context, name):
 	generic_command(context, ['sudo', 'update-rc.d', name, 'disable'])
+	generic_command(context, ['sudo', '/etc/init.d/%s' % name, 'stop'])
 
 def generic_command(context, command):
 	"""
