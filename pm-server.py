@@ -482,6 +482,12 @@ def on_exit_plugins_prenotify():
 				logging
 			)
 			pacemaker_updater.update(success_remove, failed_remove)
+		else:
+			# A mismatch where it was unable to find the node.
+			# This can be caused by a different on disk UUID to
+			# that in the database.
+			# Proceed to shutdown.
+			on_exit_prenotify_complete("This node has a UUID mismatch. Allowing exit.")
 	else:
 		# Proceed to shutdown.
 		on_exit_prenotify_complete("Not a pacemaker.")
@@ -499,6 +505,7 @@ def report_shutdown():
 	# Report that we're shutting down.
 	# This also sends back all the instance statuses.
 	# If it fails, we exit anyway. TODO: Is this right?
+	logger.debug("Reporting shutdown with master...")
 	request = paasmaker.common.api.NodeShutdownAPIRequest(configuration)
 	request.send(on_told_master_shutdown)
 
