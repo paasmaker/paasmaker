@@ -23,6 +23,7 @@ class JobManager(object):
 		self.runners = {}
 		self.in_startup = {}
 		self.abort_handlers = {}
+		self.double_process_filter = {}
 
 		logger.debug("Subscribing to job status updates.")
 		pub.subscribe(self.job_status, 'job.status')
@@ -419,6 +420,23 @@ class JobManager(object):
 		)
 
 	def job_status(self, message):
+		# Extremely crude prevention for double processing messages.
+		# TODO: Make this much nicer.
+		# NOTE: This workaround is just a bandaid, and doesn't fix the
+		# real issue that there are multiple paths in handling jobs
+		# and related race conditions. However, for now, it will work.
+		if len(self.double_process_filter) > 1000:
+			# Reset it, to prevent it getting too large
+			# and using too much memory.
+			# TODO: Make this a LRU of some kind?
+			self.double_process_filter = {}
+
+		double_key = "%s:%s" % (message.job_id, message.state)
+		if double_key in self.double_process_filter:
+			# Already seen this key/state combination.
+			return
+		self.double_process_filter[double_key] = True
+
 		if message.state in constants.JOB_SUCCESS_STATES or message.state == constants.JOB.WAITING:
 			# If the message is a success state, or waiting, go
 			# ahead and evaluate the jobs.
