@@ -145,6 +145,8 @@ if not context['use_system_openresty']:
 		raw_info = subprocess.check_output(['brew', 'info', 'pcre'])
 		lines = raw_info.split("\n")
 		for line in lines:
+			# TODO: This assumes you installed homebrew under /usr. If not,
+			# this will not work.
 			if line.startswith("/usr"):
 				bits = line.split(" ")
 				path = bits[0]
