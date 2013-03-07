@@ -610,7 +610,7 @@ class StreamConnectionTest(BaseControllerTest):
 		if hasattr(self, 'client'):
 			self.client.close()
 
-		super(BaseControllerTest, self).tearDown()
+		super(StreamConnectionTest, self).tearDown()
 
 	def test_no_job(self):
 		# Make a job number, and log to it.
