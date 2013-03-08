@@ -336,7 +336,9 @@ elif context['redis_mode'] == 'defer-to-master':
 
 	configuration['redis']['table']['host'] = context['master_node']
 	configuration['redis']['stats']['host'] = context['master_node']
+	configuration['redis']['stats']['managed'] = False
 	configuration['redis']['jobs']['host'] = context['master_node']
+	configuration['redis']['jobs']['managed'] = False
 
 	if configuration['router']['enabled']:
 		# Also slave off the master.
