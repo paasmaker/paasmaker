@@ -154,13 +154,13 @@ DEFAULT_INSTALLER_CONFIGURATION = {
 	'runtime_rbenv_for_user': True,
 	'runtime_rbenv_versions': ['1.9.3-p327'],
 
-	'service_managedmysql_enable': True,
+	'service_managedmysql_enable': False,
 	'service_managedmysql_disable_system_mysql': False,
 
-	'service_managedpostgres_enable': True,
+	'service_managedpostgres_enable': False,
 	'service_managedmysql_disable_system_postgres': False,
 
-	'service_managedredis_enable': True,
+	'service_managedredis_enable': False,
 
 	'extra_plugins': [],
 
