@@ -278,6 +278,8 @@ Listen %(port)d
 		config_count = len(glob.glob("%s/*.conf" % self.options['config_dir']))
 		if self._is_managed() and config_count > 0:
 			self._get_managed_instance(callback, error_callback)
+		else:
+			callback("Startup of the managed Apache server not required on this node.")
 
 	def shutdown_postnotify(self, callback, error_callback):
 		# If we're managed, and been asked to shutdown the managed server,
