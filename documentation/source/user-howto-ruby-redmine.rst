@@ -87,7 +87,7 @@ service to do this.
 	  name: paasmaker-redmine
 	  prepare:
 	    runtime:
-	      name: paasmaker.runtime.ruby.rbenv
+	      plugin: paasmaker.runtime.ruby.rbenv
 	      version: 1.9.3
 	    commands:
 	      - plugin: paasmaker.prepare.shell
@@ -99,7 +99,7 @@ service to do this.
 	  - name: web
 	    quantity: 1
 	    runtime:
-	      name: paasmaker.runtime.ruby.rbenv
+	      plugin: paasmaker.runtime.ruby.rbenv
 	      parameters:
 	        launch_command: "thin start -p %(port)d"
 	      version: 1.9.3
@@ -111,11 +111,11 @@ service to do this.
 	            - rake db:migrate
 	            - REDMINE_LANG=en rake redmine:load_default_data
 	    placement:
-	      strategy: paasmaker.placement.default
+	      plugin: paasmaker.placement.default
 
 	services:
-	  - name: postgres
-	    provider: paasmaker.service.postgres
+	  - name: redminesql
+	    plugin: paasmaker.service.postgres
 
 Now, you can edit ``config/environment.rb`` to make the following changes. The new block
 is the one in the middle.
@@ -310,3 +310,39 @@ should appear in the bucket automatically. Note that the upload will make Redmin
 slower to upload files.
 
 Check in your changes, and deploy as appropriate.
+
+Updating Redmine
+----------------
+
+Around the beginning of 2013, Rails had a few security vulnerabilities,
+and Redmine was sensitive to this because it's based on Rails.
+
+To keep your Redmine installation secure, you should update your Redmine
+installation. You can use this method to update to the latest version.
+
+* Have an up to date checkout of your version of Redmine.
+* Download the latest tar.gz release of Redmine. I fetched it from
+  `the Redmine download page on RubyForge <http://rubyforge.org/frs/?group_id=1850>`_.
+* Unpack it into a temporary directory. For example:
+
+  .. code-block:: bash
+
+  	$ tar -zxvf redmine-2.2.3.tar.gz
+  	$ cp -Rv redmine-2.2.3/* /path/to/your/redmine/checkout
+
+* Review the changes. In my example, I went to version 2.2.3. The only file
+  that I had changed that was overridden was config/environment.rb, so I
+  reverted that file, and then checked in all other changes.
+
+  .. code-block:: bash
+
+  	$ git status
+  	$ git diff
+  	$ git checkout config/environment.rb
+  	$ git add .
+  	$ git commit
+
+* Make sure that you can still ``bundle install``. Quite likely you'll
+  actually want to ``bundle update`` to fetch all the dependencies.
+
+* Redeploy your version of Redmine using Paasmaker.
