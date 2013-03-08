@@ -191,6 +191,10 @@ socketio_router.configuration = configuration
 # over routing, and passes through requests to the normal HTTP endpoints.
 logging.info("Setting up the application.")
 application_settings = configuration.get_tornado_configuration()
+# We don't need to have a second socket_io_port, so choose a high port
+# that's free for this purpose. Otherwise tornadio2 doesn't work.
+tornadio_port_finder = paasmaker.util.port.FreePortFinder()
+application_settings['socket_io_port'] = tornadio_port_finder.free_in_range(65000, 65500)
 application = tornado.web.Application(
 	socketio_router.apply_routes(routes),
 	**application_settings
