@@ -345,6 +345,8 @@ elif context['redis_mode'] == 'defer-to-master':
 			'host': context['master_node'],
 			'port': 42510
 		}
+		# Reset the table to listen locally.
+		configuration['redis']['table']['host'] = '0.0.0.0'
 
 # Toggle the shutdown flag.
 configuration['redis']['table']['shutdown'] = context['shutdown_daemons_on_exit']

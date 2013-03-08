@@ -268,7 +268,8 @@ function start() {
 	then
 		fix_iptables
 
-		echo "Started successfully."
+		echo "Forked into background successfully."
+		echo "Check the log file at $LOG_PATH to make sure it registered fully."
 	else
 		echo "Failed to start up!"
 		echo "Check $LOG_PATH to find out why."
