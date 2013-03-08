@@ -59,7 +59,7 @@ class NodeRegisterAPIRequest(APIRequest):
 			payload_completed()
 
 		def start_runtimes():
-			if self.configuration.is_heart():
+			if self.configuration.is_heart() or self.configuration.is_pacemaker():
 				self.configuration.get_runtimes(got_runtimes)
 			else:
 				payload_completed()

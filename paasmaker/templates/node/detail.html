@@ -20,19 +20,21 @@
 		</li>
 	</ul>
 
-	<h2>Runtimes</h2>
-	<table class="table table-striped table-bordered">
-		<tr>
-			<th>Name</th>
-			<th>Versions</th>
-		</tr>
-		{% for runtime, versions in node.tags['runtimes'].iteritems() %}
+	{% if 'runtimes' in node.tags %}
+		<h2>Runtimes</h2>
+		<table class="table table-striped table-bordered">
 			<tr>
-				<td>{{ runtime }}</td>
-				<td>{{ ", ".join(versions) }}</td>
+				<th>Name</th>
+				<th>Versions</th>
 			</tr>
-		{% end %}
-	</table>
+			{% for runtime, versions in node.tags['runtimes'].iteritems() %}
+				<tr>
+					<td>{{ runtime }}</td>
+					<td>{{ ", ".join(versions) }}</td>
+				</tr>
+			{% end %}
+		</table>
+	{% end %}
 
 	<h2>Instances</h2>
 	<table class="table table-striped table-bordered">
