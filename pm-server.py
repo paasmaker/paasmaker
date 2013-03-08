@@ -288,7 +288,7 @@ def on_completed_startup():
 		configuration.startup_periodic_manager()
 
 def on_intermediary_started(message):
-	logger.debug(message)
+	logger.info(message)
 	on_intermediary_started.required -= 1
 	# See if everything is ready.
 	if on_intermediary_started.required <= 0:
@@ -355,17 +355,21 @@ def on_ioloop_started():
 	# demand, and failure means the appropriate code will retry.
 
 	# Job manager
+	logger.info("Starting job manager (async)...")
 	configuration.startup_job_manager(on_intermediary_started, on_intermediary_failed)
 
 	# Possibly managed routing table startup.
+	logger.info("Starting router table redis (async)...")
 	configuration.get_router_table_redis(on_redis_started, on_intermediary_failed)
 
 	# Possibly managed stats redis startup.
+	logger.info("Starting stats redis (async)...")
 	configuration.get_stats_redis(on_redis_started, on_intermediary_failed)
 
 	with tornado.stack_context.StackContext(handle_startup_exception):
 		# Managed NGINX.
 		if configuration.get_flat('router.enabled') and configuration.get_flat('router.nginx.managed'):
+			logger.info("Starting managed nginx (async)...")
 			nginx = paasmaker.router.router.NginxRouter(configuration)
 			nginx.startup(on_intermediary_started, on_intermediary_failed)
 		else:
@@ -374,6 +378,7 @@ def on_ioloop_started():
 
 		# Kick off all the async startup plugins.
 		for plugin in async_startup_plugins:
+			logger.info("Starting async startup plugin %s..." % plugin)
 			instance = configuration.plugins.instantiate(
 				plugin,
 				paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN
@@ -569,7 +574,10 @@ def on_actual_exit():
 
 	# And really, really exit.
 	logging.info("Exiting.")
-	os.unlink(pid_path)
+	if os.path.exists(pid_path):
+		os.unlink(pid_path)
+	else:
+		logging.error("No PID file exists, but exiting anyway.")
 	sys.exit(0)
 
 # Commence the application.
