@@ -279,6 +279,8 @@ plugins:
     title: Parameters Service
 """
 
+	# TODO: The frontend_domain_postfix command below will fail
+	# if the test node isn't a router.
 	PACEMAKER = """
 pacemaker:
   enabled: true
@@ -286,6 +288,7 @@ pacemaker:
   allow_supertoken: true
   cluster_hostname: %(cluster_hostname)s
   dsn: "%(dsn)s"
+  frontend_domain_postfix: ":%(nginx_port_direct)d"
 """
 
 	HEART = """
