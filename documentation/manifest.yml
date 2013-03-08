@@ -5,24 +5,30 @@ application:
   name: doc.paasmaker.com
   prepare:
     runtime:
-      name: paasmaker.runtime.shell
+      plugin: paasmaker.runtime.shell
       version: 1
     commands:
       - plugin: paasmaker.prepare.shell
         parameters:
+          # To build this, we need to download all the pip
+          # packages so sphinx can see them. TODO:
+          # make this faster.
           commands:
-            - cd documentation
-            - python build.py
+            - mkdir thirdparty
+            - virtualenv thirdparty/python
+            - . thirdparty/python/bin/activate
+            - pip install -r requirements.txt
+            - ./build-documentation.sh
 
 instances:
-  web:
+  - name: web
     quantity: 1
     runtime:
-      name: paasmaker.runtime.shell
+      plugin: paasmaker.runtime.static
       parameters:
-        launch_command: "python documentation/app.py --port=%(port)d"
+        document_root: documentation/build/html/
       version: 1
     placement:
-      strategy: paasmaker.placement.default
+      plugin: paasmaker.placement.default
     hostnames:
-      - doc.paasmaker.com
+      - docs.paasmaker.org
