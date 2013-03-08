@@ -307,6 +307,7 @@ class StreamConnection(tornadio2.SocketConnection):
 			# so that will help a lot.
 			logger.debug("Starting connection to %s", str(node))
 			remote = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
+			remote.set_target(node)
 			remote.set_lines_callback(self.handle_remote_lines)
 			remote.set_zerosize_callback(remote_zerosize)
 			remote.set_cantfind_callback(remote_error)
