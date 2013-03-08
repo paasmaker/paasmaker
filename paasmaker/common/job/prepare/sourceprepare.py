@@ -91,13 +91,13 @@ class SourcePreparerJob(BaseJob):
 		plugin_name = task['plugin']
 		if self.configuration.plugins.exists(plugin_name, paasmaker.util.plugin.MODE.PREPARE_COMMAND):
 			self.logger.info("Starting up plugin %s...", plugin_name)
-			plugin = self.configuration.plugins.instantiate(
+			self.prepare_plugin = self.configuration.plugins.instantiate(
 				plugin_name,
 				paasmaker.util.plugin.MODE.PREPARE_COMMAND,
 				task['parameters'],
 				self.logger
 			)
-			plugin.prepare(self.environment, self.path, self.plugin_success, self.plugin_failure)
+			self.prepare_plugin.prepare(self.environment, self.path, self.plugin_success, self.plugin_failure)
 		else:
 			# Invalid plugin.
 			error_message ="No such prepare plugin %s" % plugin_name
@@ -109,3 +109,10 @@ class SourcePreparerJob(BaseJob):
 
 	def plugin_failure(self, message):
 		self.failed("Failed to execute prepare command: " + message)
+
+	def abort_job(self):
+		# Ask the plugin to stop.
+		# It should exit with an error of some kind.
+		if hasattr(self, 'prepare_plugin'):
+			self.prepare_plugin.abort()
+		# Otherwise, do nothing.

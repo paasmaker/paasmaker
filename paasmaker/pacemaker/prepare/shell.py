@@ -59,13 +59,18 @@ class ShellPrepare(BasePrepare):
 
 		# Start the commands off.
 		command = ['bash', self.tempnam]
-		extractor = paasmaker.util.Popen(command,
+		self.scriptrunner = paasmaker.util.Popen(command,
 			stdout=self.log_fp,
 			stderr=self.log_fp,
 			on_exit=completed_script,
 			cwd=directory,
 			io_loop=self.configuration.io_loop,
 			env=environment)
+
+	def _abort(self):
+		# If signalled, abort the script runner and let it sort everything out.
+		if hasattr(self, 'scriptrunner'):
+			self.scriptrunner.kill()
 
 class ShellPrepareTestTest(BasePrepareTest):
 	def test_simple(self):
