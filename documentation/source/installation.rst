@@ -7,6 +7,11 @@ Paasmaker is currently supported on the following platforms:
 * Ubuntu 12.04 and 12.10.
 * OSX 10.8 (development only)
 
+.. NOTE::
+	This installation document is for a single node development Paasmaker
+	that runs on your machine only. See the :doc:`administrator manual <administrator>`
+	for how to install larger multi-node setups.
+
 Generic Notes
 -------------
 
@@ -67,6 +72,8 @@ The installer does the following things:
   own version of Apache as needed. On OSX, it uses the already-installed Apache and PHP.
 * Install `rbenv <https://github.com/sstephenson/rbenv/>`_ for Ruby support, and installs
   one or more versions of Ruby (if enabled in your configuration).
+* If configured, writes out an init script to start Paasmaker on boot. It can also enable
+  this script. This is only supported on Linux.
 
 Installing on OS X
 ------------------
@@ -151,6 +158,7 @@ and password ``paasmaker``.
 	(for testing/debugging), use port 42500 instead.
 
 If this is your first time with Paasmaker, move on to the getting started guide.
+
 TODO: write and link this guide.
 
 Common Problems
@@ -159,4 +167,18 @@ Common Problems
 Here are some common issues that people run into when installing and starting
 Paasmaker:
 
-TODO: Write this list.
+* Apache fails to start. Characterized by a "CalledProcessError: Command apache2
+  returned non-zero exit status 1". The output should be nearby to indicate what
+  went wrong; typically it's one of two things; either a coding error in Paasmaker,
+  or Apache has run out of a certain type of shared memory, and won't start.
+
+Configuring Paasmaker
+---------------------
+
+.. NOTE::
+	This is a basic overview of how to configure Paasmaker. For full details,
+	see the :doc:`administrator manual <administrator>`.
+
+The installer will write out a file, called ``paasmaker.yml`` that contains
+the settings for your Paasmaker installation. The most common thing that you'll
+want to do is to add new plugins. Check the documentation from
