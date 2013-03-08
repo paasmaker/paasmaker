@@ -605,7 +605,7 @@ application:
 
 .. code-block:: bash
 
-	git@bitbucket.org:freefoote/paasmaker-tornado-advanced.git
+	git@bitbucket.org:paasmaker/paasmaker-tornado-advanced.git
 
 Once you've created the application, you should be able to start it and then
 visit it via the URLs provided by the control panel. When you're done, you
@@ -660,7 +660,105 @@ system, such as Zabbix or Nagios.
 Backups
 -------
 
-TODO: Write this section.
+There are several components you will want to back up. Paasmaker can store a lot
+of data; but only some of it is critical to restoring the Pacemaker node.
+
+Only your Pacemaker nodes need to be backed up. Hearts and Routers should be able
+to be rebuilt from scratch, and the Pacemaker will then distribute out work to them
+as they come back online.
+
+.. WARNING::
+	Restoring a Pacemaker node from a backup has not been tested and documented
+	at this time. These are general notes about what to backup that should be able
+	to result in a successful restore in the future.
+
+* ``paasmaker.yml``. This is the configuration file. If you've made customisations
+  to it, you'll want to back it up.
+
+* Backup the database. If you stored it on RDS or an external SQL database, use
+  your normal backup proceedures to back these up. If you're running on a standalone
+  box, you might find the ``automysqlbackup`` and ``autopostgresqlbackup`` packages
+  useful. In our case, I just used these instructions to create backup files:
+
+  .. code-block:: bash
+
+  	$ sudo apt-get install automysqlbackup
+  	$ sudo vim /etc/default/automysqlbackup
+  	...
+  	DBHOST=your-rds-hostname.ap-southeast-2.rds.amazonaws.com
+	USERNAME=root
+	PASSWORD=yourpassword
+	...
+	DBNAMES=`mysql --defaults-file=/etc/mysql/debian.cnf --execute="SHOW DATABASES" \
+	-h your-rds-hostname.ap-southeast-2.rds.amazonaws.com -u root \
+	--password=yourpassword | awk '{print $1}' | grep -v ^Database$ | \
+	grep -v ^mysql$ | tr \\\r\\\n ,\ `
+
+  Note that unfortunately you need to give the username, password, and host twice due
+  to how the script works.
+
+  You can test it with:
+
+  .. code-block:: bash
+
+  	$ sudo automysqlbackup
+
+  And then check for files in ``/var/lib/automysqlbackup``.
+
+  If you're using the default sqlite database, you can fetch the database file from
+  the ``scratch/`` directory and back that up.
+
+* ``scratch/UUID``. For simplicity, Paasmaker writes it's UUID to this file. If you
+  backup and restore this file, it will speed up bootstrapping the replacement server.
+
+* Redis instances. As you've seen, Paasmaker uses three Redis instances to store data.
+  Which ones you backup depends on how much data you want to store.
+
+  .. WARNING::
+  	These instructions use a `synchronous save <http://redis.io/commands/save>`_ command
+  	on the Redis instances. This causes any queries on that Redis instance to block.
+  	This may cause Paasmaker nodes to hang for a few moments whilst this is completed.
+  	A synchronous save was chosen for these instructions so when you copy off the database
+  	file, you can be sure that the save has completed.
+
+  * The routing table master Redis. This contains the current routing table. Assuming that
+    only the Pacemaker has completely failed, and the rest of the system is still active
+    and unchanged, then the contents of this Redis still apply. This proceedure will generate
+    a safe backup:
+
+    .. code-block:: bash
+
+      $ cd paasmaker
+      $ thirdparty/redis-2.6.9/src/redis-cli -p 42510 SAVE
+      $ tar -czvf table-backup.tar.gz scratch/redis/table
+
+  * The stats Redis. This contains the traffic stats. You'll probably want to back this up
+    to keep this historical data. This proceedure will generate a safe backup:
+
+    .. code-block:: bash
+
+      $ cd paasmaker
+      $ thirdparty/redis-2.6.9/src/redis-cli -p 42512 SAVE
+      $ tar -czvf stats-backup.tar.gz scratch/redis/stats
+
+  * The jobs Redis. The contents of this Redis instance are transactional, and Paasmaker
+    doesn't mind losing the contents of this. Any jobs that were in progress will be
+    aborted, but the final say for the state of the system is the SQL database, so the jobs
+    Redis can be lost if needed. Also, due to the size of the data, Paasmaker is already
+    going to be removing old jobs periodically. You might not want to back this up as it
+    can get quite large quickly.
+
+    If you must back this up, use this proceedure:
+
+    .. code-block:: bash
+
+      $ cd paasmaker
+      $ thirdparty/redis-2.6.9/src/redis-cli -p 42513 SAVE
+      $ tar -czvf jobs-backup.tar.gz scratch/redis/jobs
+
+* Prepared applications. Prepared applications are stored in ``scratch/packed/``. If you
+  just back up the contents of that directory, Paasmaker will be able to redeploy applications
+  again quickly.
 
 Bundling into an AMI
 --------------------
