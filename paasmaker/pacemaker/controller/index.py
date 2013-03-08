@@ -7,7 +7,10 @@ class IndexController(BaseController):
 	AUTH_METHODS = [BaseController.ANONYMOUS]
 
 	def get(self):
-		self.render("index.html")
+		if self.configuration.is_pacemaker():
+			self.render("index.html")
+		else:
+			self.render("index-notpacemaker.html")
 
 	@staticmethod
 	def get_routes(configuration):

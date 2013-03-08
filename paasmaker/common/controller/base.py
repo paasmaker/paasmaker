@@ -84,6 +84,9 @@ class BaseController(tornado.web.RequestHandler):
 		self.raw_params = {}
 		self.super_auth = False
 
+		self.add_data_template('is_pacemaker', self.configuration.is_pacemaker())
+		self.add_data_template('is_router', self.configuration.is_router())
+		self.add_data_template('is_heart', self.configuration.is_heart())
 		self.add_data_template('format_form_error', self.format_form_error)
 		self.add_data_template('nice_state', self.nice_state)
 		if self.configuration.is_pacemaker():
