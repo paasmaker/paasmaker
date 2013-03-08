@@ -25,10 +25,9 @@ class SourceSCMJob(BaseJob):
 				self.parameters['scm_parameters'],
 				self.logger
 			)
-		except paasmaker.common.configuration.InvalidConfigurationException, ex:
+		except paasmaker.util.configurationhelper.InvalidConfigurationFormatException, ex:
 			error_message = "Failed to start a SCM plugin for %s.", self.parameters['scm_name']
-			logger.critical(error_message)
-			logger.critical(ex)
+			self.logger.critical(error_message, exc_info=ex)
 			self.failed(error_message)
 			return
 
