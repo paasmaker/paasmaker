@@ -10,6 +10,7 @@ import shutil
 import signal
 
 import paasmaker
+import yaml
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -57,6 +58,14 @@ class MultiPaas(object):
 
 		# Choose a port for the master.
 		self.cluster_params['master_port'] = self._free_port()
+
+		if os.path.exists('paasmaker.yml'):
+			contents = open('paasmaker.yml', 'r').read()
+			parsed = yaml.safe_load(contents)
+
+			self.cluster_params['binaries'] = "redis_binary: %s\nnginx_binary: %s\n" % (parsed['redis_binary'], parsed['nginx_binary'])
+		else:
+			self.cluster_params['binaries'] = ""
 
 	def _free_port(self):
 		return self.port_allocator.free_in_range(self.port_min, self.port_max)
@@ -231,6 +240,7 @@ log_directory: %(log_dir)s
 scratch_directory: %(scratch_dir)s
 pid_path: %(pid_path)s
 my_name: %(node_name)s
+%(binaries)s
 master:
   host: localhost
   port: %(master_port)d
@@ -289,7 +299,9 @@ router:
   enabled: true
   stats_log: managed at runtime
   nginx:
-    port: %(nginx_port)d
+    port_direct: %(nginx_port_direct)d
+    port_80: %(nginx_port_80)d
+    port_443: %(nginx_port_443)d
     managed: true
     shutdown: true
 """
@@ -351,7 +363,9 @@ router:
 		self.params['my_slave_redis_port'] = multipaas._free_port()
 
 		if self.router:
-			self.params['nginx_port'] = multipaas._free_port()
+			self.params['nginx_port_direct'] = multipaas._free_port()
+			self.params['nginx_port_80'] = multipaas._free_port()
+			self.params['nginx_port_443'] = multipaas._free_port()
 
 		if master:
 			self.params['is_cluster_master'] = 'true'
