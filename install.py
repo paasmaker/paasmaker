@@ -335,6 +335,7 @@ elif context['redis_mode'] == 'defer-to-master':
 	configuration['redis'] = copy.deepcopy(install.constants.DEFAULT_PAASMAKER_MANAGED_REDIS)
 
 	configuration['redis']['table']['host'] = context['master_node']
+	configuration['redis']['table']['managed'] = False
 	configuration['redis']['stats']['host'] = context['master_node']
 	configuration['redis']['stats']['managed'] = False
 	configuration['redis']['jobs']['host'] = context['master_node']
@@ -349,6 +350,7 @@ elif context['redis_mode'] == 'defer-to-master':
 		}
 		# Reset the table to listen locally.
 		configuration['redis']['table']['host'] = '0.0.0.0'
+		configuration['redis']['table']['managed'] = True
 
 # Toggle the shutdown flag.
 configuration['redis']['table']['shutdown'] = context['shutdown_daemons_on_exit']
