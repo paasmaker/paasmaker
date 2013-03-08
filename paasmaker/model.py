@@ -180,7 +180,7 @@ class Node(OrmBase, Base):
 		self.start_time = datetime.datetime.utcnow()
 
 	def __repr__(self):
-		return "<Node('%s','%s')>" % (self.name, self.route)
+		return "<Node('%s','%s',%d)>" % (self.name, self.route, self.apiport)
 
 	def flatten(self, field_list=None):
 		return super(Node, self).flatten(['name', 'route', 'apiport', 'uuid', 'state', 'last_heard', 'heart', 'pacemaker', 'router', 'tags', 'score', 'stats'])
