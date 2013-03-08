@@ -50,4 +50,13 @@ extra_plugins:
   - name: paasmaker.service.managedredis
     class: paasmaker.pacemaker.service.managedredis.ManagedRedisService
     title: Managed Redis Service
+  - class: paasmaker.heart.runtime.StaticRuntime
+    name: paasmaker.runtime.static
+    parameters:
+      managed: true
+      shutdown: true
+    title: Static File Runtime
+  - class: paasmaker.pacemaker.scm.devdirectory.DevDirectorySCM
+    name: paasmaker.scm.devdirectory
+    title: Development Local Directory SCM
 

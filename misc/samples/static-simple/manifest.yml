@@ -1,0 +1,27 @@
+manifest:
+  format: 1
+
+application:
+  name: static-simple
+  tags:
+    tag: value
+  prepare:
+    runtime:
+      plugin: paasmaker.runtime.shell
+      version: 1
+    commands:
+      - plugin: paasmaker.prepare.shell
+        parameters:
+          commands:
+            - echo "<html><head><title>Page 2</title></head><body><h1>Page 2</h1></body></html>" > web/page2.html
+
+instances:
+  - name: web
+    quantity: 1
+    runtime:
+      plugin: paasmaker.runtime.static
+      parameters:
+        document_root: web
+      version: 1
+    placement:
+      plugin: paasmaker.placement.default

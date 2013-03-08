@@ -101,6 +101,7 @@ test_sets = {
 
 	paasmaker.heart.runtime: ['normal', 'heart', 'runtime'],
 	paasmaker.heart.runtime.php: ['slow', 'heart', 'runtime', 'php'],
+	paasmaker.heart.runtime.php: ['slow', 'heart', 'runtime', 'static'],
 	paasmaker.heart.runtime.shell: ['slow', 'heart', 'runtime', 'shell'],
 	paasmaker.heart.runtime.rbenv: ['slow', 'heart', 'runtime', 'ruby'],
 
