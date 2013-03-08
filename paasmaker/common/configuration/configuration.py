@@ -811,8 +811,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		names, and the values are lists of versions that this node
 		can run.
 		"""
-		if not self.is_heart():
-			raise ImNotAHeart("I'm not a heart, so I have no runtimes.")
+		if not self.is_heart() or not self.is_pacemaker():
+			raise ImNotAHeart("I'm not a heart or pacemaker, so I have no runtimes.")
 
 		# Use a cached version if present.
 		# The idea is that we don't do this expensive version determination each
