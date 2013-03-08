@@ -310,8 +310,11 @@ if context['node_token'] is None and ('node_token' not in configuration or confi
 	# Generate a new node token.
 	node_token = str(uuid.uuid4())
 	configuration['node_token'] = node_token
+if context['node_token'] is not None:
+	# Set the node token as supplied. This is for secondary nodes.
+	configuration['node_token'] = context['node_token']
 
-if configuration['pacemaker']['enabled'] and context['super_token'] is None and ('super_token' not in configuration['pacemaker'] or configuration['pacemaker']['super_token'] is None):
+if configuration['pacemaker']['enabled'] and context['super_token'] is None and ('super_token' not in configuration['pacemaker'] or configuration['pacemaker']['super_token'] == 'not-applicable'):
 	# Generate a new super token.
 	super_token = str(uuid.uuid4())
 	configuration['pacemaker']['super_token'] = super_token

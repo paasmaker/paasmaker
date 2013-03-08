@@ -173,7 +173,9 @@ DEFAULT_PAASMAKER_CONFIGURATION = {
 	},
 	'pacemaker': {
 		'enabled': False,
-		'dsn': 'sqlite:///scratch/paasmaker.db'
+		'dsn': 'sqlite:///scratch/paasmaker.db',
+		'cluster_hostname': 'not-applicable',
+		'super_token': 'not-applicable'
 	},
 	'router': {
 		'enabled': False,
