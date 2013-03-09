@@ -77,6 +77,7 @@ test_sets = {
 	paasmaker.common.job.manager.manager: ['normal', 'util', 'job', 'jobmanager', 'jobmanagercore'],
 
 	paasmaker.common.dynamictags.default: ['normal', 'dynamictags'],
+	paasmaker.common.dynamictags.ec2: ['normal', 'dynamictags'],
 	paasmaker.common.stats.default: ['normal', 'stats'],
 	paasmaker.common.score.default: ['normal', 'score'],
 
