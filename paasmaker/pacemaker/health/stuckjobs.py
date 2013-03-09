@@ -21,8 +21,8 @@ class StuckJobsHealthCheck(BaseHealthCheck):
 	def check(self, parent_job_id, callback, error_callback):
 		# Find jobs that are on nodes that are down.
 		# Abort the trees to allow other jobs or systems to kick in.
-		session = self.configuration.get_database_session()
-		self.down_nodes = session.query(
+		self.session = self.configuration.get_database_session()
+		self.down_nodes = self.session.query(
 			paasmaker.model.Node
 		).filter(
 			paasmaker.model.Node.state == constants.NODE.DOWN
@@ -46,6 +46,7 @@ class StuckJobsHealthCheck(BaseHealthCheck):
 
 		except IndexError, ex:
 			# No more to work on.
+			self.session.close()
 			self.callback(
 				{
 					'cancelled_jobs': self.cancelled_jobs

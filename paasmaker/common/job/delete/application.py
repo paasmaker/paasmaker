@@ -58,6 +58,7 @@ class ApplicationDeleteRootJob(BaseJob):
 
 		session.delete(application)
 		session.commit()
+		session.close()
 
 		self.success({}, "Deleted application id %d" % self.parameters["application_id"])
 
@@ -126,6 +127,7 @@ class ApplicationDeleteServiceJob(BaseJob):
 			self.service.state = constants.SERVICE.ERROR
 			self.session.add(self.service)
 			self.session.commit()
+			self.session.close()
 			self.failed("Plugin with mode SERVICE_DELETE doesn't exist for service %s" %self.service.provider)
 			return
 
@@ -144,6 +146,7 @@ class ApplicationDeleteServiceJob(BaseJob):
 
 		self.session.delete(self.service)
 		self.session.commit()
+		self.session.close()
 
 		# And signal completion.
 		self.success({}, "Successfully deleted service %s" % self.service.name)
@@ -154,6 +157,7 @@ class ApplicationDeleteServiceJob(BaseJob):
 		self.service.state = constants.SERVICE.ERROR
 		self.session.add(self.service)
 		self.session.commit()
+		self.session.close()
 
 		if exception:
 			self.logger.error("Exception", exc_info=exception)

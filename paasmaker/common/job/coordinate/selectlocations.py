@@ -58,11 +58,13 @@ class SelectLocationsJob(BaseJob):
 			if adjustment_quantity == 0:
 				finish_message = "No more instances required. No action taken."
 				self.logger.info(finish_message)
+				self.session.close()
 				self.success({}, finish_message)
 			elif adjustment_quantity < 0:
 				# We have too many instances.
 				finish_message = "We have too many instances. No action will be taken at this time."
 				self.logger.warning(finish_message)
+				self.session.close()
 				self.success({}, finish_message)
 			else:
 				# Get it to choose the number of instances that we want.
@@ -88,10 +90,12 @@ class SelectLocationsJob(BaseJob):
 			self.session.add(instance)
 
 		self.session.commit()
+		self.session.close()
 
 		self.success({}, "Successfully chosen %d nodes for this instance." % len(nodes))
 
 	def select_failure(self, message):
+		self.session.close()
 		self.failed("Failed to find nodes for this instance: " + message)
 
 class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):

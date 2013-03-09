@@ -25,7 +25,7 @@ class AdjustInstancesHealthCheck(BaseHealthCheck):
 	def check(self, parent_job_id, callback, error_callback):
 		self.session = self.configuration.get_database_session()
 		self.callback = callback
-		self.error_message = error_callback
+		self.error_callback = error_callback
 		self.parent_job_id = parent_job_id
 
 		# Find applications in state RUNNING, and check their instances.
@@ -170,6 +170,7 @@ class AdjustInstancesHealthCheck(BaseHealthCheck):
 	def _finish(self):
 		# Make this job tree executable.
 		def done_executable():
+			self.session.close()
 			self.callback(
 				{
 					'adjusted_checked_versions': self.checked_version_count,

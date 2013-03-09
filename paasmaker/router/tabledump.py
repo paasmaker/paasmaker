@@ -84,6 +84,8 @@ class RouterTableDump(object):
 			}
 			self.table.append(entry)
 
+		self.session.close()
+
 		# Sort the table.
 		# Sort by the application id first, and then the reverse hostname.
 		# We reverse the hostname to keep subdomains together. (Also, refer

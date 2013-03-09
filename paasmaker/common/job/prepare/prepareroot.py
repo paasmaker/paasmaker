@@ -92,12 +92,14 @@ class ApplicationPrepareRootJob(BaseJob):
 			version.state = constants.VERSION.PREPARED
 			session.add(version)
 			session.commit()
+			session.close()
 
 			self.success({}, "Successfully prepared package for %s" % context['application_name'])
 
 		def store_failed(message, exception=None):
 			# Handle a failed store.
 			self.logger.error(message)
+			session.close()
 			if exception:
 				self.logger.error("Exception", exc_info=exception)
 			self.failed(message)

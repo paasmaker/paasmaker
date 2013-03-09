@@ -33,6 +33,7 @@ class DownNodesHealthCheck(BaseHealthCheck):
 		).first()
 
 		if not my_node:
+			session.close()
 			error_message = "I'm having an identity crisis. I can't find my own node record."
 			self.logger.error(error_message)
 			error_callback(error_message)
@@ -44,6 +45,7 @@ class DownNodesHealthCheck(BaseHealthCheck):
 			self.logger.info("Our node has been up for %d seconds.", my_node.uptime())
 			self.logger.info("This isn't enough time for other nodes to have reported in within the %d second threshold.", timeout)
 			self.logger.info("Therefore, no action is to be taken at this time.")
+			session.close()
 			callback({}, "Waiting for more uptime.")
 			return
 
@@ -130,6 +132,7 @@ class DownNodesHealthCheck(BaseHealthCheck):
 					)
 				except IndexError, ex:
 					# No more to process.
+					session.close()
 					self._finish_check()
 
 				# end of add_fix_instance()
@@ -137,6 +140,7 @@ class DownNodesHealthCheck(BaseHealthCheck):
 			add_fix_instance()
 		else:
 			# No jobs to queue. We're done.
+			session.close()
 			self._finish_check()
 
 	def _finish_check(self):

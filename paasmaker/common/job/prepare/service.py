@@ -30,6 +30,7 @@ class ServiceContainerJob(BaseJob):
 		environment = ApplicationEnvironment.get_environment(self.configuration, version)
 
 		# And signal success so the prepare jobs can start.
+		session.close()
 		self.success({'environment': environment}, "All services created and updated.")
 
 class ServiceJob(BaseJob):

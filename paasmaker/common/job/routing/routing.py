@@ -40,12 +40,13 @@ class RoutingUpdateJob(BaseJob):
 		else:
 			self.logger.info("Removing instance from the routing table.")
 
-		session = self.configuration.get_database_session()
-		self.instance = session.query(
+		self.session = self.configuration.get_database_session()
+		self.instance = self.session.query(
 			paasmaker.model.ApplicationInstance
 		).get(self.instance_id)
 
 		if self.instance.application_instance_type.standalone:
+			self.session.close()
 			self.success({}, "Standalone instance - no routing required.")
 		else:
 			self.updater = RouterTableUpdate(
@@ -58,10 +59,12 @@ class RoutingUpdateJob(BaseJob):
 
 	def on_success(self):
 		self.logger.info("Successfully updated routing table.")
+		self.session.close()
 		self.success({}, "Updated routing table.")
 
 	def on_failure(self, message):
 		self.logger.error(message)
+		self.session.close()
 		self.failed(message)
 
 	@staticmethod

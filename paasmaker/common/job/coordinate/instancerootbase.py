@@ -64,7 +64,9 @@ class InstanceRootBase(BaseJob):
 					self.logger.debug("Updating state for instance %s to %s", instance_id, value)
 					instance.state = value
 					session.add(instance)
+
 		session.commit()
+		session.close()
 
 	def update_version_from_context(self, context, state):
 		"""
@@ -79,3 +81,4 @@ class InstanceRootBase(BaseJob):
 			version.state = state
 			session.add(version)
 			session.commit()
+			session.close()

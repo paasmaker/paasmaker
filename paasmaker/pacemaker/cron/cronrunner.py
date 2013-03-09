@@ -121,6 +121,8 @@ class CronList(object):
 				)
 			)
 
+		session.close()
+
 		return table
 
 	def get_now_tasks(self):
@@ -170,6 +172,7 @@ class CronRunJob(paasmaker.common.job.base.BaseJob):
 		if candidates.count() == 0:
 			error_message = "Can't find any running instances to service this request."
 			self.logger.error(error_message)
+			session.close()
 			self.failed(error_message)
 			return
 
@@ -190,6 +193,8 @@ class CronRunJob(paasmaker.common.job.base.BaseJob):
 
 		endpoint = "http://%s:%d%s" % (instance.node.route, instance.port, task.uri)
 		self.logger.debug("Resolved endpoint: %s", endpoint)
+
+		session.close()
 
 		request = tornado.httpclient.HTTPRequest(
 			endpoint,
@@ -276,6 +281,7 @@ class CronRunJob(paasmaker.common.job.base.BaseJob):
 
 			except IndexError, ex:
 				# Got the last job. We're done.
+				session.close()
 				callback(new_job_set)
 
 			# end of add_job()

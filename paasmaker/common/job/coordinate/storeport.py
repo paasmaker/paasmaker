@@ -49,5 +49,6 @@ class StorePortJob(BaseJob):
 
 		session.add(instance)
 		session.commit()
+		session.close()
 
 		self.success({}, "Updated instance %s" % instance_id)

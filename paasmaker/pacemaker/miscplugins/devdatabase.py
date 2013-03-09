@@ -127,6 +127,7 @@ class DevDatabasePlugin(paasmaker.util.plugin.Plugin):
 				session.commit()
 
 		# And we're done.
+		session.close()
 		if new_user:
 			callback("Successfully created new user.")
 		else:
