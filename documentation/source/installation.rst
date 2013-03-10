@@ -172,6 +172,11 @@ Paasmaker:
   went wrong; typically it's one of two things; either a coding error in Paasmaker,
   or Apache has run out of a certain type of shared memory, and won't start.
 
+* One of the Redis servers (ports 42510 through 42512) fails to start, or nginx
+  (on 42530-42532) fails to start. Because Paasmaker chose high TCP ports, other
+  applications running on your computer may have assumed these ports for outgoing
+  connections. Culprits tend to be web browsers.
+
 Configuring Paasmaker
 ---------------------
 
