@@ -179,6 +179,13 @@ class PacemakerSchema(StrictAboutExtraKeysColanderMappingSchema):
 		title="Database DSN",
 		description="Database connection details for this pacemaker, in SQLAlchemy format")
 
+	database_options = colander.SchemaNode(
+		colander.Mapping(unknown='preserve'),
+		title="Additional Database options",
+		description="Additional Database options, passed as keyword arguments to engine_create. See http://docs.sqlalchemy.org/en/rel_0_7/core/engines.html#engine-creation-api for the available options. This can be used to tweak database connection details.",
+		missing={},
+		default={})
+
 	login_age = colander.SchemaNode(colander.Integer(),
 		title="Login age",
 		description="The number of days to grant access when logging in, before requiring a new login.",
@@ -978,7 +985,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			raise ImNotAPacemaker("I'm not a pacemaker, so I have no database.")
 
 		# Connect.
-		self.engine = create_engine(self.get_flat('pacemaker.dsn'))
+		self.engine = create_engine(self.get_flat('pacemaker.dsn'), **self['pacemaker']['database_options'])
 		self.session = sessionmaker(bind=self.engine)
 
 		# Create the tables.
