@@ -123,6 +123,7 @@ test_sets = {
 	paasmaker.pacemaker.storer.paasmakernode: ['normal', 'storer'],
 
 	paasmaker.pacemaker.prepare.shell: ['normal', 'prepare', 'shellprepare'],
+	paasmaker.pacemaker.prepare.pythonpip: ['normal', 'prepare', 'pipprepare'],
 
 	paasmaker.pacemaker.scm.zip: ['normal', 'scm'],
 	paasmaker.pacemaker.scm.tarball: ['normal', 'scm'],
