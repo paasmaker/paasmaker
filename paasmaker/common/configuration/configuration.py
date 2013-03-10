@@ -13,6 +13,7 @@ import socket
 import datetime
 import time
 import copy
+import traceback
 from distutils.spawn import find_executable
 
 import paasmaker
@@ -998,7 +999,39 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		"""
 		if not self.is_pacemaker():
 			raise ImNotA("I'm not a pacemaker, so I have no database.")
-		return self.session()
+
+		session = self.session()
+
+		if options.debug == 1:
+			if not hasattr(self, '_session_close_tracker'):
+				self._session_close_tracker = {}
+
+			# Track sessions to make sure they get closed.
+			# This is very hackish, and thus only enabled in debug mode.
+			session_key = str(session)
+
+			session.original_close = session.close
+
+			def tracking_close():
+				if session_key in self._session_close_tracker:
+					self.io_loop.remove_timeout(self._session_close_tracker[session_key]['timeout'])
+					del self._session_close_tracker[session_key]
+				session.original_close()
+
+			def session_timeout():
+				if session_key in self._session_close_tracker:
+					print "Session not closed after 20 seconds."
+					print "Opened here:"
+					print "".join(traceback.format_list(self._session_close_tracker[session_key]['traceback']))
+					del self._session_close_tracker[session_key]
+
+			session.close = tracking_close
+			self._session_close_tracker[session_key] = {
+				'timeout': self.io_loop.add_timeout(time.time() + 20, session_timeout),
+				'traceback': traceback.extract_stack()
+			}
+
+		return session
 
 	def _connect_redis(self, credentials, callback, error_callback):
 		"""
