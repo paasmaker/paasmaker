@@ -113,8 +113,10 @@ class RedisJobBackend(JobBackend):
 		if self.redis is None or self.pubsub_client is None:
 			reconnection_required = True
 		elif not self.redis.connection.connected():
+			self.redis.disconnect()
 			reconnection_required = True
 		elif not self.pubsub_client.connection.connected():
+			self.pubsub_client.disconnect()
 			reconnection_required = True
 
 		if reconnection_required:
