@@ -1,0 +1,58 @@
+is_heart: false
+is_router: false
+is_pacemaker: true
+
+cluster_hostname: production.paasmaker.net
+frontend_domain_postfix: ''
+
+master_node: production.paasmaker.net
+master_port: 42500
+
+shutdown_daemons_on_exit: false
+
+install_init_script: true
+enable_init_script: true
+init_redirect_port80: false
+
+runtime_php_enable: true
+runtime_php_disable_system_apache: true
+
+runtime_rbenv_enable: true
+runtime_rbenv_versions: ['1.9.3-p327']
+
+service_managedmysql_enable: false
+service_managedpostgres_enable: false
+service_managedredis_enable: true
+
+write_paasmaker_configuration: true
+
+extra_plugins:
+  # Additional services.
+  - name: paasmaker.service.mysql
+    title: MySQL service (RDS database)
+    class: paasmaker.pacemaker.service.mysql.MySQLService
+    parameters:
+      hostname: your-rds-instance.ap-southeast-2.rds.amazonaws.com
+      port: 3306
+      username: root
+      password: your-root-password
+  - class: paasmaker.pacemaker.service.parameters.ParametersService
+    name: paasmaker.service.parameters
+    title: Parameters Service
+
+  # SCM plugins. None are enabled by default. Turn some of these
+  # off if you don't need them.
+  - class: paasmaker.pacemaker.scm.zip.ZipSCM
+    name: paasmaker.scm.zip
+    title: Zip file SCM
+  - class: paasmaker.pacemaker.scm.tarball.TarballSCM
+    name: paasmaker.scm.tarball
+    title: Tarball SCM
+  - class: paasmaker.pacemaker.scm.git.GitSCM
+    name: paasmaker.scm.git
+    title: Git SCM
+
+  # Additional prepare tasks that are not enabled by default.
+  - class: paasmaker.pacemaker.prepare.pythonpip.PythonPipPrepare
+    name: paasmaker.prepare.pythonpip
+    title: Python PIP preparer

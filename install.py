@@ -407,6 +407,21 @@ if context['runtime_php_enable']:
 		}
 	)
 
+	# This also enables the static plugin, as they're basically the
+	# same.
+	enable_plugin(
+		configuration['plugins'],
+		{
+			'name': 'paasmaker.runtime.static',
+			'class': 'paasmaker.heart.runtime.StaticRuntime',
+			'title': 'Static Files Runtime',
+			'parameters': {
+				'managed': True,
+				'shutdown': context['shutdown_daemons_on_exit']
+			}
+		}
+	)
+
 if context['runtime_shell_enable']:
 	enable_plugin(
 		configuration['plugins'],

@@ -1,0 +1,26 @@
+is_heart: true
+is_router: true
+is_pacemaker: false
+
+master_node: production.paasmaker.net
+master_port: 42500
+node_token: 17470da9-8793-4462-8b08-8138ebf42213
+redis_mode: defer-to-master
+
+shutdown_daemons_on_exit: false
+
+install_init_script: true
+enable_init_script: true
+init_redirect_port80: true
+
+runtime_php_enable: true
+runtime_php_disable_system_apache: true
+
+runtime_rbenv_enable: true
+runtime_rbenv_versions: ['1.9.3-p327']
+
+service_managedredis_enable: false
+service_managedpostgres_enable: false
+service_managedmysql_enable: false
+
+write_paasmaker_configuration: true
