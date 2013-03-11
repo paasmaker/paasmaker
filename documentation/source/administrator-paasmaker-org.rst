@@ -595,6 +595,16 @@ back to your browser via the load balancer. (Because the Elastic Load balancer,
 and at time of writing, our nginx router, does not support web sockets, it is using
 a series of XHR long poll requests to get realtime updates).
 
+.. NOTE::
+	When a node registers with the master, it sends along a route to get back
+	to that node. The master checks this before accepting the registration. By default,
+	a node attempts to send it's FQDN. Sometimes this autodetection does not work
+	very well, and in the case of nodes on EC2, it returns an internal hostname
+	only. In future, we plan to support scenarios where the Pacemaker node is
+	outside of EC2, whilst execution nodes are inside EC2, which currently won't
+	work correctly unless you manually set the ``my_route`` option in ``paasmaker.yml``
+	on each individual node.
+
 Deploying your first application
 --------------------------------
 
