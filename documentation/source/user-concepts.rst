@@ -163,17 +163,19 @@ To keep this example simple, we'll assume the following configuration:
 
 The prepare stage looks as follows:
 
-#. The first stage for dealing with an application is creating a version of that application.
-   If the application does not exist, it is created and the code becomes the first version
-   of that application.
+.. image:: images/prepare-flow.png
+	:alt: Paasmaker prepare application flow chart
+	:align: center
+
 #. When you specify where the source code is, Paasmaker will make itself a working copy of that
    source code. For example, if you reference a git repository, it will clone that repository
    to a location, and work on those files.
 #. Paasmaker then looks for a manifest file. By default this is called ``manifest.yml`` and
    is expected to be in the root of the files. You can supply a different name when you create
    a version, which allows you to have multiple manifest files per codebase.
-#. Paasmaker reads the manifest file. Based on the manifest file, it will start to create
-   the services that you need, and move onto the prepare phase.
+#. Paasmaker reads the manifest file. Based on the manifest file, it will create a new application,
+   or create a version of an existing application. It also starts to create the services that you
+   need, and move onto the prepare phase.
 #. The manifest file can specify a series of prepare commands. These are plugin based, but the
    default plugin will simply run a series of shell commands against the code base. This is
    designed for your application to get things ready from a pristine checkout.
@@ -186,13 +188,17 @@ The prepare stage looks as follows:
    Other things you can do with prepare commands might be compiling production assets (if you
    are using an asset pipeline of some kind), or building Java source files into a WAR file
    for later execution. Anything you can do with shell commands can be coded into these
-   prepare commands.
+   prepare commands, and for anything more complicated, it is possible to write a plugin for.
 #. Once the application source tree is prepared, it is packed up. By default it will pack into
    a tar.gz file.
 #. Paasmaker then stores the .tar.gz file somewhere ready for other servers to fetch it.
 #. Your application is now ready to run.
 
 Then, to run your application, Paasmaker takes the following steps:
+
+.. image:: images/start-flow.png
+	:alt: Paasmaker application start up flow
+	:align: center
 
 #. A user indicates that they want to start a specific version of the application.
 #. Paasmaker uses the hints you've supplied to select some servers to run your application.
@@ -225,6 +231,10 @@ Once you decide that your application is ready to become the current version, yo
 "Make Current" feature of Paasmaker. For simplicity, below we refer to **A** as the currently active
 version, and **B** as the new version that you want to be active. Paasmaker then takes the following
 actions:
+
+.. image:: images/router-update-sequence.png
+	:alt: Router multiple version update sequence
+	:align: center
 
 #. The routing table is updated such that for each hostname that your application has, it will route
    to any active instances of both **A** and **B** at the same time.

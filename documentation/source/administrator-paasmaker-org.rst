@@ -11,6 +11,7 @@ which hopefully shows the possibilities of Paasmaker.
 The initial Paasmaker network looked as follows:
 
 .. image:: images/paasmaker-org-production-layout.png
+	:alt: Paasmaker initial production network layout
 
 The basic concept here is:
 
