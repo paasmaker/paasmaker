@@ -65,10 +65,16 @@ class RedisJobBackend(JobBackend):
 	def setup(self, callback, error_callback):
 		self.setup_callback = callback
 		self.setup_steps = 2
-		self.redis = None
-		self.pubsub_client = None
-		self.configuration.get_jobs_redis(self.redis_ready, error_callback)
-		self.configuration.get_jobs_redis(self.pubsub_redis_ready, error_callback)
+
+		if not hasattr(self, 'redis'):
+			self.redis = None
+		if not hasattr(self, 'pubsub_client'):
+			self.pubsub_client = None
+
+		if self.redis is None or not self.redis.connection.connected():
+			self.configuration.get_jobs_redis(self.redis_ready, error_callback)
+		if self.pubsub_client is None or not self.pubsub_client.connection.connected():
+			self.configuration.get_jobs_redis(self.pubsub_redis_ready, error_callback)
 
 	def redis_ready(self, client):
 		self.redis = client
