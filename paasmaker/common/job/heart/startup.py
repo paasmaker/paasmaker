@@ -49,10 +49,56 @@ class InstanceStartupJob(BaseJob):
 				self.logger
 			)
 
-			runtime.start(
+			# Sanity check - see if this instance is already running.
+			def not_running(message, exception=None):
+				# Make sure the allocated port is not already in use.
+				free_to_start = True
+				if not self.instance_data['instance_type']['standalone']:
+					port_checker = paasmaker.util.port.FreePortFinder()
+					if port_checker.in_use(self.instance_data['instance']['port']):
+						self.logger.error("Found allocated port %d was already in use.", self.instance_data['instance']['port'])
+						free_to_start = False
+
+						# Make a log entry in that instances log file for later reference.
+						instance_logger = self.configuration.get_job_logger(self.instance_id)
+						instance_logger.error("Found allocated port %d was already in use.", self.instance_data['instance']['port'])
+						instance_logger.error("And the instance is not running.")
+						instance_logger.error("Aborting startup.")
+						instance_logger.finished()
+
+				if free_to_start:
+					# Cool, go ahead and start it.
+					runtime.start(
+						self.instance_id,
+						self.success_callback,
+						self.failure_callback
+					)
+				else:
+					# Something was blocking this startup.
+					# Abort, and place it into the error state.
+					self.instance_data['instance']['state'] = constants.INSTANCE.ERROR
+					self.configuration.instances.save()
+
+					self.logger.error("Found that the port allocated was already in use.")
+					self.failed("Found that the port allocated was already in use.")
+
+			def is_running(message):
+				# It's apparently running. No reason to start it.
+				# Although one should ask why we got here.
+				self.logger.info("Instance is already running. No action taken.")
+				self.logger.warning("We don't know why it was already running.")
+
+				self.instance_data['instance']['state'] = constants.INSTANCE.RUNNING
+				self.configuration.instances.save()
+
+				self.success({state_key: constants.INSTANCE.RUNNING}, "Found instance already running.")
+
+			# See if it's running.
+			self.logger.info("Checking to see if the instance is already running.")
+			runtime.status(
 				self.instance_id,
-				self.success_callback,
-				self.failure_callback
+				is_running,
+				not_running
 			)
 
 	def success_callback(self, message):
