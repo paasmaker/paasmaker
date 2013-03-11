@@ -181,7 +181,11 @@ http {
 			# And let the caller know we're ready.
 			callback(message)
 
-		daemon.start_if_not_running(on_nginx_started, error_callback)
+		def on_nginx_failed(message):
+			error_message = "Unable to start managed NGINX router component: %s" % message
+			error_callback(error_message)
+
+		daemon.start_if_not_running(on_nginx_started, on_nginx_failed)
 
 	def get_configuration(self):
 		return self.generated_config

@@ -1159,11 +1159,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 						self._connect_redis(credentials, got_redis, failed_redis)
 
 			def on_redis_startup_failure(message, exception=None):
-				# TODO: Handle this.
-				logger.error("Failed to start managed redis: %s", message)
+				error_message = "Failed to start managed redis for %s: %s" % (name, message)
+				logger.error(error_message)
 				if exception:
 					logger.error("Exception:", exc_info=exception)
-				error_callback("Failed to start managed redis: %s"  % message)
+				error_callback(error_message)
 
 			# Change the action based on our state.
 			if meta['state'] == 'CREATE':
