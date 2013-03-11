@@ -1,3 +1,4 @@
+
 import paasmaker
 
 # From: http://stackoverflow.com/questions/5389507/iterating-over-every-two-elements-in-a-list
@@ -25,6 +26,11 @@ class RouterTableDump(object):
 		"""
 		Dump the table. The callback used to instantiate the object will
 		be called when the dump is ready.
+
+		.. WARNING::
+			The callback is supplied with a third argument - session - which
+			is an open database session. You must close this when you are
+			done.
 		"""
 		self.session = self.configuration.get_database_session()
 		self.configuration.get_router_table_redis(self._got_redis, self.error_callback)
@@ -84,12 +90,10 @@ class RouterTableDump(object):
 			}
 			self.table.append(entry)
 
-		self.session.close()
-
 		# Sort the table.
 		# Sort by the application id first, and then the reverse hostname.
 		# We reverse the hostname to keep subdomains together. (Also, refer
 		# http://stackoverflow.com/questions/931092/reverse-a-string-in-python)
 		self.table.sort(key=lambda x: "%d_%s" % (x['application_id'], x['hostname'][::1]))
 
-		self.callback(self.table, serial)
+		self.callback(self.table, serial, self.session)

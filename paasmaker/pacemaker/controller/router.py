@@ -16,10 +16,11 @@ class TableDumpController(BaseController):
 	def get(self):
 		self.require_permission(constants.PERMISSION.SYSTEM_ADMINISTRATION)
 
-		def on_dump_complete(table, serial):
+		def on_dump_complete(table, serial, session):
 			self.add_data('table', table)
 			self.add_data('serial', serial)
 			self.render("router/dump.html")
+			session.close()
 
 		def on_dump_error(error, exception=None):
 			self.add_error(error)

@@ -514,9 +514,10 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname, first_version_instance), "First version in hostname set.")
 		self.assertTrue(self.not_in_redis(redis, set_key_hostname_id, first_version_instance_id), "First version in hostname set.")
 
-		def got_table(table, serial):
+		def got_table(table, serial, session):
 			got_table.table = table
 			got_table.serial = serial
+			session.close()
 			self.stop()
 
 		# Dump out the table.
