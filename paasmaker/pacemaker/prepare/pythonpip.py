@@ -60,11 +60,12 @@ class PythonPipPrepare(BasePrepare):
 		# Activate the virtualenv.
 		fp.write(". %s/bin/activate\n" % self.parameters['virtualenv_name'])
 
+		# Make it relocatable.
+		# (This also shortens the shebang lines, otherwise they can easily get too long)
+		fp.write("virtualenv --relocatable %s\n" % self.parameters['virtualenv_name'])
+
 		# Install the requriements.
 		fp.write("pip install -r %s\n" % self.parameters['requirements_name'])
-
-		# Make it relocatable.
-		fp.write("virtualenv --relocatable %s\n" % self.parameters['virtualenv_name'])
 
 		fp.close()
 
