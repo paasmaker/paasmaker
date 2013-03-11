@@ -8,16 +8,15 @@ application:
       plugin: paasmaker.runtime.shell
       version: 1
     commands:
+      # We have to install all the requirements for pip so Sphinx can build the docs.
+      - plugin: paasmaker.prepare.pythonpip
+        parameters:
+          virtualenv_name: thirdparty/python
+      # And then this builds the docs. The script activates the virtualenv for itself
+      # first.
       - plugin: paasmaker.prepare.shell
         parameters:
-          # To build this, we need to download all the pip
-          # packages so sphinx can see them. TODO:
-          # make this faster.
           commands:
-            - mkdir thirdparty
-            - virtualenv thirdparty/python
-            - . thirdparty/python/bin/activate
-            - pip install -r requirements.txt
             - ./build-documentation.sh
 
 instances:
