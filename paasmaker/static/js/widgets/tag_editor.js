@@ -2,83 +2,82 @@
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 if (!pm.widgets) { pm.widgets = {}; }
 
-pm.widgets.tag_editor = function(form, container)
-{
-	this.form = form;
-	this.container = container;
-	this.editarea = $('.editor', container);
-	this.outputarea = $('.output', container);
+pm.widgets.tag_editor = (function() {
+	var container;
+	var editarea, outputarea;
 
-	var _self = this;
-	var addButton = $('<a href="#">Add...</a>');
-	addButton.click(
-		function(e)
-		{
-			var newRow = $('<div class="pair"></div>');
-			newRow.append($('<input type="text" class="tag" />'));
-			newRow.append($('<input type="text" class="value" />'));
-			_self.editarea.append(newRow);
-			_self.addRemoveButtons();
+	var init_fn = function(form, containing_el)
+	{
+		container = $(containing_el);
+		editarea = $('.editor', container);
+		outputarea = $('.output', container);
 
-			e.preventDefault();
-		}
-	);
+		var addButton = $('<a href="#">Add...</a>');
+		addButton.click(function(t) {
+			return function(e){
+				var newRow = $('<div class="pair"></div>');
+				newRow.append($('<input type="text" class="tag" />'));
+				newRow.append($('<input type="text" class="value" />'));
+				editarea.append(newRow);
+				t.addRemoveButtons();
 
-	this.container.append(addButton);
-	/*var buildButton = $('<a href="#">Build...</a>');
-	buildButton.click(function(e){_self.rebuildOutput()});
-	this.container.append(buildButton);*/
-	this.addRemoveButtons();
+				e.preventDefault();
+			};
+		}(this));
 
-	// When the form is submitted, add our inputs.
-	$(form).submit(
-		function(e)
-		{
-			_self.rebuildOutput()
-		}
-	);
-}
+		container.append(addButton);
+		/*var buildButton = $('<a href="#">Build...</a>');
+		buildButton.click(function(e){_self.rebuildOutput()});
+		this.container.append(buildButton);*/
+		this.addRemoveButtons();
 
-pm.widgets.tag_editor.prototype.addRemoveButtons = function()
-{
-	// Find rows without a remove button.
-	var rows = $('.pair', this.editarea).not('.has-remove');
-	rows.each(
-		function(index, element)
-		{
-			var el = $(element);
-			var removeButton = $('<a href="#">Remove</a>');
-			removeButton.click(
-				function(e)
-				{
-					// Remove it from the DOM.
-					el.remove();
+		// When the form is submitted, add our inputs.
+		$(form).submit(this.rebuildOutput);
 
-					e.preventDefault();
-				}
-			);
-			el.addClass('has-remove');
-			el.append(removeButton);
-		}
-	);
-}
+		return this;
+	};
 
-pm.widgets.tag_editor.prototype.rebuildOutput = function()
-{
-	var rows = $('.pair', this.editarea);
-	this.outputarea.empty();
-	var _self = this;
-	rows.each(
-		function(index, element)
-		{
-			var el = $(element);
-			var tag = $('.tag', el).val();
-			var value = $('.value', el).val();
+	init_fn.addRemoveButtons = function() {
+		// Find rows without a remove button.
+		var rows = $('.pair', editarea).not('.has-remove');
+		rows.each(
+			function(index, element)
+			{
+				var el = $(element);
+				var removeButton = $('<a href="#">Remove</a>');
+				removeButton.click(
+					function(e)
+					{
+						// Remove it from the DOM.
+						el.remove();
 
-			var tagEl = $('<input type="hidden" />');
-			tagEl.attr({name: 'tags.' + tag, value: value});
+						e.preventDefault();
+					}
+				);
+				el.addClass('has-remove');
+				el.append(removeButton);
+			}
+		);
+	};
 
-			_self.outputarea.append(tagEl);
-		}
-	);
-}
+	init_fn.rebuildOutput = function() {
+		var rows = $('.pair', editarea);
+		outputarea.empty();
+
+		rows.each(function(index, element) {
+				var el = $(element);
+				var tag = $('.tag', el).val();
+				var value = $('.value', el).val();
+
+				var tagEl = $('<input type="hidden" />');
+				tagEl.attr({name: 'tags.' + tag, value: value});
+
+				outputarea.append(tagEl);
+			}
+		);
+	};
+
+	return function() {
+		return init_fn.apply(init_fn, arguments);
+	}
+}());
