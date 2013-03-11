@@ -66,6 +66,9 @@ class RedisJobBackend(JobBackend):
 		self.setup_callback = callback
 		self.setup_steps = 2
 
+		if not hasattr(self, 'pubsub_internal_subscribed'):
+			self.pubsub_internal_subscribed = False
+
 		if not hasattr(self, 'redis'):
 			self.redis = None
 		if not hasattr(self, 'pubsub_client'):
@@ -89,7 +92,10 @@ class RedisJobBackend(JobBackend):
 			# Set up the listen handler.
 			self.pubsub_client.listen(self._on_job_status_message)
 			# Listen to internally published messages.
-			pub.subscribe(self.send_job_status, 'job.status')
+			# But don't do it on connection failure/reconnection.
+			if not self.pubsub_internal_subscribed:
+				pub.subscribe(self.send_job_status, 'job.status')
+				self.pubsub_internal_subscribed = False
 			# And signal completion.
 			self.setup_steps -= 1
 			self.check_setup_complete()
