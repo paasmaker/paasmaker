@@ -48,7 +48,7 @@ $(document).ready(
 		// TODO: This connection timeout is low to force it to fallback to XHR quickly
 		// when websocket fails. This may be too short though for production use.
 		// Maybe we can more intelligently decide this and give socket.io a better hint?
-		var streamSocket = new io.connect('http://' + window.location.host, {'connect timeout': 1000});
+		var streamSocket = new io.connect(window.location.protocol + '//' + window.location.host, {'connect timeout': 1000});
 		streamSocket.on('disconnect',
 			function()
 			{

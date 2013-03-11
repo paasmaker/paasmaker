@@ -42,8 +42,8 @@ class PackageDownloadAPIRequest(APIRequest):
 	An API request to fetch a package from a remote node, storing
 	it locally, and providing progress reports as it downloads.
 	"""
-	def __init__(self, configuration):
-		self.configuration = configuration
+	def __init__(self, configuration=None):
+		super(PackageDownloadAPIRequest, self).__init__(configuration)
 
 	def _get_output_path(self):
 		# Determine the automatic destination path for the package.

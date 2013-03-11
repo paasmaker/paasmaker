@@ -82,6 +82,7 @@ class APIRequest(object):
 		self.configuration = configuration
 		self.target = None
 		self.method = 'POST'
+		self.protocol = 'http'
 		if configuration:
 			# By default, we assume that we're talking node->node
 			self.authvalue = self.configuration.get_flat('node_token')
@@ -100,6 +101,12 @@ class APIRequest(object):
 		"""
 		self.authvalue = request.authvalue
 		self.target = request.target
+
+	def set_https(self):
+		"""
+		Use SSL for the request.
+		"""
+		self.protocol = 'https'
 
 	def set_auth(self, key):
 		"""
@@ -154,8 +161,8 @@ class APIRequest(object):
 		Get the address to the master host. This is designed for nodes
 		to automatically contact the master without any other configuration.
 		"""
-		# TODO: SSL ?
-		return "http://%s:%d" % (
+		return "%s://%s:%d" % (
+			self.protocol,
 			self.configuration.get_flat('master.host'),
 			self.configuration.get_flat('master.port')
 		)
@@ -172,15 +179,23 @@ class APIRequest(object):
 		"""
 		Set the target for this request. The target can be either:
 
-		* A string, in the format http://hostname:port;
+		* A string, in the format "hostname:port" (http/https is prepended
+		  automatically);
 		* A node object.
 
 		:arg str|Node target: The target for this request.
 		"""
 		if isinstance(target, basestring):
-			self.target = target
+			self.target = "%s://%s" % (
+				self.protocol,
+				target
+			)
 		elif isinstance(target, paasmaker.model.Node):
-			self.target = "http://%s:%d" % (target.route, target.apiport)
+			self.target = "%s://%s:%d" % (
+				self.protocol,
+				target.route,
+				target.apiport
+			)
 		else:
 			raise ValueError("Target is not a string or Node object.")
 
@@ -332,7 +347,8 @@ class StreamAPIRequest(APIRequest):
 			parsed.port,
 			io_loop=self.io_loop,
 			query="auth=%s" % urllib.quote(self.authvalue),
-			force_longpoll=self.force_longpoll
+			force_longpoll=self.force_longpoll,
+			secure=(self.protocol == 'https')
 		)
 
 		# Hook up a few events to get started.

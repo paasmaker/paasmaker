@@ -81,7 +81,7 @@ class NodeRegisterAPIRequest(APIRequest):
 		self.configuration.get_node_stats(got_stats)
 
 	def get_endpoint(self):
-		return '/node/register'
+		return '/node/register?bypass_ssl=true'
 
 	def process_response(self, response):
 		"""
@@ -111,7 +111,7 @@ class NodeUpdateAPIRequest(NodeRegisterAPIRequest):
 		super(NodeUpdateAPIRequest, self).async_build_payload(payload, completed_parent_payload)
 
 	def get_endpoint(self):
-		return '/node/update'
+		return '/node/update?bypass_ssl=true'
 
 class NodeShutdownAPIRequest(NodeUpdateAPIRequest):
 	"""
@@ -119,7 +119,7 @@ class NodeShutdownAPIRequest(NodeUpdateAPIRequest):
 	to take the appropriate shutdown actions.
 	"""
 	def get_endpoint(self):
-		return '/node/shutdown'
+		return '/node/shutdown?bypass_ssl=true'
 
 class NodeUpdatePeriodicManager(object):
 	"""

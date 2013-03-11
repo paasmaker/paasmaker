@@ -10,4 +10,4 @@ class InformationAPIRequest(APIRequest):
 	"""
 
 	def get_endpoint(self):
-		return '/information'
+		return '/information?bypass_ssl=true'

@@ -104,6 +104,7 @@ class BaseController(tornado.web.RequestHandler):
 
 		Performs several actions:
 
+		* Redirects to SSL if required.
 		* Parses and stores a JSON POST body if present.
 		* Sets the format flag based on the query string.
 		* Checks that the user is authenticated with a valid
@@ -140,6 +141,38 @@ class BaseController(tornado.web.RequestHandler):
 		# TODO: This could allow GET variables to replace POST variables...
 		# TODO: This means GET variables can override values in the JSON structure.
 		self.raw_params.update(structure)
+
+		# SSL redirection rules:
+		# * If require_ssl is set, but the query string "bypass_ssl" is set,
+		#   don't require SSL. This is to allow nodes to report in via
+		#   the API without SSL, an explicit remotely specified set.
+		# * If require_ssl is set, and in HTML mode, redirect to the SSL
+		#   version of this page. (POST parameters are lost).
+		# * If require_ssl is set, and in JSON mode, return a 403
+		#   forbidden, with an error indicating why.
+		# TODO: Re-evaluate these rules in the future for safety.
+		if self.configuration.get_flat('pacemaker.require_ssl') and self.request.protocol != 'https':
+			if 'bypass_ssl' in self.raw_params:
+				# No action to take.
+				pass
+			elif self.format == 'html':
+
+				# Figure out the port. You can have require_ssl on and
+				# not actually be listening for HTTPS - in this scenario
+				# there is an SSL termination point ahead of the node.
+				# In this scenario we also make the assumption that the
+				# https port is the standard 443.
+				https_port = self.configuration.get_flat('https_port')
+				if https_port is None:
+					https_port = ''
+				else:
+					https_port = ':%d' % https_port
+
+				target = "https://%s%s%s" % (self.request.host, https_port, self.request.uri)
+				self.redirect(target)
+				return
+			else:
+				raise tornado.web.HTTPError(403, "You must use SSL to access this page.")
 
 		# Must be one of the supported auth methods.
 		self._require_authentication(self.AUTH_METHODS)

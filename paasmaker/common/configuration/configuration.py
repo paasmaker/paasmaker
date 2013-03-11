@@ -175,6 +175,14 @@ class PacemakerSchema(StrictAboutExtraKeysColanderMappingSchema):
 		missing=False,
 		default=False)
 
+	require_ssl = colander.SchemaNode(
+		colander.Boolean(),
+		title="Require SSL",
+		description="If true, require SSL for access to the console and API.",
+		missing=False,
+		default=False
+	)
+
 	dsn = colander.SchemaNode(colander.String(),
 		title="Database DSN",
 		description="Database connection details for this pacemaker, in SQLAlchemy format")
@@ -431,6 +439,22 @@ class ConfigurationSchema(StrictAboutExtraKeysColanderMappingSchema):
 		description="The HTTP port that this node listens on for API requests",
 		missing=DEFAULT_API_PORT,
 		default=DEFAULT_API_PORT)
+
+	https_port = colander.SchemaNode(
+		colander.Integer(),
+		title="HTTPS Port",
+		description="The HTTPS port that this node listens on for API requests. To enable, you must set this to a port and also set ssl_key and ssl_cert options.",
+		missing=None,
+		default=None
+	)
+
+	ssl_options = colander.SchemaNode(
+		colander.Mapping(unknown='preserve'),
+		title="SSL options",
+		description="The SSL options if SSL is enabled. You need at least `keyfile` and `certfile`. You can put any other options in here from http://docs.python.org/2/library/ssl.html#ssl.wrap_socket",
+		missing={},
+		default={}
+	)
 
 	misc_ports = MiscPortsSchema(default=MiscPortsSchema.default(), missing=MiscPortsSchema.default())
 
@@ -697,6 +721,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		the hostname and route (if required), registers plugins,
 		including default plugins.
 		"""
+
+		if self['https_port'] is not None:
+			# Make sure the keyfile and certfile are set.
+			if not 'keyfile' in self['ssl_options'] or not 'certfile' in self['ssl_options']:
+				raise InvalidConfigurationParameterException('keyfile and certfile must both be set if you enable listening on an SSL port. Set them inside the ``ssl_options`` mapping.')
 
 		# Convert the scratch directory into a fully qualified path.
 		self['scratch_directory'] = os.path.abspath(self['scratch_directory'])

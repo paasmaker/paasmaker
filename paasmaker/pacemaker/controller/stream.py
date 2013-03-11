@@ -240,6 +240,9 @@ class StreamConnection(tornadio2.SocketConnection):
 		if position is None:
 			position = 0
 
+		# Force into an int.
+		position = int(position)
+
 		def found_log(result_job_id, result):
 			if isinstance(result, basestring):
 				logger.info("Found job log %s locally.", job_id)
