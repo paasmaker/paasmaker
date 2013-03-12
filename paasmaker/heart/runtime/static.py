@@ -265,7 +265,8 @@ Listen %(port)d
 	def shutdown_postnotify(self, callback, error_callback):
 		# If we're managed, and been asked to shutdown the managed server,
 		# do that.
-		if self._is_managed() and self.options['shutdown']:
+		config_count = len(glob.glob("%s/*.conf" % self.options['config_dir']))
+		if self._is_managed() and self.options['shutdown'] and config_count > 0:
 			def got_managed(message):
 				# Stop running the server.
 				self.apache_server.stop()
