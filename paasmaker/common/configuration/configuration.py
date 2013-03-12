@@ -704,6 +704,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.io_loop = io_loop or tornado.ioloop.IOLoop.instance()
 		self.start_time = datetime.datetime.utcnow()
 		self.node_logging_configured = False
+		self.database_sessions_checked_out = 0
+		self.database_sessions_checkout_pending = 0
 
 	def uptime(self):
 		"""
@@ -1059,6 +1061,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			debug_source_traceback = traceback.extract_stack()
 
 		def attach_tracker(session):
+			self.database_sessions_checkout_pending -= 1
+			self.database_sessions_checked_out += 1
 			if options.debug == 1:
 				if not hasattr(self, '_session_close_tracker'):
 					self._session_close_tracker = {}
@@ -1070,6 +1074,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				session.original_close = session.close
 
 				def tracking_close():
+					self.database_sessions_checked_out -= 1
 					if session_key in self._session_close_tracker:
 						self.io_loop.remove_timeout(self._session_close_tracker[session_key]['timeout'])
 						del self._session_close_tracker[session_key]
@@ -1090,10 +1095,32 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 			callback(session)
 
-		real_callback = callback
+		def attach_lightweight_counter(session):
+			self.database_sessions_checkout_pending -= 1
+			self.database_sessions_checked_out += 1
+			session.original_close = session.close
+
+			def counter_decrement():
+				self.database_sessions_checked_out -= 1
+				session.original_close()
+
+			session.close = counter_decrement
+
+			callback(session)
+
+		# Figure out which callback to go back through.
+		real_callback = attach_lightweight_counter
 
 		if options.debug == 1:
 			real_callback = attach_tracker
+
+		logger.debug(
+			"Fetch database session. %d pending, %d out.",
+			self.database_sessions_checkout_pending,
+			self.database_sessions_checked_out
+		)
+
+		self.database_sessions_checkout_pending += 1
 
 		fetcher = ThreadedDatabaseSessionFetcher(self.io_loop, real_callback, error_callback)
 		fetcher.work(self.session)
