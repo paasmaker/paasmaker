@@ -646,7 +646,9 @@ class ThreadedDatabaseSessionFetcher(paasmaker.util.threadcallback.ThreadCallbac
 	"""
 
 	def _work(self, sessionmaker):
+		logger.debug("Creating database session (or waiting for one).")
 		session = sessionmaker()
+		logger.debug("Got database session, returning to caller.")
 		self._callback(session)
 
 class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
