@@ -703,7 +703,7 @@ class WorkspaceUserRoleFlatCache(object):
 		and then ``has_permission()`` wherever required for the remainder
 		of the lifetime of the request.
 		"""
-		if workspace and isinstance(workspace, int):
+		if workspace and (isinstance(workspace, int) or isinstance(workspace, long)):
 			workspace_id = workspace
 		elif workspace:
 			workspace_id = workspace.id
