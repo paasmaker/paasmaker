@@ -1052,6 +1052,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		if not self.is_pacemaker():
 			raise ImNotA("I'm not a pacemaker, so I have no database.")
 
+		debug_source_traceback = None
+		if options.debug == 1:
+			debug_source_traceback = traceback.extract_stack()
+
 		def attach_tracker(session):
 			if options.debug == 1:
 				if not hasattr(self, '_session_close_tracker'):
@@ -1079,7 +1083,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				session.close = tracking_close
 				self._session_close_tracker[session_key] = {
 					'timeout': self.io_loop.add_timeout(time.time() + 20, session_timeout),
-					'traceback': traceback.extract_stack()
+					'traceback': debug_source_traceback
 				}
 
 			callback(session)

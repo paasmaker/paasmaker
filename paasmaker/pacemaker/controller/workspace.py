@@ -32,13 +32,11 @@ class WorkspaceSchema(colander.MappingSchema):
 class WorkspaceEditController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
-	def _get_workspace(self, callback, workspace_id=None):
+	def _get_workspace(self, workspace_id=None):
 		workspace = None
 		if workspace_id:
 			# Find and load the workspace.
-			session = yield tornado.gen.Task(self.db)
-			workspace = session.query(
+			workspace = self.session.query(
 				paasmaker.model.Workspace
 			).get(int(workspace_id))
 			if not workspace:
@@ -46,16 +44,15 @@ class WorkspaceEditController(BaseController):
 
 			self.add_data('workspace', workspace)
 
-		callback(workspace)
+		return workspace
 
 	def _default_workspace(self):
 		workspace = paasmaker.model.Workspace()
 		workspace.name = ''
 		return workspace
 
-	@tornado.gen.engine
 	def get(self, workspace_id=None):
-		workspace = yield tornado.gen.Task(self._get_workspace, workspace_id=workspace_id)
+		workspace = self._get_workspace(workspace_id)
 		self.require_permission(constants.PERMISSION.WORKSPACE_EDIT, workspace=workspace)
 		if not workspace:
 			workspace = self._default_workspace()
@@ -63,9 +60,8 @@ class WorkspaceEditController(BaseController):
 
 		self.render("workspace/edit.html")
 
-	@tornado.gen.engine
 	def post(self, workspace_id=None):
-		workspace = yield tornado.gen.Task(self._get_workspace, workspace_id=workspace_id)
+		workspace = self._get_workspace(workspace_id)
 		self.require_permission(constants.PERMISSION.WORKSPACE_EDIT, workspace=workspace)
 
 		valid_data = self.validate_data(WorkspaceSchema())
@@ -78,10 +74,9 @@ class WorkspaceEditController(BaseController):
 		workspace.stub = self.params['stub']
 
 		if valid_data:
-			session = yield tornado.gen.Task(self.db)
-			session.add(workspace)
-			session.commit()
-			session.refresh(workspace)
+			self.session.add(workspace)
+			self.session.commit()
+			self.session.refresh(workspace)
 
 			self.add_data('workspace', workspace)
 
@@ -100,29 +95,21 @@ class WorkspaceEditController(BaseController):
 class WorkspaceListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
 	def get(self):
 		# Check to see if we have global workspace list permissions.
-		session = yield tornado.gen.Task(self.db)
-		workspaces = session.query(
+		workspaces = self.session.query(
 			paasmaker.model.Workspace
 		)
 
-		workspace_list_permission = yield tornado.gen.Task(
-			self.has_permission,
-			constants.PERMISSION.WORKSPACE_LIST,
-			workspace=None
-		)
-		if not workspace_list_permission:
+		if not self.has_permission(constants.PERMISSION.WORKSPACE_LIST):
 			# Nope, you have a limited selection. So limit the query to those.
-			current_user = yield tornado.gen.Task(self.pm_get_current_user)
-			workspaces = session.query(
+			workspaces = self.session.query(
 				paasmaker.model.Workspace
 			).filter(
 				paasmaker.model.Workspace.id.in_(
 					paasmaker.model.WorkspaceUserRoleFlat.list_of_workspaces_for_user(
-						session,
-						current_user
+						self.session,
+						self.get_current_user()
 					)
 				)
 			)

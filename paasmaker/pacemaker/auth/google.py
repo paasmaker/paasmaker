@@ -60,10 +60,12 @@ class GoogleAuthController(BaseController, tornado.auth.GoogleMixin):
 
 		# Look up the user by email address.
 		# TODO: Use the correct auth source name.
-		session = yield tornado.gen.Task(self.db)
-		user = session.query(paasmaker.model.User) \
-			.filter(paasmaker.model.User.login==google_user['email'],
-				paasmaker.model.User.auth_source=="paasmaker.auth.google").first()
+		user = self.session.query(
+			paasmaker.model.User
+		).filter(
+			paasmaker.model.User.login==google_user['email'],
+			paasmaker.model.User.auth_source=="paasmaker.auth.google"
+		).first()
 
 		if not user:
 			# Create the user record. They won't have any permissions
@@ -77,9 +79,9 @@ class GoogleAuthController(BaseController, tornado.auth.GoogleMixin):
 			user.auth_source = "paasmaker.auth.google"
 			user.auth_meta = google_user
 
-			session.add(user)
-			session.commit()
-			session.refresh(user)
+			self.session.add(user)
+			self.session.commit()
+			self.session.refresh(user)
 
 		# Mark them as logged in.
 		self._allow_user(user)

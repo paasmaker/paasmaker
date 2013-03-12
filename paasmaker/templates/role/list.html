@@ -6,7 +6,7 @@
 
 {% block body %}
 	<div class="btn-group btn-group-header">
-		{% if has_permission(PERMISSION.ROLE_EDIT) %}
+		{% if user_permissions.has_permission(PERMISSION.ROLE_EDIT, None) %}
 			<a class="btn" href="/role/create">Create Role</a>
 		{% end %}
 	</div>

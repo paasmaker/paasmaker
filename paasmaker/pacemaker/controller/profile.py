@@ -15,12 +15,11 @@ class ProfileUserDataSchema(colander.MappingSchema):
 class ProfileController(BaseController):
 	AUTH_METHODS = [BaseController.USER]
 
-	@tornado.gen.engine
 	def get(self):
 		# No permissions check - you can only fetch your API key.
 		# Note - we're allowing the API key here because only the logged in
 		# user can view their own API key. So not a security risk.
-		user = yield tornado.gen.Task(self.pm_get_current_user)
+		user = self.get_current_user()
 		self.add_data('apikey', user.apikey)
 		self.render("user/profile.html")
 
@@ -33,14 +32,12 @@ class ProfileController(BaseController):
 class ProfileUserdataController(BaseController):
 	AUTH_METHODS = [BaseController.USER]
 
-	@tornado.gen.engine
 	def get(self):
 		# No permissions check - you can only fetch your userdata.
-		user = yield tornado.gen.Task(self.pm_get_current_user)
+		user = self.get_current_user()
 		self.add_data('userdata', user.userdata)
 		self.render("api/apionly.html")
 
-	@tornado.gen.engine
 	def post(self):
 		# Validate immediately.
 		valid_data = self.validate_data(ProfileUserDataSchema())
@@ -51,16 +48,15 @@ class ProfileUserdataController(BaseController):
 
 		# Don't check permissions, because you have to be authenticated,
 		# and you only operate on your user's data anyway.
-		user_stub = yield tornado.gen.Task(self.pm_get_current_user)
-		session = yield tornado.gen.Task(self.db)
-		user = session.query(
+		user_stub = self.get_current_user()
+		user = self.session.query(
 			paasmaker.model.User
 		).get(user_stub.id)
 
 		user.userdata = self.params['userdata']
 
-		session.add(user)
-		session.commit()
+		self.session.add(user)
+		self.session.commit()
 
 		self.add_data('success', True)
 
@@ -75,13 +71,11 @@ class ProfileUserdataController(BaseController):
 class ProfileResetAPIKeyController(BaseController):
 	AUTH_METHODS = [BaseController.USER]
 
-	@tornado.gen.engine
 	def post(self):
-		user = yield tornado.gen.Task(self.pm_get_current_user)
+		user = self.get_current_user()
 		user.generate_api_key()
-		session = yield tornado.gen.Task(self.db)
-		session.add(user)
-		session.commit()
+		self.session.add(user)
+		self.session.commit()
 
 		self.add_data('apikey', user.apikey)
 		self.redirect("/profile")

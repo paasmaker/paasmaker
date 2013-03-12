@@ -47,11 +47,11 @@ class RoleAllocationUnAssignSchema(colander.MappingSchema):
 class RoleListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
 	def get(self):
 		self.require_permission(constants.PERMISSION.ROLE_LIST)
-		session = yield tornado.gen.Task(self.db)
-		roles = session.query(paasmaker.model.Role)
+		roles = self.session.query(
+			paasmaker.model.Role
+		)
 		self._paginate('roles', roles)
 
 		self.render("role/list.html")
@@ -65,11 +65,9 @@ class RoleListController(BaseController):
 class RoleAllocationListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
 	def get(self):
 		self.require_permission(constants.PERMISSION.ROLE_ASSIGN)
-		session = yield tornado.gen.Task(self.db)
-		allocations = session.query(
+		allocations = self.session.query(
 			paasmaker.model.WorkspaceUserRole
 		).filter(
 			paasmaker.model.WorkspaceUserRole.deleted == None
@@ -87,27 +85,26 @@ class RoleAllocationListController(BaseController):
 class RoleEditController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
-	def _get_role(self, role_id, callback):
+	def _get_role(self, role_id):
 		role = None
 		if role_id:
 			# Find and load the role.
-			session = yield tornado.gen.Task(self.db)
-			role = session.query(paasmaker.model.Role).get(int(role_id))
+			role = self.session.query(
+				paasmaker.model.Role
+			).get(int(role_id))
 			if not role:
 				raise HTTPError(404, "No such role.")
 
-		callback(role)
+		return role
 
 	def _default_role(self):
 		role = paasmaker.model.Role()
 		role.name = ''
 		return role
 
-	@tornado.gen.engine
 	def get(self, role_id=None):
 		self.require_permission(constants.PERMISSION.ROLE_EDIT)
-		role = yield tornado.gen.Task(self._get_role, role_id)
+		role = self._get_role(role_id)
 		if not role:
 			role = self._default_role()
 		self.add_data('role', role)
@@ -115,10 +112,9 @@ class RoleEditController(BaseController):
 
 		self.render("role/edit.html")
 
-	@tornado.gen.engine
 	def post(self, role_id=None):
 		self.require_permission(constants.PERMISSION.ROLE_EDIT)
-		role = yield tornado.gen.Task(self._get_role, role_id)
+		role = self._get_role(role_id)
 
 		valid_data = self.validate_data(RoleSchema())
 
@@ -135,10 +131,9 @@ class RoleEditController(BaseController):
 			role.permissions = self.params['permissions']
 
 		if valid_data:
-			session = yield tornado.gen.Task(self.db)
-			session.add(role)
-			paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
-			session.refresh(role)
+			self.session.add(role)
+			paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(self.session)
+			self.session.refresh(role)
 
 			self.add_data('role', role)
 
@@ -158,7 +153,6 @@ class RoleEditController(BaseController):
 class RoleAllocationAssignController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
 	def get(self):
 		self.require_permission(constants.PERMISSION.ROLE_ASSIGN)
 		# List available users, workspaces, and roles.
@@ -166,10 +160,15 @@ class RoleAllocationAssignController(BaseController):
 		if self.format == 'html':
 			# We don't expose this here to the API - this is
 			# purely for the template to use.
-			session = yield tornado.gen.Task(self.db)
-			users = session.query(paasmaker.model.User).all()
-			roles = session.query(paasmaker.model.Role).all()
-			workspaces = session.query(paasmaker.model.Workspace).all()
+			users = self.session.query(
+				paasmaker.model.User
+			).all()
+			roles = self.session.query(
+				paasmaker.model.Role
+			).all()
+			workspaces = self.session.query(
+				paasmaker.model.Workspace
+			).all()
 
 			self.add_data_template('users', users)
 			self.add_data_template('roles', roles)
@@ -177,19 +176,23 @@ class RoleAllocationAssignController(BaseController):
 
 		self.render("role/allocationassign.html")
 
-	@tornado.gen.engine
 	def post(self):
 		self.require_permission(constants.PERMISSION.ROLE_ASSIGN)
 		valid_data = self.validate_data(RoleAllocationAssignSchema())
 
 		# Fetch the role, user, and workspace.
-		session = yield tornado.gen.Task(self.db)
-		role = session.query(paasmaker.model.Role).get(int(self.params['role_id']))
-		user = session.query(paasmaker.model.User).get(int(self.params['user_id']))
+		role = self.session.query(
+			paasmaker.model.Role
+		).get(int(self.params['role_id']))
+		user = self.session.query(
+			paasmaker.model.User
+		).get(int(self.params['user_id']))
 		workspace_id = self.params['workspace_id']
 		workspace = None
 		if workspace_id:
-			workspace = session.query(paasmaker.model.Workspace).get(int(workspace_id))
+			workspace = self.session.query(
+				paasmaker.model.Workspace
+			).get(int(workspace_id))
 
 		if not role:
 			self.add_error("No such role.")
@@ -207,9 +210,9 @@ class RoleAllocationAssignController(BaseController):
 			allocation.role = role
 			allocation.workspace = workspace
 
-			session.add(allocation)
-			paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
-			session.refresh(allocation)
+			self.session.add(allocation)
+			paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(self.session)
+			self.session.refresh(allocation)
 
 			self.add_data('allocation', allocation)
 			self.redirect('/role/allocation/list')
@@ -225,21 +228,21 @@ class RoleAllocationAssignController(BaseController):
 class RoleAllocationUnAssignController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
 	def post(self):
 		self.require_permission(constants.PERMISSION.ROLE_ASSIGN)
 		valid_data = self.validate_data(RoleAllocationUnAssignSchema())
 
 		# Fetch this allocation.
-		session = yield tornado.gen.Task(self.db)
-		allocation = session.query(paasmaker.model.WorkspaceUserRole).get(int(self.params['allocation_id']))
+		allocation = self.session.query(
+			paasmaker.model.WorkspaceUserRole
+		).get(int(self.params['allocation_id']))
 
 		if not allocation:
 			raise tornado.HTTPError(404, "No such allocation.")
 
 		allocation.delete()
-		session.add(allocation)
-		paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
+		self.session.add(allocation)
+		paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(self.session)
 
 		self.add_data('success', True)
 

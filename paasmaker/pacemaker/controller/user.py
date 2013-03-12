@@ -69,19 +69,19 @@ class UserSchema(colander.MappingSchema):
 class UserEditController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
-	def _get_user(self, callback, user_id=None):
+	def _get_user(self, user_id=None):
 		user = None
 		if user_id:
 			# Find and load the user.
-			session = yield tornado.gen.Task(self.db)
-			user = session.query(paasmaker.model.User).get(int(user_id))
+			user = self.session.query(
+				paasmaker.model.User
+			).get(int(user_id))
 			if not user:
 				raise HTTPError(404, "No such user.")
 
 			self.add_data('user', user)
 
-		callback(user)
+		return user
 
 	def _default_user(self):
 		user = paasmaker.model.User()
@@ -90,20 +90,18 @@ class UserEditController(BaseController):
 		user.email = ''
 		return user
 
-	@tornado.gen.engine
 	def get(self, user_id=None):
 		self.require_permission(constants.PERMISSION.USER_EDIT)
-		user = yield tornado.gen.Task(self._get_user, user_id=user_id)
+		user = self._get_user(user_id)
 		if not user:
 			user = self._default_user()
 			self.add_data('user', user)
 
 		self.render("user/edit.html")
 
-	@tornado.gen.engine
 	def post(self, user_id=None):
 		self.require_permission(constants.PERMISSION.USER_EDIT)
-		user = yield tornado.gen.Task(self._get_user, user_id=user_id)
+		user = self._get_user(user_id)
 
 		valid_data = self.validate_data(UserSchema())
 
@@ -125,10 +123,9 @@ class UserEditController(BaseController):
 			if self.params.has_key('password'):
 				user.password = self.params['password']
 
-			session = yield tornado.gen.Task(self.db)
-			session.add(user)
-			session.commit()
-			session.refresh(user)
+			self.session.add(user)
+			self.session.commit()
+			self.session.refresh(user)
 
 			self.add_data('user', user)
 
@@ -147,11 +144,9 @@ class UserEditController(BaseController):
 class UserListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
 	def get(self):
 		self.require_permission(constants.PERMISSION.USER_LIST)
-		session = yield tornado.gen.Task(self.db)
-		users = session.query(paasmaker.model.User)
+		users = self.session.query(paasmaker.model.User)
 		self._paginate('users', users)
 		self.render("user/list.html")
 

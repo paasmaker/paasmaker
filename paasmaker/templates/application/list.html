@@ -27,7 +27,7 @@
 			<tr>
 				<td>
 					{{ application.name }}
-					{% if user_permissions.has_permission(PERMISSION.APPLICATION_DELETE, application.workspace) %}
+					{% if user_permissions.has_permission(PERMISSION.APPLICATION_DELETE, application.workspace_id) %}
 						{% if application.can_delete() %}
 							<form method="POST" action="/application/{{ application.id }}/delete" style="display: inline;">
 								<input type="submit" class="btn btn-mini btn-danger" value="Delete" />
@@ -44,9 +44,9 @@
 					</a>
 				</td>
 				<td>
-					{% if user_permissions.has_permission(PERMISSION.APPLICATION_SERVICE_DETAIL, application.workspace) %}<a href="/application/{{ application.id }}/services">{% end %}
+					{% if user_permissions.has_permission(PERMISSION.APPLICATION_SERVICE_DETAIL, application.workspace_id) %}<a href="/application/{{ application.id }}/services">{% end %}
 						{{ len(application.services) }} services
-					{% if user_permissions.has_permission(PERMISSION.APPLICATION_SERVICE_DETAIL, application.workspace) %}</a>{% end %}
+					{% if user_permissions.has_permission(PERMISSION.APPLICATION_SERVICE_DETAIL, application.workspace_id) %}</a>{% end %}
 				</td>
 			</tr>
 		{% end %}

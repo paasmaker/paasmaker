@@ -31,28 +31,25 @@ class UploadChunkSchema(colander.MappingSchema):
 class UploadController(BaseController):
 	AUTH_METHODS = [BaseController.USER]
 
-	@tornado.gen.engine
-	def _identifier(self, callback):
+	def _identifier(self):
 		# Hash the identifier. (We don't take chances with user input)
 		# Also, we add the user key to the mix, so that users don't overwrite
 		# each others files.
 		md5 = hashlib.md5()
-		user = yield tornado.gen.Task(self.pm_get_current_user)
+		user = self.get_current_user()
 		md5.update(user.apikey)
 		md5.update(self.params['resumableIdentifier'])
 		identifier = md5.hexdigest()
 
-		callback(identifier)
+		return identifier
 
-	@tornado.gen.engine
-	def _chunk_path(self, callback):
+	def _chunk_path(self):
 		temp_path = self.configuration.get_scratch_path_exists('partialuploads')
-		identifier = yield tornado.gen.Task(self._identifier)
+		identifier = self._identifier()
 		temp_file = os.path.join(temp_path, "%s.%06d" % (identifier, int(self.params['resumableChunkNumber'])))
 
-		callback(temp_file)
+		return temp_file
 
-	@tornado.gen.engine
 	def get(self):
 		# Force JSON response.
 		self._set_format('json')
@@ -63,8 +60,8 @@ class UploadController(BaseController):
 
 		# Test to see if a chunk exists. Return 200 if it does,
 		# or 404 otherwise.
-		identifier = yield tornado.gen.Task(self._identifier)
-		chunk_path = yield tornado.gen.Task(self._chunk_path)
+		identifier = self._identifier()
+		chunk_path = self._chunk_path()
 		if os.path.exists(chunk_path):
 			self.add_data('success', True)
 			self.add_data('identifier', identifier)
@@ -75,7 +72,6 @@ class UploadController(BaseController):
 			self.add_data('identifier', identifier)
 			self.write_error(404)
 
-	@tornado.gen.engine
 	def post(self):
 		# Force JSON response.
 		self._set_format('json')
@@ -86,7 +82,7 @@ class UploadController(BaseController):
 
 		self.validate_data(UploadChunkSchema())
 
-		temp_file = yield tornado.gen.Task(self._chunk_path)
+		temp_file = self._chunk_path()
 
 		if not self.request.files.has_key('file.data'):
 			self.add_error('No file uploaded.')
@@ -98,7 +94,7 @@ class UploadController(BaseController):
 			fp.close()
 
 			# See if we have all the parts.
-			identifier = yield tornado.gen.Task(self._identifier)
+			identifier = self._identifier()
 			temp_path = self.configuration.get_scratch_path_exists('partialuploads')
 			parts = glob.glob(os.path.join(temp_path, "%s.*" % identifier))
 			parts.sort()

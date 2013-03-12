@@ -57,8 +57,6 @@ class LoginController(BaseController):
 		plugins.reverse()
 
 		# And with each of them, try to authenticate.
-		session = yield tornado.gen.Task(self.db)
-
 		def complete_request(authenticated):
 			if authenticated:
 				# Note: redirect() calls finish().
@@ -91,7 +89,7 @@ class LoginController(BaseController):
 					try_plugin(plugins.pop())
 
 			login_handler.authenticate(
-				session,
+				self.session,
 				username,
 				password,
 				success_login,

@@ -19,10 +19,8 @@ logger.addHandler(logging.NullHandler())
 class VersionRootController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
-	def _get_version(self, version_id, callback):
-		session = yield tornado.gen.Task(self.db)
-		version = session.query(
+	def _get_version(self, version_id):
+		version = self.session.query(
 			paasmaker.model.ApplicationVersion
 		).get(int(version_id))
 		if not version:
@@ -30,13 +28,12 @@ class VersionRootController(BaseController):
 		if version.deleted:
 			raise tornado.web.HTTPError(404, "Deleted version.")
 		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=version.application.workspace)
-		callback(version)
+		return version
 
 class VersionController(VersionRootController):
 
-	@tornado.gen.engine
 	def get(self, version_id):
-		version = yield tornado.gen.Task(self._get_version, version_id)
+		version = self._get_version(version_id)
 		self.add_data('version', version)
 		self.add_data_template('configuration', self.configuration)
 
@@ -60,9 +57,9 @@ class VersionController(VersionRootController):
 		return routes
 
 class VersionInstancesController(VersionRootController):
-	@tornado.gen.engine
+
 	def get(self, version_id):
-		version = yield tornado.gen.Task(self._get_version, version_id)
+		version = self._get_version(version_id)
 		self.add_data('version', version)
 
 		# For the API, fetch a list of types as well,
@@ -85,9 +82,8 @@ class VersionInstancesController(VersionRootController):
 
 class VersionRegisterController(VersionRootController):
 
-	@tornado.gen.engine
 	def post(self, version_id):
-		version = yield tornado.gen.Task(self._get_version, version_id)
+		version = self._get_version(version_id)
 
 		# TODO: This prevents us from being able to add new
 		# instances if the instances have errors. Rethink this.
@@ -119,9 +115,8 @@ class VersionRegisterController(VersionRootController):
 
 class VersionStartupController(VersionRootController):
 
-	@tornado.gen.engine
 	def post(self, version_id):
-		version = yield tornado.gen.Task(self._get_version, version_id)
+		version = self._get_version(version_id)
 		self.add_data('version', version)
 
 		if version.state != constants.VERSION.READY and version.state != constants.VERSION.PREPARED:
@@ -150,9 +145,8 @@ class VersionStartupController(VersionRootController):
 
 class VersionShutdownController(VersionRootController):
 
-	@tornado.gen.engine
 	def post(self, version_id):
-		version = yield tornado.gen.Task(self._get_version, version_id)
+		version = self._get_version(version_id)
 		self.add_data('version', version)
 
 		if version.state != constants.VERSION.RUNNING:
@@ -181,9 +175,8 @@ class VersionShutdownController(VersionRootController):
 
 class VersionDeRegisterController(VersionRootController):
 
-	@tornado.gen.engine
 	def post(self, version_id):
-		version = yield tornado.gen.Task(self._get_version, version_id)
+		version = self._get_version(version_id)
 		self.add_data('version', version)
 
 		if version.state != constants.VERSION.READY:
@@ -212,9 +205,8 @@ class VersionDeRegisterController(VersionRootController):
 
 class VersionDeleteController(VersionRootController):
 
-	@tornado.gen.engine
 	def post(self, version_id):
-		version = yield tornado.gen.Task(self._get_version, version_id)
+		version = self._get_version(version_id)
 		self.add_data('version', version)
 
 		if version.is_current:
@@ -228,8 +220,8 @@ class VersionDeleteController(VersionRootController):
 		# TODO: Remove files off disk or other systems.
 
 		version.delete()
-		self.db().add(version)
-		self.db().commit()
+		self.session.add(version)
+		self.session.commit()
 
 		self.redirect("/application/%d" % version.application.id)
 

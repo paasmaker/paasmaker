@@ -46,37 +46,41 @@ class ApplicationCurrentVersionSchema(colander.MappingSchema):
 class ApplicationRootController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
-	def _get_workspace(self, workspace_id, callback):
-		session = yield tornado.gen.Task(self.db)
-		workspace = session.query(paasmaker.model.Workspace).get(int(workspace_id))
+	def _get_workspace(self, workspace_id):
+		workspace = self.session.query(
+			paasmaker.model.Workspace
+		).get(int(workspace_id))
+
 		if not workspace:
 			raise tornado.web.HTTPError(404, "No such workspace.")
 		if workspace.deleted:
 			raise tornado.web.HTTPError(404, "Deleted workspace.")
-		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=workspace)
-		callback(workspace)
 
-	@tornado.gen.engine
-	def _get_application(self, application_id, callback):
-		session = yield tornado.gen.Task(self.db)
-		application = session.query(paasmaker.model.Application).get(int(application_id))
+		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=workspace)
+
+		return workspace
+
+	def _get_application(self, application_id):
+		application = self.session.query(
+			paasmaker.model.Application
+		).get(int(application_id))
+
 		if not application:
 			raise tornado.web.HTTPError(404, "No such application.")
 		if application.deleted:
 			raise tornado.web.HTTPError(404, "Deleted application.")
+
 		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=application.workspace)
-		callback(application)
+
+		return application
 
 class ApplicationListController(ApplicationRootController):
 
-	@tornado.gen.engine
 	def get(self, workspace_id):
-		workspace = yield tornado.gen.Task(self._get_workspace, workspace_id)
+		workspace = self._get_workspace(workspace_id)
 
 		# TODO: Unit test.
-		session = yield tornado.gen.Task(self.db)
-		applications = session.query(
+		applications = self.session.query(
 			paasmaker.model.Application
 		).filter(
 			paasmaker.model.Application.workspace == workspace
@@ -102,19 +106,17 @@ class ApplicationListController(ApplicationRootController):
 # TODO: Unit test. Desperately required!
 class ApplicationNewController(ApplicationRootController):
 
-	@tornado.gen.engine
 	def get(self, input_id):
 		last_scm_name = None
 		last_version_params = {}
 		if self.request.uri.startswith('/application'):
-			application = yield tornado.gen.Task(self._get_application, input_id)
+			application = self._get_application(input_id)
 			workspace = application.workspace
 			self.add_data('new_application', False)
 			self.add_data('application', application)
 
 			# Get the last version, and thus it's last SCM parameters.
-			session = yield tornado.gen.Task(self.db)
-			last_version = session.query(
+			last_version = self.session.query(
 				paasmaker.model.ApplicationVersion
 			).filter(
 				paasmaker.model.ApplicationVersion.application == application
@@ -127,7 +129,7 @@ class ApplicationNewController(ApplicationRootController):
 			last_scm_name = last_version.scm_name
 		else:
 			application = None
-			workspace = yield tornado.gen.Task(self._get_workspace, input_id)
+			workspace = self._get_workspace(input_id)
 			self.add_data('new_application', True)
 		self.add_data('workspace', workspace)
 		self.add_data('last_scm_params', last_version_params)
@@ -175,22 +177,19 @@ class ApplicationNewController(ApplicationRootController):
 		self.add_data('scms', result_list)
 		self.render("application/new.html")
 
-	@tornado.gen.engine
 	def post(self, input_id):
 		if self.request.uri.startswith('/application'):
-			application = yield tornado.gen.Task(self._get_application, input_id)
+			application = self._get_application(input_id)
 			application_id = application.id
 			application_name = application.name
 			workspace = application.workspace
 			self.add_data('new_application', False)
-			# TODO: the application object's session gets closed/detached
-			# before it can be serialized. So we're not currently including it.
-			#self.add_data('application', application)
+			self.add_data('application', application)
 		else:
 			application = None
 			application_id = None
 			application_name = 'New Application'
-			workspace = yield tornado.gen.Task(self._get_workspace, input_id)
+			workspace = self._get_workspace(input_id)
 			self.add_data('new_application', True)
 
 		self.add_data('workspace', workspace)
@@ -241,9 +240,8 @@ class ApplicationNewController(ApplicationRootController):
 
 class ApplicationController(ApplicationRootController):
 
-	@tornado.gen.engine
 	def get(self, application_id):
-		application = yield tornado.gen.Task(self._get_application, application_id)
+		application = self._get_application(application_id)
 
 		# TODO: Unit test.
 		self.add_data('application', application)
@@ -276,19 +274,17 @@ class ApplicationController(ApplicationRootController):
 
 class ApplicationSetCurrentController(ApplicationRootController):
 
-	@tornado.gen.engine
 	def post(self, input_id):
-		session = yield tornado.gen.Task(self.db)
 		if self.request.uri.startswith('/application'):
-			application = yield tornado.gen.Task(self._get_application, input_id)
+			application = self._get_application(input_id)
 			valid_data = self.validate_data(ApplicationCurrentVersionSchema())
 			if not valid_data:
 				# Nope. No recourse here.
 				raise tornado.web.HTTPError(400, "Invalid data supplied.")
 			# Load up the version.
-			version = session.query(paasmaker.model.ApplicationVersion).get(int(self.params['version_id']))
+			version = self.session.query(paasmaker.model.ApplicationVersion).get(int(self.params['version_id']))
 		else:
-			version = session.query(paasmaker.model.ApplicationVersion).get(int(input_id))
+			version = self.session.query(paasmaker.model.ApplicationVersion).get(int(input_id))
 			if not version:
 				raise tornado.web.HTTPError(404, "No such version.")
 			application = version.application
@@ -330,13 +326,11 @@ class ApplicationSetCurrentController(ApplicationRootController):
 
 class ApplicationDeleteController(ApplicationRootController):
 
-	@tornado.gen.engine
 	def post(self, input_id):
-		application = yield tornado.gen.Task(self._get_application, input_id)
+		application = self._get_application(input_id)
 
 		self.require_permission(constants.PERMISSION.APPLICATION_DELETE, workspace=application.workspace)
 
-		session = yield tornado.gen.Task(self.db)
 		if not application.can_delete():
 			raise tornado.web.HTTPError(400, "Cannot delete application that is still active")
 
@@ -364,9 +358,8 @@ class ApplicationDeleteController(ApplicationRootController):
 class ApplicationServiceListController(ApplicationRootController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
 	def get(self, application_id):
-		application = yield tornado.gen.Task(self._get_application, application_id)
+		application = self._get_application(application_id)
 		self.require_permission(constants.PERMISSION.APPLICATION_SERVICE_DETAIL, workspace=application.workspace)
 
 		self._paginate('services', application.services)

@@ -14,8 +14,7 @@ class OverviewController(BaseController):
 		self.require_permission(constants.PERMISSION.SYSTEM_OVERVIEW)
 
 		# Instance status counts
-		session = yield tornado.gen.Task(self.db)
-		instance_status_counts = session.query(
+		instance_status_counts = self.session.query(
 			paasmaker.model.ApplicationInstance.state,
 			func.count()
 		).group_by(
@@ -23,7 +22,7 @@ class OverviewController(BaseController):
 		)
 		self.add_data('instances', instance_status_counts)
 
-		node_status_counts = session.query(
+		node_status_counts = self.session.query(
 			paasmaker.model.Node.state,
 			func.count()
 		).group_by(
@@ -32,7 +31,7 @@ class OverviewController(BaseController):
 		self.add_data('nodes', node_status_counts)
 
 		# Workspace routing stats.
-		self.workspace_list = session.query(
+		self.workspace_list = self.session.query(
 			paasmaker.model.Workspace
 		).order_by(
 			paasmaker.model.Workspace.name.asc()

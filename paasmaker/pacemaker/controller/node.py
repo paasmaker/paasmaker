@@ -68,10 +68,6 @@ class NodeRegisterController(BaseController):
 			# is tried against this controller.
 			raise tornado.web.HTTPError(400, "Invalid request.")
 
-		# Get the session here, and use it later.
-		# Yes, this is a duplicate of that in BaseController.
-		self.node_session = yield tornado.gen.Task(self.db)
-
 		do_connectivity_check = False
 		if self.action == 'register':
 			# Look for nodes with the same route/API port.
@@ -116,11 +112,10 @@ class NodeRegisterController(BaseController):
 	def _finished_connectivity(self, response):
 		if response.success:
 			# Success! Save the node.
-			session = self.node_session
-			session.add(self.node)
-			session.commit()
+			self.session.add(self.node)
+			self.session.commit()
 
-			session.refresh(self.node)
+			self.session.refresh(self.node)
 			# Send back the appropriate data.
 			# TODO: Figure out why it needs to be flattened now.
 			# If you don't, it sends back an object with id being None.
@@ -156,7 +151,7 @@ class NodeRegisterController(BaseController):
 
 	def _finished_response(self):
 		# Commit any changes to the database.
-		self.node_session.commit()
+		self.session.commit()
 		# Add a list of job IDs.
 		self.add_data('jobs', self.node_adjustment_jobs)
 		if len(self.node_adjustment_jobs) > 0:
@@ -174,7 +169,7 @@ class NodeRegisterController(BaseController):
 		new_uuid = str(uuid.uuid4())
 
 		# Look for nodes with the same route/API port.
-		duplicate_node = self.node_session.query(
+		duplicate_node = self.session.query(
 			paasmaker.model.Node
 		).filter(
 			paasmaker.model.Node.route == self.params['route']
@@ -198,7 +193,7 @@ class NodeRegisterController(BaseController):
 
 	def _find_existing_node(self):
 		# Find the node.
-		node = self.node_session.query(
+		node = self.session.query(
 			paasmaker.model.Node
 		).filter(
 			paasmaker.model.Node.uuid == self.params['uuid']
@@ -221,8 +216,7 @@ class NodeRegisterController(BaseController):
 	def _write_instance_statuses(self, statuses):
 		# Fetch all the instances from the database.
 		if len(statuses.keys()) > 0:
-			session = self.node_session
-			instance_list = session.query(
+			instance_list = self.session.query(
 				paasmaker.model.ApplicationInstance
 			).filter(
 				paasmaker.model.ApplicationInstance.instance_id.in_(statuses.keys())
@@ -240,7 +234,7 @@ class NodeRegisterController(BaseController):
 							statuses[instance.instance_id]
 						)
 						instance.state = statuses[instance.instance_id]
-						session.add(instance)
+						self.session.add(instance)
 
 						# Process the next one.
 						process_instance_list()
@@ -302,7 +296,7 @@ class NodeRegisterController(BaseController):
 			# It's now running. Insert a job to update the routing.
 			paasmaker.common.job.routing.routing.RoutingUpdateJob.setup_for_instance(
 				self.configuration,
-				self.node_session,
+				self.session,
 				instance,
 				True,
 				update_job_added
@@ -313,7 +307,7 @@ class NodeRegisterController(BaseController):
 			# for a reason.
 			paasmaker.common.job.routing.routing.RoutingUpdateJob.setup_for_instance(
 				self.configuration,
-				self.node_session,
+				self.session,
 				instance,
 				False,
 				update_job_added
@@ -331,12 +325,10 @@ class NodeRegisterController(BaseController):
 class NodeListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
 	def get(self):
 		self.require_permission(constants.PERMISSION.NODE_LIST)
 
-		session = yield tornado.gen.Task(self.db)
-		nodes = session.query(paasmaker.model.Node)
+		nodes = self.session.query(paasmaker.model.Node)
 		self._paginate('nodes', nodes)
 		self.render("node/list.html")
 
@@ -349,18 +341,15 @@ class NodeListController(BaseController):
 class NodeDetailController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.gen.engine
-	def _get_node(self, node_id, callback):
-		session = yield tornado.gen.Task(self.db)
-		node = session.query(paasmaker.model.Node).get(int(node_id))
+	def _get_node(self, node_id):
+		node = self.session.query(paasmaker.model.Node).get(int(node_id))
 		if not node:
 			raise tornado.web.HTTPError(404, "No such node.")
 		self.require_permission(constants.PERMISSION.NODE_DETAIL_VIEW)
-		callback(node)
+		return node
 
-	@tornado.gen.engine
 	def get(self, node_id):
-		node = yield tornado.gen.Task(self._get_node, node_id)
+		node = self._get_node(node_id)
 
 		self.add_data('node', node)
 		self.add_data_template('json', json)
