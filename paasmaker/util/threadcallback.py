@@ -49,9 +49,10 @@ class ThreadCallback(threading.Thread):
 		If you fail, throw an exception, and that will be passed back to
 		the error_callback.
 
-		If you finish, set self.callback_args to a list of arguments
-		to call the callback function with. You can also set self.callback_kwargs
-		as well.
+		When you finish, call ``self._callback`` with any arguments
+		and keyword arguments you would like. These get translated
+		back to the user supplied callback once control returns
+		to the main thread.
 
 		You should adjust the signature of this function to be any
 		named or keyword arguments that make sense for your work.
