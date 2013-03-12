@@ -639,6 +639,16 @@ class JobStatusMessage(object):
 			'summary': self.summary
 		}
 
+class ThreadedDatabaseSessionFetcher(paasmaker.util.threadcallback.ThreadCallback):
+	"""
+	Helper class to grab a SQLalchemy session in another thread, in
+	case it blocks waiting on connection or external resources.
+	"""
+
+	def _work(self, sessionmaker):
+		session = sessionmaker()
+		self._callback(session)
+
 class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	"""
 	The main configuration object for the Paasmaker system.
@@ -1027,47 +1037,60 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		"""
 		return self.port_allocator.free_in_range(self.get_flat('misc_ports.minimum'), self.get_flat('misc_ports.maximum'))
 
-	def get_database_session(self):
+	def get_database_session(self, callback, error_callback):
 		"""
 		Get a database session object. Each requesthandler should fetch
 		one of these when it needs to, but hang onto it - repeated
 		calls will fetch new sessions every time.
+
+		In production, it was discovered that SQLalchemy will pool these
+		for performance, which is what we want, but block when the pool
+		is already checked out. For that reason, we push the checkout
+		from the pool onto a thread, and callback the caller when the
+		session is available.
 		"""
 		if not self.is_pacemaker():
 			raise ImNotA("I'm not a pacemaker, so I have no database.")
 
-		session = self.session()
+		def attach_tracker(session):
+			if options.debug == 1:
+				if not hasattr(self, '_session_close_tracker'):
+					self._session_close_tracker = {}
+
+				# Track sessions to make sure they get closed.
+				# This is very hackish, and thus only enabled in debug mode.
+				session_key = str(session)
+
+				session.original_close = session.close
+
+				def tracking_close():
+					if session_key in self._session_close_tracker:
+						self.io_loop.remove_timeout(self._session_close_tracker[session_key]['timeout'])
+						del self._session_close_tracker[session_key]
+					session.original_close()
+
+				def session_timeout():
+					if session_key in self._session_close_tracker:
+						print "Session not closed after 20 seconds."
+						print "Opened here:"
+						print "".join(traceback.format_list(self._session_close_tracker[session_key]['traceback']))
+						del self._session_close_tracker[session_key]
+
+				session.close = tracking_close
+				self._session_close_tracker[session_key] = {
+					'timeout': self.io_loop.add_timeout(time.time() + 20, session_timeout),
+					'traceback': traceback.extract_stack()
+				}
+
+			callback(session)
+
+		real_callback = callback
 
 		if options.debug == 1:
-			if not hasattr(self, '_session_close_tracker'):
-				self._session_close_tracker = {}
+			real_callback = attach_tracker
 
-			# Track sessions to make sure they get closed.
-			# This is very hackish, and thus only enabled in debug mode.
-			session_key = str(session)
-
-			session.original_close = session.close
-
-			def tracking_close():
-				if session_key in self._session_close_tracker:
-					self.io_loop.remove_timeout(self._session_close_tracker[session_key]['timeout'])
-					del self._session_close_tracker[session_key]
-				session.original_close()
-
-			def session_timeout():
-				if session_key in self._session_close_tracker:
-					print "Session not closed after 20 seconds."
-					print "Opened here:"
-					print "".join(traceback.format_list(self._session_close_tracker[session_key]['traceback']))
-					del self._session_close_tracker[session_key]
-
-			session.close = tracking_close
-			self._session_close_tracker[session_key] = {
-				'timeout': self.io_loop.add_timeout(time.time() + 20, session_timeout),
-				'traceback': traceback.extract_stack()
-			}
-
-		return session
+		fetcher = ThreadedDatabaseSessionFetcher(self.io_loop, real_callback, error_callback)
+		fetcher.work(self.session)
 
 	def _connect_redis(self, credentials, callback, error_callback):
 		"""
@@ -1505,65 +1528,68 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			error_callback(job_id, "Node is not a pacemaker, and can't search other nodes.")
 			return
 
-		# Now move onto the synchronous tests.
-		# TODO: This queries the DB twice for each lookup, which
-		# can be expensive. Having said that, tailing a log isn't something
-		# that's done that often. Discuss.
-		# Is the job_id an instance log?
-		session = self.get_database_session()
+		def got_database_session(session):
+			# Now move onto the synchronous tests.
+			# TODO: This queries the DB twice for each lookup, which
+			# can be expensive. Having said that, tailing a log isn't something
+			# that's done that often. Discuss.
+			# Is the job_id an instance log?
+			instance = session.query(
+				paasmaker.model.ApplicationInstance
+			).filter(
+				paasmaker.model.ApplicationInstance.instance_id == job_id
+			).first()
 
-		instance = session.query(
-			paasmaker.model.ApplicationInstance
-		).filter(
-			paasmaker.model.ApplicationInstance.instance_id == job_id
-		).first()
+			def check_node(node):
+				# Helper function to check the given node and return.
+				session.close()
+				if node is None:
+					error_callback(job_id, "Can't find a node with this job on it.")
+					return
+				elif node.state == constants.NODE.ACTIVE:
+					callback(job_id, node)
+				else:
+					error_callback(job_id, "Node %s has the log file, but that node is down." % node.name)
 
-		def check_node(node):
-			# Helper function to check the given node and return.
-			session.close()
-			if node is None:
-				error_callback(job_id, "Can't find a node with this job on it.")
+			if instance is not None:
+				# It's on the given remote node.
+				# If the node is working...
+				check_node(instance.node)
 				return
-			elif node.state == constants.NODE.ACTIVE:
-				callback(job_id, node)
-			else:
-				error_callback(job_id, "Node %s has the log file, but that node is down." % node.name)
 
-		if instance is not None:
-			# It's on the given remote node.
-			# If the node is working...
-			check_node(instance.node)
-			return
+			# Try again - see if it's a node.
+			node = session.query(
+				paasmaker.model.Node
+			).filter(
+				paasmaker.model.Node.uuid == job_id
+			).first()
 
-		# Try again - see if it's a node.
-		node = session.query(
-			paasmaker.model.Node
-		).filter(
-			paasmaker.model.Node.uuid == job_id
-		).first()
-
-		if node is not None:
-			# It's the given remote node.
-			check_node(node)
-			return
-
-		# Now, check the jobs system to see where that node is.
-		def on_got_job(data):
-			logger.debug("Got job metata for %s", job_id)
-			if not data.has_key(job_id):
-				error_callback(job_id, "No such job %s." % job_id)
-			else:
-				# Locate the node that it's on.
-				node = session.query(
-					paasmaker.model.Node
-				).filter(
-					paasmaker.model.Node.uuid == data[job_id]['node']
-				).first()
-
-				# And pass it back.
+			if node is not None:
+				# It's the given remote node.
 				check_node(node)
+				return
 
-		self.job_manager.get_jobs([job_id], on_got_job)
+			# Now, check the jobs system to see where that node is.
+			def on_got_job(data):
+				logger.debug("Got job metata for %s", job_id)
+				if not data.has_key(job_id):
+					error_callback(job_id, "No such job %s." % job_id)
+				else:
+					# Locate the node that it's on.
+					node = session.query(
+						paasmaker.model.Node
+					).filter(
+						paasmaker.model.Node.uuid == data[job_id]['node']
+					).first()
+
+					# And pass it back.
+					check_node(node)
+
+			self.job_manager.get_jobs([job_id], on_got_job)
+
+			# end of got_database_session()
+
+		self.get_database_session(got_database_session, error_callback)
 
 	#
 	# IDENTITY HELPERS

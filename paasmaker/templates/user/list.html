@@ -6,7 +6,7 @@
 
 {% block body %}
 	<div class="btn-group btn-group-header">
-		{% if has_permission(PERMISSION.USER_EDIT) %}
+		{% if user_permissions.has_permission(PERMISSION.USER_EDIT, None) %}
 			<a class="btn" href="/user/create">Create User</a>
 		{% end %}
 	</div>
@@ -22,9 +22,9 @@
 		{% for user in users %}
 			<tr>
 				<td>
-					{% if has_permission(PERMISSION.USER_EDIT) %}<a href="/user/{{ user.id }}">{% end %}
+					{% if user_permissions.has_permission(PERMISSION.USER_EDIT, None) %}<a href="/user/{{ user.id }}">{% end %}
 						{{ user.name }}
-					{% if has_permission(PERMISSION.USER_EDIT) %}</a>{% end %}
+					{% if user_permissions.has_permission(PERMISSION.USER_EDIT, None) %}</a>{% end %}
 				</td>
 				<td>
 					{{ user.auth_source }}

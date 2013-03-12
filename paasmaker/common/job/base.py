@@ -73,6 +73,16 @@ class BaseJob(Plugin):
 	def _complete_job(self, state, context, summary):
 		self.job_manager.completed(self.job_id, state, context, summary)
 
+	def _failure_callback(self, message, exception=None):
+		"""
+		A generic error callback that logs the message, optional
+		exception, and then fails the job.
+		"""
+		self.logger.error(message)
+		if exception:
+			self.logger.error("Exception:", exc_info=exception)
+		self.failed(message)
+
 	# SUBCLASS OVERRIDE FUNCTIONS
 	def start_job(self, context):
 		"""

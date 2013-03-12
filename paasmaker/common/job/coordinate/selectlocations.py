@@ -31,51 +31,56 @@ class SelectLocationsJob(BaseJob):
 	def start_job(self, context):
 		self.logger.info("Starting to select locations.")
 
-		self.session = self.configuration.get_database_session()
-		self.instance_type = self.session.query(
-			paasmaker.model.ApplicationInstanceType
-		).get(self.parameters['application_instance_type_id'])
+		def got_session(session):
+			self.session = session
+			self.instance_type = self.session.query(
+				paasmaker.model.ApplicationInstanceType
+			).get(self.parameters['application_instance_type_id'])
 
-		# Fire up the plugin for placement.
-		plugin_exists = self.configuration.plugins.exists(
-			self.instance_type.placement_provider,
-			paasmaker.util.plugin.MODE.PLACEMENT
-		)
-		if not plugin_exists:
-			error_message = "No placement provider %s" % self.instance_type.placement_provider
-			self.logger.error(error_message)
-			self.failed(error_message)
-		else:
-			placement = self.configuration.plugins.instantiate(
+			# Fire up the plugin for placement.
+			plugin_exists = self.configuration.plugins.exists(
 				self.instance_type.placement_provider,
-				paasmaker.util.plugin.MODE.PLACEMENT,
-				self.instance_type.placement_parameters,
-				self.logger
+				paasmaker.util.plugin.MODE.PLACEMENT
 			)
-
-			adjustment_quantity = self.instance_type.adjustment_instances(self.session)
-
-			if adjustment_quantity == 0:
-				finish_message = "No more instances required. No action taken."
-				self.logger.info(finish_message)
-				self.session.close()
-				self.success({}, finish_message)
-			elif adjustment_quantity < 0:
-				# We have too many instances.
-				finish_message = "We have too many instances. No action will be taken at this time."
-				self.logger.warning(finish_message)
-				self.session.close()
-				self.success({}, finish_message)
+			if not plugin_exists:
+				error_message = "No placement provider %s" % self.instance_type.placement_provider
+				self.logger.error(error_message)
+				self.failed(error_message)
 			else:
-				# Get it to choose the number of instances that we want.
-				# This will call us back when ready.
-				placement.choose(
-					self.session,
-					self.instance_type,
-					adjustment_quantity,
-					self.select_success,
-					self.select_failure
+				placement = self.configuration.plugins.instantiate(
+					self.instance_type.placement_provider,
+					paasmaker.util.plugin.MODE.PLACEMENT,
+					self.instance_type.placement_parameters,
+					self.logger
 				)
+
+				adjustment_quantity = self.instance_type.adjustment_instances(self.session)
+
+				if adjustment_quantity == 0:
+					finish_message = "No more instances required. No action taken."
+					self.logger.info(finish_message)
+					self.session.close()
+					self.success({}, finish_message)
+				elif adjustment_quantity < 0:
+					# We have too many instances.
+					finish_message = "We have too many instances. No action will be taken at this time."
+					self.logger.warning(finish_message)
+					self.session.close()
+					self.success({}, finish_message)
+				else:
+					# Get it to choose the number of instances that we want.
+					# This will call us back when ready.
+					placement.choose(
+						self.session,
+						self.instance_type,
+						adjustment_quantity,
+						self.select_success,
+						self.select_failure
+					)
+
+			# end of got_session()
+
+		self.configuration.get_database_session(got_session, self._failure_callback)
 
 	def select_success(self, nodes, message):
 		# Ok, now that we have a chosen set of nodes, create records for them in
@@ -153,7 +158,8 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 	def test_simple_success(self):
 		# Set up the environment.
-		s = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		s = self.wait()
 		instance_type = self.create_sample_application(s, 'paasmaker.runtime.php', {}, '5.3')
 
 		node = self.add_simple_node(s, {
@@ -201,7 +207,8 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 	def test_simple_failed(self):
 		# Set up the environment.
-		s = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		s = self.wait()
 		instance_type = self.create_sample_application(s, 'paasmaker.runtime.php', {}, '5.3')
 
 		node = self.add_simple_node(s, {

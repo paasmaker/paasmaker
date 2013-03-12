@@ -90,56 +90,62 @@ class CronList(object):
 
 		return task_buckets
 
-	def _load_or_build_table(self):
+	def _load_or_build_table(self, callback, error_callback):
 		cachepath = self.configuration.get_scratch_path('crontable')
-		session = self.configuration.get_database_session()
-		key = self._get_cache_key(session)
-		table = None
-		if os.path.exists(cachepath):
-			# Load it and check the time.
-			try:
-				parsed = json.loads(open(cachepath, 'r').read())
 
-				if parsed['key'] == key:
-					# It's valid.
-					table = parsed['table']
-			except ValueError, ex:
-				# Invalid JSON. Rebuild.
-				pass
+		def got_session(session):
+			key = self._get_cache_key(session)
+			table = None
+			if os.path.exists(cachepath):
+				# Load it and check the time.
+				try:
+					parsed = json.loads(open(cachepath, 'r').read())
 
-		if not table:
-			# Need to build the table.
-			table = self._build_cache(session)
+					if parsed['key'] == key:
+						# It's valid.
+						table = parsed['table']
+				except ValueError, ex:
+					# Invalid JSON. Rebuild.
+					pass
 
-			# Store the table for later.
-			open(cachepath, 'w').write(
-				json.dumps(
-					{
-						'key': key,
-						'table': table
-					}
+			if not table:
+				# Need to build the table.
+				table = self._build_cache(session)
+
+				# Store the table for later.
+				open(cachepath, 'w').write(
+					json.dumps(
+						{
+							'key': key,
+							'table': table
+						}
+					)
 				)
-			)
 
-		session.close()
+			session.close()
 
-		return table
+			callback(table)
 
-	def get_now_tasks(self):
-		table = self._load_or_build_table()
+			# end of got_session()
 
-		evaluation_time = time.gmtime(time.time())[:5]
+		self.configuration.get_database_session(got_session, error_callback)
 
-		now_tasks = []
+	def get_now_tasks(self, callback, error_callback):
+		def got_table(table):
+			evaluation_time = time.gmtime(time.time())[:5]
 
-		for spec, task_list in table.iteritems():
-			for task_id in task_list:
-				checker = cronex.CronExpression("%s %d" % (str(spec), task_id))
+			now_tasks = []
 
-				if checker.check_trigger(evaluation_time):
-					now_tasks.append(task_id)
+			for spec, task_list in table.iteritems():
+				for task_id in task_list:
+					checker = cronex.CronExpression("%s %d" % (str(spec), task_id))
 
-		return now_tasks
+					if checker.check_trigger(evaluation_time):
+						now_tasks.append(task_id)
+
+			callback(now_tasks)
+
+		self._load_or_build_table(got_table, error_callback)
 
 class CronRunJobSchema(colander.MappingSchema):
 	task_id = colander.SchemaNode(colander.Integer())
@@ -152,57 +158,61 @@ class CronRunJob(paasmaker.common.job.base.BaseJob):
 	def start_job(self, context):
 		task_id = self.parameters['task_id']
 
-		session = self.configuration.get_database_session()
-		task = session.query(
-			paasmaker.model.ApplicationInstanceTypeCron
-		).get(task_id)
+		def got_session(session):
+			task = session.query(
+				paasmaker.model.ApplicationInstanceTypeCron
+			).get(task_id)
 
-		self.logger.info("Starting cron task %s" % task.uri)
-		self.started = datetime.datetime.now()
+			self.logger.info("Starting cron task %s" % task.uri)
+			self.started = datetime.datetime.now()
 
-		# Find an instance to service us.
-		self.logger.info("Looking for instance to service this request.")
-		candidates = session.query(
-			paasmaker.model.ApplicationInstance
-		).filter(
-			paasmaker.model.ApplicationInstance.application_instance_type == task.application_instance_type,
-			paasmaker.model.ApplicationInstance.state == constants.INSTANCE.RUNNING
-		)
+			# Find an instance to service us.
+			self.logger.info("Looking for instance to service this request.")
+			candidates = session.query(
+				paasmaker.model.ApplicationInstance
+			).filter(
+				paasmaker.model.ApplicationInstance.application_instance_type == task.application_instance_type,
+				paasmaker.model.ApplicationInstance.state == constants.INSTANCE.RUNNING
+			)
 
-		if candidates.count() == 0:
-			error_message = "Can't find any running instances to service this request."
-			self.logger.error(error_message)
+			if candidates.count() == 0:
+				error_message = "Can't find any running instances to service this request."
+				self.logger.error(error_message)
+				session.close()
+				self.failed(error_message)
+				return
+
+			# Pick the first one. That will do.
+			# TODO: Use a little bit more intelligence to find an appropriate node.
+			instance = candidates[0]
+
+			self.logger.info("Chosen %s (on node %s) to service this request.", instance.instance_id, instance.node.name)
+
+			# Build our HTTP request object.
+			kwargs = {}
+			kwargs['request_timeout'] = 300 # TODO: This gives it max 5 mins to complete. Check to see if we can make this unlimited.
+			kwargs['streaming_callback'] = self._on_data_block
+			if task.username:
+				self.logger.info("Using supplied username and password.")
+				kwargs['auth_username'] = task.username
+				kwargs['auth_password'] = task.password
+
+			endpoint = "http://%s:%d%s" % (instance.node.route, instance.port, task.uri)
+			self.logger.debug("Resolved endpoint: %s", endpoint)
+
 			session.close()
-			self.failed(error_message)
-			return
 
-		# Pick the first one. That will do.
-		# TODO: Use a little bit more intelligence to find an appropriate node.
-		instance = candidates[0]
+			request = tornado.httpclient.HTTPRequest(
+				endpoint,
+				**kwargs
+			)
+			client = tornado.httpclient.AsyncHTTPClient(io_loop=self.configuration.io_loop)
+			self.log_fp = self.logger.takeover_file()
+			client.fetch(request, self._on_request_complete)
 
-		self.logger.info("Chosen %s (on node %s) to service this request.", instance.instance_id, instance.node.name)
+			# end of got_session()
 
-		# Build our HTTP request object.
-		kwargs = {}
-		kwargs['request_timeout'] = 300 # TODO: This gives it max 5 mins to complete. Check to see if we can make this unlimited.
-		kwargs['streaming_callback'] = self._on_data_block
-		if task.username:
-			self.logger.info("Using supplied username and password.")
-			kwargs['auth_username'] = task.username
-			kwargs['auth_password'] = task.password
-
-		endpoint = "http://%s:%d%s" % (instance.node.route, instance.port, task.uri)
-		self.logger.debug("Resolved endpoint: %s", endpoint)
-
-		session.close()
-
-		request = tornado.httpclient.HTTPRequest(
-			endpoint,
-			**kwargs
-		)
-		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.configuration.io_loop)
-		self.log_fp = self.logger.takeover_file()
-		client.fetch(request, self._on_request_complete)
+		self.configuration.get_database_session(got_session, self._failure_callback)
 
 	def _on_data_block(self, data):
 		# Write the data block to the file.
@@ -223,71 +233,80 @@ class CronRunJob(paasmaker.common.job.base.BaseJob):
 			self.success({}, "Completed successfully.")
 
 	@staticmethod
-	def schedule_tasks(configuration, callback):
+	def schedule_tasks(configuration, callback, error_callback):
 		new_job_set = []
 
-		session = configuration.get_database_session()
+		def got_tasks(session, ready_to_run):
+			def add_job():
+				try:
+					task_id = ready_to_run.pop()
+					task = session.query(
+						paasmaker.model.ApplicationInstanceTypeCron
+					).get(task_id)
 
-		# Get a list of the tasks.
-		lister = CronList(configuration)
-		ready_to_run = lister.get_now_tasks()
+					instance_type = task.application_instance_type
 
-		def add_job():
-			try:
-				task_id = ready_to_run.pop()
-				task = session.query(
-					paasmaker.model.ApplicationInstanceTypeCron
-				).get(task_id)
+					task_title = "Cron task '%s' for application %s, version %d, at %s" % (
+						task.uri,
+						task.application_instance_type.application_version.application.name,
+						task.application_instance_type.application_version.version,
+						datetime.datetime.utcnow().isoformat()
+					)
 
-				instance_type = task.application_instance_type
+					tags = []
+					tags.append('workspace:%d' % instance_type.application_version.application.workspace.id)
+					tags.append('workspace:cron:%d' % instance_type.application_version.application.workspace.id)
+					tags.append('application:%d' % instance_type.application_version.application.id)
+					tags.append('application:cron:%d' % instance_type.application_version.application.id)
+					tags.append('application_version:%d' % instance_type.application_version.id)
+					tags.append('application_version:cron:%d' % instance_type.application_version.id)
+					tags.append('application_instance_type:%d' % instance_type.id)
+					tags.append('application_instance_type:cron:%d' % instance_type.id)
+					tags.append('application_instance_type_cron:%d' % task.id)
 
-				task_title = "Cron task '%s' for application %s, version %d, at %s" % (
-					task.uri,
-					task.application_instance_type.application_version.application.name,
-					task.application_instance_type.application_version.version,
-					datetime.datetime.utcnow().isoformat()
-				)
+					def on_job_executable():
+						# Move onto the next job.
+						add_job()
 
-				tags = []
-				tags.append('workspace:%d' % instance_type.application_version.application.workspace.id)
-				tags.append('workspace:cron:%d' % instance_type.application_version.application.workspace.id)
-				tags.append('application:%d' % instance_type.application_version.application.id)
-				tags.append('application:cron:%d' % instance_type.application_version.application.id)
-				tags.append('application_version:%d' % instance_type.application_version.id)
-				tags.append('application_version:cron:%d' % instance_type.application_version.id)
-				tags.append('application_instance_type:%d' % instance_type.id)
-				tags.append('application_instance_type:cron:%d' % instance_type.id)
-				tags.append('application_instance_type_cron:%d' % task.id)
+					def on_job_added(new_job_id):
+						# Move onto the next job.
+						new_job_set.append(new_job_id)
+						# Make it executable immediately.
+						configuration.job_manager.allow_execution(new_job_id, callback=on_job_executable)
 
-				def on_job_executable():
-					# Move onto the next job.
-					add_job()
+					configuration.job_manager.add_job(
+						'paasmaker.job.cron',
+						{
+							'task_id': task.id
+						},
+						task_title,
+						on_job_added,
+						tags=tags
+					)
 
-				def on_job_added(new_job_id):
-					# Move onto the next job.
-					new_job_set.append(new_job_id)
-					# Make it executable immediately.
-					configuration.job_manager.allow_execution(new_job_id, callback=on_job_executable)
+				except IndexError, ex:
+					# Got the last job. We're done.
+					session.close()
+					callback(new_job_set)
 
-				configuration.job_manager.add_job(
-					'paasmaker.job.cron',
-					{
-						'task_id': task.id
-					},
-					task_title,
-					on_job_added,
-					tags=tags
-				)
+				# end of add_job()
 
-			except IndexError, ex:
-				# Got the last job. We're done.
-				session.close()
-				callback(new_job_set)
+			# Kick off the process.
+			add_job()
 
-			# end of add_job()
+			# end of got_tasks()
 
-		# Kick off the process.
-		add_job()
+		def got_session(session):
+			def got_tasks_intermediate(tasks):
+				got_tasks(session, tasks)
+
+			# Get a list of the tasks.
+			lister = CronList(configuration)
+			ready_to_run = lister.get_now_tasks(got_tasks_intermediate, error_callback)
+
+			# end of got_session()
+
+		configuration.get_database_session(got_session, error_callback)
 
 class CronPeriodicManager(object):
 	def __init__(self, configuration):
@@ -316,10 +335,15 @@ class CronPeriodicManager(object):
 	def schedule_jobs(self):
 		# Fire off the jobs.
 		logger.info("Evaluating cron jobs.")
-		CronRunJob.schedule_tasks(self.configuration, self._on_complete)
+		CronRunJob.schedule_tasks(self.configuration, self._on_complete, self._on_error)
 
 	def _on_complete(self, tasklist):
 		logger.info("Kicked off %d cron jobs.", len(tasklist))
+
+	def _on_error(self, message, exception=None):
+		logger.error("Error scheduling cron jobs: %s", message)
+		if exception:
+			logger.error("Exception:", exc_info=exception)
 
 class CronTestController(BaseController):
 	AUTH_METHODS = [BaseController.ANONYMOUS]
@@ -363,7 +387,8 @@ class CronRunnerTest(BaseControllerTest):
 		return self.wait()
 
 	def test_cron(self):
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 
 		# Make us a node.
 		nodeuuid = str(uuid.uuid4())
@@ -478,14 +503,16 @@ class CronRunnerTest(BaseControllerTest):
 
 		# Now get a list of the tasks.
 		lister = CronList(self.configuration)
-		ready_to_run = lister.get_now_tasks()
+		lister.get_now_tasks(self.stop, None)
+		ready_to_run = self.wait()
 
 		self.assertEquals(1, len(ready_to_run), "Incorrect number of ready to run tasks.")
 		self.assertEquals(ready_to_run[0], cron_task_1.id, "Wrong task ready to run.")
 
 		# Do the cron list again. It should fetch from cache.
 		lister = CronList(self.configuration)
-		ready_to_run = lister.get_now_tasks()
+		lister.get_now_tasks(self.stop, None)
+		ready_to_run = self.wait()
 
 		self.assertEquals(1, len(ready_to_run), "Incorrect number of ready to run tasks.")
 		self.assertEquals(ready_to_run[0], cron_task_1.id, "Wrong task ready to run.")
@@ -496,13 +523,14 @@ class CronRunnerTest(BaseControllerTest):
 		# Do the cron list again. The cache should be invalid, and it should return a different
 		# result.
 		lister = CronList(self.configuration)
-		ready_to_run = lister.get_now_tasks()
+		lister.get_now_tasks(self.stop, None)
+		ready_to_run = self.wait()
 
 		self.assertEquals(1, len(ready_to_run), "Incorrect number of ready to run tasks.")
 		self.assertEquals(ready_to_run[0], cron_task_2.id, "Wrong task ready to run.")
 
 		# Schedule and run those jobs.
-		CronRunJob.schedule_tasks(self.configuration, self.stop)
+		CronRunJob.schedule_tasks(self.configuration, self.stop, None)
 		tasks = self.wait()
 
 		self.assertEquals(1, len(tasks), "Too many tasks scheduled.")
@@ -523,7 +551,7 @@ class CronRunnerTest(BaseControllerTest):
 		version_1.make_current(session)
 
 		# And try again.
-		CronRunJob.schedule_tasks(self.configuration, self.stop)
+		CronRunJob.schedule_tasks(self.configuration, self.stop, None)
 		tasks = self.wait()
 
 		self.assertEquals(1, len(tasks), "Too many tasks scheduled.")

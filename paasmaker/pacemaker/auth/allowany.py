@@ -67,7 +67,8 @@ class AllowAnyAuthTest(BaseAuthTest):
 			paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN
 		)
 
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 
 		auth.authenticate(
 			session,
@@ -93,7 +94,8 @@ class AllowAnyAuthTest(BaseAuthTest):
 			paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN
 		)
 
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 		u = paasmaker.model.User()
 		u.login = 'username'
 		u.email = 'username@example.com'
@@ -126,7 +128,8 @@ class AllowAnyAuthTest(BaseAuthTest):
 			paasmaker.util.plugin.MODE.USER_AUTHENTICATE_PLAIN
 		)
 
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 		u = paasmaker.model.User()
 		u.login = 'username'
 		u.email = 'username@example.com'

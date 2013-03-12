@@ -40,22 +40,27 @@ class RoutingUpdateJob(BaseJob):
 		else:
 			self.logger.info("Removing instance from the routing table.")
 
-		self.session = self.configuration.get_database_session()
-		self.instance = self.session.query(
-			paasmaker.model.ApplicationInstance
-		).get(self.instance_id)
+		def got_session(session):
+			self.session = session
+			self.instance = self.session.query(
+				paasmaker.model.ApplicationInstance
+			).get(self.instance_id)
 
-		if self.instance.application_instance_type.standalone:
-			self.session.close()
-			self.success({}, "Standalone instance - no routing required.")
-		else:
-			self.updater = RouterTableUpdate(
-				self.configuration,
-				self.instance,
-				self.parameters['add'],
-				self.logger
-			)
-			self.updater.update(self.on_success, self.on_failure)
+			if self.instance.application_instance_type.standalone:
+				self.session.close()
+				self.success({}, "Standalone instance - no routing required.")
+			else:
+				self.updater = RouterTableUpdate(
+					self.configuration,
+					self.instance,
+					self.parameters['add'],
+					self.logger
+				)
+				self.updater.update(self.on_success, self.on_failure)
+
+			# end of got_session()
+
+		self.configuration.get_database_session(got_session, self._failure_callback)
 
 	def on_success(self):
 		self.logger.info("Successfully updated routing table.")
@@ -372,7 +377,8 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 	def test_simple(self):
 		# Set up the environment.
-		s = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		s = self.wait()
 		instance_types = self.create_sample_applications(s, 'paasmaker.runtime.php', {}, '5.3')
 
 		node = self.add_simple_node(s, {

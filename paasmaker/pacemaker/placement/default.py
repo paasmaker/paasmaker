@@ -156,7 +156,8 @@ class DefaultPlacementTest(BasePlacementTest):
 		self.assertEquals(len(result), 0, "Should have returned no nodes.")
 
 	def test_simple(self):
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 		self.create_sample_nodes(session, 10)
 		instance_type = self.create_sample_application(session, 'paasmaker.runtime.php', {}, '5.3')
 
@@ -182,7 +183,8 @@ class DefaultPlacementTest(BasePlacementTest):
 		self.assertEquals(self.nodes[0].state, constants.NODE.ACTIVE, "Returned node was not active.")
 
 	def test_more_than_available(self):
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 		self.create_sample_nodes(session, 10)
 		instance_type = self.create_sample_application(session, 'paasmaker.runtime.php', {}, '5.3')
 
@@ -209,7 +211,8 @@ class DefaultPlacementTest(BasePlacementTest):
 		self.assertEquals(self.nodes[0].state, constants.NODE.ACTIVE, "Returned node was not active.")
 
 	def test_no_runtime(self):
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 		self.create_sample_nodes(session, 10)
 		instance_type = self.create_sample_application(session, 'paasmaker.runtime.noexist', {}, '1.0')
 

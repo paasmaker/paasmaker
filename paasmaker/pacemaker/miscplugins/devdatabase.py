@@ -55,83 +55,87 @@ class DevDatabasePlugin(paasmaker.util.plugin.Plugin):
 
 	def startup_async_prelisten(self, callback, error_callback):
 		# Look for some defaults, and create them if missing.
-		session = self.configuration.get_database_session()
 
-		user = session.query(
-			paasmaker.model.User
-		).filter(
-			paasmaker.model.User.login == self.options['login']
-		).first()
+		def got_session(session):
+			user = session.query(
+				paasmaker.model.User
+			).filter(
+				paasmaker.model.User.login == self.options['login']
+			).first()
 
-		self.logger.info("************************************************************")
-		self.logger.info("Running development bootstrap plugin")
-		self.logger.info("----------------")
+			self.logger.info("************************************************************")
+			self.logger.info("Running development bootstrap plugin")
+			self.logger.info("----------------")
 
-		if not user:
-			# Create the user and set default name/password etc.
-			new_user = True
-			user = paasmaker.model.User()
+			if not user:
+				# Create the user and set default name/password etc.
+				new_user = True
+				user = paasmaker.model.User()
 
-			user.login = self.options['login']
-			user.email = self.options['email']
-			user.enabled = True
-			user.name = self.options['name']
-			user.password = self.options['password']
+				user.login = self.options['login']
+				user.email = self.options['email']
+				user.enabled = True
+				user.name = self.options['name']
+				user.password = self.options['password']
 
-			# Record that this plugin created it.
-			meta = user.auth_meta
-			meta['dev_user'] = self.called_name
-			user.auth_meta = meta
+				# Record that this plugin created it.
+				meta = user.auth_meta
+				meta['dev_user'] = self.called_name
+				user.auth_meta = meta
 
-			self.logger.info("New user created for testing!")
-			self.logger.info("username: %s", self.options['login'])
-			self.logger.info("password: %s", self.options['password'])
-		else:
-			new_user = False
+				self.logger.info("New user created for testing!")
+				self.logger.info("username: %s", self.options['login'])
+				self.logger.info("password: %s", self.options['password'])
+			else:
+				new_user = False
 
-			# Make sure the user is one that this plugin created.
-			meta = user.auth_meta
-			if not meta.has_key('dev_user') or meta['dev_user'] != self.called_name:
-				error_callback("Dev Database plugin is attempting to operate on a user that it did not create. This is not permitted.")
-				return
+				# Make sure the user is one that this plugin created.
+				meta = user.auth_meta
+				if not meta.has_key('dev_user') or meta['dev_user'] != self.called_name:
+					error_callback("Dev Database plugin is attempting to operate on a user that it did not create. This is not permitted.")
+					return
 
-		session.add(user)
-		session.commit()
+			session.add(user)
+			session.commit()
 
-		self.logger.info("YOU SHOULD NOT BE SEEING THIS LOG MESSAGE IN PRODUCTION.")
-		self.logger.info("(disable DevDatabasePlugin in paasmaker.yml to prevent this)")
-		self.logger.info("************************************************************")
+			self.logger.info("YOU SHOULD NOT BE SEEING THIS LOG MESSAGE IN PRODUCTION.")
+			self.logger.info("(disable DevDatabasePlugin in paasmaker.yml to prevent this)")
+			self.logger.info("************************************************************")
 
-		if new_user:
-			# Create them a role with all permissions,
-			# and assign it. Only for new users.
-			role = paasmaker.model.Role()
-			role.name = 'Administrator'
-			role.permissions = paasmaker.common.core.constants.PERMISSION.ALL
+			if new_user:
+				# Create them a role with all permissions,
+				# and assign it. Only for new users.
+				role = paasmaker.model.Role()
+				role.name = 'Administrator'
+				role.permissions = paasmaker.common.core.constants.PERMISSION.ALL
 
-			role_allocation = paasmaker.model.WorkspaceUserRole()
-			role_allocation.user = user
-			role_allocation.role = role
+				role_allocation = paasmaker.model.WorkspaceUserRole()
+				role_allocation.user = user
+				role_allocation.role = role
 
-			session.add(role)
-			session.add(role_allocation)
+				session.add(role)
+				session.add(role_allocation)
 
-			paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
+				paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
 
-			if self.options['create_workspace']:
-				workspace = paasmaker.model.Workspace()
-				workspace.name = self.options['workspace_name']
-				workspace.stub = self.options['workspace_stub']
+				if self.options['create_workspace']:
+					workspace = paasmaker.model.Workspace()
+					workspace.name = self.options['workspace_name']
+					workspace.stub = self.options['workspace_stub']
 
-				session.add(workspace)
-				session.commit()
+					session.add(workspace)
+					session.commit()
 
-		# And we're done.
-		session.close()
-		if new_user:
-			callback("Successfully created new user.")
-		else:
-			callback("Updated existing user.")
+			# And we're done.
+			session.close()
+			if new_user:
+				callback("Successfully created new user.")
+			else:
+				callback("Updated existing user.")
+
+			# end of got_session()
+
+		self.configuration.get_database_session(got_session, error_callback)
 
 class DevDatabasePluginTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
@@ -151,7 +155,8 @@ class DevDatabasePluginTest(tornado.testing.AsyncTestCase):
 
 	def test_simple(self):
 		# If it's run, it will just create a new test user.
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 
 		users = session.query(
 			paasmaker.model.User

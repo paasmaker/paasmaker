@@ -32,7 +32,10 @@ class RouterTableDump(object):
 			is an open database session. You must close this when you are
 			done.
 		"""
-		self.session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self._got_session, self.error_callback)
+
+	def _got_session(self, session):
+		self.session = session
 		self.configuration.get_router_table_redis(self._got_redis, self.error_callback)
 
 	def _got_redis(self, redis):

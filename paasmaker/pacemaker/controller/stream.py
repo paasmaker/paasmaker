@@ -23,6 +23,7 @@ BLOCK_READ = 8192
 
 class StreamConnection(tornadio2.SocketConnection):
 
+	@tornado.gen.engine
 	def on_open(self, request):
 		"""
 		Set up this stream connection, and set up storage variables used later.
@@ -30,6 +31,10 @@ class StreamConnection(tornadio2.SocketConnection):
 		This also checks that the user is authorized.
 		"""
 		self.configuration = self.session.server.configuration
+
+		def session_error_callback(message, exception=None):
+			# Failed to get the session, which means no authentication.
+			raise tornado.web.HTTPError(500, message)
 
 		# AUTHORIZATION
 		# Check that the user is allowed.
@@ -49,7 +54,10 @@ class StreamConnection(tornadio2.SocketConnection):
 				)
 
 				if user_id:
-					session = self.configuration.get_database_session()
+					session = yield tornado.gen.Task(
+						self.configuration.get_database_session,
+						error_callback=session_error_callback
+					)
 					user = session.query(
 						paasmaker.model.User
 					).get(int(user_id))
@@ -71,7 +79,10 @@ class StreamConnection(tornadio2.SocketConnection):
 				self.auth_method = 'node'
 			# And against the user token.
 			if self.configuration.is_pacemaker():
-				session = self.configuration.get_database_session()
+				session = yield tornado.gen.Task(
+					self.configuration.get_database_session,
+					error_callback=session_error_callback
+				)
 				user = session.query(
 					paasmaker.model.User
 				).filter(
@@ -651,7 +662,8 @@ class StreamConnectionTest(BaseControllerTest):
 		nodeuuid = str(uuid.uuid4())
 		self.configuration.set_node_uuid(nodeuuid)
 		node = paasmaker.model.Node('test', 'localhost', self.get_http_port(), nodeuuid, constants.NODE.ACTIVE)
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 		session.add(node)
 		session.commit()
 
@@ -700,7 +712,8 @@ class StreamConnectionTest(BaseControllerTest):
 		nodeuuid = str(uuid.uuid4())
 		self.configuration.set_node_uuid(nodeuuid)
 		node = paasmaker.model.Node('test', 'localhost', self.get_http_port(), nodeuuid, constants.NODE.ACTIVE)
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 		session.add(node)
 		session.commit()
 		instance_type = session.query(paasmaker.model.ApplicationInstanceType).get(instance_type.id)

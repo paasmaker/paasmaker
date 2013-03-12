@@ -40,7 +40,7 @@ class RegisterRootJob(InstanceRootBase):
 	"""
 
 	@classmethod
-	def setup_version(cls, configuration, application_version, callback, limit_instances=None, parent=None):
+	def setup_version(cls, configuration, application_version, callback, error_callback, limit_instances=None, parent=None):
 		# List all the instance types.
 		# Assume we have an open session on the application_version object.
 
@@ -93,10 +93,11 @@ class RegisterRootJob(InstanceRootBase):
 		configuration.job_manager.add_tree(tree, on_tree_added, parent=parent)
 
 	def start_job(self, context):
-		self.update_version_from_context(context, constants.VERSION.READY)
+		def version_updated():
+			self.logger.info("Select locations and register instances.")
+			self.success({}, "Selected and registered instances.")
 
-		self.logger.info("Select locations and register instances.")
-		self.success({}, "Selected and registered instances.")
+		self.update_version_from_context(context, constants.VERSION.READY, version_updated)
 
 class RegisterRequestJobParametersSchema(colander.MappingSchema):
 	application_instance_type_id = colander.SchemaNode(colander.Integer())
@@ -112,66 +113,70 @@ class RegisterRequestJob(BaseJob):
 	def start_job(self, context):
 		self.logger.info("Creating node registration jobs.")
 
-		session = self.configuration.get_database_session()
-		instance_type = session.query(
-			paasmaker.model.ApplicationInstanceType
-		).get(self.parameters['application_instance_type_id'])
+		def got_session(session):
+			instance_type = session.query(
+				paasmaker.model.ApplicationInstanceType
+			).get(self.parameters['application_instance_type_id'])
 
-		# Find all instances that need to be registered.
-		# Attempt to grab all the data at once that is required.
-		to_allocate = session.query(
-			paasmaker.model.ApplicationInstance
-		).options(
-			sqlalchemy.orm.joinedload(
-				paasmaker.model.ApplicationInstance.node
-			)
-		).filter(
-			paasmaker.model.ApplicationInstance.application_instance_type == instance_type,
-			paasmaker.model.ApplicationInstance.state == constants.INSTANCE.ALLOCATED
-		)
-
-		# Now set up the jobs.
-		container = self.configuration.job_manager.get_specifier()
-		container.set_job(
-			'paasmaker.job.container',
-			{},
-			'Register container for %s' % instance_type.name
-		)
-
-		self.logger.info("Found %d instance that need to be registered.", to_allocate.count())
-
-		# And for each of those, create the following jobs:
-		# - Store port
-		#   - Register instance.
-		self.instance_list = []
-		for instance in to_allocate:
-			storeport = container.add_child()
-			storeport.set_job(
-				'paasmaker.job.coordinate.storeport',
-				{
-					'instance_id': instance.instance_id,
-					'database_id': instance.id
-				},
-				'Store instance port'
+			# Find all instances that need to be registered.
+			# Attempt to grab all the data at once that is required.
+			to_allocate = session.query(
+				paasmaker.model.ApplicationInstance
+			).options(
+				sqlalchemy.orm.joinedload(
+					paasmaker.model.ApplicationInstance.node
+				)
+			).filter(
+				paasmaker.model.ApplicationInstance.application_instance_type == instance_type,
+				paasmaker.model.ApplicationInstance.state == constants.INSTANCE.ALLOCATED
 			)
 
-			register = storeport.add_child()
-			register.set_job(
-				'paasmaker.job.heart.registerinstance',
-				instance.flatten_for_heart(),
-				'Register instance %s on node %s' % (instance.instance_id, instance.node.name),
-				node=instance.node.uuid
+			# Now set up the jobs.
+			container = self.configuration.job_manager.get_specifier()
+			container.set_job(
+				'paasmaker.job.container',
+				{},
+				'Register container for %s' % instance_type.name
 			)
 
-		def on_tree_executable():
-			self.success({}, "Created all registration jobs.")
+			self.logger.info("Found %d instance that need to be registered.", to_allocate.count())
 
-		def on_tree_added(root_id):
-			self.configuration.job_manager.allow_execution(self.job_metadata['root_id'], callback=on_tree_executable)
+			# And for each of those, create the following jobs:
+			# - Store port
+			#   - Register instance.
+			self.instance_list = []
+			for instance in to_allocate:
+				storeport = container.add_child()
+				storeport.set_job(
+					'paasmaker.job.coordinate.storeport',
+					{
+						'instance_id': instance.instance_id,
+						'database_id': instance.id
+					},
+					'Store instance port'
+				)
 
-		# Add that entire tree into the job manager.
-		session.close()
-		self.configuration.job_manager.add_tree(container, on_tree_added, parent=self.job_metadata['parent_id'])
+				register = storeport.add_child()
+				register.set_job(
+					'paasmaker.job.heart.registerinstance',
+					instance.flatten_for_heart(),
+					'Register instance %s on node %s' % (instance.instance_id, instance.node.name),
+					node=instance.node.uuid
+				)
+
+			def on_tree_executable():
+				self.success({}, "Created all registration jobs.")
+
+			def on_tree_added(root_id):
+				self.configuration.job_manager.allow_execution(self.job_metadata['root_id'], callback=on_tree_executable)
+
+			# Add that entire tree into the job manager.
+			session.close()
+			self.configuration.job_manager.add_tree(container, on_tree_added, parent=self.job_metadata['parent_id'])
+
+			# end of got_session()
+
+		self.configuration.get_database_session(got_session, self._failure_callback)
 
 class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
@@ -201,7 +206,9 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 			'1',
 			'tornado-simple'
 		)
-		node = self.add_simple_node(self.configuration.get_database_session(), {
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
+		node = self.add_simple_node(session, {
 			'node': {},
 			'runtimes': {
 				'paasmaker.runtime.shell': ['1']
@@ -209,13 +216,15 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		}, self.configuration)
 
 		# Check that the version is in the correct starting state.
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 		our_version = session.query(paasmaker.model.ApplicationVersion).get(instance_type.application_version.id)
 		self.assertEquals(our_version.state, constants.VERSION.PREPARED)
 
 		RegisterRootJob.setup_version(
 			self.configuration,
 			instance_type.application_version,
+			self.stop,
 			self.stop
 		)
 
@@ -235,7 +244,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		#self.wait()
 
 		result = self.wait()
-		while result.state != constants.JOB.SUCCESS:
+		while result is None or result.state != constants.JOB.SUCCESS:
 			result = self.wait()
 
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Should have succeeded.")
@@ -272,6 +281,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		DeRegisterRootJob.setup_version(
 			self.configuration,
 			instance_type.application_version,
+			self.stop,
 			self.stop
 		)
 		deregister_root_id = self.wait()
@@ -300,6 +310,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		StartupRootJob.setup_version(
 			self.configuration,
 			instance_type.application_version,
+			self.stop,
 			self.stop
 		)
 		# TODO: I have an unbalanced self.stop()/self.wait() pair
@@ -389,6 +400,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		ShutdownRootJob.setup_instances(
 			self.configuration,
 			[instance],
+			self.stop,
 			self.stop
 		)
 
@@ -411,6 +423,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		StartupRootJob.setup_instances(
 			self.configuration,
 			[instance],
+			self.stop,
 			self.stop
 		)
 
@@ -435,6 +448,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		CurrentVersionRequestJob.setup_version(
 			self.configuration,
 			instance_type.application_version.id,
+			self.stop,
 			self.stop
 		)
 
@@ -468,6 +482,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		ShutdownRootJob.setup_version(
 			self.configuration,
 			instance_type.application_version,
+			self.stop,
 			self.stop
 		)
 		# TODO: I have an unbalanced self.stop()/self.wait() pair
@@ -515,6 +530,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		DeRegisterRootJob.setup_version(
 			self.configuration,
 			instance_type.application_version,
+			self.stop,
 			self.stop
 		)
 		deregister_root_id = self.wait()

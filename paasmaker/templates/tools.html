@@ -1,7 +1,7 @@
 {% extends "layout/main.html" %}
 
 {% block body %}
-	{% if not has_permission(PERMISSION.SYSTEM_ADMINISTRATION) %}
+	{% if not user_permissions.has_permission(PERMISSION.SYSTEM_ADMINISTRATION, None) %}
 		<h1>Warning: you don't have sufficient permissions to use all features on this page</h1>
 	{% end %}
 

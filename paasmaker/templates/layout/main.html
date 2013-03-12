@@ -49,7 +49,7 @@
 					<ul class="nav">
 						{# Don't bother showing any of this if you're not logged in. #}
 						{% if current_user %}
-							{% if has_permission(PERMISSION.SYSTEM_OVERVIEW) %}
+							{% if user_permissions.has_permission(PERMISSION.SYSTEM_OVERVIEW, None) %}
 								<li>
 									<a href="/overview">Overview</a>
 								</li>
@@ -63,27 +63,27 @@
 							<li class="dropdown">
 								<a href="#" class="dropdown-toggle" data-toggle="dropdown">Administration <b class="caret"></b></a>
 								<ul class="dropdown-menu">
-									{% if has_permission(PERMISSION.USER_LIST) %}
+									{% if user_permissions.has_permission(PERMISSION.USER_LIST, None) %}
 										<li><a href="/user/list">Users</a></li>
 									{% end %}
-									{% if has_permission(PERMISSION.ROLE_LIST) %}
+									{% if user_permissions.has_permission(PERMISSION.ROLE_LIST, None) %}
 										<li><a href="/role/list">Roles</a></li>
 									{% end %}
-									{% if has_permission(PERMISSION.ROLE_ASSIGN) %}
+									{% if user_permissions.has_permission(PERMISSION.ROLE_ASSIGN, None) %}
 										<li><a href="/role/allocation/list">Role Allocations</a></li>
 									{% end %}
-									{% if has_permission(PERMISSION.NODE_LIST) %}
+									{% if user_permissions.has_permission(PERMISSION.NODE_LIST, None) %}
 										<li><a href="/node/list">Nodes</a></li>
 									{% end %}
-									{% if has_permission(PERMISSION.SYSTEM_ADMINISTRATION) %}
+									{% if user_permissions.has_permission(PERMISSION.SYSTEM_ADMINISTRATION, None) %}
 										<li><a href="/router/dump">Router Table Dump</a></li>
 										<li><a href="/configuration/dump">System Configuration</a></li>
 										<li><a href="/configuration/plugins">Plugin Configuration</a></li>
 									{% end %}
-									{% if has_permission(PERMISSION.HEALTH_CHECK) %}
+									{% if user_permissions.has_permission(PERMISSION.HEALTH_CHECK, None) %}
 										<li><a href="/job/list/health">Health Check Results</a></li>
 									{% end %}
-									{% if has_permission(PERMISSION.SYSTEM_ADMINISTRATION) %}
+									{% if user_permissions.has_permission(PERMISSION.SYSTEM_ADMINISTRATION, None) %}
 										<li><a href="/job/list/periodic">Periodic Tasks</a></li>
 									{% end %}
 								</ul>

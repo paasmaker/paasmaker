@@ -61,7 +61,8 @@ class TestHelpers(object):
 				modules=['pacemaker'],
 				io_loop=self.io_loop)
 
-		session = configuration.get_database_session()
+		configuration.get_database_session(self.stop, None)
+		session = self.wait()
 
 		# Make a node (ie, us) to run on.
 		# our_uuid = str(uuid.uuid4())
@@ -174,7 +175,8 @@ class TestHelpers(object):
 			runtime_parameters,
 			runtime_version,
 			application)
-		session = configuration.get_database_session()
+		configuration.get_database_session(self.stop, None)
+		session = self.wait()
 		instance_type = session.query(paasmaker.model.ApplicationInstanceType).get(instance_type.id)
 		node = self.add_simple_node(
 			session,

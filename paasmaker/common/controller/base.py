@@ -66,6 +66,41 @@ class BaseController(tornado.web.RequestHandler):
 	# this out for us.
 	PERMISSIONS_CACHE = {}
 
+	# Make all requests async.
+	# This overrides the request handling in Tornado.
+	def _execute(self, transforms, *args, **kwargs):
+		"""Executes this request with the given output transforms."""
+		self._transforms = transforms
+		try:
+			if self.request.method not in self.SUPPORTED_METHODS:
+				raise HTTPError(405)
+			# If XSRF cookies are turned on, reject form submissions without
+			# the proper cookie
+			if self.request.method not in ("GET", "HEAD", "OPTIONS") and \
+				self.application.settings.get("xsrf_cookies"):
+				self.check_xsrf_cookie()
+
+			# Make all requests async.
+			self._auto_finish = False
+
+			with tornado.stack_context.ExceptionStackContext(self._stack_context_handle_exception):
+				def prepare_complete():
+					if not self._finished:
+						method_args = [self.decode_argument(arg) for arg in args]
+						method_kwargs = dict((k, self.decode_argument(v, name=k)) for (k, v) in kwargs.iteritems())
+						# Call the get(), post(), or other appropriate method.
+						getattr(self, self.request.method.lower())(*method_args, **method_kwargs)
+
+				# Call self.prepare() in an asynchronous fashion.
+				# Note that prepare() won't call the callback if the normal
+				# get()/post() handler should not be used (eg, auth failed)
+				# but in this case it would have already terminated the request.
+				self.prepare(prepare_complete)
+
+		except Exception, e:
+			# Handle any exception that leaked.
+		    self._handle_request_exception(e)
+
 	def initialize(self, **kwargs):
 		# This is defined here so controllers can change it per-request.
 		self.DEFAULT_PAGE_SIZE = 10
@@ -97,7 +132,8 @@ class BaseController(tornado.web.RequestHandler):
 		if uuid:
 			self.add_header('X-Paasmaker-Node', self.configuration.get_node_uuid())
 
-	def prepare(self):
+	@tornado.gen.engine
+	def prepare(self, callback):
 		"""
 		Called to prepare the request, before the method that will
 		handle the request itself.
@@ -110,9 +146,17 @@ class BaseController(tornado.web.RequestHandler):
 		* Checks that the user is authenticated with a valid
 		  authentication method, and terminates the request
 		  with a 403 if it can't find a suitable method.
+
+		This is different to a normal Tornado prepare() function,
+		as it can call a callback to indicate that the request
+		should proceed. Be aware that the request handlers have been
+		significantly altered to fit with Paasmaker's internal
+		structure better.
 		"""
+		# Set the mode of the request.
 		self._set_format(self.get_argument('format', 'html'))
 
+		# Handle the POST body.
 		if self.request.method == 'POST':
 			# If the post body is JSON, parse it and put it into the arguments.
 			# TODO: This JSON detection is lightweight, but there might be corner
@@ -156,7 +200,6 @@ class BaseController(tornado.web.RequestHandler):
 				# No action to take.
 				pass
 			elif self.format == 'html':
-
 				# Figure out the port. You can have require_ssl on and
 				# not actually be listening for HTTPS - in this scenario
 				# there is an SSL termination point ahead of the node.
@@ -170,12 +213,86 @@ class BaseController(tornado.web.RequestHandler):
 
 				target = "https://%s%s%s" % (self.request.host, https_port, self.request.uri)
 				self.redirect(target)
+				# Stop processing the request.
 				return
 			else:
 				raise tornado.web.HTTPError(403, "You must use SSL to access this page.")
 
 		# Must be one of the supported auth methods.
-		self._require_authentication(self.AUTH_METHODS)
+		#self._require_authentication(self.AUTH_METHODS)
+		methods = self.AUTH_METHODS
+		if len(methods) == 0:
+			# No methods provided.
+			raise tornado.web.HTTPError(403, 'Access is denied. No authentication methods supplied. This is a server side coding error.')
+
+		found_allowed_method = False
+
+		# Replace the current user that tornado might have supplied.
+		user = yield tornado.gen.Task(self.pm_get_current_user)
+		self.add_data_template('current_user', user)
+
+		if self.ANONYMOUS in methods:
+			# Anonymous is allowed. So let it go through...
+			logger.debug("Anonymous method allowed. Allowing request.")
+			found_allowed_method = True
+
+		# See if the request has an auth value.
+		auth_value = self.auth
+		if 'Auth-Paasmaker' in self.request.headers:
+			# User supplied an auth value via header;
+			# check that value.
+			auth_value = self.request.headers['Auth-Paasmaker']
+
+		if len(auth_value) > 0:
+			# We've been supplied a value. Now test it.
+			if self.NODE in methods:
+				if auth_value == self.configuration.get_flat('node_token'):
+					# Permitted.
+					logger.debug("Permitted node token authentication.")
+					found_allowed_method = True
+
+			if self.SUPER in methods and self.configuration.is_pacemaker() and self.configuration.get_flat('pacemaker.allow_supertoken'):
+				if auth_value == self.configuration.get_flat('pacemaker.super_token'):
+					# Permitted.
+					logger.debug("Permitted super token authentication.")
+					found_allowed_method = True
+					self.super_auth = True
+
+			if self.USER in methods and self.configuration.is_pacemaker():
+				# If the used passed an API key, try to look that up.
+				session = yield tornado.gen.Task(self.db)
+				user = session.query(
+					paasmaker.model.User
+				).filter(
+					paasmaker.model.User.apikey == auth_value
+				).first()
+
+				# Make sure we have the user, and it's enabled and not deleted.
+				if user and user.enabled and not user.deleted:
+					self.user = user
+					self._update_user_permissions_cache()
+					found_allowed_method = True
+					logger.debug("Permitted user token authentication.")
+
+		# Finally, if USER authentication is permitted, and
+		# we're not authenticated yet, enforce that.
+		if self.USER in methods and self.configuration.is_pacemaker() and not found_allowed_method:
+			user = yield tornado.gen.Task(self.pm_get_current_user)
+			if user:
+				found_allowed_method = True
+
+		# And based on the result...
+		if not found_allowed_method:
+			# YOU ... SHALL NOT ... PAAS!
+			# (But with less bridge breaking.)
+			logger.warning("Access denied for request.")
+			if self.format == 'json':
+				raise tornado.web.HTTPError(403, 'Access is denied')
+			else:
+				self.redirect('/login?rt=' + tornado.escape.url_escape(self.request.uri))
+		else:
+			# Good to go. Continue on to the get()/post() methods.
+			callback()
 
 	def validate_data(self, api_schema, html_schema=None):
 		"""
@@ -237,88 +354,19 @@ class BaseController(tornado.web.RequestHandler):
 		else:
 			self.render("api/apionly.html")
 
-	def _require_authentication(self, methods):
-		"""
-		Check the authentication methods until one is found that
-		can be satisfied. In HTML mode, redirects to the login page.
-		In JSON mode, it returns a 403 error and terminates the request.
-		"""
-		if len(methods) == 0:
-			# No methods provided.
-			raise tornado.web.HTTPError(403, 'Access is denied. No authentication methods supplied. This is a server side coding error.')
-
-		found_allowed_method = False
-
-		if self.ANONYMOUS in methods:
-			# Anonymous is allowed. So let it go through...
-			logger.debug("Anonymous method allowed. Allowing request.")
-			found_allowed_method = True
-
-		# See if the request has an auth value.
-		auth_value = self.auth
-		if 'Auth-Paasmaker' in self.request.headers:
-			# User supplied an auth value via header;
-			# check that value.
-			auth_value = self.request.headers['Auth-Paasmaker']
-
-		if len(auth_value) > 0:
-			# We've been supplied a value. Now test it.
-			if self.NODE in methods:
-				if auth_value == self.configuration.get_flat('node_token'):
-					# Permitted.
-					logger.debug("Permitted node token authentication.")
-					found_allowed_method = True
-
-			if self.SUPER in methods and self.configuration.is_pacemaker() and self.configuration.get_flat('pacemaker.allow_supertoken'):
-				if auth_value == self.configuration.get_flat('pacemaker.super_token'):
-					# Permitted.
-					logger.debug("Permitted super token authentication.")
-					found_allowed_method = True
-					self.super_auth = True
-
-			if self.USER in methods and self.configuration.is_pacemaker():
-				# If the used passed an API key, try to look that up.
-				user = self.db().query(
-					paasmaker.model.User
-				).filter(
-					paasmaker.model.User.apikey == auth_value
-				).first()
-				# Make sure we have the user, and it's enabled and not deleted.
-				if user and user.enabled and not user.deleted:
-					self.user = user
-					self._update_user_permissions_cache()
-					found_allowed_method = True
-					logger.debug("Permitted user token authentication.")
-
-		# Finally, if USER authentication is permitted, and
-		# we're not authenticated yet, enforce that.
-		if self.USER in methods and self.configuration.is_pacemaker() and not found_allowed_method:
-			user = self.get_current_user()
-			if user:
-				found_allowed_method = True
-
-		# And based on the result...
-		if not found_allowed_method:
-			# YOU ... SHALL NOT ... PAAS!
-			# (But with less bridge breaking.)
-			logger.warning("Access denied for request.")
-			if self.format == 'json':
-				raise tornado.web.HTTPError(403, 'Access is denied')
-			else:
-				self.redirect('/login?rt=' + tornado.escape.url_escape(self.request.uri))
-
-	def get_current_user(self):
+	@tornado.gen.engine
+	def pm_get_current_user(self, callback):
 		"""
 		Get the currently logged in user. Only tests for HTTP cookies
 		to perform the login.
 		"""
 		# Did we already look them up? Return that.
 		if self.user:
-			return self.user
+			callback(self.user)
 
 		# Only pacemakers allow users to authenticate to them.
 		if not self.configuration.is_pacemaker():
-			return None
+			callback(None)
 
 		# Fetch their cookie.
 		raw = self.get_secure_cookie(
@@ -327,7 +375,8 @@ class BaseController(tornado.web.RequestHandler):
 		)
 		if raw:
 			# Lookup the user object.
-			user = self.db().query(
+			session = yield tornado.gen.Task(self.db)
+			user = session.query(
 				paasmaker.model.User
 			).get(int(raw))
 			# Make sure we have the user, and it's enabled and not deleted.
@@ -335,8 +384,9 @@ class BaseController(tornado.web.RequestHandler):
 				self.user = user
 				self._update_user_permissions_cache()
 
-		return self.user
+		callback(self.user)
 
+	@tornado.gen.engine
 	def _update_user_permissions_cache(self):
 		# Update their permissions cache. The idea is to do
 		# one SQL query per request to check it, and 2 if
@@ -349,9 +399,11 @@ class BaseController(tornado.web.RequestHandler):
 			user_key = str(self.user.id)
 			if not self.PERMISSIONS_CACHE.has_key(user_key):
 				self.PERMISSIONS_CACHE[user_key] = paasmaker.model.WorkspaceUserRoleFlatCache(self.user)
-			self.PERMISSIONS_CACHE[user_key].check_cache(self.db())
+			session = yield tornado.gen.Task(self.db)
+			self.PERMISSIONS_CACHE[user_key].check_cache(session)
 
-	def has_permission(self, permission, workspace=None, user=None):
+	@tornado.gen.engine
+	def has_permission(self, permission, callback, workspace=None, user=None):
 		"""
 		Determine if the currently logged in user has the named
 		permission. Returns True if they do, or False otherwise.
@@ -366,10 +418,13 @@ class BaseController(tornado.web.RequestHandler):
 			# If authenticated with the super token,
 			# you can do anything. With great power comes
 			# great responsiblity...
-			return True
+			callback(True)
+			return
+
 		if not user:
 			# No user supplied? Use the current user.
-			user = self.get_current_user()
+			user = yield tornado.gen.Task(self.pm_get_current_user)
+
 		if not user:
 			# Still no user? Not logged in.
 			# This situation should not occur, because the parent
@@ -385,8 +440,9 @@ class BaseController(tornado.web.RequestHandler):
 			permission,
 			workspace
 		)
-		return allowed
+		callback(allowed)
 
+	@tornado.gen.engine
 	def require_permission(self, permission, workspace=None, user=None):
 		"""
 		Require the given permission to continue. Stops the request
@@ -397,7 +453,7 @@ class BaseController(tornado.web.RequestHandler):
 			scope to.
 		:arg User user: The optional user to check the permission for.
 		"""
-		allowed = self.has_permission(permission, workspace, user)
+		allowed = yield tornado.gen.Task(self.has_permission, permission, workspace=workspace, user=user)
 		if not allowed:
 			self.add_error("You require permission %s to access." % permission)
 			raise tornado.web.HTTPError(403, "Access denied.")
@@ -497,18 +553,31 @@ class BaseController(tornado.web.RequestHandler):
 		"""
 		self.warnings.extend(warnings)
 
-	def db(self):
+	def db(self, callback):
 		"""
 		Fetch a SQLAlchemy database session.
 
 		Each request returns only one Session object. If you call
 		``db()`` several times during a request, each one will be
 		the same Session object.
+
+		If it is unable to get a session, it aborts the request with
+		a 500 server error.
 		"""
 		if self.session:
-			return self.session
-		self.session = self.configuration.get_database_session()
-		return self.session
+			callback(self.session)
+
+		def got_session(session):
+			self.session = session
+			callback(session)
+
+		self.configuration.get_database_session(got_session, self._database_session_error)
+
+	def _database_session_error(message, exception=None):
+		logger.error("Unable to fetch database session: %s", message)
+		if exception:
+			logger.error("Exception: ", exc_info=exception)
+		self.write_error(500, exc_info=exception)
 
 	def _set_format(self, format):
 		if format != 'json' and format != 'html':
@@ -544,7 +613,8 @@ class BaseController(tornado.web.RequestHandler):
 			variables.update(self.template)
 			variables.update(kwargs)
 			variables['PERMISSION'] = constants.PERMISSION
-			variables['has_permission'] = self.has_permission
+			if 'current_user' in variables and variables['current_user'] is not None:
+				variables['user_permissions'] = self.PERMISSIONS_CACHE[str(variables['current_user'].id)]
 			super(BaseController, self).render(template, **variables)
 
 	def write_error(self, status_code, **kwargs):
@@ -571,11 +641,11 @@ class BaseController(tornado.web.RequestHandler):
 		self.render('error/error.html')
 
 	def on_finish(self):
-		self.application.log_request(self)
-
 		# Shut down any active database session.
 		if self.session:
 			self.session.close()
+
+		super(BaseController, self).on_finish()
 
 	def _get_router_stats_for(self, name, input_id, callback, output_key='router_stats', title=None):
 		"""
@@ -789,7 +859,8 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase, TestHelpers):
 		Otherwise, the URL is untouched.
 		"""
 		# Create a test user - if required.
-		s = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		s = self.wait()
 		user = s.query(paasmaker.model.User) \
 			.filter(paasmaker.model.User.login=='username') \
 			.first()

@@ -21,9 +21,9 @@
 					<code>{{ node.uuid[0:8] }}</code>
 				</td>
 				<td>
-					{% if has_permission(PERMISSION.NODE_DETAIL_VIEW) %}<a href="/node/{{ node.id }}">{% end %}
+					{% if user_permissions.has_permission(PERMISSION.NODE_DETAIL_VIEW, None) %}<a href="/node/{{ node.id }}">{% end %}
 						{{ node.name }}
-					{% if has_permission(PERMISSION.NODE_DETAIL_VIEW) %}</a>{% end %}
+					{% if user_permissions.has_permission(PERMISSION.NODE_DETAIL_VIEW, None) %}</a>{% end %}
 				</td>
 				<td>
 					{{ node.route }}:{{ node.apiport }}

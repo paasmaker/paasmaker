@@ -24,124 +24,128 @@ class DownNodesHealthCheck(BaseHealthCheck):
 
 	def check(self, parent_job_id, callback, error_callback):
 		timeout = self.parameters['node_timeout']
-		session = self.configuration.get_database_session()
 
-		my_node = session.query(
-			paasmaker.model.Node
-		).filter(
-			paasmaker.model.Node.uuid == self.configuration.get_node_uuid()
-		).first()
-
-		if not my_node:
-			session.close()
-			error_message = "I'm having an identity crisis. I can't find my own node record."
-			self.logger.error(error_message)
-			error_callback(error_message)
-			return
-
-		# If our uptime is less than the timeout, don't perform the check,
-		# because nodes might not have had time to report in to us yet.
-		if my_node.uptime() < timeout:
-			self.logger.info("Our node has been up for %d seconds.", my_node.uptime())
-			self.logger.info("This isn't enough time for other nodes to have reported in within the %d second threshold.", timeout)
-			self.logger.info("Therefore, no action is to be taken at this time.")
-			session.close()
-			callback({}, "Waiting for more uptime.")
-			return
-
-		self.logger.info("Looking for nodes that haven't reported in for %d seconds...", timeout)
-
-		# Now find any nodes that haven't reported in for a while.
-		before_time = datetime.datetime.utcnow() - datetime.timedelta(0, timeout)
-		bad_nodes = session.query(
-			paasmaker.model.Node.id
-		).filter(
-			paasmaker.model.Node.last_heard < before_time,
-			paasmaker.model.Node.state == constants.NODE.ACTIVE
-		)
-		bad_nodes_count = bad_nodes.count()
-
-		self.logger.info("Found %d down nodes.", bad_nodes_count)
-
-		if bad_nodes_count > 0:
-			full_node_list = session.query(
+		def got_session(session):
+			my_node = session.query(
 				paasmaker.model.Node
 			).filter(
-				paasmaker.model.Node.id.in_(bad_nodes)
+				paasmaker.model.Node.uuid == self.configuration.get_node_uuid()
+			).first()
+
+			if not my_node:
+				session.close()
+				error_message = "I'm having an identity crisis. I can't find my own node record."
+				self.logger.error(error_message)
+				error_callback(error_message)
+				return
+
+			# If our uptime is less than the timeout, don't perform the check,
+			# because nodes might not have had time to report in to us yet.
+			if my_node.uptime() < timeout:
+				self.logger.info("Our node has been up for %d seconds.", my_node.uptime())
+				self.logger.info("This isn't enough time for other nodes to have reported in within the %d second threshold.", timeout)
+				self.logger.info("Therefore, no action is to be taken at this time.")
+				session.close()
+				callback({}, "Waiting for more uptime.")
+				return
+
+			self.logger.info("Looking for nodes that haven't reported in for %d seconds...", timeout)
+
+			# Now find any nodes that haven't reported in for a while.
+			before_time = datetime.datetime.utcnow() - datetime.timedelta(0, timeout)
+			bad_nodes = session.query(
+				paasmaker.model.Node.id
+			).filter(
+				paasmaker.model.Node.last_heard < before_time,
+				paasmaker.model.Node.state == constants.NODE.ACTIVE
+			)
+			bad_nodes_count = bad_nodes.count()
+
+			self.logger.info("Found %d down nodes.", bad_nodes_count)
+
+			if bad_nodes_count > 0:
+				full_node_list = session.query(
+					paasmaker.model.Node
+				).filter(
+					paasmaker.model.Node.id.in_(bad_nodes)
+				)
+
+				self.logger.info("Failed nodes:")
+				for node in full_node_list:
+					self.logger.info("- %s (%s:%d, %s)", node.name, node.route, node.apiport, node.uuid[0:8])
+
+			# Find any can-run instances on that node.
+			down_instances = session.query(
+				paasmaker.model.ApplicationInstance
+			).filter(
+				paasmaker.model.ApplicationInstance.node_id.in_(bad_nodes),
+				paasmaker.model.ApplicationInstance.state.in_(constants.INSTANCE_ALLOCATED_STATES)
 			)
 
-			self.logger.info("Failed nodes:")
-			for node in full_node_list:
-				self.logger.info("- %s (%s:%d, %s)", node.name, node.route, node.apiport, node.uuid[0:8])
+			altered_instance_count = down_instances.count()
 
-		# Find any can-run instances on that node.
-		down_instances = session.query(
-			paasmaker.model.ApplicationInstance
-		).filter(
-			paasmaker.model.ApplicationInstance.node_id.in_(bad_nodes),
-			paasmaker.model.ApplicationInstance.state.in_(constants.INSTANCE_ALLOCATED_STATES)
-		)
+			# Mark instances as down first. If we did nodes first, then this doesn't work
+			# as the matched set of bad nodes then changes.
+			if altered_instance_count > 0:
+				# Force it to generate a list now.
+				fix_down_instances = down_instances.all()
 
-		altered_instance_count = down_instances.count()
+				# Then update the instances.
+				self.logger.critical("Marked %d instances as DOWN.", altered_instance_count)
+				down_instances.update(
+					{
+						'state': constants.INSTANCE.DOWN
+					},
+					synchronize_session=False
+				)
 
-		# Mark instances as down first. If we did nodes first, then this doesn't work
-		# as the matched set of bad nodes then changes.
-		if altered_instance_count > 0:
-			# Force it to generate a list now.
-			fix_down_instances = down_instances.all()
+			# Then nodes.
+			if bad_nodes_count > 0:
+				self.logger.critical("Updating %d nodes to DOWN.", bad_nodes_count)
+				bad_nodes.update({'state': constants.NODE.DOWN})
 
-			# Then update the instances.
-			self.logger.critical("Marked %d instances as DOWN.", altered_instance_count)
-			down_instances.update(
-				{
-					'state': constants.INSTANCE.DOWN
-				},
-				synchronize_session=False
-			)
+			# If we have changes to commit, do that.
+			if bad_nodes_count > 0 or altered_instance_count > 0:
+				session.commit()
 
-		# Then nodes.
-		if bad_nodes_count > 0:
-			self.logger.critical("Updating %d nodes to DOWN.", bad_nodes_count)
-			bad_nodes.update({'state': constants.NODE.DOWN})
+			self.return_context = {
+				'bad_nodes': bad_nodes_count,
+				'down_instances': altered_instance_count
+			}
+			self.return_message = "Completed down nodes check. Found %d down nodes, and marked %d instances as down." % (bad_nodes_count, altered_instance_count)
+			self.callback = callback
 
-		# If we have changes to commit, do that.
-		if bad_nodes_count > 0 or altered_instance_count > 0:
-			session.commit()
+			if altered_instance_count > 0:
+				# Queue up jobs to remove those instances from the routing table.
+				def add_fix_instance(job_id=None):
+					if job_id:
+						self.logger.info("Added job %s to fix routing for an instance.", job_id)
+					try:
+						instance = fix_down_instances.pop()
 
-		self.return_context = {
-			'bad_nodes': bad_nodes_count,
-			'down_instances': altered_instance_count
-		}
-		self.return_message = "Completed down nodes check. Found %d down nodes, and marked %d instances as down." % (bad_nodes_count, altered_instance_count)
-		self.callback = callback
+						paasmaker.common.job.routing.routing.RoutingUpdateJob.setup_for_instance(
+							self.configuration,
+							session,
+							instance,
+							False,
+							add_fix_instance
+						)
+					except IndexError, ex:
+						# No more to process.
+						session.close()
+						self._finish_check()
 
-		if altered_instance_count > 0:
-			# Queue up jobs to remove those instances from the routing table.
-			def add_fix_instance(job_id=None):
-				if job_id:
-					self.logger.info("Added job %s to fix routing for an instance.", job_id)
-				try:
-					instance = fix_down_instances.pop()
+					# end of add_fix_instance()
 
-					paasmaker.common.job.routing.routing.RoutingUpdateJob.setup_for_instance(
-						self.configuration,
-						session,
-						instance,
-						False,
-						add_fix_instance
-					)
-				except IndexError, ex:
-					# No more to process.
-					session.close()
-					self._finish_check()
+				add_fix_instance()
+			else:
+				# No jobs to queue. We're done.
+				session.close()
+				self._finish_check()
 
-				# end of add_fix_instance()
+			# end of got_session()
 
-			add_fix_instance()
-		else:
-			# No jobs to queue. We're done.
-			session.close()
-			self._finish_check()
+		self.configuration.get_database_session(got_session, error_callback)
 
 	def _finish_check(self):
 		self.callback(
@@ -192,7 +196,8 @@ class DownNodesHealthCheckTest(BaseHealthCheckTest):
 		our_uuid = str(uuid.uuid4())
 		self.configuration.set_node_uuid(our_uuid)
 
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 		node = paasmaker.model.Node('test', 'localhost', 12345, our_uuid, constants.NODE.ACTIVE)
 		session.add(node)
 		session.commit()

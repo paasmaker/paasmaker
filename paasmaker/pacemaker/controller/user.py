@@ -69,17 +69,19 @@ class UserSchema(colander.MappingSchema):
 class UserEditController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	def _get_user(self, user_id=None):
+	@tornado.gen.engine
+	def _get_user(self, callback, user_id=None):
 		user = None
 		if user_id:
 			# Find and load the user.
-			user = self.db().query(paasmaker.model.User).get(int(user_id))
+			session = yield tornado.gen.Task(self.db)
+			user = session.query(paasmaker.model.User).get(int(user_id))
 			if not user:
 				raise HTTPError(404, "No such user.")
 
 			self.add_data('user', user)
 
-		return user
+		callback(user)
 
 	def _default_user(self):
 		user = paasmaker.model.User()
@@ -88,18 +90,20 @@ class UserEditController(BaseController):
 		user.email = ''
 		return user
 
+	@tornado.gen.engine
 	def get(self, user_id=None):
 		self.require_permission(constants.PERMISSION.USER_EDIT)
-		user = self._get_user(user_id)
+		user = yield tornado.gen.Task(self._get_user, user_id=user_id)
 		if not user:
 			user = self._default_user()
 			self.add_data('user', user)
 
 		self.render("user/edit.html")
 
+	@tornado.gen.engine
 	def post(self, user_id=None):
 		self.require_permission(constants.PERMISSION.USER_EDIT)
-		user = self._get_user(user_id)
+		user = yield tornado.gen.Task(self._get_user, user_id=user_id)
 
 		valid_data = self.validate_data(UserSchema())
 
@@ -121,7 +125,7 @@ class UserEditController(BaseController):
 			if self.params.has_key('password'):
 				user.password = self.params['password']
 
-			session = self.db()
+			session = yield tornado.gen.Task(self.db)
 			session.add(user)
 			session.commit()
 			session.refresh(user)
@@ -143,9 +147,11 @@ class UserEditController(BaseController):
 class UserListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
+	@tornado.gen.engine
 	def get(self):
 		self.require_permission(constants.PERMISSION.USER_LIST)
-		users = self.db().query(paasmaker.model.User)
+		session = yield tornado.gen.Task(self.db)
+		users = session.query(paasmaker.model.User)
 		self._paginate('users', users)
 		self.render("user/list.html")
 
@@ -192,6 +198,7 @@ class UserEditControllerTest(BaseControllerTest):
 		response = self.wait()
 
 		self.failIf(response.success)
+		self.assertTrue('input_errors' in response.data, "Did not fail with errors.")
 		input_errors = response.data['input_errors']
 		self.assertTrue(input_errors.has_key('login'), "Missing error on login attribute.")
 		self.assertTrue(input_errors.has_key('name'), "Missing error on login attribute.")
@@ -235,7 +242,11 @@ class UserEditControllerTest(BaseControllerTest):
 		self.failIf(not response.success)
 		self.assertEquals(response.data['user']['name'], 'Test Updated', 'Name was not updated.')
 		# Load up the user separately and confirm.
-		user = self.configuration.get_database_session().query(paasmaker.model.User).get(user_id)
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
+		user = session.query(
+			paasmaker.model.User
+		).get(user_id)
 		self.assertEquals(user.name, 'Test Updated', 'Name was not updated.')
 
 	def test_edit_fail(self):

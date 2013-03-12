@@ -29,7 +29,7 @@ class DeRegisterRootJob(InstanceRootBase):
 	"""
 
 	@classmethod
-	def setup_version(cls, configuration, application_version, callback, limit_instances=None, parent=None):
+	def setup_version(cls, configuration, application_version, callback, error_callback, limit_instances=None, parent=None):
 		# List all the instance types.
 		# Assume we have an open session on the application_version object.
 
@@ -75,11 +75,14 @@ class DeRegisterRootJob(InstanceRootBase):
 		configuration.job_manager.add_tree(tree, on_tree_added, parent=parent)
 
 	def start_job(self, context):
-		self.update_jobs_from_context(context)
-		self.update_version_from_context(context, constants.VERSION.PREPARED)
+		def version_updated():
+			self.logger.info("Deregister instances.")
+			self.success({}, "Deregistered instances.")
 
-		self.logger.info("Deregister instances.")
-		self.success({}, "Deregistered instances.")
+		def jobs_updated():
+			self.update_version_from_context(context, constants.VERSION.PREPARED, version_updated)
+
+		self.update_jobs_from_context(context, jobs_updated)
 
 class DeRegisterRequestJobParametersSchema(colander.MappingSchema):
 	application_instance_type_id = colander.SchemaNode(colander.Integer())
@@ -95,51 +98,53 @@ class DeRegisterRequestJob(InstanceJobHelper):
 	}
 
 	def start_job(self, context):
-		# We've been supplied with an instance type, so now locate all instances for
-		# that type, and queue jobs for them.
-		session = self.configuration.get_database_session()
+		def got_session(session):
+			# We've been supplied with an instance type, so now locate all instances for
+			# that type, and queue jobs for them.
 
-		instance_type = self.get_instance_type(session)
-		instances = self.get_instances(
-			session,
-			instance_type,
-			[
-				constants.INSTANCE.ALLOCATED,
-				constants.INSTANCE.REGISTERED,
-				constants.INSTANCE.STOPPED,
-				constants.INSTANCE.ERROR
-			],
-			context
-		)
-
-		tags = self.get_tags_for(instance_type)
-
-		# The root of this tree.
-		container = self.configuration.job_manager.get_specifier()
-		container.set_job(
-			'paasmaker.job.container',
-			{},
-			'Deregister container for %s' % instance_type.name,
-			tags=tags
-		)
-
-		for instance in instances:
-			deregistration = container.add_child()
-			deregistration.set_job(
-				'paasmaker.job.heart.deregisterinstance',
-				{
-					'instance_id': instance.instance_id
-				},
-				"Deregister instance %s on node %s" % (instance.instance_id, instance.node.name),
-				node=instance.node.uuid
+			instance_type = self.get_instance_type(session)
+			instances = self.get_instances(
+				session,
+				instance_type,
+				[
+					constants.INSTANCE.ALLOCATED,
+					constants.INSTANCE.REGISTERED,
+					constants.INSTANCE.STOPPED,
+					constants.INSTANCE.ERROR
+				],
+				context
 			)
 
-		def on_tree_executable():
-			self.success({}, "Created all de registration jobs.")
+			tags = self.get_tags_for(instance_type)
 
-		def on_tree_added(root_id):
-			self.configuration.job_manager.allow_execution(self.job_metadata['root_id'], callback=on_tree_executable)
+			# The root of this tree.
+			container = self.configuration.job_manager.get_specifier()
+			container.set_job(
+				'paasmaker.job.container',
+				{},
+				'Deregister container for %s' % instance_type.name,
+				tags=tags
+			)
 
-		# Add that entire tree into the job manager.
-		session.close()
-		self.configuration.job_manager.add_tree(container, on_tree_added, parent=self.job_metadata['root_id'])
+			for instance in instances:
+				deregistration = container.add_child()
+				deregistration.set_job(
+					'paasmaker.job.heart.deregisterinstance',
+					{
+						'instance_id': instance.instance_id
+					},
+					"Deregister instance %s on node %s" % (instance.instance_id, instance.node.name),
+					node=instance.node.uuid
+				)
+
+			def on_tree_executable():
+				self.success({}, "Created all de registration jobs.")
+
+			def on_tree_added(root_id):
+				self.configuration.job_manager.allow_execution(self.job_metadata['root_id'], callback=on_tree_executable)
+
+			# Add that entire tree into the job manager.
+			session.close()
+			self.configuration.job_manager.add_tree(container, on_tree_added, parent=self.job_metadata['root_id'])
+
+		self.configuration.get_database_session(got_session, self._failure_callback)

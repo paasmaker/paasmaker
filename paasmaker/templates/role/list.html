@@ -19,9 +19,9 @@
 		{% for role in roles %}
 			<tr>
 				<td>
-					{% if has_permission(PERMISSION.ROLE_EDIT) %}<a href="/role/{{ role.id }}">{% end %}
+					{% if user_permissions.has_permission(PERMISSION.ROLE_EDIT, None) %}<a href="/role/{{ role.id }}">{% end %}
 						{{ role.name }}
-					{% if has_permission(PERMISSION.ROLE_EDIT) %}</a>{% end %}
+					{% if user_permissions.has_permission(PERMISSION.ROLE_EDIT, None) %}</a>{% end %}
 				</td>
 				<td>
 					{% raw "<br />".join(role.permissions) %}

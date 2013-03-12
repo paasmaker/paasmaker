@@ -35,20 +35,24 @@ class StorePortJob(BaseJob):
 		# If it didn't send us back a port number, then it's a standalone
 		# instance, meaning it has no port. So just record that it's registered.
 
-		session = self.configuration.get_database_session()
-		instance = session.query(paasmaker.model.ApplicationInstance).get(self.parameters['database_id'])
+		def got_session(session):
+			instance = session.query(paasmaker.model.ApplicationInstance).get(self.parameters['database_id'])
 
-		key = "port-%s" % instance_id
-		if context.has_key(key):
-			instance.port = context[key]
-			self.logger.debug("Remote allocated port %d to this instance." % instance.port)
-		else:
-			self.logger.debug("Remote did not return a port for this instance.")
+			key = "port-%s" % instance_id
+			if context.has_key(key):
+				instance.port = context[key]
+				self.logger.debug("Remote allocated port %d to this instance." % instance.port)
+			else:
+				self.logger.debug("Remote did not return a port for this instance.")
 
-		instance.state = constants.INSTANCE.REGISTERED
+			instance.state = constants.INSTANCE.REGISTERED
 
-		session.add(instance)
-		session.commit()
-		session.close()
+			session.add(instance)
+			session.commit()
+			session.close()
 
-		self.success({}, "Updated instance %s" % instance_id)
+			self.success({}, "Updated instance %s" % instance_id)
+
+			# end of got_session()
+
+		self.configuration.get_database_session(got_session, self._failure_callback)

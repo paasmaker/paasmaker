@@ -246,7 +246,7 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 		# Import instances.
 		for imetadata in self['instances']:
 			instance_type = paasmaker.model.ApplicationInstanceType()
-			
+
 			# Basic information.
 			instance_type.name = imetadata['name']
 			instance_type.quantity = imetadata['quantity']
@@ -444,12 +444,13 @@ services:
 				"Plugin paasmaker.service.icantbelieveitsnot_aplugin not enabled or doesn't exist (referenced in services.0.plugin)",
 				ex.message, "Invalid plugin config threw an exception without the expected error message"
 			)
-			
+
 	def test_unpack_configuration(self):
 		config = ApplicationConfiguration(self.configuration)
 		config.load(self.test_config)
 
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 
 		workspace = paasmaker.model.Workspace()
 		workspace.name = 'Test'

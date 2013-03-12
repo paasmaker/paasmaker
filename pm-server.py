@@ -217,30 +217,37 @@ def on_registered_with_master():
 
 	# Add this pacemaker to the routing table.
 	if configuration.is_pacemaker():
-		session = configuration.get_database_session()
-		def success_insert():
-			session.close()
-			logger.info("Successfully inserted this pacemaker into the routing table.")
-		def failed_insert(message, exception=None):
-			session.close()
-			logger.error("Failed to place pacemaker into the routing table.")
+		def got_database_session(session):
+			def success_insert():
+				session.close()
+				logger.info("Successfully inserted this pacemaker into the routing table.")
+			def failed_insert(message, exception=None):
+				session.close()
+				logger.error("Failed to place pacemaker into the routing table.")
+				logger.error(message)
+				if exception:
+					lgoger.error("Exception:", exc_info=exception)
+
+			node = session.query(
+				paasmaker.model.Node,
+			).filter(
+				paasmaker.model.Node.uuid == configuration.get_node_uuid()
+			).first()
+
+			pacemaker_updater = paasmaker.common.job.routing.routing.RouterTablePacemakerUpdate(
+				configuration,
+				node,
+				True,
+				logging
+			)
+			pacemaker_updater.update(success_insert, failed_insert)
+
+		def failed_database_session(message, exception=None):
 			logger.error(message)
 			if exception:
-				lgoger.error("Exception:", exc_info=exception)
+				logger.error("Exception:", exc_info=exception)
 
-		node = session.query(
-			paasmaker.model.Node,
-		).filter(
-			paasmaker.model.Node.uuid == configuration.get_node_uuid()
-		).first()
-
-		pacemaker_updater = paasmaker.common.job.routing.routing.RouterTablePacemakerUpdate(
-			configuration,
-			node,
-			True,
-			logging
-		)
-		pacemaker_updater.update(success_insert, failed_insert)
+		configuration.get_database_session(got_database_session, failed_database_session)
 
 	# Try again to set up node logging, if it did not previously work.
 	# This is because this might be the first time we've registered.
@@ -474,39 +481,46 @@ def on_exit_plugins_prenotify():
 
 	# Remove this pacemaker from the routing table.
 	if configuration.is_pacemaker():
-		session = configuration.get_database_session()
-		def success_remove():
-			session.close()
-			logger.info("Successfully removed this pacemaker from the routing table.")
-			on_exit_prenotify_complete("Pacemaker router table removal.")
-		def failed_remove(message, exception=None):
-			session.close()
-			logger.error("Failed to remove this pacemaker from the routing table.")
+		def got_database_session(session):
+			def success_remove():
+				session.close()
+				logger.info("Successfully removed this pacemaker from the routing table.")
+				on_exit_prenotify_complete("Pacemaker router table removal.")
+			def failed_remove(message, exception=None):
+				session.close()
+				logger.error("Failed to remove this pacemaker from the routing table.")
+				logger.error(message)
+				if exception:
+					lgoger.error("Exception:", exc_info=exception)
+				on_exit_prenotify_complete("Pacemaker router table removal.")
+
+			node = session.query(
+				paasmaker.model.Node,
+			).filter(
+				paasmaker.model.Node.uuid == configuration.get_node_uuid()
+			).first()
+
+			if node:
+				pacemaker_updater = paasmaker.common.job.routing.routing.RouterTablePacemakerUpdate(
+					configuration,
+					node,
+					False,
+					logging
+				)
+				pacemaker_updater.update(success_remove, failed_remove)
+			else:
+				# A mismatch where it was unable to find the node.
+				# This can be caused by a different on disk UUID to
+				# that in the database.
+				# Proceed to shutdown.
+				on_exit_prenotify_complete("This node has a UUID mismatch. Allowing exit.")
+
+		def failed_database_session(message, exception=None):
 			logger.error(message)
 			if exception:
-				lgoger.error("Exception:", exc_info=exception)
-			on_exit_prenotify_complete("Pacemaker router table removal.")
+				logger.error("Exception:", exc_info=exception)
 
-		node = session.query(
-			paasmaker.model.Node,
-		).filter(
-			paasmaker.model.Node.uuid == configuration.get_node_uuid()
-		).first()
-
-		if node:
-			pacemaker_updater = paasmaker.common.job.routing.routing.RouterTablePacemakerUpdate(
-				configuration,
-				node,
-				False,
-				logging
-			)
-			pacemaker_updater.update(success_remove, failed_remove)
-		else:
-			# A mismatch where it was unable to find the node.
-			# This can be caused by a different on disk UUID to
-			# that in the database.
-			# Proceed to shutdown.
-			on_exit_prenotify_complete("This node has a UUID mismatch. Allowing exit.")
+		configuration.get_database_session(got_database_session, failed_database_session)
 	else:
 		# Proceed to shutdown.
 		on_exit_prenotify_complete("Not a pacemaker.")

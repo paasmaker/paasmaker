@@ -23,41 +23,47 @@ class AdjustInstancesHealthCheck(BaseHealthCheck):
 	API_VERSION = "0.9.0"
 
 	def check(self, parent_job_id, callback, error_callback):
-		self.session = self.configuration.get_database_session()
 		self.callback = callback
 		self.error_callback = error_callback
 		self.parent_job_id = parent_job_id
 
-		# Find applications in state RUNNING, and check their instances.
-		# Only check applications that haven't been altered for
-		# a short time; this stops race conditions around normal startup
-		# conditions.
-		older_than = datetime.datetime.utcnow() - datetime.timedelta(0, self.parameters['startup_wait'])
+		def got_session(session):
+			self.session = session
 
-		self.running_versions = self.session.query(
-			paasmaker.model.ApplicationVersion
-		).filter(
-			paasmaker.model.ApplicationVersion.state == constants.VERSION.RUNNING,
-			paasmaker.model.ApplicationVersion.updated < older_than
-		).all()
+			# Find applications in state RUNNING, and check their instances.
+			# Only check applications that haven't been altered for
+			# a short time; this stops race conditions around normal startup
+			# conditions.
+			older_than = datetime.datetime.utcnow() - datetime.timedelta(0, self.parameters['startup_wait'])
 
-		self.active_nodes = self.session.query(
-			paasmaker.model.Node.id
-		).filter(
-			paasmaker.model.Node.state == constants.NODE.ACTIVE
-		)
+			self.running_versions = self.session.query(
+				paasmaker.model.ApplicationVersion
+			).filter(
+				paasmaker.model.ApplicationVersion.state == constants.VERSION.RUNNING,
+				paasmaker.model.ApplicationVersion.updated < older_than
+			).all()
 
-		self.checked_version_count = len(self.running_versions)
-		self.stop_actions = 0
-		self.start_actions = 0
-		self.stopped_instances = 0
-		self.whole_start_version = None
+			self.active_nodes = self.session.query(
+				paasmaker.model.Node.id
+			).filter(
+				paasmaker.model.Node.state == constants.NODE.ACTIVE
+			)
 
-		self.logger.info("Checking %d running versions.", self.checked_version_count)
+			self.checked_version_count = len(self.running_versions)
+			self.stop_actions = 0
+			self.start_actions = 0
+			self.stopped_instances = 0
+			self.whole_start_version = None
 
-		# Start processing them on the IO loop, so as to coordinate with
-		# other things that the system is doing.
-		self.configuration.io_loop.add_callback(self._get_next_version)
+			self.logger.info("Checking %d running versions.", self.checked_version_count)
+
+			# Start processing them on the IO loop, so as to coordinate with
+			# other things that the system is doing.
+			self.configuration.io_loop.add_callback(self._get_next_version)
+
+			# end of got_session()
+
+		self.configuration.get_database_session(got_session, error_callback)
 
 	def _get_next_version(self):
 		if self.whole_start_version:
@@ -72,6 +78,7 @@ class AdjustInstancesHealthCheck(BaseHealthCheck):
 				self.configuration,
 				self.whole_start_version,
 				submitted,
+				self.error_callback,
 				parent=self.parent_job_id
 			)
 		else:
@@ -160,6 +167,7 @@ class AdjustInstancesHealthCheck(BaseHealthCheck):
 				self.configuration,
 				instances,
 				self._instance_type_job_submitted,
+				self.error_callback,
 				parent=self.parent_job_id
 			)
 
@@ -196,7 +204,8 @@ class AdjustInstancesHealthCheckTest(BaseHealthCheckTest):
 		)
 
 	def test_standard(self):
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 
 		health = self.registry.instantiate(
 			'paasmaker.health.adjustinstances',

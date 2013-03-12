@@ -39,13 +39,13 @@ class GoogleAuthMetadata(paasmaker.util.plugin.Plugin):
 class GoogleAuthController(BaseController, tornado.auth.GoogleMixin):
 	AUTH_METHODS = [BaseController.ANONYMOUS]
 
-	@tornado.web.asynchronous
 	def get(self):
 		if self.get_argument("openid.mode", None):
 			self.get_authenticated_user(self.async_callback(self._on_auth))
 			return
 		self.authenticate_redirect()
 
+	@tornado.gen.engine
 	def _on_auth(self, google_user):
 		if not google_user:
 			raise tornado.web.HTTPError(500, "Google auth failed")
@@ -60,7 +60,7 @@ class GoogleAuthController(BaseController, tornado.auth.GoogleMixin):
 
 		# Look up the user by email address.
 		# TODO: Use the correct auth source name.
-		session = self.db()
+		session = yield tornado.gen.Task(self.db)
 		user = session.query(paasmaker.model.User) \
 			.filter(paasmaker.model.User.login==google_user['email'],
 				paasmaker.model.User.auth_source=="paasmaker.auth.google").first()

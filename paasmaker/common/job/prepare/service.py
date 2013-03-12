@@ -19,19 +19,21 @@ class ServiceContainerJob(BaseJob):
 	def start_job(self, context):
 		# Fetch all the relevant services and put them into the environment
 		# for the prepare tasks.
-		session = self.configuration.get_database_session()
-		version = session.query(
-			paasmaker.model.ApplicationVersion
-		).get(
-			context['application_version_id']
-		)
+		def got_session(session):
+			version = session.query(
+				paasmaker.model.ApplicationVersion
+			).get(
+				context['application_version_id']
+			)
 
-		# Build our environment for later.
-		environment = ApplicationEnvironment.get_environment(self.configuration, version)
+			# Build our environment for later.
+			environment = ApplicationEnvironment.get_environment(self.configuration, version)
 
-		# And signal success so the prepare jobs can start.
-		session.close()
-		self.success({'environment': environment}, "All services created and updated.")
+			# And signal success so the prepare jobs can start.
+			session.close()
+			self.success({'environment': environment}, "All services created and updated.")
+
+		self.configuration.get_database_session(got_session, self._failure_callback)
 
 class ServiceJob(BaseJob):
 	"""
@@ -42,32 +44,37 @@ class ServiceJob(BaseJob):
 	}
 
 	def start_job(self, context):
-		self.session = self.configuration.get_database_session()
-		self.service = self.session.query(
-			paasmaker.model.Service
-		).get(
-			self.parameters['service_id']
-		)
-
-		try:
-			service_plugin = self.configuration.plugins.instantiate(
-				self.service.provider,
-				paasmaker.util.plugin.MODE.SERVICE_CREATE,
-				self.service.parameters,
-				self.logger
+		def got_session(session):
+			self.session = session
+			self.service = self.session.query(
+				paasmaker.model.Service
+			).get(
+				self.parameters['service_id']
 			)
-		except paasmaker.common.configuration.InvalidConfigurationException, ex:
-			error_message = "Failed to start a service plugin for %s." % self.service.provider
-			self.logger.critical(error_message)
-			self.logger.critical(ex)
-			self.failed(error_message)
-			return
 
-		# Get this service plugin to create it's service.
-		if self.service.state == constants.SERVICE.NEW:
-			service_plugin.create(self.service.name, self.service_success, self.service_failure)
-		else:
-			service_plugin.update(self.service.name, self.service.credentials, self.service_success, self.service_failure)
+			try:
+				service_plugin = self.configuration.plugins.instantiate(
+					self.service.provider,
+					paasmaker.util.plugin.MODE.SERVICE_CREATE,
+					self.service.parameters,
+					self.logger
+				)
+			except paasmaker.common.configuration.InvalidConfigurationException, ex:
+				error_message = "Failed to start a service plugin for %s." % self.service.provider
+				self.logger.critical(error_message)
+				self.logger.critical(ex)
+				self.failed(error_message)
+				return
+
+			# Get this service plugin to create it's service.
+			if self.service.state == constants.SERVICE.NEW:
+				service_plugin.create(self.service.name, self.service_success, self.service_failure)
+			else:
+				service_plugin.update(self.service.name, self.service.credentials, self.service_success, self.service_failure)
+
+			# end of got_session()
+
+		self.configuration.get_database_session(got_session, self._failure_callback)
 
 	def service_success(self, credentials, message):
 		self.session.refresh(self.service)

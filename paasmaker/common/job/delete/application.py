@@ -43,24 +43,28 @@ class ApplicationDeleteRootJob(BaseJob):
 	}
 
 	def start_job(self, context):
-		session = self.configuration.get_database_session()
-		application = session.query(
-			paasmaker.model.Application
-		).get(
-			self.parameters["application_id"]
-		)
+		def got_session(session):
+			application = session.query(
+				paasmaker.model.Application
+			).get(
+				self.parameters["application_id"]
+			)
 
-		if application is None:
-			error_msg = "Can't find application of id %d to delete" % self.parameters["application_id"]
-			self.logger.error(error_msg)
-			self.failed(error_msg)
-			return
+			if application is None:
+				error_msg = "Can't find application of id %d to delete" % self.parameters["application_id"]
+				self.logger.error(error_msg)
+				self.failed(error_msg)
+				return
 
-		session.delete(application)
-		session.commit()
-		session.close()
+			session.delete(application)
+			session.commit()
+			session.close()
 
-		self.success({}, "Deleted application id %d" % self.parameters["application_id"])
+			self.success({}, "Deleted application id %d" % self.parameters["application_id"])
+
+			# end of got_session()
+
+		self.configuration.get_database_session(got_session, self._failure_callback)
 
 	@classmethod
 	def setup_for_application(cls, configuration, application, callback):
@@ -111,34 +115,39 @@ class ApplicationDeleteServiceJob(BaseJob):
 	}
 
 	def start_job(self, context):
-		self.session = self.configuration.get_database_session()
-		self.service = self.session.query(
-			paasmaker.model.Service
-		).get(
-			self.parameters['service_id']
-		)
+		def got_session(session):
+			self.session = session
+			self.service = self.session.query(
+				paasmaker.model.Service
+			).get(
+				self.parameters['service_id']
+			)
 
-		plugin_exists = self.configuration.plugins.exists(
-			self.service.provider,
-			paasmaker.util.plugin.MODE.SERVICE_DELETE
-		)
+			plugin_exists = self.configuration.plugins.exists(
+				self.service.provider,
+				paasmaker.util.plugin.MODE.SERVICE_DELETE
+			)
 
-		if not plugin_exists:
-			self.service.state = constants.SERVICE.ERROR
-			self.session.add(self.service)
-			self.session.commit()
-			self.session.close()
-			self.failed("Plugin with mode SERVICE_DELETE doesn't exist for service %s" %self.service.provider)
-			return
+			if not plugin_exists:
+				self.service.state = constants.SERVICE.ERROR
+				self.session.add(self.service)
+				self.session.commit()
+				self.session.close()
+				self.failed("Plugin with mode SERVICE_DELETE doesn't exist for service %s" %self.service.provider)
+				return
 
-		service_plugin = self.configuration.plugins.instantiate(
-			self.service.provider,
-			paasmaker.util.plugin.MODE.SERVICE_DELETE,
-			self.service.parameters,
-			self.logger
-		)
+			service_plugin = self.configuration.plugins.instantiate(
+				self.service.provider,
+				paasmaker.util.plugin.MODE.SERVICE_DELETE,
+				self.service.parameters,
+				self.logger
+			)
 
-		service_plugin.remove(self.service.name, self.service.credentials, self._service_success, self._service_failure)
+			service_plugin.remove(self.service.name, self.service.credentials, self._service_success, self._service_failure)
+
+			# end of got_session()
+
+		self.configuration.get_database_session(got_session, self._failure_callback)
 
 	def _service_success(self, message):
 		self.logger.info(message)
@@ -191,7 +200,8 @@ class ApplicationDeleteJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.stop(message)
 
 	def test_simple(self):
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 
 		workspace = paasmaker.model.Workspace()
 		workspace.name = 'Test'
@@ -250,7 +260,8 @@ class ApplicationDeleteJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertEquals(result.state, constants.JOB.SUCCESS, "Application delete job did not succeed")
 
 		session.close()
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 
 		shouldnt_exist = session.query(
 			paasmaker.model.Application

@@ -76,64 +76,65 @@ class ApplicationPrepareRootJob(BaseJob):
 		# In the context should be a 'package' attribute. Record and in future upload this.
 		self.logger.info("Finalising package for %s" % context['application_name'])
 
-		# TODO: Use subclasses of this to handle storage on S3, shared filesystems, etc.
-		# For now... store it in the path we've been supplied, and make the URL to it a Paasmaker URL.
-		session = self.configuration.get_database_session()
-		version = session.query(paasmaker.model.ApplicationVersion).get(context['application_version_id'])
+		def got_session(session):
+			version = session.query(paasmaker.model.ApplicationVersion).get(context['application_version_id'])
 
-		# Set the source path.
-		# Only store the package name, not the leading path.
-		version.checksum = context['package_checksum']
-		version.source_package_type = context['package_type']
+			# Set the source path.
+			# Only store the package name, not the leading path.
+			version.checksum = context['package_checksum']
+			version.source_package_type = context['package_type']
 
-		def store_complete(url, message):
-			self.logger.info(message)
-			version.source_path = url
-			version.state = constants.VERSION.PREPARED
-			session.add(version)
-			session.commit()
-			session.close()
+			def store_complete(url, message):
+				self.logger.info(message)
+				version.source_path = url
+				version.state = constants.VERSION.PREPARED
+				session.add(version)
+				session.commit()
+				session.close()
 
-			self.success({}, "Successfully prepared package for %s" % context['application_name'])
+				self.success({}, "Successfully prepared package for %s" % context['application_name'])
 
-		def store_failed(message, exception=None):
-			# Handle a failed store.
-			self.logger.error(message)
-			session.close()
-			if exception:
-				self.logger.error("Exception", exc_info=exception)
-			self.failed(message)
-			# end of pack_failed()
+				# end of store_complete()
 
-		# Store the package.
-		# Locate a suitable plugin to do this.
-		storer_plugin_name = 'paasmaker.storer.default'
-		if 'preferred_storer' in context:
-			storer_plugin_name = 'paasmaker.storer.%s' % context['preferred_storer']
-
-		plugin_exists = self.configuration.plugins.exists(
-			storer_plugin_name,
-			paasmaker.util.plugin.MODE.STORER
-		)
-
-		if not plugin_exists:
+			# Store the package.
+			# Locate a suitable plugin to do this.
+			storer_plugin_name = 'paasmaker.storer.default'
 			if 'preferred_storer' in context:
-				error_message = "The preferred storer %s was not found." % storer_plugin_name
-			else:
-				error_message = "Your Paasmaker configuration is incomplete. No default source storer plugin is configured."
+				storer_plugin_name = 'paasmaker.storer.%s' % context['preferred_storer']
 
-			self.logger.error(error_message)
-			self.failed(error_message)
-			return
+			plugin_exists = self.configuration.plugins.exists(
+				storer_plugin_name,
+				paasmaker.util.plugin.MODE.STORER
+			)
 
-		storer_plugin = self.configuration.plugins.instantiate(
-			storer_plugin_name,
-			paasmaker.util.plugin.MODE.STORER,
-			{},
-			self.logger
-		)
+			if not plugin_exists:
+				if 'preferred_storer' in context:
+					error_message = "The preferred storer %s was not found." % storer_plugin_name
+				else:
+					error_message = "Your Paasmaker configuration is incomplete. No default source storer plugin is configured."
 
-		storer_plugin.store(context['package_file'], context['package_checksum'], context['package_type'], store_complete, store_failed)
+				self.logger.error(error_message)
+				self.failed(error_message)
+				return
+
+			storer_plugin = self.configuration.plugins.instantiate(
+				storer_plugin_name,
+				paasmaker.util.plugin.MODE.STORER,
+				{},
+				self.logger
+			)
+
+			storer_plugin.store(
+				context['package_file'],
+				context['package_checksum'],
+				context['package_type'],
+				store_complete,
+				self._failure_callback
+			)
+
+			# end of got_session()
+
+		self.configuration.get_database_session(got_session, self._failure_callback)
 
 	# TODO: Can't place versions into ERROR state when they can't be prepared. Fix this!
 
@@ -181,7 +182,8 @@ class PrepareJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertEquals(code, 0, "Unable to create temporary zip file.")
 
 		# Now let's get started...
-		s = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		s = self.wait()
 		workspace = paasmaker.model.Workspace()
 		workspace.name = 'Work Zone'
 		workspace.stub = 'work'

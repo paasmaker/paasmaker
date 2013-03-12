@@ -9,13 +9,15 @@ import tornado.testing
 class InformationController(BaseController):
 	AUTH_METHODS = [BaseController.NODE, BaseController.USER, BaseController.SUPER]
 
+	@tornado.gen.engine
 	def get(self):
 		self.add_data('is_heart', self.configuration.is_heart())
 		self.add_data('is_pacemaker', self.configuration.is_pacemaker())
 		self.render("api/apionly.html")
 
+	@tornado.gen.engine
 	def post(self):
-		return self.get()
+		self.get()
 
 	@staticmethod
 	def get_routes(configuration):

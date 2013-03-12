@@ -361,7 +361,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		#print open(self.accesslog_combined, 'r').read()
 
 		# Should be 404 this time.
-		self.assertEquals(response.code, 404, "Response is not 404.")
+		self.assertEquals(response.code, 404, "Response is not 404 - got %d." % response.code)
 
 		# Now insert a record for it.
 		# Inserted records MUST be IP addresses.

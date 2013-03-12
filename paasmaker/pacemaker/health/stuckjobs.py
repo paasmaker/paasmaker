@@ -21,22 +21,26 @@ class StuckJobsHealthCheck(BaseHealthCheck):
 	def check(self, parent_job_id, callback, error_callback):
 		# Find jobs that are on nodes that are down.
 		# Abort the trees to allow other jobs or systems to kick in.
-		self.session = self.configuration.get_database_session()
-		self.down_nodes = self.session.query(
-			paasmaker.model.Node
-		).filter(
-			paasmaker.model.Node.state == constants.NODE.DOWN
-		).all()
+		def got_session(session):
+			self.session = session
 
-		self.callback = callback
-		self.error_callback = error_callback
+			self.down_nodes = self.session.query(
+				paasmaker.model.Node
+			).filter(
+				paasmaker.model.Node.state == constants.NODE.DOWN
+			).all()
 
-		self.down_nodes_count = len(self.down_nodes)
-		self.cancelled_jobs = 0
+			self.callback = callback
+			self.error_callback = error_callback
 
-		self.logger.info("Checking %d down nodes.", self.down_nodes_count)
+			self.down_nodes_count = len(self.down_nodes)
+			self.cancelled_jobs = 0
 
-		self.configuration.io_loop.add_callback(self._fetch_down_node)
+			self.logger.info("Checking %d down nodes.", self.down_nodes_count)
+
+			self.configuration.io_loop.add_callback(self._fetch_down_node)
+
+		self.configuration.get_database_session(got_session, error_callback)
 
 	def _fetch_down_node(self):
 		try:
@@ -115,7 +119,8 @@ class StuckJobsHealthCheckTest(BaseHealthCheckTest):
 		our_uuid = str(uuid.uuid4())
 		self.configuration.set_node_uuid(our_uuid)
 
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 		node = paasmaker.model.Node('test', 'localhost', 12345, our_uuid, constants.NODE.ACTIVE)
 		session.add(node)
 		session.commit()

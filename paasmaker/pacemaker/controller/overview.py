@@ -9,12 +9,13 @@ from sqlalchemy import func
 class OverviewController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.web.asynchronous
+	@tornado.gen.engine
 	def get(self):
 		self.require_permission(constants.PERMISSION.SYSTEM_OVERVIEW)
 
 		# Instance status counts
-		instance_status_counts = self.db().query(
+		session = yield tornado.gen.Task(self.db)
+		instance_status_counts = session.query(
 			paasmaker.model.ApplicationInstance.state,
 			func.count()
 		).group_by(
@@ -22,7 +23,7 @@ class OverviewController(BaseController):
 		)
 		self.add_data('instances', instance_status_counts)
 
-		node_status_counts = self.db().query(
+		node_status_counts = session.query(
 			paasmaker.model.Node.state,
 			func.count()
 		).group_by(
@@ -31,7 +32,7 @@ class OverviewController(BaseController):
 		self.add_data('nodes', node_status_counts)
 
 		# Workspace routing stats.
-		self.workspace_list = self.db().query(
+		self.workspace_list = session.query(
 			paasmaker.model.Workspace
 		).order_by(
 			paasmaker.model.Workspace.name.asc()

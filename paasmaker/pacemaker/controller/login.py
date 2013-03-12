@@ -44,7 +44,7 @@ class LoginController(BaseController):
 		self._external_logins_list()
 		self.render("login/login.html")
 
-	@tornado.web.asynchronous
+	@tornado.gen.engine
 	def post(self):
 		valid_data = self.validate_data(LoginSchema())
 
@@ -57,7 +57,7 @@ class LoginController(BaseController):
 		plugins.reverse()
 
 		# And with each of them, try to authenticate.
-		session = self.db()
+		session = yield tornado.gen.Task(self.db)
 
 		def complete_request(authenticated):
 			if authenticated:
@@ -140,7 +140,8 @@ class LoginControllerTest(BaseControllerTest):
 
 	def test_login(self):
 		# Create a test user.
-		s = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		s = self.wait()
 		u = paasmaker.model.User()
 		u.login = 'username'
 		u.email = 'username@example.com'
@@ -176,9 +177,24 @@ class LoginControllerTest(BaseControllerTest):
 		self.assertEquals(response.headers['Location'], '/', "Should have redirected to homepage.")
 		self.assertTrue(response.headers.has_key('Set-Cookie'), "Missing user cookie.")
 
+		raw_cookie = response.headers['Set-Cookie'].split(';')[0]
+
+		# Check that the returned cookie can be used again.
+		request = tornado.httpclient.HTTPRequest(
+			"http://localhost:%d/information?format=json" % self.get_http_port(),
+			method="GET",
+			follow_redirects=False,
+			headers={'Cookie': raw_cookie}
+			)
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, self.stop)
+		response = self.wait()
+		self.assertEquals(response.code, 200, "Should have responded with 200.")
+
 	def test_login_json(self):
 		# Create a test user.
-		s = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		s = self.wait()
 		u = paasmaker.model.User()
 		u.login = 'username'
 		u.email = 'username@example.com'
@@ -227,7 +243,8 @@ class LoginControllerTest(BaseControllerTest):
 
 	def test_login_apikey(self):
 		# Create a test user.
-		s = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		s = self.wait()
 		u = paasmaker.model.User()
 		u.login = 'username'
 		u.email = 'username@example.com'

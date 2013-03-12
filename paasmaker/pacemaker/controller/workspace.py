@@ -32,25 +32,30 @@ class WorkspaceSchema(colander.MappingSchema):
 class WorkspaceEditController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	def _get_workspace(self, workspace_id=None):
+	@tornado.gen.engine
+	def _get_workspace(self, callback, workspace_id=None):
 		workspace = None
 		if workspace_id:
 			# Find and load the workspace.
-			workspace = self.db().query(paasmaker.model.Workspace).get(int(workspace_id))
+			session = yield tornado.gen.Task(self.db)
+			workspace = session.query(
+				paasmaker.model.Workspace
+			).get(int(workspace_id))
 			if not workspace:
 				raise HTTPError(404, "No such workspace.")
 
 			self.add_data('workspace', workspace)
 
-		return workspace
+		callback(workspace)
 
 	def _default_workspace(self):
 		workspace = paasmaker.model.Workspace()
 		workspace.name = ''
 		return workspace
 
+	@tornado.gen.engine
 	def get(self, workspace_id=None):
-		workspace = self._get_workspace(workspace_id)
+		workspace = yield tornado.gen.Task(self._get_workspace, workspace_id=workspace_id)
 		self.require_permission(constants.PERMISSION.WORKSPACE_EDIT, workspace=workspace)
 		if not workspace:
 			workspace = self._default_workspace()
@@ -58,8 +63,9 @@ class WorkspaceEditController(BaseController):
 
 		self.render("workspace/edit.html")
 
+	@tornado.gen.engine
 	def post(self, workspace_id=None):
-		workspace = self._get_workspace(workspace_id)
+		workspace = yield tornado.gen.Task(self._get_workspace, workspace_id=workspace_id)
 		self.require_permission(constants.PERMISSION.WORKSPACE_EDIT, workspace=workspace)
 
 		valid_data = self.validate_data(WorkspaceSchema())
@@ -72,7 +78,7 @@ class WorkspaceEditController(BaseController):
 		workspace.stub = self.params['stub']
 
 		if valid_data:
-			session = self.db()
+			session = yield tornado.gen.Task(self.db)
 			session.add(workspace)
 			session.commit()
 			session.refresh(workspace)
@@ -94,21 +100,29 @@ class WorkspaceEditController(BaseController):
 class WorkspaceListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
+	@tornado.gen.engine
 	def get(self):
 		# Check to see if we have global workspace list permissions.
-		workspaces = self.db().query(
+		session = yield tornado.gen.Task(self.db)
+		workspaces = session.query(
 			paasmaker.model.Workspace
 		)
 
-		if not self.has_permission(constants.PERMISSION.WORKSPACE_LIST):
+		workspace_list_permission = yield tornado.gen.Task(
+			self.has_permission,
+			constants.PERMISSION.WORKSPACE_LIST,
+			workspace=None
+		)
+		if not workspace_list_permission:
 			# Nope, you have a limited selection. So limit the query to those.
-			workspaces = self.db().query(
+			current_user = yield tornado.gen.Task(self.pm_get_current_user)
+			workspaces = session.query(
 				paasmaker.model.Workspace
 			).filter(
 				paasmaker.model.Workspace.id.in_(
 					paasmaker.model.WorkspaceUserRoleFlat.list_of_workspaces_for_user(
-						self.db(),
-						self.get_current_user()
+						session,
+						current_user
 					)
 				)
 			)
@@ -197,7 +211,9 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		self.failIf(not response.success)
 		self.assertEquals(response.data['workspace']['name'], 'Test Altered workspace', 'Name was not updated.')
 		# Load up the workspace separately and confirm.
-		workspace = self.configuration.get_database_session().query(paasmaker.model.Workspace).get(workspace_id)
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
+		workspace = session.query(paasmaker.model.Workspace).get(workspace_id)
 		self.assertEquals(workspace.name, 'Test Altered workspace', 'Name was not updated.')
 
 	def test_edit_fail(self):
@@ -274,7 +290,8 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		self.assertEquals(len(response.data['workspaces']), 2, "Not enough workspaces returned.")
 
 		# Now, create a user and assign them permission only to view the second workspace.
-		session = self.configuration.get_database_session()
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
 		user = paasmaker.model.User()
 		user.login = 'username'
 		user.email = 'username@example.com'
