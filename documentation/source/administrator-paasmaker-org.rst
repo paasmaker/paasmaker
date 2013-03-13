@@ -43,7 +43,9 @@ this was the closest location for us.
 	At this time, you must run the SQL database for the Pacemaker on the same node as the
 	Pacemaker. This is due to the fact that early on we chose to use SQLAlchemy as an ORM
 	library, and this does not have any easy to implement asynchronous options for Tornado,
-	the asychronous Python library in use. In the future, we will remedy this issue.
+	the asychronous Python library in use. This made database connections very sensitive to
+	connectivity issues, regardless of how brief they were. In the future, we will remedy
+	this issue.
 
 EC2 Security Group
 ------------------

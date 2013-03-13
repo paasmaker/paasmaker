@@ -7,20 +7,48 @@ import sys
 import tornado.testing
 
 class ThreadCallback(threading.Thread):
-	def __init__(self, io_loop, callback, error_callback, **kwargs):
-		"""
-		A helper class to spawn a new thread, do some blocking work in that,
-		and then asychronously call the supplied callback once done.
+	"""
+	A helper class to spawn a new thread, do some blocking work in that,
+	and then asychronously call the supplied callback once done.
 
-		This class is meant to be subclassed to perform the specific work that
-		you need to do. It's designed to be a way to use external syncrhonous
-		libraries to do a little bit of work, rather than having to rewrite them
-		or find a synchronous version of those libraries.
+	This class is meant to be subclassed to perform the specific work that
+	you need to do. It's designed to be a way to use external syncrhonous
+	libraries to do a little bit of work, rather than having to rewrite them
+	or find a synchronous version of those libraries.
 
-		CAUTION: error_callback MUST have the signature (message, exception)
+	Here is a simple example:
+
+	.. code-block:: python
+
+		class MySyncWork(ThreadCallback):
+		    def _work(self, input1, input1, kwinput1=value):
+		        dowork()
+
+		        # To generate an error, raise an exception.
+		        self._callback(callbackarg1, callbackarg2, kwarg1=value)
+
+		def finished(callbackarg1, callbackarg2, kwarg1=value):
+		    # The work is completed.
+		    pass
+
+		def error_callback(message, exception=None):
+		    # Handle the error.
+		    pass
+
+		sync = MySyncWork(self.configuration.io_loop, finished, error_callback)
+		sync.work(input1, input2, kwinput1=value)
+
+	.. WARNING::
+		``error_callback`` MUST have the signature (message, exception)
 		as the exception handling here won't print errors if this is not the
 		case.
-		"""
+	.. WARNING::
+		The body of the ``_work()`` function is performed on a different thread.
+		You'll need to consider locking if you're accessing things outside
+		of the scope of this function.
+	"""
+
+	def __init__(self, io_loop, callback, error_callback, **kwargs):
 		super(ThreadCallback, self).__init__(**kwargs)
 		self.io_loop = io_loop
 		self._user_callback = tornado.stack_context.wrap(callback)

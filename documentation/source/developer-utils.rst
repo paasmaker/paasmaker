@@ -66,3 +66,6 @@ Misc
 
 .. autoclass:: paasmaker.common.core.constants.Enum
     :members:
+
+.. autoclass:: paasmaker.util.threadcallback.ThreadCallback
+    :members:

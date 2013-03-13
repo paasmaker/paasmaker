@@ -53,9 +53,15 @@ These document the internals of Paasmaker, useful for if you are
 hacking the core or developing plugins that require advanced
 integration with Paasmaker.
 
+Paasmaker is heavily reliant on the Tornado asynchronous web
+framework, so an understanding of Tornado will assist in understanding
+the code.
+
 .. toctree::
    :maxdepth: 2
 
+   developer-coding-conventions
+   developer-coding-tornado
    developer-configuration
    developer-utils
    developer-managed
