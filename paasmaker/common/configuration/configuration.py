@@ -166,7 +166,7 @@ class HealthCombinedSchema(StrictAboutExtraKeysColanderMappingSchema):
 
 	@staticmethod
 	def default():
-		return {'enabled': False, 'groups': []}
+		return {'enabled': True, 'groups': [], 'use_default_checks': True}
 
 class PacemakerSchema(StrictAboutExtraKeysColanderMappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
