@@ -113,7 +113,7 @@ First, clone the repository:
 
 .. code-block:: bash
 
-	$ git clone git@bitbucket.org:freefoote/paasmaker.git
+	$ git clone git@bitbucket.org:paasmaker/paasmaker.git
 
 Now, in this example we're going to use the 'example-hacking' configuration,
 which is designed to set up the system as if you were going to modify the Paasmaker code.

@@ -214,7 +214,7 @@ file. Finally, we'll run the installer script.
 .. code-block:: bash
 
 	$ sudo apt-get install git
-	$ git clone git@bitbucket.org:freefoote/paasmaker.git
+	$ git clone git@bitbucket.org:paasmaker/paasmaker.git
 
 Set up the configuration file. The example used for Paasmaker's production systems
 is in install/configs/example-production-pacemaker.yml. You should update the file
@@ -470,7 +470,7 @@ Then we can install Paasmaker:
 .. code-block:: bash
 
 	$ sudo apt-get install git
-	$ git clone git@bitbucket.org:freefoote/paasmaker.git
+	$ git clone git@bitbucket.org:paasmaker/paasmaker.git
 
 Now we need to create a configuration file for this install. You can base it off
 the one in install/config/example-production-heart.yml. It is reproduced here
