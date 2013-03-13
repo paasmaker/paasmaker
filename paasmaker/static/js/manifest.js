@@ -32,6 +32,8 @@ Object.equals = function( x, y ) {
 
 //----------------------------------------
 
+var widget_counter = 0;	// TODO: deglobalise and/or just use widget_stack.length
+
 var draw_functions = {
 	manifest: function(structure, path) {
 		return "<p>I am a manifest, format version: " + structure.format + "</p>";
@@ -40,6 +42,32 @@ var draw_functions = {
 	application: function(structure, path) {
 		var html = "<div class=\"pm-manifest-item pm-manifest-instance\" style=\"border:solid 1px green\">";
 		html += "<h3>application: " + structure.name + "</h3>";
+		if (structure.tags) {
+			var div_id = widget_counter;
+			html += "<input type=\"text\" id=\"pm-manifest-tags-" + div_id + "\"><div class=\"pm-tag-editor\" id=\"pm-manifest-widget-" + div_id + "\"></div>";
+			widget_counter ++;
+
+			var tag_editor_opts = {
+				change: function() {
+					return function(new_obj) {
+						new_json = JSON.stringify(new_obj.Tags);
+						$('#pm-manifest-tags-' + div_id).val(new_json);
+					}
+				}(),
+				drawproperty: function(opt, json, root, path, key) {
+					children = {};
+		            if (key == 'Tags' && Object.prototype.toString.call(json[key]) == '[object Object]') {
+						children.item = $('<div>', { 'class': 'item', 'data-path': path });
+	                    children.item.addClass('expanded group-top-level');
+	                    children.property = $(opt.headerElement || '<span class="property group-header">' + key + '</span>');
+	                }
+		            return children;
+		        }
+			};
+			pm.manifest.add_widget('#pm-manifest-widget-' + div_id, 'jsonEditor', [{Tags: structure.tags}, tag_editor_opts]);
+			pm.manifest.add_widget('#pm-manifest-tags-' + div_id, 'val', [JSON.stringify(structure.tags)]);
+		}
+
 		if (structure.prepare && structure.prepare.commands) {
 			if (typeof structure.prepare.commands != "object" || typeof structure.prepare.commands.length != "number") {
 				throw {
@@ -184,6 +212,7 @@ pm.manifest = (function() {
 	}
 
 	var current_manifest;
+	var widget_stack = [];
 
 	return {
 		findLineNumber: function(path) {
@@ -235,10 +264,26 @@ pm.manifest = (function() {
 			}
 			$("#pm_manifest_rendered").html(html);
 
+			if (widget_stack.length > 0) {
+				console.log(widget_stack);
+				widget_stack.forEach(function(widget) {
+					$(widget.element)[widget.function_name].apply($(widget.element), widget.arguments);
+				});
+				widget_stack = [];
+			}
+
 			// TODO: do this in CSS?
 			var height = $("#pm_manifest_rendered").height();
 			$("#pm_manifest_yaml_form").css({'height': height + 'px'});
 			$("#pm_manifest_yaml_block").css({'height': height + 'px'});
+		},
+
+		add_widget: function(element, function_name, arguments) {
+			widget_stack.push({
+				element: element,
+				function_name: function_name,
+				arguments: arguments
+			});
 		},
 
 		plugins: null,
