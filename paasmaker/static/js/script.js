@@ -27,7 +27,25 @@ $(document).ready(
 	{
 		if( $('.workspace-tag-editor').length > 0 )
 		{
-			new pm.widgets.tag_editor($('form'), $('.workspace-tag-editor'));
+			var values = {Tags: JSON.parse($('#pm_workspace_tags').val())};
+
+			console.log(this);
+			$('.workspace-tag-editor').jsonEditor(values, {
+				change: function(new_obj) {
+					new_json = JSON.stringify(new_obj.Tags);
+					$('#foobar-tag-debug').html(new_json);
+					$('#pm_workspace_tags').val(new_json);
+				},
+				drawproperty: function(opt, json, root, path, key) {
+					children = {};
+		            if (key == 'Tags' && Object.prototype.toString.call(json[key]) == '[object Object]') {
+						children.item = $('<div>', { 'class': 'item', 'data-path': path });
+	                    children.item.addClass('expanded group-top-level');
+	                    children.property = $(opt.headerElement || '<span class="property group-header">' + key + '</span>');
+	                }
+		            return children;
+		        }
+			});
 		}
 
 		if( $('.test-browser-features').length > 0 )

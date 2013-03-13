@@ -28,6 +28,11 @@ class WorkspaceSchema(colander.MappingSchema):
 		description="A set of tags for this workspace.",
 		missing={},
 		default={})
+	serialised_tags = colander.SchemaNode(colander.String(),
+		title="Workspace Tags JSON",
+		description="JSON-encoded version of the tags for this workspace; takes precedence over tags if set",
+		missing="",
+		default="")
 
 class WorkspaceEditController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
@@ -40,7 +45,7 @@ class WorkspaceEditController(BaseController):
 				paasmaker.model.Workspace
 			).get(int(workspace_id))
 			if not workspace:
-				raise HTTPError(404, "No such workspace.")
+				raise tornado.web.HTTPError(404, "No such workspace.")
 
 			self.add_data('workspace', workspace)
 
@@ -72,6 +77,9 @@ class WorkspaceEditController(BaseController):
 		workspace.name = self.params['name']
 		workspace.tags = self.params['tags']
 		workspace.stub = self.params['stub']
+
+		if len(self.params['serialised_tags']) > 0:
+			workspace.tags = json.loads(self.params['serialised_tags'])
 
 		if valid_data:
 			self.session.add(workspace)
