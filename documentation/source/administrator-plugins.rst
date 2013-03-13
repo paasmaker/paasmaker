@@ -13,19 +13,21 @@ Runtime Plugins
 ---------------
 
 .. toctree::
-   :maxdepth: 2
+	:maxdepth: 2
 
-   plugin-runtime-php
-   plugin-runtime-shell
+	plugin-runtime-shell
+	plugin-runtime-php
+	plugin-runtime-static
+	plugin-runtime-rbenv
 
 Authentication Plugins
 ----------------------
 
 .. toctree::
-   :maxdepth: 2
+	:maxdepth: 2
 
-   plugin-auth-allowany
-   plugin-auth-google
+	plugin-auth-allowany
+	plugin-auth-google
 
 Plugin overview
 ---------------

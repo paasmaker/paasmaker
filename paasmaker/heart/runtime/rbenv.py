@@ -17,7 +17,7 @@ import tornado
 class RbenvRuntimeOptionsSchema(colander.MappingSchema):
 	rbenv_path = colander.SchemaNode(colander.String(),
 		title="rbenv path",
-		description="The path to the root where rbenv is installed.",
+		description="The path to the root where rbenv is installed. If the path contains ~, it is expanded to the home directory of the user who is running Paasmaker.",
 		default="~/.rbenv",
 		missing="~/.rbenv")
 

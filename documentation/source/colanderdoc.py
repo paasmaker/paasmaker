@@ -70,7 +70,13 @@ class ColanderDocDirective(Directive):
 
 			if attribute.default != colander.null:
 				# There is a default set. Add it.
-				default_text = "Default value: %s" % str(attribute.default)
+				if isinstance(attribute.default, bool):
+					# Convert boolean's str() output to lowercase.
+					# Why? In yaml it must be lowercase, so having it in the
+					# docs as uppercase is confusing to users.
+					default_text = "Default value: %s" % str(attribute.default).lower()
+				else:
+					default_text = "Default value: %s" % str(attribute.default)
 				default = nodes.paragraph(text=default_text)
 
 				definition += default
