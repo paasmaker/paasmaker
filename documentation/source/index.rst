@@ -1,6 +1,6 @@
 
-Welcome to Paasmaker's documentation!
-=====================================
+Paasmaker
+=========
 
 Contents:
 

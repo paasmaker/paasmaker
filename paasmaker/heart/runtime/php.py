@@ -40,7 +40,7 @@ class PHPRuntimeOptionsSchema(colander.MappingSchema):
 class PHPRuntimeParametersSchema(colander.MappingSchema):
 	document_root = colander.SchemaNode(colander.String(),
 		title="Document root",
-		description="The subfolder under the application folder that is the document root.")
+		description="The subfolder under the application folder that is the public document root. For example, 'web'.")
 
 class PHPEnvironmentParametersSchema(colander.MappingSchema):
 	# No options required, but the environment requires a schema.

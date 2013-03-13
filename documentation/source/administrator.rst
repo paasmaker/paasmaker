@@ -12,7 +12,6 @@ Installing and working with Paasmaker
    :maxdepth: 2
 
    administrator-paasmaker-org
-   administrator-plugins
 
 Configuration Reference
 -----------------------
@@ -20,4 +19,5 @@ Configuration Reference
 .. toctree::
    :maxdepth: 2
 
+   administrator-plugins
    administrator-port-allocation
