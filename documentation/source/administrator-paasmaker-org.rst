@@ -17,11 +17,12 @@ The basic concept here is:
 
 * The Amazon Elastic Load Balancer is an additonal routing layer, to handle failed
   physical servers.
-* The Amazon Relational Database Service provides a MySQL like database to the Pacemaker
-  and applications. It was chosen because we can easily scale it up and down and
+* The Amazon Relational Database Service provides a MySQL like database to applications
+  running on the cluster. It was chosen because we can easily scale it up and down and
   is less things to maintain.
 * One server, running on a small instance, is the Pacemaker, that sets up applications,
-  and manages other nodes in the cluster.
+  and manages other nodes in the cluster. It also runs it's own SQL database purely for
+  the pacemaker. (In this example, I used Postgres).
 * One or more servers, initially m1.small to keep costs down, run as hearts and routers,
   and host applications and route HTTP traffic.
 
@@ -29,14 +30,20 @@ Several things needed to be chosen first before any work started. Firstly, the c
 needs a hostname which is used to automatically generate hostnames for applications
 and for the Pacemaker itself. For the production network, we chose ``production.paasmaker.net``.
 
-Also, for this guide, everything was set up in ap-southeast-2 - Sydney, Australia - because
+Also, for this guide, everything was set up in ``ap-southeast-2`` (Sydney, Australia), because
 this was the closest location for us.
 
-.. NOTE:
+.. note::
 	This is purely an example of setting up a Paasmaker cluster. Your needs will be different
 	to ours and you should consider this a guide to help you understand how to deploy
 	Paasmaker and to design your own system. Some of the steps taken in this guide are
 	purely my preferred choices in server management.
+
+.. warning::
+	At this time, you must run the SQL database for the Pacemaker on the same node as the
+	Pacemaker. This is due to the fact that early on we chose to use SQLAlchemy as an ORM
+	library, and this does not have any easy to implement asynchronous options for Tornado,
+	the asychronous Python library in use. In the future, we will remedy this issue.
 
 EC2 Security Group
 ------------------
@@ -80,6 +87,10 @@ Summary of settings:
 Amazon RDS instance
 -------------------
 
+.. NOTE::
+	In this example, the RDS is purely for databases for applications that you
+	deploy to the cluster.
+
 Set up the Amazon RDS instance. First, create a security group for your RDS instance,
 and then launch a new RDS instance with that security group. You should adjust these
 settings depending on your performance and redundancy needs.
@@ -99,8 +110,8 @@ Summary of settings:
 * Security group: the group you created before.
 * No initial database.
 
-If you don't want to use RDS, you can instead install MySQL (or Postgres) onto the
-Pacemaker node and hook that up. There are notes at that step describing this setup.
+If you don't want to use RDS, you can instead use another database server of your
+choosing, and set your Pacemaker up to use that to supply services to applications.
 
 Create Pacemaker EC2 instance
 -----------------------------
@@ -151,6 +162,14 @@ Create the initial Paasmaker database. Normally, Paasmaker would create database
 for you for applications, but it is unable to create it's own database. However,
 you don't need to import any schema - Paasmaker will do this on first startup.
 
+For our setup, we're going to use Postgres on the same machine as the Pacemaker.
+
+Install the Postgres server:
+
+.. code-block:: bash
+
+	$ sudo apt-get install postgresql
+
 Choose a username, database name, and password that the Pacemaker will use.
 For example:
 
@@ -158,34 +177,31 @@ For example:
 * Database: pacemaker
 * Password: choose a password
 
-From your login to the Pacemaker node, install a MySQL client, and use that
-to create the initial user and database. This creates a seperate username,
-database, and password for the Pacemaker itself, to isolate it from other applications.
+Now go ahead and create a seperate username and password in Postgres.
 
 .. code-block:: bash
 
-	$ sudo apt-get install mysql-client
-	$ mysql -u root -h <RDS hostname> -p
-	Password: <RDS root password>
+	$ sudo su - postgres -c psql
+	psql> CREATE USER pacemaker PASSWORD 'password';
+	psql> CREATE DATABASE pacemaker OWNER pacemaker;
+
+Alternately, you could use a local installation of MySQL instead:
+
+.. code-block:: bash
+
+	$ sudo apt-get install mysql-server
+	... when prompted, choose a MySQL root password ...
+	$ mysql -u root -h localhost -p
+	Password: <root password>
 	mysql> CREATE USER 'pacemaker'@'%' IDENTIFIED BY 'password';
 	mysql> CREATE DATABASE pacemaker;
 	mysql> GRANT ALL ON pacemaker.* TO 'pacemaker'@'%' IDENTIFIED BY 'password';
 	mysql> GRANT ALL ON pacemaker.* TO 'pacemaker'@'localhost' IDENTIFIED BY 'password';
 	mysql> quit
 
-If you don't want to use RDS, you can install a local MySQL on the Pacemaker node.
-To do that, follow these steps:
-
-.. code-block:: bash
-
-	$ sudo apt-get install mysql-server
-	... when prompted, choose a MySQL root password ...
-	$ sudo vim /etc/mysql/my.cnf
-	... change:
-	bind-address = 0.0.0.0
-	$ sudo /etc/init.d/mysql-server restart
-
-And then use the previous steps to create the initial database.
+.. warning::
+	As stated previously, using a database on different server to the Pacemaker
+	node is not supported at this time.
 
 DNS records
 -----------
@@ -216,7 +232,7 @@ file. Finally, we'll run the installer script.
 	$ sudo apt-get install git
 	$ git clone git@bitbucket.org:paasmaker/paasmaker.git
 
-Set up the configuration file. The example used for Paasmaker's production systems
+Set up the installation configuration file. The example used for Paasmaker's production systems
 is in install/configs/example-production-pacemaker.yml. You should update the file
 to match your environment, but below is a copy of the file with some more descriptions.
 
@@ -331,7 +347,11 @@ The database configuration is supplied as a `SQLalchemy DSN
 <http://docs.sqlalchemy.org/en/rel_0_8/core/engines.html#database-urls>`_. For our case,
 the DSN looks like this::
 
-	mysql://username:password@hostname/database
+	postgresql://pacemaker:password@127.0.0.1/pacemaker
+
+Or like this if you're using MySQL::
+
+	mysql://pacemaker:password@127.0.0.1/pacemaker
 
 In ``paasmaker.yml``, find the ``dsn:`` option and update it appropriately.
 
@@ -339,11 +359,11 @@ In ``paasmaker.yml``, find the ``dsn:`` option and update it appropriately.
 
 	$ vim paasmaker.yml
 	...
-	  dsn: mysql://username:password@hostname/database
+	  dsn: postgresql://pacemaker:password@127.0.0.1/pacemaker
 
 Once you've saved the file, restart Paasmaker. It will then recreate the tables on
 the server, or exit with an error if it can not connect to the database for any reason.
-It may take a while to restart (30-60 seconds) whilst it recreates the tables.
+It may take a while to restart (5-10 seconds) whilst it recreates the tables.
 
 .. code-block:: bash
 
@@ -616,7 +636,7 @@ application:
 
 .. code-block:: bash
 
-	git@bitbucket.org:paasmaker/paasmaker-tornado-advanced.git
+	git@bitbucket.org:paasmaker/paasmaker-python-simple.git
 
 Once you've created the application, you should be able to start it and then
 visit it via the URLs provided by the control panel. When you're done, you
@@ -664,7 +684,7 @@ Server Monitoring
 -----------------
 
 Don't forget to install the appropriate hooks onto the server for your server
-monitoring system. Currently, we are using `Copperegg <http://copperegg.com>`_
+monitoring system. Currently, we are using `CopperEgg <http://copperegg.com>`_
 for monitoring the production servers, to save us having to run our own monitoring
 system, such as Zabbix or Nagios.
 
@@ -686,10 +706,10 @@ as they come back online.
 * ``paasmaker.yml``. This is the configuration file. If you've made customisations
   to it, you'll want to back it up.
 
-* Backup the database. If you stored it on RDS or an external SQL database, use
-  your normal backup proceedures to back these up. If you're running on a standalone
-  box, you might find the ``automysqlbackup`` and ``autopostgresqlbackup`` packages
-  useful. In our case, I just used these instructions to create backup files:
+* Backup the database. If you're running on a standalone box, you might find the
+  ``automysqlbackup`` and ``autopostgresqlbackup`` packages useful. In our case,
+  I just used these instructions to create backup files of the RDS instance (for
+  the application databases):
 
   .. code-block:: bash
 
@@ -715,6 +735,15 @@ as they come back online.
   	$ sudo automysqlbackup
 
   And then check for files in ``/var/lib/automysqlbackup``.
+
+  If you've followed my instructions exactly, install the ``autopostgresqlbackup``
+  package, and you'll automatically have Postgres backups appear in ``/var/lib/autopostgresqlbackup``.
+
+  .. code-block:: bash
+
+  	$ sudo apt-get install autopostgresqlbackup
+  	$ sudo autopostgresqlbackup
+  	$ ls /var/lib/autopostgresqlbackup
 
   If you're using the default sqlite database, you can fetch the database file from
   the ``scratch/`` directory and back that up.
