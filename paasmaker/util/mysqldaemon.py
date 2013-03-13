@@ -37,13 +37,13 @@ class MySQLDaemon(ManagedDaemon):
 	connect without a password.
 
 	.. warning::
-	   On Ubuntu, `AppArmor <https://wiki.ubuntu.com/AppArmor>`_ is
-	   configured by default to prevent mysqld from writing outside
-	   of ``/var``, which will prevent this service from starting.
-	   You will have to add Paasmaker's scratch directory to
-	   ``/etc/apparmor.d/usr.sbin.mysqld`` like so::
-	   		/path/to/paasmaker/scratch/ r,
-  			/path/to/paasmaker/scratch/** rwk,
+		On Ubuntu, `AppArmor <https://wiki.ubuntu.com/AppArmor>`_ is
+		configured by default to prevent mysqld from writing outside
+		of ``/var``, which will prevent this service from starting.
+		You will have to add Paasmaker's scratch directory to
+		``/etc/apparmor.d/usr.sbin.mysqld`` like so::
+			/path/to/paasmaker/scratch/ r,
+			/path/to/paasmaker/scratch/** rwk,
 	"""
 	def _eat_output(self):
 		return open("%s/%s" % (self.parameters['working_dir'], str(uuid.uuid4())), 'w')
