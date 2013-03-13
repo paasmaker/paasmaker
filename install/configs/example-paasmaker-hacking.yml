@@ -32,9 +32,11 @@ service_managedredis_enable: true
 write_paasmaker_configuration: true
 
 extra_plugins:
+  # CAUTION: Do NOT have this plugin enabled on a production system.
   - name: paasmaker.misc.devdatabase
     title: Development Database Bootstrap plugin
     class: paasmaker.pacemaker.miscplugins.devdatabase.DevDatabasePlugin
+
   - name: paasmaker.scm.zip
     class: paasmaker.pacemaker.scm.zip.ZipSCM
     title: Zip file SCM
@@ -60,3 +62,6 @@ extra_plugins:
     name: paasmaker.scm.devdirectory
     title: Development Local Directory SCM
 
+  - class: paasmaker.pacemaker.prepare.pythonpip.PythonPipPrepare
+    name: paasmaker.prepare.pythonpip
+    title: Python PIP preparer
