@@ -69,12 +69,11 @@ class RootAction(object):
 		sys.exit(code)
 
 	def point_and_auth(self, args, apirequest):
-		scheme = 'http'
-		if args.ssl:
-			scheme = 'https'
-		host = "%s://%s:%d" % (scheme, args.remote, args.port)
+		host = "%s:%d" % (args.remote, args.port)
 		apirequest.set_target(host)
 		apirequest.set_auth(args.key)
+		if args.ssl:
+			apirequest.set_https()
 
 	def generic_request_failed(self, message, exception=None):
 		logging.error(message)
