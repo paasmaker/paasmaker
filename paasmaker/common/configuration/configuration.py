@@ -1075,6 +1075,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 				def tracking_close():
 					self.database_sessions_checked_out -= 1
+					logger.debug(
+						"Returning database session. %d pending, %d out.",
+						self.database_sessions_checkout_pending,
+						self.database_sessions_checked_out
+					)
 					if session_key in self._session_close_tracker:
 						self.io_loop.remove_timeout(self._session_close_tracker[session_key]['timeout'])
 						del self._session_close_tracker[session_key]
@@ -1102,6 +1107,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 			def counter_decrement():
 				self.database_sessions_checked_out -= 1
+				logger.debug(
+					"Returning database session. %d pending, %d out.",
+					self.database_sessions_checkout_pending,
+					self.database_sessions_checked_out
+				)
 				session.original_close()
 
 			session.close = counter_decrement
