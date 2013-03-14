@@ -49,18 +49,11 @@ extra_plugins:
   - name: paasmaker.scm.git
     class: paasmaker.pacemaker.scm.git.GitSCM
     title: Git SCM
+
   - name: paasmaker.service.parameters
     class: paasmaker.pacemaker.service.parameters.ParametersService
     title: Parameters Service
-  - name: paasmaker.service.managedredis
-    class: paasmaker.pacemaker.service.managedredis.ManagedRedisService
-    title: Managed Redis Service
-  - class: paasmaker.heart.runtime.StaticRuntime
-    name: paasmaker.runtime.static
-    parameters:
-      managed: true
-      shutdown: true
-    title: Static File Runtime
+
   - class: paasmaker.pacemaker.scm.devdirectory.DevDirectorySCM
     name: paasmaker.scm.devdirectory
     title: Development Local Directory SCM
