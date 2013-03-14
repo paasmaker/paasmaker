@@ -83,3 +83,4 @@ application. The documentation for each plugin shows how to do that.
 	plugin-service-s3bucket
 	plugin-service-parameters
 	plugin-service-filesystem
+	plugin-service-managedmongodb

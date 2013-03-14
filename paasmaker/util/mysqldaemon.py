@@ -42,6 +42,7 @@ class MySQLDaemon(ManagedDaemon):
 		of ``/var``, which will prevent this service from starting.
 		You will have to add Paasmaker's scratch directory to
 		``/etc/apparmor.d/usr.sbin.mysqld`` like so::
+
 			/path/to/paasmaker/scratch/ r,
 			/path/to/paasmaker/scratch/** rwk,
 	"""

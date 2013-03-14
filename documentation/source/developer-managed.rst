@@ -59,6 +59,9 @@ Completed Daemons
 .. autoclass:: paasmaker.util.mysqldaemon.MySQLDaemon
     :members:
 
+.. autoclass:: paasmaker.util.mongodaemon.MongoDaemon
+    :members:
+
 In progress Daemons
 -------------------
 

@@ -34,6 +34,7 @@ Service Plugins
 	plugin-service-s3bucket
 	plugin-service-parameters
 	plugin-service-filesystem
+	plugin-service-managedmongodb
 
 Startup and Prepare plugins
 ---------------------------
