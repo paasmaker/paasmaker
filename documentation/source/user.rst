@@ -13,6 +13,7 @@ below, to understand how Paasmaker works and how it runs your applications.
    :maxdepth: 2
 
    user-concepts
+   user-application-manifest
 
 An important point
 ------------------
@@ -36,3 +37,49 @@ Below are some notes on integrating with specific languages.
 
    user-howto-php
    user-howto-ruby
+
+Preparing and starting applications
+-----------------------------------
+
+Paasmaker ships with a few plugins that are used during the prepare
+and startup phase of applications.
+
+.. toctree::
+	:maxdepth: 2
+
+	plugin-prepare-shell
+	plugin-startup-filesystemlinker
+
+Runtime Plugins
+---------------
+
+Depending on your server configuration, you will have a set of runtimes
+available. For those runtimes, you can configure them somewhat from your
+application. The documentation for each plugin shows how to do that.
+
+.. toctree::
+	:maxdepth: 2
+
+	plugin-runtime-shell
+	plugin-runtime-php
+	plugin-runtime-static
+	plugin-runtime-rbenv
+
+Service Plugins
+---------------
+
+Depending on your server configuration, you will have a set of services
+available. For those services, you can configure them somewhat from your
+application. The documentation for each plugin shows how to do that.
+
+.. toctree::
+	:maxdepth: 2
+
+	plugin-service-mysql
+	plugin-service-managedmysql
+	plugin-service-postgres
+	plugin-service-managedpostgres
+	plugin-service-managedredis
+	plugin-service-s3bucket
+	plugin-service-parameters
+	plugin-service-filesystem

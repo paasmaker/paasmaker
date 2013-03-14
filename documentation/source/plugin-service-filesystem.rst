@@ -24,9 +24,8 @@ Your application will be supplied a service with credentials like this:
 	    "protocol": "directory"
 	},
 
-You can use this plugin along with the file system linker startup plugin
-(TODO: insert link to that here) to link persistent directories into your
-application codebase.
+You can use this plugin along with the :doc:`plugin-startup-filesystemlinker` to link persistent
+directories into your application codebase.
 
 To enable the plugin:
 
@@ -49,6 +48,10 @@ To enable the plugin:
 	solution. Alternately, depending on your requirements, a solution using
 	`lsyncd <https://code.google.com/p/lsyncd/>`_ might be able to work. We will
 	leave this one as an excercise for the system administrators.
+
+.. NOTE::
+	You will need to find a way to back up the files that applications write into
+	this folder.
 
 Application Configuration
 -------------------------

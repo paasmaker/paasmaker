@@ -13,7 +13,12 @@ class ShellPrepareConfigurationSchema(colander.MappingSchema):
 
 class ShellPrepareParametersSchema(colander.MappingSchema):
 	# Must have a key called commands, which is a list of strings.
-	commands = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()), title="Commands")
+	commands = colander.SchemaNode(
+		colander.Sequence(),
+		colander.SchemaNode(colander.String()),
+		title="Commands",
+		description="A list of command to run. They can be any bash syntax you would like. Each item in the list becomes a single line in a shell script that is written out and executed."
+	)
 
 class ShellPrepare(BasePrepare):
 	# NOTE: This plugin can also be used to run commands prior to an instance starting.

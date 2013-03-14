@@ -11,6 +11,11 @@ to the application enough configuration to work with that bucket.
 	create a seperate IAM role just for that bucket and supply that to
 	the application.
 
+.. WARNING::
+	This service will only be able to delete the created S3 bucket if it
+	is empty. This is a bug with this service. It will prevent you from
+	deleting an application that contains one of these services.
+
 The application will get credentials that look like this:
 
 .. code-block:: json

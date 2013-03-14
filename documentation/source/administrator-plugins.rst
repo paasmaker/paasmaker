@@ -35,6 +35,15 @@ Service Plugins
 	plugin-service-parameters
 	plugin-service-filesystem
 
+Startup and Prepare plugins
+---------------------------
+
+.. toctree::
+	:maxdepth: 2
+
+	plugin-prepare-shell
+	plugin-startup-filesystemlinker
+
 Authentication Plugins
 ----------------------
 

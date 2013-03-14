@@ -115,10 +115,29 @@ class Instance(StrictAboutExtraKeysColanderMappingSchema):
 		description="The quantity of instances to start with.",
 		missing=1,
 		default=1)
-	runtime = RuntimePlugin()
-	startup = Prepares(default=[], missing=[])
-	placement = PlacementPlugin(default=PlacementPlugin.default(), missing=PlacementPlugin.default())
-	hostnames = colander.SchemaNode(colander.Sequence(), colander.SchemaNode(colander.String()), title="Hostnames", default=[], missing=[])
+	runtime = RuntimePlugin(
+		title="Runtime",
+		description="A section describing the runtime plugin name and version for this instance."
+	)
+	startup = Prepares(
+		title="Startup tasks",
+		description="A list of plugins and parameters to run on instance startup.",
+		default=[],
+		missing=[]
+	)
+	placement = PlacementPlugin(
+		title="Placement information",
+		description="A section that provides hints to Paasmaker about where to place your application.",
+		default=PlacementPlugin.default(),
+		missing=PlacementPlugin.default()
+	)
+	hostnames = colander.SchemaNode(colander.Sequence(),
+		colander.SchemaNode(colander.String()),
+		title="Hostnames",
+		description="A set of public hostnames that this instance will have if it is the current version of the application.",
+		default=[],
+		missing=[]
+	)
 	exclusive = colander.SchemaNode(colander.Boolean(),
 		title="Version Exclusive",
 		description="If set to true, only one version of this instance type will run at a time. This is good for background workers that you don't want overlapping.",
@@ -129,7 +148,11 @@ class Instance(StrictAboutExtraKeysColanderMappingSchema):
 		description="If true, this instance doesn't require a TCP port. Affects the startup of the application.",
 		default=False,
 		missing=False)
-	crons = Crons(default=[], missing=[])
+	crons = Crons(
+		title="Cron tasks",
+		description="A list of cron tasks to run against your instances. Cron is implemented by calling a URL on your instance.",
+		default=[], missing=[]
+	)
 
 class Instances(colander.SequenceSchema):
 	instance = Instance()
@@ -137,8 +160,6 @@ class Instances(colander.SequenceSchema):
 class ConfigurationSchema(StrictAboutExtraKeysColanderMappingSchema):
 	application = Application()
 	services = Services(default=[], missing=[])
-	# NOTE: We validate the instances ApplicationConfiguration.post_load(), because
-	# there didn't seem to be an easy way to get Colander to validate them.
 	instances = Instances()
 	manifest = Manifest()
 
