@@ -219,11 +219,11 @@ class PluginRegistry(object):
 
 		# Make sure it's a subclass of the plugin.
 		if not issubclass(former, Plugin):
-			raise ValueError("Supplied class is not a Plugin.")
+			raise ValueError("Supplied class %s is not a Plugin." % klass)
 
 		# See if we have an options schema.
 		if not former.OPTIONS_SCHEMA:
-			raise ValueError("Supplied class has no options schema.")
+			raise ValueError("Supplied class %s has no options schema." % klass)
 
 		# Check the API version.
 		if not hasattr(former, 'API_VERSION'):
@@ -243,7 +243,7 @@ class PluginRegistry(object):
 
 		# Make sure it has some modes of operation.
 		if len(former.MODES) == 0:
-			raise ValueError("Supplied class has no modes.")
+			raise ValueError("Supplied class %s has no modes." % klass)
 
 		# If we already have the plugin, remove it first,
 		# and then add it again. This is in case the replacement
@@ -262,7 +262,7 @@ class PluginRegistry(object):
 				self.mode_registry[mode] = []
 			self.mode_registry[mode].append(plugin)
 			if MODE_REQUIRE_PARAMS[mode] and not former.MODES[mode]:
-				raise ValueError("Supplied class does not have a parameter schema, but has a mode that accepts parameters.")
+				raise ValueError("Supplied class %s does not have a parameter schema, but has a mode that accepts parameters." % klass)
 		self.class_modes[plugin] = former.MODES.keys()
 
 	def deregister(self, plugin):
