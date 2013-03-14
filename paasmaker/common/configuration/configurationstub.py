@@ -175,6 +175,11 @@ router:
         # Choose a UUID for ourself.
         #self.set_node_uuid(str(uuid.uuid4()))
 
+        # Change the route that we chose for ourselves, as it seems to
+        # be wrong a lot of the time.
+        self['my_route'] = '127.0.0.1'
+        self.update_flat()
+
         # And if we're a pacemaker, create the DB.
         if 'pacemaker' in modules:
             self.setup_database()
