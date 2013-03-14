@@ -252,7 +252,7 @@ if context['runtime_rbenv_enable']:
 		else:
 			logging.info("Ruby version %s is already installed.", version)
 
-# PHP
+# PHP / Static runtime.
 if context['runtime_php_enable']:
 	# To enable, all we really need to do is install Apache and some PHP packages.
 	install.helpers.install_packages(context, context.get_package_set('runtime-php'))
@@ -320,8 +320,8 @@ if configuration['pacemaker']['enabled'] and context['super_token'] is None and 
 	configuration['pacemaker']['super_token'] = super_token
 
 if configuration['pacemaker']['enabled']:
-	if not 'cluster_hostname' in configuration['pacemaker']:
-		configuration['pacemaker']['cluster_hostname'] = context['cluster_hostname']
+	# Always set the cluster hostname from the installation configuration file.
+	configuration['pacemaker']['cluster_hostname'] = context['cluster_hostname']
 
 if configuration['pacemaker']['enabled']:
 	if context['init_redirect_port80']:
@@ -488,6 +488,27 @@ serialized = """# Generated configuration file for Paasmaker.
 # If you edit this file, the next time you run the install script,
 # it will merge any changes with your configuration.
 # However, any comments that you added to this file will be lost.
+
+# NOTE: The following values will be overwritten from the installation
+# configuration if you re-run the installer. These are overwritten
+# regardless of their setting in paasmaker.yml:
+#
+#  pacemaker.cluster_hostname
+#  pacemaker.frontend_domain_postfix
+#  my_name
+#  my_route
+#  master.host
+#  master.port
+#  heart.enabled
+#  router.enabled
+#  pacemaker.enabled
+#  redis_binary
+#  nginx_binary
+#  node_token
+#  Any 'shutdown' flags.
+#
+# node_token, super_token are preserved and not regenerated
+# after the first install run (as applicable).
 
 """ + serialized
 
