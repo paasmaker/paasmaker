@@ -97,10 +97,12 @@ class PeriodicsOnlySchema(StrictAboutExtraKeysColanderMappingSchema):
 class ScmListerSchema(StrictAboutExtraKeysColanderMappingSchema):
 	for_name = colander.SchemaNode(colander.String(),
 		name="for",
-		title="The SCM plugin that these listers are for.")
+		title="SCM name",
+		description="The SCM that this list of listers is for.")
 	plugins = colander.SchemaNode(colander.Sequence(),
 		colander.SchemaNode(colander.String()),
-		title="Plugins that list repositories.",
+		title="Plugins List",
+		description="A list of plugin names that can list repositories for this SCM.",
 		default=[],
 		missing=[])
 
@@ -138,6 +140,8 @@ class HealthGroupSchema(StrictAboutExtraKeysColanderMappingSchema):
 		title="Group recheck period",
 		description="How often to run this health check group, in seconds.")
 	plugins = HealthPluginsSchema(
+		title="Plugins",
+		description="A set of plugins and their run order.",
 		default=HealthPluginsSchema.default(),
 		missing=HealthPluginsSchema.default()
 	)
@@ -160,7 +164,7 @@ class HealthCombinedSchema(StrictAboutExtraKeysColanderMappingSchema):
 		default=True)
 	use_default_checks = colander.SchemaNode(colander.Boolean(),
 		title="Include default health checks",
-		description="Include default health checks. These are added to any groups. If you do enable this, you should not define a 'default' group.",
+		description="Include default health checks. These are added to any groups. If you do enable this, you should not define a 'default' group. The default checks are in paasmaker/data/defaults/health.yml.",
 		missing=True,
 		default=True)
 
@@ -208,10 +212,10 @@ class PacemakerSchema(StrictAboutExtraKeysColanderMappingSchema):
 
 	cluster_hostname = colander.SchemaNode(colander.String(),
 		title="Cluster Hostname",
-		description="The hostname postfix used to automatically generate hostnames when required. Eg, each application version gets a URL - N.<applicatio>.cluster_hostname.")
+		description="The hostname postfix used to automatically generate hostnames when required. Eg, each application version gets a URL - N.<type>.<application>.cluster_hostname.")
 	pacemaker_prefix = colander.SchemaNode(colander.String(),
 		title="Pacemaker Prefix",
-		description="The prefix added to the cluster hostname to make a url for the pacemakers.",
+		description="The prefix added to the cluster hostname to make a hostname for the pacemakers.",
 		missing="pacemaker",
 		default="pacemaker")
 
@@ -227,7 +231,7 @@ class PacemakerSchema(StrictAboutExtraKeysColanderMappingSchema):
 
 	run_crons = colander.SchemaNode(colander.Boolean(),
 		title="Run cron tasks",
-		description="If true, run the cron tasks on this node. If you have multiple pacemakers, you won't want to do this on two of them.",
+		description="If true, run the cron tasks on this node. If you have multiple pacemakers, you won't want to do this on more than one of them.",
 		missing=True,
 		default=True)
 
@@ -238,6 +242,8 @@ class PacemakerSchema(StrictAboutExtraKeysColanderMappingSchema):
 		default=True)
 
 	health = HealthCombinedSchema(
+		title="Health Check configuration",
+		description="Options for the health checking system.",
 		missing=HealthCombinedSchema.default(),
 		default=HealthCombinedSchema.default()
 	)
@@ -261,7 +267,7 @@ class HeartSchema(StrictAboutExtraKeysColanderMappingSchema):
 
 	working_dir = colander.SchemaNode(colander.String(),
 		title="Working directory",
-		description="Directory where heart working files are stored",
+		description="Directory where active application instance files are stored. By default, Paasmaker will choose a path inside the scratch directory. You can customize this if your heart node has a special storage location optimised for application instances.",
 		# None here means to automatically figure out the path.
 		missing=None,
 		default=None)
@@ -301,13 +307,13 @@ class RedisConnectionSchema(StrictAboutExtraKeysColanderMappingSchema):
 
 	@staticmethod
 	def default_router_table():
-		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_MASTER, 'password': None, 'managed': False, 'shutdown': False}
+		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_MASTER, 'password': None, 'managed': True, 'shutdown': False}
 	@staticmethod
 	def default_router_stats():
-		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_STATS, 'password': None, 'managed': False, 'shutdown': False}
+		return {'host': 'localhost', 'port': DEFAULT_ROUTER_REDIS_STATS, 'password': None, 'managed': True, 'shutdown': False}
 	@staticmethod
 	def default_jobs():
-		return {'host': 'localhost', 'port': DEFAULT_REDIS_JOBS, 'password': None, 'managed': False, 'shutdown': False}
+		return {'host': 'localhost', 'port': DEFAULT_REDIS_JOBS, 'password': None, 'managed': True, 'shutdown': False}
 
 class RedisConnectionSlaveSchema(RedisConnectionSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -349,7 +355,7 @@ class NginxSchema(StrictAboutExtraKeysColanderMappingSchema):
 
 	@staticmethod
 	def default():
-		return {'managed': False, 'port_direct': DEFAULT_NGINX_DIRECT, 'port_80': DEFAULT_NGINX_PORT80, 'shutdown': False}
+		return {'managed': True, 'port_direct': DEFAULT_NGINX_DIRECT, 'port_80': DEFAULT_NGINX_PORT80, 'port_443': DEFAULT_NGINX_PORT443, 'shutdown': False}
 
 class RouterSchema(StrictAboutExtraKeysColanderMappingSchema):
 	enabled = colander.SchemaNode(colander.Boolean(),
@@ -366,7 +372,7 @@ class RouterSchema(StrictAboutExtraKeysColanderMappingSchema):
 
 	stats_log = colander.SchemaNode(colander.String(),
 		title="Stats log location",
-		description="NGINX Paasmaker stats log file location")
+		description="NGINX Paasmaker stats log file location. If Paasmaker is managing the nginx, it sets this location automatically.")
 
 	stats_interval = colander.SchemaNode(colander.Integer(),
 		title="Stats read interval",
@@ -374,7 +380,12 @@ class RouterSchema(StrictAboutExtraKeysColanderMappingSchema):
 		default=500,
 		missing=500)
 
-	nginx = NginxSchema(missing=NginxSchema.default(), default=NginxSchema.default())
+	nginx = NginxSchema(
+		title="Managed NGINX configuration",
+		description="The configuration for a managed Nginx that Paasmaker can start for you.",
+		missing=NginxSchema.default(),
+		default=NginxSchema.default()
+	)
 
 	@staticmethod
 	def default():
@@ -423,11 +434,6 @@ class MasterSchema(StrictAboutExtraKeysColanderMappingSchema):
 		description="The master node HTTP port for API requests.",
 		default=DEFAULT_API_PORT,
 		missing=DEFAULT_API_PORT)
-	isitme = colander.SchemaNode(colander.Boolean(),
-		title="Am I the master?",
-		description="If true, I'm the master node.",
-		default=False,
-		missing=False)
 
 	@staticmethod
 	def default():
@@ -456,11 +462,16 @@ class ConfigurationSchema(StrictAboutExtraKeysColanderMappingSchema):
 		default={}
 	)
 
-	misc_ports = MiscPortsSchema(default=MiscPortsSchema.default(), missing=MiscPortsSchema.default())
+	misc_ports = MiscPortsSchema(
+		title="Misc Ports",
+		description="The range of ports allocated to application instances or other times where a free port is required.",
+		default=MiscPortsSchema.default(),
+		missing=MiscPortsSchema.default()
+	)
 
 	default_plugins = colander.SchemaNode(colander.Boolean(),
 		title="Set up default plugins",
-		description="If true, sets up a set of internal plugins for job handling and other tasks. If you turn this off, you will have full control over all plugins - and will need to include job plugins.",
+		description="If true, sets up a set of internal plugins for job handling and other tasks. If you turn this off, you will have full control over all plugins - and will need to include job plugins. The default plugins are read from paasmaker/data/defaults/plugins.yml.",
 		missing=True,
 		default=True)
 
@@ -482,20 +493,20 @@ class ConfigurationSchema(StrictAboutExtraKeysColanderMappingSchema):
 
 	log_directory = colander.SchemaNode(colander.String(),
 		title="Log Directory",
-		description="Directory used to store log files",
+		description="Directory used to store log files. If set to None, it will choose a path automatically.",
 		# None here means to automatically figure out/generate the path.
 		default=None,
 		missing=None)
 
 	server_log_level = colander.SchemaNode(colander.String(),
 		title="Server log level",
-		description="The log level for the server log file.",
+		description="The log level for the server log file. One of DEBUG, INFO, WARNING, ERROR, or CRITICAL. DEBUG is particularly noisy.",
 		default="INFO",
 		missing="INFO")
 
 	scratch_directory = colander.SchemaNode(colander.String(),
 		title="Scratch Directory",
-		description="Directory used for random temporary files. Should be somewhere persistent between reboots, eg, not /tmp.",
+		description="Directory used for data storage. Instances are stored here, as well as run time configuration, managed daemon files and data. This should be a persistent location.",
 		default="scratch",
 		missing="scratch")
 
@@ -505,7 +516,12 @@ class ConfigurationSchema(StrictAboutExtraKeysColanderMappingSchema):
 		default="paasmaker.pid",
 		missing="paasmaker.pid")
 
-	master = MasterSchema(default=MasterSchema.default(), missing=MasterSchema.default())
+	master = MasterSchema(
+		title="Master Node details",
+		description="Connection information for the master node.",
+		default=MasterSchema.default(),
+		missing=MasterSchema.default()
+	)
 
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="User tags",
@@ -513,31 +529,45 @@ class ConfigurationSchema(StrictAboutExtraKeysColanderMappingSchema):
 		missing={},
 		default={})
 
-	single_node = colander.SchemaNode(colander.Boolean(),
-		title="Single node mode",
-		description="In single node mode, a few dependant services are not required and thus not started.",
-		default=False,
-		missing=False)
-
 	node_report_interval = colander.SchemaNode(colander.Integer(),
 		title="Node report interval",
-		description="How long in milliseconds between reports back to the master node. Default 60seconds.",
+		description="How long in milliseconds between reports back to the master node. Default is 60 seconds.",
 		default=60000,
 		missing=60000)
 
 	job_manager_check_interval = colander.SchemaNode(
 		colander.Integer(),
 		title="Job Manager check interval",
-		description="How often, in milliseconds, between checks of the job manager backend.",
+		description="How often, in milliseconds, between checks of the job manager backend to ensure it's still connected.",
 		default=5000,
 		missing=5000
 	)
 
-	pacemaker = PacemakerSchema(default=PacemakerSchema.default(), missing=PacemakerSchema.default())
-	heart = HeartSchema(defalt=HeartSchema.default(), missing=HeartSchema.default())
-	router = RouterSchema(default=RouterSchema.default(), missing=RouterSchema.default())
+	pacemaker = PacemakerSchema(
+		title="Pacemaker configuration",
+		description="The configuration options for the Pacemaker, if enabled.",
+		default=PacemakerSchema.default(),
+		missing=PacemakerSchema.default()
+	)
+	heart = HeartSchema(
+		title="Heart configuration",
+		description="The configuration options for the heart, if enabled.",
+		default=HeartSchema.default(),
+		missing=HeartSchema.default()
+	)
+	router = RouterSchema(
+		title="Router configuration",
+		description="The configuration options for the router, if enabled.",
+		default=RouterSchema.default(),
+		missing=RouterSchema.default()
+	)
 
-	redis = RedisSchema(default=RedisSchema.default(), missing=RedisSchema.default())
+	redis = RedisSchema(
+		title="Redis configuration",
+		description="A complete set of information on how to connect to Redis instances. If omitted, defaults to a fully managed single node configuration.",
+		default=RedisSchema.default(),
+		missing=RedisSchema.default()
+	)
 
 	plugins = PluginsSchema(
 		title="Plugins",

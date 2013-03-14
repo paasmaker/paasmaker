@@ -244,7 +244,6 @@ my_name: %(node_name)s
 master:
   host: localhost
   port: %(master_port)d
-  isitme: %(is_cluster_master)s
 
 redis:
 %(table_redis)s

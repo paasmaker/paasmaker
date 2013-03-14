@@ -38,7 +38,6 @@ scratch_directory: %(scratch_dir)s
 master:
   host: localhost
   port: %(master_port)d
-  isitme: true
 
 misc_ports:
   minimum: 42700
