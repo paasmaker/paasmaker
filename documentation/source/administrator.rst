@@ -21,5 +21,6 @@ Configuration Reference
    :maxdepth: 2
 
    administrator-configuration
+   administrator-permissions
    administrator-plugins
    administrator-port-allocation
