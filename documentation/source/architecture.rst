@@ -18,8 +18,8 @@ Router
 	There can be as many routers as is required for a cluster.
 
 Heart
-	This component manages :ref:`instances <glossary-instance>` - starting
-	and stopping them on request, :ref:`registering <glossary-registering>` them
+	This component manages :term:`instances <instance>` - starting
+	and stopping them on request, :term:`registering` them
 	on nodes by downloading the files, and managing their state when
 	the heart itself starts and stops. There can be as many hearts as
 	required for a cluster.
@@ -34,7 +34,7 @@ Pacemaker
 In the future, Paasmaker will be extended to have a fourth component:
 
 Service
-	This component will advertise any available :ref:`services <glossary-service>`
+	This component will advertise any available :term:`services <service>`
 	on the node, and then perform any related tasks with those services to be able
 	to provide them to applications.
 
@@ -60,7 +60,7 @@ The following organisation is used to classify everything into the system:
   different parts of your application started from the same code base. For example,
   you might have a public web site, an administrative website, and a background
   task processor in the same code base. Each instance type can have a different runtime,
-  and other protections between versions. See :ref:`instance types <glossary-instance-type>`
+  and other protections between versions. See :term:`instance types <instance type>`
   for more information on this.
 * **Instance**: an instance is a version of an instance type running on a specific node.
   An instance has a state, and that state indicates what the instance is doing at the time.
@@ -192,7 +192,7 @@ with the performance of the router.
 * It then logs to result of that request to file with the appropriate logging
   key, so that request can be accounted to a specific instance type.
 
-Security and Mutli-tenancy
+Security and mutli-tenancy
 --------------------------
 
 Paasmaker has (at this time) been designed to run in small clusters, with
