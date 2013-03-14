@@ -97,9 +97,15 @@ class ManagedDaemon(object):
 		pidpath = self.get_pid_path()
 		if os.path.exists(pidpath):
 			fp = open(pidpath, 'r')
-			pid = int(fp.read())
+			raw = fp.read()
 			fp.close()
-			return pid
+			if len(raw) == 0:
+				# Blank PID file.
+				# TODO: We're assuming it's not running...
+				return None
+			else:
+				pid = int(raw)
+				return pid
 		else:
 			return None
 
