@@ -55,6 +55,9 @@ SYSTEM_PACKAGES = {
 			],
 			'service-postgres': [
 				'postgresql'
+			],
+			'service-mongodb': [
+				'mongodb'
 			]
 		}
 	},
@@ -161,6 +164,9 @@ DEFAULT_INSTALLER_CONFIGURATION = {
 	'service_managedmysql_disable_system_postgres': False,
 
 	'service_managedredis_enable': False,
+
+	'service_managedmongodb_enable': False,
+	'service_managedmongodb_disable_system_mongodb': False,
 
 	'extra_plugins': [],
 

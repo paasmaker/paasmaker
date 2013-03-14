@@ -27,6 +27,9 @@ service_managedmysql_disable_system_mysql: false
 service_managedpostgres_enable: true
 service_managedmysql_disable_system_postgres: false
 
+service_managedmongodb_enable: true
+service_managedmongodb_disable_system_mongodb: false
+
 service_managedredis_enable: true
 
 write_paasmaker_configuration: true

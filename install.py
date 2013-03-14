@@ -269,6 +269,9 @@ if context['service_managedmysql_enable']:
 if context['service_managedpostgres_enable']:
 	install.helpers.install_packages(context, context.get_package_set('service-postgres'))
 
+if context['service_managedmongodb_enable']:
+	install.helpers.install_packages(context, context.get_package_set('service-mongodb'))
+
 if not context['write_paasmaker_configuration']:
 	# We've been asked not to tamper with the paasmaker.yml configuration file.
 	# Respect that.
@@ -436,6 +439,8 @@ if context['service_managedmysql_disable_system_mysql']:
 	install.helpers.disable_service(context, 'mysql')
 if context['service_managedmysql_disable_system_postgres']:
 	install.helpers.disable_service(context, 'postgresql')
+if context['service_managedmongodb_disable_system_mongodb']:
+	install.helpers.disable_service(context, 'mongodb')
 
 if context['service_managedpostgres_enable']:
 	enable_plugin(
@@ -460,6 +465,19 @@ if context['service_managedmysql_enable']:
 			'title': 'Managed MySQL Service',
 			'parameters': {
 				'root_password': 'paasmaker',
+				'shutdown': context['shutdown_daemons_on_exit']
+			}
+		}
+	)
+
+if context['service_managedmongodb_enable']:
+	enable_plugin(
+		configuration['plugins'],
+		{
+			'name': 'paasmaker.service.managedmongodb',
+			'class': 'paasmaker.pacemaker.service.managedmongodb.ManagedMongoService',
+			'title': 'Managed Mongodb Service',
+			'parameters': {
 				'shutdown': context['shutdown_daemons_on_exit']
 			}
 		}

@@ -262,6 +262,9 @@ class ManagedMongoServiceTest(BaseServiceTest):
 		service.startup_async_prelisten(self.stop, self.stop)
 		self.wait()
 
+		# Give it a little bit longer to start up.
+		self.short_wait_hack(length=0.5)
+
 		# Try to connect again and re-fetch the value we set.
 		new_client = pymongo.MongoClient(
 			self.credentials['hostname'],
@@ -294,4 +297,7 @@ class ManagedMongoServiceTest(BaseServiceTest):
 
 			self.assertTrue(False, "Connecting to deleted instance should have raised an exception.")
 		except Exception, ex:
-			self.assertIn("Connection reset by peer", ex.message, "Exception %s isn't what we expected." % ex)
+			if "Connection reset by peer" in ex.message or "Connection refused" in ex.message:
+				self.assertTrue(True, "Correct error message.")
+			else:
+				self.assertTrue(False, "Exception %s isn't what we expected." % ex)
