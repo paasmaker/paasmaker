@@ -31,7 +31,7 @@ class S3BucketServiceConfigurationSchema(colander.MappingSchema):
 	default_region = colander.SchemaNode(
 		colander.String(),
 		title="Default Bucket Create Region",
-		description="The default location to create a bucket in, if the application doesn't specify.",
+		description="The default location to create a bucket in, if the application doesn't specify. If it is not set, then it will the Amazon S3 default region.",
 		default="",
 		missing=""
 	)
@@ -70,7 +70,8 @@ class S3BucketService(BaseService):
 			"protocol": "s3",
 			"bucket": "<bucket name>",
 			"access_key": "<access key to use>",
-			"secret_key": "<secret key to use>"
+			"secret_key": "<secret key to use>",
+			"endpoint": "<endpoint URL>"
 		}
 
 	.. WARNING::

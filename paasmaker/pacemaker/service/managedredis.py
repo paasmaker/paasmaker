@@ -26,7 +26,7 @@ class ManagedRedisServiceConfigurationSchema(colander.MappingSchema):
 		missing=True)
 	shutdown = colander.SchemaNode(colander.Boolean(),
 		title="Shutdown",
-		description="If true, shut down all managed redis instances when the node stops. You won't want to do this normally.",
+		description="If true, shut down all managed redis instances when the node stops.",
 		default=False,
 		missing=False)
 

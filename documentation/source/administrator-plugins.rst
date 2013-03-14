@@ -20,6 +20,21 @@ Runtime Plugins
 	plugin-runtime-static
 	plugin-runtime-rbenv
 
+Service Plugins
+---------------
+
+.. toctree::
+	:maxdepth: 2
+
+	plugin-service-mysql
+	plugin-service-managedmysql
+	plugin-service-postgres
+	plugin-service-managedpostgres
+	plugin-service-managedredis
+	plugin-service-s3bucket
+	plugin-service-parameters
+	plugin-service-filesystem
+
 Authentication Plugins
 ----------------------
 

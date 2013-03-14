@@ -26,7 +26,7 @@ class ManagedPostgresServiceConfigurationSchema(colander.MappingSchema):
 		description="The administrative password for this instance. You must supply one, and the plugin can't change it after it's started up a server.")
 	shutdown = colander.SchemaNode(colander.Boolean(),
 		title="Shutdown",
-		description="If true, shut down the managed postgres when the node stops. You won't want to do this normally.",
+		description="If true, shut down the managed postgres when the node stops.",
 		default=False,
 		missing=False)
 	binary_path = colander.SchemaNode(colander.String(),

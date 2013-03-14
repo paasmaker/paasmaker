@@ -76,7 +76,10 @@ class ColanderDocDirective(Directive):
 					# docs as uppercase is confusing to users.
 					default_text = "Default value: %s" % str(attribute.default).lower()
 				else:
-					default_text = "Default value: %s" % str(attribute.default)
+					default_value = str(attribute.default)
+					if len(default_value) == 0:
+						default_value = "''"
+					default_text = "Default value: %s" % default_value
 				default = nodes.paragraph(text=default_text)
 
 				definition += default
