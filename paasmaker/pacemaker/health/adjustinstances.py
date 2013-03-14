@@ -178,6 +178,7 @@ class AdjustInstancesHealthCheck(BaseHealthCheck):
 	def _finish(self):
 		# Make this job tree executable.
 		def done_executable():
+			self.logger.info("Completed checking instances. All adjustment jobs scheduled.")
 			self.session.close()
 			self.callback(
 				{
