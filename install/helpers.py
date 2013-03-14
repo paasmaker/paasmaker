@@ -82,17 +82,14 @@ def install_packages(context, packages):
 
 def _install_packages_linux_ubuntu(context, packages):
 	try:
-		# This is to prevent apt-get from asking interactive
-		# questions.
-		# TODO: This doesn't work. Fix it.
+		# The DEBIAN_FRONTEND variable is to prevent
+		# apt-get from asking interactive questions,
+		# specifically for the installation of MySQL.
 		# See http://serverfault.com/questions/347937/how-do-i-ask-apt-get-to-skip-all-post-install-configuration-steps
-		environment = copy.deepcopy(os.environ)
-		environment['DEBIAN_FRONTEND'] = 'noninteractive'
-
 		logging.info("About to install %s...", ",".join(packages))
-		command = ['sudo', 'apt-get', '-y', 'install']
+		command = ['sudo', 'DEBIAN_FRONTEND=noninteractive', 'apt-get', 'install']
 		command.extend(packages)
-		subprocess.check_call(command, env=environment)
+		subprocess.check_call(command)
 
 	except subprocess.CalledProcessError, ex:
 		raise InstallationError(str(ex))

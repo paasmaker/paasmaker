@@ -22,10 +22,10 @@ runtime_rbenv_versions: ['1.9.3-p327']
 runtime_rbenv_for_user: false
 
 service_managedmysql_enable: true
-service_managedmysql_disable_system_mysql: true
+service_managedmysql_disable_system_mysql: false
 
 service_managedpostgres_enable: true
-service_managedmysql_disable_system_postgres: true
+service_managedmysql_disable_system_postgres: false
 
 service_managedredis_enable: true
 
