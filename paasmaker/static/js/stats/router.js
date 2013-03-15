@@ -102,7 +102,7 @@ pm.stats.routerstats = (function(){
 		// A template for each stats section.
 		var statsSectionTemplateRaw = '{{#each statset}}' +
 				'<div class="stats-row clearfix">' +
-					'<span class="title">{{title}}</span>' +
+					'<span class="title">{{title}}:</span>' +
 					'<span class="value">{{value}}' +
 						'{{#if diff}} | <span class="diff">{{diff}}/s</span>{{/if}}' +
 					'</span>' +
@@ -211,7 +211,7 @@ pm.stats.routerstats = (function(){
 		// To store the last set of numbers, for calculating deltas.
 		var lastNumbers;
 
-		function calculateDifference(key, values) {
+		var calculateDifference = function(key, values) {
 			if( lastNumbers ) {
 				var difference = values[key] - lastNumbers[key];
 				var deltaTime = values['as_at'] - lastNumbers['as_at'];
@@ -223,7 +223,8 @@ pm.stats.routerstats = (function(){
 		}
 
 		stats.showUpdate = function(update) {
-			// The primary stats first.
+			// Objects to feed into the template for generating the HTML
+			// of the stats.
 			primaryStatsSet = {
 				statset: [
 					{
@@ -246,27 +247,27 @@ pm.stats.routerstats = (function(){
 			secondaryStatsSet = {
 				statset: [
 					{
-						title: '1xx Percentage',
+						title: '1xx Requests',
 						value: update['1xx'],
 						diff: ''
 					},
 					{
-						title: '2xx Percentage',
+						title: '2xx Requests',
 						value: update['2xx'],
 						diff: ''
 					},
 					{
-						title: '3xx Percentage',
+						title: '3xx Requests',
 						value: update['3xx'],
 						diff: ''
 					},
 					{
-						title: '4xx Percentage',
+						title: '4xx Requests',
 						value: update['4xx'],
 						diff: ''
 					},
 					{
-						title: '5xx Percentage',
+						title: '5xx Requests',
 						value: update['5xx'],
 						diff: ''
 					},
