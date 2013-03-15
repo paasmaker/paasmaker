@@ -5,68 +5,16 @@
 		<title>Paasmaker</title>
 		<meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-		<!-- Le styles -->
-		<!-- <link href="{{ static_url("css/bootstrap.css") }}" rel="stylesheet">
-		<link href="{{ static_url("css/bootstrap-responsive.css") }}" rel="stylesheet"> -->
-		<link href="{{ static_url("css/fonts.css") }}" rel="stylesheet">
-		<link href="{{ static_url("css/paasmaker-new.css") }}" rel="stylesheet">
-
-		<!-- Le fav and touch icons -->
-		{# <link rel="shortcut icon" href="../assets/ico/favicon.ico">
-		<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../assets/ico/apple-touch-icon-144-precomposed.png">
-		<link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
-		<link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
-		<link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png"> #}
-
-		<!-- <script src="{{ static_url("js/libs/modernizr-2.6.2.min.js") }}"></script> -->
+		{% module Template("include/css.html") %}
 	</head>
 	<body>
-		<div id="top_bar">
-			<!-- TODO: CSS background -->
-			<div class="logo"><img src="{{ static_url("img/paasmaker-logo-alpha.png") }}" alt="Paasmaker"></div>
+		{% module Template("include/top_bar.html") %}
 
-			<form id="workspace_switcher"></form>
-
-			<div class="login_links">
-				{% if current_user %}
-					Logged in as <a href="/profile" class="navbar-link">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
-				{% else %}
-					<a href="/login">Login</a>
-				{% end %}
-			</div>
-		</div>
-
-		<script src="/my-permissions.js"></script>
 		<div id="main">
 			<p class="initial_loading"><img src="{{ static_url("img/load-inline.gif") }}" alt=""> Page still loading, yo.</p>
 		</div>
 
-		<!-- Libraries -->
-		<script src="{{ static_url("js/libs/jquery-1.8.3.min.js") }}"></script>
-		<script src="{{ static_url("js/libs/jquery.json-2.4.min.js") }}"></script>
-		<script src="{{ static_url("js/libs/jquery.flot.js") }}"></script>
-		<script src="{{ static_url("js/libs/bootstrap.min.js") }}"></script>
-		<script src="{{ static_url("js/libs/resumable.js") }}"></script>
-		<script src="{{ static_url("js/libs/handlebars.js") }}"></script>
-
-		<!-- Old interface code -->
-		<script src="{{ static_url("js/stats/router.js") }}"></script>
-		<script src="{{ static_url("js/logs/instance.js") }}"></script>
-		<script src="{{ static_url("js/jobs/display.js") }}"></script>
-		<script src="{{ static_url("js/widgets/upload.js") }}"></script>
-
-		<!-- New interface code -->
-		<script src="{{ static_url("js/paasmaker.js") }}"></script>
-		<script src="{{ static_url("js/pm.util.js") }}"></script>
-		<script src="{{ static_url("js/pm.overview.js") }}"></script>
-		<script src="{{ static_url("js/pm.workspace.js") }}"></script>
-
-		<!-- Manifest editor -->
-		<!-- <script src="{{ static_url("js/libs/js-yaml.js") }}"></script>
-		<script src="{{ static_url("js/libs/later-cron.js") }}"></script>
-		<script src="{{ static_url("js/libs/moment.js") }}"></script>
-		<script src="{{ static_url("js/libs/prettycron.js") }}"></script>
-		<script src="{{ static_url("js/libs/jquery.jsoneditor.js") }}"></script>
-		<script src="{{ static_url("js/manifest.js") }}"></script> -->
+		<script src="/my-permissions.js"></script>
+		{% module Template("javascript.html") %}
 	</body>
 </html>
