@@ -1,0 +1,12 @@
+/**
+ * Paasmaker 0.9.0
+ * Insert licence notice here
+ */
+
+/* Global header and main container */
+#top_bar { position: fixed; top: 0; left: 0; height: 40px; width: 100%; border-bottom: solid 1px #cccccc; box-shadow: 0 2px 5px #999999;  }
+#top_bar .logo { float: left; }
+#top_bar .login_links { float: right; }
+
+#main { margin: 45px 5px; }
+

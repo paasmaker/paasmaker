@@ -126,6 +126,8 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceEditController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceListController.get_routes(route_extras))
 
+	# scaffolds for the new web interface
+	routes.extend(paasmaker.pacemaker.controller.newinterface.NewInterfaceController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.tools.ToolsController.get_routes(route_extras))
 
 	routes.extend(paasmaker.pacemaker.controller.role.RoleEditController.get_routes(route_extras))
