@@ -8,6 +8,7 @@
 		<!-- Le styles -->
 		<!-- <link href="{{ static_url("css/bootstrap.css") }}" rel="stylesheet">
 		<link href="{{ static_url("css/bootstrap-responsive.css") }}" rel="stylesheet"> -->
+		<link href="{{ static_url("css/fonts.css") }}" rel="stylesheet">
 		<link href="{{ static_url("css/paasmaker-new.css") }}" rel="stylesheet">
 
 		<!-- Le fav and touch icons -->
@@ -39,7 +40,8 @@
 				<!-- TODO: return permissions in JSON -->
 			{% end %}
 			<div id="main">
-				<p><img src="{{ static_url("img/load-inline.gif") }}" alt=""> Page still loading, yo.</p>
+				<p class="initial_loading"><img src="{{ static_url("img/load-inline.gif") }}" alt=""> Page still loading, yo.</p>
+				<form><textarea>Hello!</textarea></form>
 			</div>
 
 		{% else %}
