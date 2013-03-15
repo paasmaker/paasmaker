@@ -129,6 +129,7 @@ if configuration.is_pacemaker():
 
 	# scaffolds for the new web interface
 	routes.extend(paasmaker.pacemaker.controller.newinterface.NewInterfaceController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.newinterface.NewInterfaceQUnitTestController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.tools.ToolsController.get_routes(route_extras))
 
 	routes.extend(paasmaker.pacemaker.controller.role.RoleEditController.get_routes(route_extras))

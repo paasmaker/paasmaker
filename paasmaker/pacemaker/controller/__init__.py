@@ -1,7 +1,7 @@
 # pacemaker controller init.
 
 from index import IndexController
-from newinterface import NewInterfaceController
+from newinterface import NewInterfaceController, NewInterfaceQUnitTestController
 from tools import ToolsController
 from overview import OverviewController
 from login import LoginController, LogoutController

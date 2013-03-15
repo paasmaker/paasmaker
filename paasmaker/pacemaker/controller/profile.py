@@ -105,7 +105,7 @@ class MyPermissionsController(BaseController):
 		else:
 			# Emit a .js file.
 			self.set_header('Content-Type', 'text/javascript')
-			self.write("var permissions = %s;" % json.dumps(cache.cache))
+			self.write("var currentUserPermissions = %s;" % json.dumps(cache.cache))
 			self.finish()
 
 	@staticmethod
@@ -230,4 +230,4 @@ class ProfileControllerTest(BaseControllerTest):
 
 		self.failIf(response.error)
 
-		self.assertTrue("var permissions =" in response.body)
+		self.assertTrue("var currentUserPermissions =" in response.body)

@@ -8,6 +8,7 @@
 		<!-- Le styles -->
 		<!-- <link href="{{ static_url("css/bootstrap.css") }}" rel="stylesheet">
 		<link href="{{ static_url("css/bootstrap-responsive.css") }}" rel="stylesheet"> -->
+		<link href="{{ static_url("js/libs/qunit-1.11.0.css") }}" rel="stylesheet">
 		<link href="{{ static_url("css/fonts.css") }}" rel="stylesheet">
 		<link href="{{ static_url("css/paasmaker-new.css") }}" rel="stylesheet">
 
@@ -36,10 +37,8 @@
 			</div>
 		</div>
 
-		<script src="/my-permissions.js"></script>
-		<div id="main">
-			<p class="initial_loading"><img src="{{ static_url("img/load-inline.gif") }}" alt=""> Page still loading, yo.</p>
-		</div>
+		<div id="qunit"></div>
+  		<div id="qunit-fixture"></div>
 
 		<!-- Libraries -->
 		<script src="{{ static_url("js/libs/jquery-1.8.3.min.js") }}"></script>
@@ -48,6 +47,7 @@
 		<script src="{{ static_url("js/libs/bootstrap.min.js") }}"></script>
 		<script src="{{ static_url("js/libs/resumable.js") }}"></script>
 		<script src="{{ static_url("js/libs/handlebars.js") }}"></script>
+		<script src="{{ static_url("js/libs/qunit-1.11.0.js") }}"></script>
 
 		<!-- Old interface code -->
 		<script src="{{ static_url("js/stats/router.js") }}"></script>
@@ -56,10 +56,11 @@
 		<script src="{{ static_url("js/widgets/upload.js") }}"></script>
 
 		<!-- New interface code -->
-		<script src="{{ static_url("js/paasmaker.js") }}"></script>
 		<script src="{{ static_url("js/pm.util.js") }}"></script>
 		<script src="{{ static_url("js/pm.overview.js") }}"></script>
 		<script src="{{ static_url("js/pm.workspace.js") }}"></script>
+
+		<script src="{{ static_url("js/qunit.js") }}"></script>
 
 		<!-- Manifest editor -->
 		<!-- <script src="{{ static_url("js/libs/js-yaml.js") }}"></script>
