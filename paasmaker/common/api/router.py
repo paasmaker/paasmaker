@@ -54,7 +54,7 @@ class RouterStreamAPIRequest(StreamAPIRequest):
 
 		The callback looks like so::
 
-			def error(message):
+			def error(message, exception=None, name=None, input_id=None):
 				pass
 		"""
 		self.on('router.stats.error', callback)

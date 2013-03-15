@@ -36,12 +36,11 @@
 	<h2>Routing</h2>
 
 	<div class="router-stats-collection">
-		{% module Template("include/router_stats.html", router_stats=router_stats, router_stats_display=router_stats_display) %}
-		{% module Template("include/router_stats.html", router_stats=pacemaker, router_stats_display=router_stats_display) %}
+		<div class="router-stats well well-small" data-name="uncaught" data-inputid="0" data-title="Uncaught Requests">Loading...</div>
+		<div class="router-stats well well-small" data-name="pacemaker" data-inputid="0" data-title="Pacemaker Requests">Loading...</div>
 
 		{% for workspace in workspaces %}
-			{# This is a hack. #}
-			{% module Template("include/router_stats.html", router_stats=eval("workspace_%d_router" % workspace.id), router_stats_display=router_stats_display) %}
+			<div class="router-stats well well-small" data-name="workspace" data-inputid="{{ workspace.id }}" data-title="Workspace {{ workspace.name }}">Loading...</div>
 		{% end %}
 	</div>
 {% end %}

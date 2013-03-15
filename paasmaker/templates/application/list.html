@@ -1,7 +1,7 @@
 {% extends "../layout/main.html" %}
 
 {% block pretitle %}
-	{% module Template("include/router_stats.html", router_stats=router_stats, router_stats_display=router_stats_display) %}
+	<div class="router-stats well well-small" data-name="workspace" data-inputid="{{ workspace.id }}">Loading...</div>
 {% end %}
 
 {% block pagetitle %}

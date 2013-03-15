@@ -44,10 +44,6 @@ class VersionController(VersionRootController):
 			types[instance_type.name]['version_url'] = instance_type.version_hostname(self.configuration)
 		self.add_data('types', types)
 
-		# Fetch the router stats.
-		self._get_router_stats_for('version', version.id, self._got_stats)
-
-	def _got_stats(self, result):
 		self.render("version/view.html")
 
 	@staticmethod

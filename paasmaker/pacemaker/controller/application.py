@@ -91,10 +91,6 @@ class ApplicationListController(ApplicationRootController):
 		self._paginate('applications', applications)
 		self.add_data_template('paasmaker', paasmaker)
 
-		# Fetch the router stats.
-		self._get_router_stats_for('workspace', workspace.id, self._got_stats)
-
-	def _got_stats(self, result):
 		self.render("application/list.html")
 
 	@staticmethod
@@ -260,10 +256,6 @@ class ApplicationController(ApplicationRootController):
 		self.add_data_template('constants', constants)
 		self.add_data('current_version', current_version)
 
-		# Fetch the router stats.
-		self._get_router_stats_for('application', application.id, self._got_stats)
-
-	def _got_stats(self, result):
 		self.render("application/versions.html")
 
 	@staticmethod

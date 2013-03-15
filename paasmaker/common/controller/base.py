@@ -643,65 +643,6 @@ class BaseController(tornado.web.RequestHandler):
 
 		self._close_session()
 
-	def _get_router_stats_for(self, name, input_id, callback, output_key='router_stats', title=None):
-		"""
-		Helper function to get the aggregated router stats for
-		the named aggregation group. Places the result automatically
-		into the given output key, with the given title.
-
-		:arg str name: The aggregation name.
-		:arg int input_id: The aggregation input ID.
-		:arg callable callback: The callback to call when it's done.
-			It's single argument is the stats data.
-		:arg str output_key: The output key name to insert the data
-			as. If None, does not add the data at all, and only
-			calls the callback with the data.
-		:arg str title: The optional title to give this set of data.
-		"""
-		router_stats = paasmaker.router.stats.ApplicationStats(
-			self.configuration
-		)
-
-		output = {
-			'name': name,
-			'input_id': input_id,
-			'title': title,
-			'data': None
-		}
-
-		if output_key:
-			self.add_data(output_key, output)
-
-		self.add_data_template('router_stats_display', paasmaker.router.stats.ApplicationStats.DISPLAY_SET)
-
-		def got_router_stats(result):
-			output['data'] = result
-			callback(result)
-
-		def router_stats_error(error, exception=None):
-			self.add_warning('Unable to fetch router stats: ' + error)
-			callback(None)
-
-		def got_router_vtset(vtset):
-			router_stats.total_for_list(
-				'vt',
-				vtset,
-				got_router_stats,
-				router_stats_error
-			)
-
-		def stats_system_ready():
-			router_stats.vtset_for_name(
-				name,
-				input_id,
-				got_router_vtset
-			)
-
-		router_stats.setup(
-			stats_system_ready,
-			router_stats_error
-		)
-
 	def _redirect_job(self, job_id, url):
 		"""
 		Helper function to redirect to the job detail page

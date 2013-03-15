@@ -468,7 +468,7 @@ class StreamConnection(tornadio2.SocketConnection):
 				self.emit('router.stats.update', name, input_id, stats)
 
 			def failed_stats(error, exception=None):
-				self.emit('router.stats.error', error)
+				self.emit('router.stats.error', error, name, input_id)
 
 			def got_set(vtset):
 				stats_output.total_for_list('vt', vtset, got_stats, failed_stats)
@@ -904,7 +904,7 @@ class StreamConnectionTest(BaseControllerTest):
 		def update(name, input_id, values):
 			self.stop(('update', name, input_id, values))
 
-		def error(message):
+		def error(message, exception=None, name=None, input_id=None):
 			#print message
 			self.stop(('error', message))
 

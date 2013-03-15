@@ -2,216 +2,293 @@
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 pm.stats = {};
 
-pm.stats.router = function(streamSocket, container)
-{
-	this.streamSocket = streamSocket;
+pm.stats.routergraph = (function(){
+	var module = {};
 
-	// And now set up other internal variables.
-	this.container = container;
-	this.input_name = container.attr('data-name');
-	this.input_id = container.attr('data-inputid');
+	module.graph = function(streamSocket, container, statCategory, statInputId) {
+		var graph = {};
+		var plot;
+		var timeout;
+		var graphOptions = {
+			series: { shadowSize: 1, bars: { show: true, fill: true, barWidth: 1000 } },
+			yaxis: { min: 0 },
+			xaxis: { mode: "time", minTickSize: [30, "second"], }
+		};
 
-	var _self = this;
-	this.ready = false;
+		// Resolve the container.
+		container = $(container);
 
-	// For speed later, pre-lookup the value instances.
-	this.requests = $('.stat-requests .value', container);
-	this.bytes = $('.stat-bytes .value', container);
-	this.time_average = $('.stat-time_average .value', container);
-	this.onexx = $('.stat-1xx .value', container);
-	this.twoxx = $('.stat-2xx .value', container);
-	this.threexx = $('.stat-3xx .value', container);
-	this.fourxx = $('.stat-4xx .value', container);
-	this.fivexx = $('.stat-5xx .value', container);
+		// Subscribe to the router history events.
+		streamSocket.on(
+			'router.stats.history',
+			function(serverStatCategory, serverInputId, start, end, history) {
+				if(serverStatCategory == statCategory && serverInputId == statInputId) {
+					graph.showGraph(start, end, history);
 
-	this.onexx_percentage = $('.stat-1xx_percentage .value', container);
-	this.twoxx_percentage = $('.stat-2xx_percentage .value', container);
-	this.threexx_percentage = $('.stat-3xx_percentage .value', container);
-	this.fourxx_percentage = $('.stat-4xx_percentage .value', container);
-	this.fivexx_percentage = $('.stat-5xx_percentage .value', container);
-	this.nginxtime_average = $('.stat-nginxtime_average .value', container);
+					timeout = setTimeout(function() { graph.requestUpdate() }, 1000);
+				}
+			}
+		);
 
-	// Hook up the show more/less button.
-	var showButton = $('.show-all', container);
-	var secondary = $('.secondary', container);
-	showButton.click(
-		function(e)
+		// Set up the Flot object.
+		plot = $.plot(container, [], graphOptions);
+
+		graph.showGraph = function(start, end, graphPoints)
 		{
-			if( secondary.is(':visible') )
-			{
-				showButton.text('Show all');
+			if( graphPoints.length == 0 ) {
+				// No data returned. Fake it!
+				graphPoints.push([start, 0]);
+				graphPoints.push([end, 0]);
 			}
 			else
 			{
-				showButton.text('Hide');
+				if( graphPoints[0][0] != start ) {
+					// Doesn't start with the start time. Insert
+					// a point to make it make sense.
+					graphPoints.splice(0, 0, [start, 0])
+				}
+				if( graphPoints[graphPoints.length - 1][0] != end ) {
+					// Doesn't end with the end time. Insert a
+					// point to make it make sense.
+					graphPoints.push([end, 0])
+				}
 			}
-			secondary.slideToggle();
-		}
-	);
 
-	var graphButton = $('.show-graph', container);
-	this.graphArea = $('.graph', container);
-	this.isGraphing = false;
-	graphButton.click(
-		function(e)
-		{
-			_self.graphArea.toggle();
-			_self.isGraphing = !_self.isGraphing;
-			_self.setupGraphArea();
-			_self.requestGraph();
-		}
-	);
+			// Now convert all the times to unix timestamp milliseconds.
+			for( var i = 0; i < graphPoints.length; i++ ) {
+				graphPoints[i][0] *= 1000;
+			}
 
-	// If the graph area is visible on page load,
-	// start graphing now.
-	if( this.graphArea.is(':visible') )
-	{
-		this.setupGraphArea();
-		// Don't make the first call to update the graph,
-		// because it's likely not ready yet.
-		this.isGraphing = true;
+			plot.setData([graphPoints]);
+			plot.setupGrid();
+			plot.draw();
+		}
+
+		graph.requestUpdate = function() {
+			// Request an update from the server.
+			var now = new Date();
+			streamSocket.emit(
+				'router.stats.history',
+				statCategory,
+				statInputId,
+				'requests',
+				(now.getTime() / 1000) - 60 // Start - 60 seconds ago to now.
+			);
+		};
+
+		graph.stopUpdating = function() {
+			clearTimeout(timeout);
+		};
+
+		// Request the first update.
+		graph.requestUpdate();
+
+		return graph;
 	}
 
-	this.streamSocket.on('router.stats.update',
-		function(input_name, input_id, stats)
-		{
-			if(_self.input_name == input_name && _self.input_id == input_id)
+	return module;
+}());
+
+pm.stats.routerstats = (function(){
+	var module = {};
+
+	module.stats = function(streamSocket, container, statCategory, statInputId, title) {
+		var stats = {};
+
+		// Resolve the container.
+		container = $(container);
+		container.empty();
+
+		// A template for each stats section.
+		var statsSectionTemplateRaw = '{{#each statset}}' +
+				'<div class="stats-row clearfix">' +
+					'<span class="title">{{title}}</span>' +
+					'<span class="value">{{value}}' +
+						'{{#if diff}} | <span class="diff">{{diff}}/s</span>{{/if}}' +
+					'</span>' +
+				'</div>' +
+			'{{/each}}';
+
+		var statsSectionTemplate = Handlebars.compile(statsSectionTemplateRaw);
+
+		// Create top level containers.
+		if (title) {
+			var titleContainer = $('<div class="complete-title"></div>');
+			titleContainer.text(title);
+			container.append(titleContainer);
+		}
+		var primaryStats = $('<div class="primary">Loading...</div>');
+		var secondaryStats = $('<div class="secondary"></div>');
+		var graphArea = $('<div class="graph"></div>');
+		var buttonBox = $('<div class="btn-group"></div>');
+
+		container.append(primaryStats);
+		container.append(secondaryStats);
+		container.append(graphArea);
+		container.append(buttonBox);
+
+		var showAllButton = $('<a href="#" class="show-all btn btn-mini">Show all</a>');
+		var graphButton = $('<a href="#" class="show-graph btn btn-mini">Show Graph</a>');
+
+		buttonBox.append(showAllButton);
+		buttonBox.append(graphButton);
+
+		var graphWidget;
+
+		stats.showGraph = function() {
+			graphArea.show();
+			graphWidget = pm.stats.routergraph.graph(streamSocket, graphArea, statCategory, statInputId);
+			graphButton.text('Hide Graph');
+		}
+
+		stats.hideGraph = function() {
+			// Stop updating.
+			if(graphWidget) {
+				graphWidget.stopUpdating();
+			}
+			graphArea.hide();
+			graphButton.text('Show Graph');
+		}
+
+		graphButton.click(function(e) {
+			if( graphArea.is(':visible') ) {
+				stats.hideGraph();
+			} else {
+				stats.showGraph();
+			}
+
+			e.preventDefault();
+		});
+
+		// On startup, if the graph area is already visible, show the
+		// graph.
+		if( graphArea.is(':visible') ) {
+			stats.showGraph();
+		}
+
+		showAllButton.click(function(e) {
+			if( secondaryStats.is(':visible') ) {
+				showAllButton.text('Show all');
+			} else {
+				showAllButton.text('Hide');
+			}
+
+			secondaryStats.slideToggle();
+
+			e.preventDefault();
+		});
+
+		// Listen to the router stats update event.
+		streamSocket.on(
+			'router.stats.update',
+			function(serverCategoryName, serverCategoryId, serverStats) {
+				if( serverCategoryName == statCategory && serverCategoryId == statInputId ) {
+					stats.showUpdate(serverStats);
+
+					// And in 1s, get more stats.
+					setTimeout(function(){ stats.requestUpdate(); }, 1000);
+				}
+			}
+		);
+
+		streamSocket.on(
+			'router.stats.error',
+			function(error, serverStatCategory, serverInputId)
 			{
-				_self.showUpdate(stats);
+				if(serverStatCategory == statCategory && serverInputId == statInputId) {
+					// No stats available.
+					primaryStats.text("No stats available.");
+
+					timeout = setTimeout(function() { graph.requestUpdate() }, 1000);
+				}
+			}
+		);
+
+		stats.requestUpdate = function() {
+			streamSocket.emit('router.stats.update', statCategory, statInputId);
+		}
+
+		// To store the last set of numbers, for calculating deltas.
+		var lastNumbers;
+
+		function calculateDifference(key, values) {
+			if( lastNumbers ) {
+				var difference = values[key] - lastNumbers[key];
+				var deltaTime = values['as_at'] - lastNumbers['as_at'];
+
+				return ' ' + pm.util.number_format(difference / deltaTime);
+			} else {
+				return '';
 			}
 		}
-	);
 
-	this.streamSocket.on('router.stats.history',
-		function(input_name, input_id, start, end, history)
-		{
-			if(_self.input_name == input_name && _self.input_id == input_id)
-			{
-				_self.showGraph(start, end, history);
+		stats.showUpdate = function(update) {
+			// The primary stats first.
+			primaryStatsSet = {
+				statset: [
+					{
+						title: 'Requests',
+						value: pm.util.number_format(update.requests),
+						diff: calculateDifference('requests', update)
+					},
+					{
+						title: 'Bytes',
+						value: pm.util.number_format(update.bytes),
+						diff: calculateDifference('bytes', update)
+					},
+					{
+						title: 'Average Time',
+						value: pm.util.number_format(update.time_average),
+						diff: ''
+					}
+				]
+			};
+			secondaryStatsSet = {
+				statset: [
+					{
+						title: '1xx Percentage',
+						value: update['1xx'],
+						diff: ''
+					},
+					{
+						title: '2xx Percentage',
+						value: update['2xx'],
+						diff: ''
+					},
+					{
+						title: '3xx Percentage',
+						value: update['3xx'],
+						diff: ''
+					},
+					{
+						title: '4xx Percentage',
+						value: update['4xx'],
+						diff: ''
+					},
+					{
+						title: '5xx Percentage',
+						value: update['5xx'],
+						diff: ''
+					},
+					{
+						title: 'NGINX time Average',
+						value: pm.util.number_format(update.nginxtime_average),
+						diff: ''
+					}
+				]
 			}
+
+			primaryStats.html(statsSectionTemplate(primaryStatsSet));
+			secondaryStats.html(statsSectionTemplate(secondaryStatsSet));
+
+			lastNumbers = update;
 		}
-	);
 
-	// Ask for an update immediately.
-	this.requestUpdate();
+		// Request the first update.
+		stats.requestUpdate();
 
-	if(this.isGraphing)
-	{
-		this.requestGraph();
-	}
-}
-
-pm.stats.router.prototype.setupGraphArea = function()
-{
-	var options = {
-		series: { shadowSize: 1, bars: { show: true, fill: true, barWidth: 1000 } },
-		yaxis: { min: 0 },
-		xaxis: { mode: "time", minTickSize: [30, "second"], }
-	};
-	this.plot = $.plot(this.graphArea, [], options);
-}
-
-pm.stats.router.prototype.requestUpdate = function()
-{
-	this.streamSocket.emit('router.stats.update', this.input_name, this.input_id);
-}
-
-pm.stats.router.prototype.requestGraph = function()
-{
-	var now = new Date();
-	// TODO: Allow more configuration, less assumptions.
-	this.streamSocket.emit(
-		'router.stats.history',
-		this.input_name,
-		this.input_id,
-		'requests',
-		(now.getTime() / 1000) - 60 // Start - 60 seconds ago to now.
-	);
-}
-
-pm.stats.router.prototype.displayIncludingLast = function(key, values, container)
-{
-	var value = '';
-	value += number_format(values[key]);
-
-	if( this.lastNumbers )
-	{
-		var difference = values[key] - this.lastNumbers[key];
-		var deltaTime = values['as_at'] - this.lastNumbers['as_at'];
-
-		value += ' - <span class="diff">' + number_format(difference / deltaTime) + '/s</span>';
+		return stats;
 	}
 
-	container.html(value);
-}
-
-pm.stats.router.prototype.showUpdate = function(update)
-{
-	this.displayIncludingLast('requests', update, this.requests);
-	this.displayIncludingLast('bytes', update, this.bytes);
-	this.time_average.text(number_format(update.time_average));
-
-	this.displayIncludingLast('1xx', update, this.onexx);
-	this.displayIncludingLast('2xx', update, this.twoxx);
-	this.displayIncludingLast('3xx', update, this.threexx);
-	this.displayIncludingLast('4xx', update, this.fourxx);
-	this.displayIncludingLast('5xx', update, this.fivexx);
-
-	this.onexx_percentage.text(toFixed(update['1xx_percentage'], 2) + '%');
-	this.twoxx_percentage.text(toFixed(update['2xx_percentage'], 2) + '%');
-	this.threexx_percentage.text(toFixed(update['3xx_percentage'], 2) + '%');
-	this.fourxx_percentage.text(toFixed(update['4xx_percentage'], 2) + '%');
-	this.fivexx_percentage.text(toFixed(update['5xx_percentage'], 2) + '%');
-	this.nginxtime_average.text(number_format(update.nginxtime_average));
-
-	// And then in 1s, request it again.
-	var _self = this;
-	setTimeout(function(){ _self.requestUpdate(); }, 1000);
-
-	this.lastNumbers = update;
-}
-
-pm.stats.router.prototype.showGraph = function(start, end, graphPoints)
-{
-	//console.log(graphdata.points);
-	if( graphPoints.length == 0 )
-	{
-		// No data returned. Fake it!
-		graphPoints.push([start, 0]);
-		graphPoints.push([end, 0]);
-	}
-	else
-	{
-		if( graphPoints[0][0] != start )
-		{
-			// Doesn't start with the start time. Insert
-			// a point to make it make sense.
-			graphPoints.splice(0, 0, [start, 0])
-		}
-		if( graphPoints[graphPoints.length - 1][0] != end )
-		{
-			// Doesn't end with the end time. Insert a
-			// point to make it make sense.
-			graphPoints.push([end, 0])
-		}
-	}
-
-	// Now convert all the times to unix timestamp milliseconds.
-	for( var i = 0; i < graphPoints.length; i++ )
-	{
-		graphPoints[i][0] *= 1000;
-	}
-
-	//console.log(graphPoints);
-
-	this.plot.setData([graphPoints]);
-	this.plot.setupGrid();
-	this.plot.draw();
-
-	// And then in 1s, request it again.
-	if( this.isGraphing )
-	{
-		var _self = this;
-		setTimeout(function(){ _self.requestGraph(); }, 1000);
-	}
-}
+	return module;
+}());
