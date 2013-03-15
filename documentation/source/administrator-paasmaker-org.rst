@@ -659,6 +659,10 @@ to do this, but for purposes of this discussion, the flow looks like this:
   the applications (X-Forwarded-Scheme: https) to let them know.
 * The router then forwards the request to the Pacemaker.
 
+.. NOTE::
+	Be sure to add 42532 to your security group, to allow the Elastic
+	Load Balancer to be able to talk to it.
+
 You should then ensure that the Pacemaker gets requests on SSL. In the
 Pacemaker section of the configuration file, on the Pacemaker node only,
 you can set ``require_ssl`` to true, like so:
