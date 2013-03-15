@@ -86,6 +86,34 @@ class ProfileResetAPIKeyController(BaseController):
 		routes.append((r"/profile/reset-api-key", ProfileResetAPIKeyController, configuration))
 		return routes
 
+class MyPermissionsController(BaseController):
+	AUTH_METHODS = [BaseController.USER]
+
+	def get(self, mode):
+		# TODO: This relies on a lot of assumptions
+		# about the BaseController and the Permissions cache
+		# class.
+		user = self.get_current_user()
+		cache = self.PERMISSIONS_CACHE[str(user.id)]
+
+		self.add_data('version', cache.cache_version)
+		self.add_data('permissions', cache.cache)
+
+		if mode == '':
+			# Normal JSON mode.
+			self.render("api/apionly.html")
+		else:
+			# Emit a .js file.
+			self.set_header('Content-Type', 'text/javascript')
+			self.write("var permissions = %s;" % json.dumps(cache.cache))
+			self.finish()
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/my-permissions(|.js)", MyPermissionsController, configuration))
+		return routes
+
 class ProfileControllerTest(BaseControllerTest):
 	config_modules = ['pacemaker']
 
@@ -94,6 +122,7 @@ class ProfileControllerTest(BaseControllerTest):
 		routes = ProfileController.get_routes({'configuration': self.configuration})
 		routes.extend(ProfileUserdataController.get_routes({'configuration': self.configuration}))
 		routes.extend(ProfileResetAPIKeyController.get_routes({'configuration': self.configuration}))
+		routes.extend(MyPermissionsController.get_routes({'configuration': self.configuration}))
 		routes.extend(paasmaker.pacemaker.controller.login.LoginController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
@@ -182,3 +211,23 @@ class ProfileControllerTest(BaseControllerTest):
 
 		self.assertNotEquals(key, parsed['data']['apikey'], "Key was not changed")
 		self.assertEquals(changed_key, parsed['data']['apikey'], "Key was not stored correctly.")
+
+	def test_my_permissions(self):
+		request = self.fetch_with_user_auth('http://localhost:%d/my-permissions?format=json')
+		response = self.wait()
+
+		self.failIf(response.error)
+
+		parsed = json.loads(response.body)
+
+		self.assertTrue('data' in parsed, "Missing data section.")
+		data = parsed['data']
+		self.assertTrue('permissions' in data, "Missing permissions.")
+		self.assertTrue('version' in data, "Missing permissions version.")
+
+		request = self.fetch_with_user_auth('http://localhost:%d/my-permissions.js')
+		response = self.wait()
+
+		self.failIf(response.error)
+
+		self.assertTrue("var permissions =" in response.body)
