@@ -72,6 +72,28 @@ The following classes form the core of the routing system and the stats fetching
 .. autoclass:: paasmaker.router.tabledump.RouterTableDump
     :members:
 
+Router hostname lookup
+----------------------
+
+The following actions are taken to look up the hostname of the incoming
+request to route it through to the correct location:
+
+* Finds the hostname of the request. For example, `www.foo.com`.
+* Sees if it can find routes for `www.foo.com`.
+* Sees if it can find routes for `*.foo.com`. Note that this only works
+  on a single level for performance reasons - so baz.bar.foo.com will only
+  try to look for `*.bar.foo.com` in the database.
+* Finds the log recording key for the hostname, used to track the stats
+  for that instance type.
+* Where it finds routes, it chooses one at random, and directs the request
+  to that instance.
+* It then logs to result of that request to file with the appropriate logging
+  key, so that request can be accounted to a specific instance type.
+
+In future, we hope to be able to support more features with the router, such
+as sticky sessions, detection of down instances at the router level, and other
+traffic balancing features and methods.
+
 Redis key layout - Routing Table
 --------------------------------
 

@@ -16,7 +16,6 @@ Contents:
    developer
 
    glossary
-   architecture
 
 Indices and tables
 ==================

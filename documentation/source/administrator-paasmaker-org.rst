@@ -644,6 +644,47 @@ Once you've created the application, you should be able to start it and then
 visit it via the URLs provided by the control panel. When you're done, you
 can stop the application, and then delete it via the control panel.
 
+Protecting the Pacemaker with SSL
+---------------------------------
+
+Commonly, you would want to protect access to the Pacemaker (and thus the
+web console) with SSL, to protect passwords in transit. There are many ways
+to do this, but for purposes of this discussion, the flow looks like this:
+
+* The Elastic Load Balancer is configured to terminate the SSL, and the
+  certificate is uploaded to that.
+* The Elastic Load Balancer forwards decrypted sessions through to port
+  42532 on the routers. The routers are configured to assume that connections
+  on this port are decrypted SSL sessions and they pass along headers to
+  the applications (X-Forwarded-Scheme: https) to let them know.
+* The router then forwards the request to the Pacemaker.
+
+You should then ensure that the Pacemaker gets requests on SSL. In the
+Pacemaker section of the configuration file, on the Pacemaker node only,
+you can set ``require_ssl`` to true, like so:
+
+.. code-block:: yaml
+
+	pacemaker:
+	  require_ssl: true
+
+And then the Pacemaker will redirect to the SSL version of the page as required.
+If you try to perform API requests against it without SSL turned on, they
+will be denied.
+
+Currently, we don't have a way to configure the Nginx components of the routers
+to decrypt SSL; we plan to add this in the future. However, Paasmaker nodes
+can be configured to do SSL themselves, although this means you'll then
+need to access them directly, rather than through the router. To turn this
+on, in your ``paasmaker.yml`` file:
+
+.. code-block:: yaml
+
+	https_port: 42501
+	ssl_options:
+	  certfile: /path/to/server.crt
+	  keyfile: /path/to/server.key
+
 Resetting a node
 ----------------
 

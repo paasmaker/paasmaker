@@ -60,6 +60,7 @@ the code.
 .. toctree::
    :maxdepth: 2
 
+   developer-major-systems
    developer-coding-conventions
    developer-coding-tornado
    developer-configuration
