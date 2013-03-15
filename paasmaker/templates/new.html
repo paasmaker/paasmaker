@@ -25,6 +25,8 @@
 			<!-- TODO: CSS background -->
 			<div class="logo"><img src="{{ static_url("img/paasmaker-logo-alpha.png") }}" alt="Paasmaker"></div>
 
+			<form id="workspace_switcher"></form>
+
 			<div class="login_links">
 				{% if current_user %}
 					Logged in as <a href="/profile" class="navbar-link">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
@@ -41,7 +43,6 @@
 			{% end %}
 			<div id="main">
 				<p class="initial_loading"><img src="{{ static_url("img/load-inline.gif") }}" alt=""> Page still loading, yo.</p>
-				<form><textarea>Hello!</textarea></form>
 			</div>
 
 		{% else %}
@@ -57,12 +58,15 @@
 		<script src="{{ static_url("js/libs/socket.io.js") }}"></script>
 
 		<!-- Old interface code -->
-		<script src="{{ static_url("js/libs/modernizr-2.6.2.min.js") }}"></script>
-		<script src="{{ static_url("js/paasmaker.js") }}"></script>
 		<script src="{{ static_url("js/stats/router.js") }}"></script>
 		<script src="{{ static_url("js/logs/instance.js") }}"></script>
 		<script src="{{ static_url("js/jobs/display.js") }}"></script>
 		<script src="{{ static_url("js/widgets/upload.js") }}"></script>
+
+		<!-- New interface code -->
+		<script src="{{ static_url("js/paasmaker.js") }}"></script>
+		<script src="{{ static_url("js/pm.overview.js") }}"></script>
+		<script src="{{ static_url("js/pm.workspace.js") }}"></script>
 
 		<!-- Manifest editor -->
 		<!-- <script src="{{ static_url("js/libs/js-yaml.js") }}"></script>

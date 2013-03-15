@@ -26,23 +26,27 @@ $(function() {
 	// Populate the workspaces dropdown.
 	// TODO: Make this more efficient without having the server include it in the HTML.
 	// NOTE: This doesn't handle errors - if you're not logged in, no list.
+	// TODO: update list when workspaces are added/edited
 	// var workspaceListContainer = $('.nav .workspace-list');
-	// if( workspaceListContainer.length > 0 )
-	// {
-	// 	$.getJSON(
-	// 		'/workspace/list?format=json',
-	// 		function(data, text, xhr) {
-	// 			for (var i = 0; i < data.data.workspaces.length; i++) {
-	// 				workspace = data.data.workspaces[i];
-	// 				thisA = $('<a href="/workspace/' + workspace.id + '/applications"></a>');
-	// 				thisA.text(workspace.name);
-	// 				thisLi = $('<li></li>');
-	// 				thisLi.append(thisA);
-	// 				workspaceListContainer.append(thisLi);
-	// 			}
-	// 		}
-	// 	);
-	// }
+	$.getJSON(
+		'/workspace/list?format=json',
+		function(data) {
+			var menu = $("<select class=\"\"></select>");
+			var optgroup = $("<optgroup label=\"Workspaces\">");
+			menu.append(
+	            $("<option value=\"overview\">Overview</option><option value=\"overview\"></option>")
+            );
+			menu.append(optgroup);
+			data.data.workspaces.forEach(function(workspace) {
+				optgroup.append(
+					$("<option value=\"" + workspace.id + "\">" + workspace.name + "</option>")
+				);
+			});
+			$("#workspace_switcher").empty();
+			$("#workspace_switcher").append(menu);
+			menu.on('change', pm.workspace.switchTo);
+		}
+	);
 
 	// Holdover from previous interface: while loading, show a HTML5 feature report card
 	// Code from Modernizr 2.6.2
@@ -61,4 +65,7 @@ $(function() {
 		resultList.append($('<li>' + test + ': ' + labels[tests[test]()] + '</li>'));
 	}
 	$('#main').append('<p>For now, does your browser support things?</p>', resultList);
+
+	// Load the overview dashboard
+	// pm.overview.init();
 });
