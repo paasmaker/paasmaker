@@ -18,7 +18,7 @@ $(function() {
 	// TODO: update list when workspaces are added/edited
 	// var workspaceListContainer = $('.nav .workspace-list');
 	pm.data.api({
-	    endpoint: '/workspace/list',
+	    endpoint: 'workspace/list',
 		callback: function(data) {
 			var menu = $("<select class=\"\"></select>");
 			var optgroup = $("<optgroup label=\"Workspaces\">");

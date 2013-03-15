@@ -31,6 +31,10 @@ pm.data = (function() {
 		api: function(options) {
 			if (!options.arguments) { options.arguments = {}; }
 
+			if (options.endpoint.substr(0, 1) !== '/') {
+				options.endpoint = '/' + options.endpoint;
+			}
+
 			if (options.endpoint.indexOf('?') !== -1) {
 				// parse out existing arguments if there are any in the endpoint string
 				var query_string = options.endpoint.split('?');
@@ -43,7 +47,7 @@ pm.data = (function() {
 			}
 
 			// make sure ?format=json is included, then rebuild the query string
-			options.arguments[format] = "json";
+			options.arguments.format = "json";
 			var arg_string = '';
 			for (var key in options.arguments) {
 				arg_string += encodeURIComponent(key) + '=' + encodeURIComponent(options.arguments[key]);
