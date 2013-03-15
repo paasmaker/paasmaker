@@ -18,8 +18,13 @@
 		{% raw format_form_error('stub') %}
 
 		<label>Tags:</label>
-		<pre id="foobar-tag-debug">{{ workspace._tags }}</pre>
-		<input type="hidden" id="pm_workspace_tags" name="serialised_tags" value="{{ workspace._tags }}">
+		{% if workspace._tags is not None %}
+			<pre id="foobar-tag-debug">{{ workspace._tags }}</pre>
+			<input type="hidden" id="pm_workspace_tags" name="serialised_tags" value="{{ workspace._tags }}">
+		{% else %}
+			<pre id="foobar-tag-debug"></pre>
+			<input type="hidden" id="pm_workspace_tags" name="serialised_tags" value="{}">
+		{% end %}
 		<div class="workspace-tag-editor pm-tag-editor"></div>
 		{% raw format_form_error('tags') %}
 		<br />
