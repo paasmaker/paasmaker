@@ -271,12 +271,12 @@ def on_completed_startup():
 	# exceptions thrown should not cause the server to exit.
 	with tornado.stack_context.StackContext(handle_runtime_exception):
 		logging.info("Listening on port %d", configuration['http_port'])
-		http_server = tornado.httpserver.HTTPServer(application)
+		http_server = tornado.httpserver.HTTPServer(application, xheaders=True)
 		http_server.listen(configuration['http_port'])
 
 		if configuration['https_port'] is not None:
 			logging.info("Listening on port %d for SSL connections", configuration['https_port'])
-			https_server = tornado.httpserver.HTTPServer(application, ssl_options=configuration['ssl_options'])
+			https_server = tornado.httpserver.HTTPServer(application, ssl_options=configuration['ssl_options'], xheaders=True)
 			https_server.listen(configuration['https_port'])
 
 		logging.info("All systems are go.")
