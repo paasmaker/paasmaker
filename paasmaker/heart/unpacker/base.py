@@ -12,6 +12,16 @@ class BaseUnpackerConfigurationSchema(colander.MappingSchema):
 	pass
 
 class BaseUnpacker(paasmaker.util.plugin.Plugin):
+	"""
+	These plugins are able to take a downloaded package file,
+	and unpack them into the appropriate location, ready for
+	execution.
+
+	At the moment, the default unpacker, the tarball unpacker,
+	just unpacks the tarball, as the name might suggest. The other
+	unpacker is the development directory unpacker, which symlinks
+	the development location to the instance root.
+	"""
 	MODES = {
 		paasmaker.util.plugin.MODE.UNPACKER: None
 	}

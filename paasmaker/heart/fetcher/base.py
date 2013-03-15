@@ -12,6 +12,15 @@ class BaseFetcherConfigurationSchema(colander.MappingSchema):
 	pass
 
 class BaseFetcher(paasmaker.util.plugin.Plugin):
+	"""
+	These plugins are used to fetch the prepared applications
+	from a remote server, onto the local node for execution.
+
+	The default plugin, paasmakernode, just fetches the prepared
+	package from the master node. In the future, we hope to be
+	able to supply plugins that can fetch packages from Amazon S3,
+	or other scalable redundant storage.
+	"""
 	MODES = {
 		paasmaker.util.plugin.MODE.FETCHER: None
 	}

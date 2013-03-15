@@ -21,6 +21,8 @@ roughly based on a grouping of what they do.
    developer-plugins-health
    developer-plugins-runtime
    developer-plugins-service
+   developer-plugins-heart
+   developer-plugins-pacemaker
 
 Example Plugin
 --------------

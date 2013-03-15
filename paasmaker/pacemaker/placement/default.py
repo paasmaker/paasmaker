@@ -37,7 +37,7 @@ class DefaultPlacement(BasePlacement):
 
 	def choose(self, session, instance_type, quantity, callback, error_callback):
 		# Query active nodes first.
-		nodes = self.get_active_nodes(session)
+		nodes = self._get_active_nodes(session)
 
 		self.logger.info("Stage 1: Found %d active nodes.", len(nodes))
 
@@ -50,7 +50,7 @@ class DefaultPlacement(BasePlacement):
 		runtime_tags = {}
 		runtime_tags[instance_type.runtime_name] = [instance_type.runtime_version]
 		self.logger.info("Stage 2: Filtering to these runtimes: %s", str(runtime_tags))
-		nodes = self.filter_by_tags(nodes, {'runtimes': runtime_tags})
+		nodes = self._filter_by_tags(nodes, {'runtimes': runtime_tags})
 		self.logger.info("Stage 2: Found %d nodes that can run this instance.", len(nodes))
 
 		if self._fail_if_none(nodes, error_callback, "No nodes can service the runtime %s, version %s." % (instance_type.runtime_name, instance_type.runtime_version)):
@@ -63,7 +63,7 @@ class DefaultPlacement(BasePlacement):
 		if self.parameters.has_key('tags'):
 			tags = self.parameters['tags']
 		self.logger.info("Stage 3: Filtering to nodes with these tags: %s", str(tags))
-		nodes = self.filter_by_tags(nodes, {'node': tags})
+		nodes = self._filter_by_tags(nodes, {'node': tags})
 		self.logger.info("Stage 3: Found %d nodes that match these tags.", len(nodes))
 
 		if self._fail_if_none(nodes, error_callback, "No nodes match the supplied tags: %s" % str(tags)):
@@ -124,35 +124,35 @@ class DefaultPlacementTest(BasePlacementTest):
 		nodes = [n]
 
 		# This should return all the nodes, because no qualifying tags are supplied.
-		result = plugin.filter_by_tags(nodes, {})
+		result = plugin._filter_by_tags(nodes, {})
 		self.assertEquals(len(result), 1, "Should have returned the node.")
 
 		# This should return no nodes, because there are tags that must meet.
-		result = plugin.filter_by_tags(nodes, {'foo': 'bar'})
+		result = plugin._filter_by_tags(nodes, {'foo': 'bar'})
 		self.assertEquals(len(result), 0, "Should have returned no nodes.")
 
 		# This should return the node, because the value matches.
-		result = plugin.filter_by_tags(nodes, {'node': {'one': 'two'}})
+		result = plugin._filter_by_tags(nodes, {'node': {'one': 'two'}})
 		self.assertEquals(len(result), 1, "Should have returned the node.")
 
 		# This should not return the node, because the value does not matches.
-		result = plugin.filter_by_tags(nodes, {'node': {'one': 'one'}})
+		result = plugin._filter_by_tags(nodes, {'node': {'one': 'one'}})
 		self.assertEquals(len(result), 0, "Should have returned no nodes.")
 
 		# Try to fetch a runtime - one that doesn't exist.
-		result = plugin.filter_by_tags(nodes, {'runtimes': {'paasmaker.runtime.noexist': ['1.0']}})
+		result = plugin._filter_by_tags(nodes, {'runtimes': {'paasmaker.runtime.noexist': ['1.0']}})
 		self.assertEquals(len(result), 0, "Should have returned no nodes.")
 
 		# Try to fetch a runtime that matches.
-		result = plugin.filter_by_tags(nodes, {'runtimes': {'paasmaker.runtime.php': ['5.3.10']}})
+		result = plugin._filter_by_tags(nodes, {'runtimes': {'paasmaker.runtime.php': ['5.3.10']}})
 		self.assertEquals(len(result), 1, "Should have returned the node.")
-		result = plugin.filter_by_tags(nodes, {'runtimes': {'paasmaker.runtime.php': ['5.3']}})
+		result = plugin._filter_by_tags(nodes, {'runtimes': {'paasmaker.runtime.php': ['5.3']}})
 		self.assertEquals(len(result), 1, "Should have returned the node.")
 
 		# Try to fetch a runtime that doesn't match in version.
-		result = plugin.filter_by_tags(nodes, {'runtimes': {'paasmaker.runtime.php': ['5']}})
+		result = plugin._filter_by_tags(nodes, {'runtimes': {'paasmaker.runtime.php': ['5']}})
 		self.assertEquals(len(result), 0, "Should have returned no nodes.")
-		result = plugin.filter_by_tags(nodes, {'runtimes': {'paasmaker.runtime.php': ['5.4']}})
+		result = plugin._filter_by_tags(nodes, {'runtimes': {'paasmaker.runtime.php': ['5.4']}})
 		self.assertEquals(len(result), 0, "Should have returned no nodes.")
 
 	def test_simple(self):

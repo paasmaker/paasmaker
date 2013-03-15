@@ -9,6 +9,17 @@ class BaseStatsConfigurationSchema(colander.MappingSchema):
 	pass
 
 class BaseStats(paasmaker.util.plugin.Plugin):
+	"""
+	This plugin is used to fetch stats on the node, which are
+	reported back to the master for informational purposes.
+	Additionally, these stats are used by scoring plugins to
+	calculate the "score" for a node. The score is used by
+	the Pacemaker to rank nodes when determining where to place
+	applications.
+
+	These plugins are called each time the node reports back
+	to the master node.
+	"""
 	MODES = {
 		paasmaker.util.plugin.MODE.NODE_STATS: None
 	}

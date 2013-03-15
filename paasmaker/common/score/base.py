@@ -9,6 +9,15 @@ class BaseScoreConfigurationSchema(colander.MappingSchema):
 	pass
 
 class BaseScore(paasmaker.util.plugin.Plugin):
+	"""
+	Score plugins are used to take a set of stats for a node,
+	and return a number that can be used to rank nodes when
+	placing applications.
+
+	These plugins are called each time a node reports back to
+	the master node.
+	"""
+
 	MODES = {
 		paasmaker.util.plugin.MODE.NODE_SCORE: None
 	}
@@ -17,8 +26,15 @@ class BaseScore(paasmaker.util.plugin.Plugin):
 	def score(self, stats):
 		"""
 		From the given stats dict, calculate a score for the node.
-		It should be between 0 and 1 (fractional), but you can emit
+		It should be between 0 and 1 (fractional), but you can return
 		values bigger than 1 to really emphasise that the node is overloaded.
+
+		You should test values in stats to see if they exist,
+		and not assume that they do.
+
+		The score value is returned. This is called sychronously
+		each time the node registers with the master, so you
+		won't want to spend a long time.
 		"""
 		raise NotImplementedError("You must implement score().")
 

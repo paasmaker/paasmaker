@@ -12,6 +12,11 @@ class BasePackerConfigurationSchema(colander.MappingSchema):
 	pass
 
 class BasePacker(paasmaker.util.plugin.Plugin):
+	"""
+	These plugins are responsible for packing up prepared applications
+	into a file that can be stored somewhere. The only function here
+	is to take a directory and output a packed file.
+	"""
 	MODES = {
 		paasmaker.util.plugin.MODE.PACKER: None
 	}

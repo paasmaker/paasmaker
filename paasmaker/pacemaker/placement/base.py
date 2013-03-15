@@ -8,13 +8,22 @@ from paasmaker.common.core import constants
 
 # Base placement.
 class BasePlacement(paasmaker.util.plugin.Plugin):
+	"""
+	These plugins are designed to choose where applications run.
+	They take a list of servers, the number of instances required,
+	and return a list of locations to run those instances.
+	"""
 
 	# Helper functions for subclasses.
-	def get_active_nodes(self, session):
+	def _get_active_nodes(self, session):
 		"""
+		Helper function for subclasses.
+
 		Get a list of active nodes from the database that are hearts.
 		Returns a mutable list that you could then filter down. They
 		are ordered by their score.
+
+		:arg Session session: An open database session.
 		"""
 		nodes = session.query(
 			Node
@@ -27,8 +36,10 @@ class BasePlacement(paasmaker.util.plugin.Plugin):
 
 		return nodes
 
-	def filter_by_tags(self, nodes, tags):
+	def _filter_by_tags(self, nodes, tags):
 		"""
+		Helper function for subclasses.
+
 		Filter the given node list by the supplied tags dict.
 		To match, the node must have all the tags present in
 		the supplied tags and they must be equal. If the tags
@@ -50,10 +61,17 @@ class BasePlacement(paasmaker.util.plugin.Plugin):
 
 		return result_list
 
-
 	def choose(self, session, instance_type, quantity, callback, error_callback):
 		"""
-		Select quantity nodes to run the given instance type application.
+		Select quantity nodes to run the given instance type application. You
+		should rank the list of nodes before returning them.
+
+		:arg Session session: An open database session.
+		:arg ApplicationInstanceType instance_type: The instance type object
+			from the database, if you need to look up additional information.
+		:arg int quantity: The number of instances that we wish to place.
+		:arg callable callback: The callback to call once done.
+		:arg callable error_callback: The error callback to call once done.
 		"""
 		pass
 

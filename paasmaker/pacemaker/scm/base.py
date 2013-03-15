@@ -27,6 +27,16 @@ class BaseSCMParametersSchema(colander.MappingSchema):
 # can use this cleverly to store only a few extra details.
 
 class BaseSCM(paasmaker.util.plugin.Plugin):
+	"""
+	SCM plugins are responsible for fetching raw application source code,
+	ready for it to be prepared and then packed for storage. It should end
+	up with a new copy that can be modified.
+
+	SCMs should cache checkouts where possible to speed up lookups. For
+	example, the git SCM stores a persistent checkout, and just pulls
+	new changes each time.
+	"""
+
 	# These are defaults - you should set your own.
 	MODES = {
 		paasmaker.util.plugin.MODE.SCM_EXPORT: BaseSCMParametersSchema(),
@@ -87,7 +97,10 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 		"""
 		Return some HTML that goes into the form to be inserted into the
 		web page, for users to interact with. The supplied last_selections
-		is a hash that contains what was used last time (or empty if not found).
+		is a dict that contains what was used last time (or empty if not found).
+
+		:arg dict last_selections: The selections that the user made last time
+			they deployed the given application.
 		"""
 		raise NotImplementedError("You must implement create_form().")
 

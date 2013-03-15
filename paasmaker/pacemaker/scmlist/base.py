@@ -18,6 +18,15 @@ class BaseSCMListParametersSchema(colander.MappingSchema):
 	pass
 
 class BaseSCMList(paasmaker.util.plugin.Plugin):
+	"""
+	SCM list plugins are meant to fetch a list of repositories of
+	a particular type, to be able to display a drop down list in
+	the web interface for convenience.
+
+	For example, the first plugin shipped is one for BitBucket.
+	This provides a list of BitBucket repositories available to
+	the credentials supplied.
+	"""
 	MODES = {
 		paasmaker.util.plugin.MODE.SCM_LIST: None
 	}
@@ -28,13 +37,20 @@ class BaseSCMList(paasmaker.util.plugin.Plugin):
 	def get_repo_list(self, bypass_cache, callback, error_callback):
 		"""
 		Return a list of URLs and titles for this SCM.
-		The returned list should look like so:
-		[
-			{
-				'title': 'Title',
-				'url': 'url_to_repo'
-			}
-		]
+		The returned list should look like so::
+
+			[
+				{
+					'title': 'Title',
+					'url': 'url_to_repo'
+				}
+			]
+
+		:arg bool bypass_cache: If True, don't use a cached version
+			of the list.
+		:arg callable callback: The callback to call once done.
+		:arg callable error_callback: The error callback to call if something
+			goes wrong.
 		"""
 		raise NotImplementedError("You must implement get_url_list().")
 
