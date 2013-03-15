@@ -36,18 +36,12 @@
 			</div>
 		</div>
 
-		{# Don't bother showing any of this if you're not logged in; TODO: redirect to login page #}
-		{% if current_user %}
-			{% if user_permissions.has_permission(PERMISSION.SYSTEM_OVERVIEW, None) %}
-				<!-- TODO: return permissions in JSON -->
-			{% end %}
-			<div id="main">
-				<p class="initial_loading"><img src="{{ static_url("img/load-inline.gif") }}" alt=""> Page still loading, yo.</p>
-			</div>
-
-		{% else %}
-			{% module Template("login/login-new.html", external_logins=[]) %}
+		{% if user_permissions.has_permission(PERMISSION.SYSTEM_OVERVIEW, None) %}
+			<!-- TODO: return permissions in JSON -->
 		{% end %}
+		<div id="main">
+			<p class="initial_loading"><img src="{{ static_url("img/load-inline.gif") }}" alt=""> Page still loading, yo.</p>
+		</div>
 
 		<!-- Libraries -->
 		<script src="{{ static_url("js/libs/jquery-1.8.3.min.js") }}"></script>
@@ -55,7 +49,7 @@
 		<script src="{{ static_url("js/libs/jquery.flot.js") }}"></script>
 		<script src="{{ static_url("js/libs/bootstrap.min.js") }}"></script>
 		<script src="{{ static_url("js/libs/resumable.js") }}"></script>
-		<script src="{{ static_url("js/libs/socket.io.js") }}"></script>
+		<script src="{{ static_url("js/libs/handlebars.js") }}"></script>
 
 		<!-- Old interface code -->
 		<script src="{{ static_url("js/stats/router.js") }}"></script>
@@ -65,6 +59,7 @@
 
 		<!-- New interface code -->
 		<script src="{{ static_url("js/paasmaker.js") }}"></script>
+		<script src="{{ static_url("js/pm.util.js") }}"></script>
 		<script src="{{ static_url("js/pm.overview.js") }}"></script>
 		<script src="{{ static_url("js/pm.workspace.js") }}"></script>
 
