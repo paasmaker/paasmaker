@@ -2,7 +2,9 @@
 Paasmaker
 =========
 
-Contents:
+Paasmaker is an Open Source Platform as a Service, designed to be
+easily extensible with Python plugins. It is designed to be highly
+visible, and easy to cluster.
 
 .. toctree::
    :maxdepth: 2
