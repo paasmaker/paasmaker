@@ -91,6 +91,9 @@ SYSTEM_PACKAGES = {
 			],
 			'service-postgres': [
 				'postgresql'
+			],
+			'service-mongodb': [
+				'mongodb'
 			]
 		}
 	}

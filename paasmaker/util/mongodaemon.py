@@ -89,7 +89,7 @@ smallfiles = true
 		logging.info("Starting up mongoDB server on port %d." % self.parameters['port'])
 		subprocess.check_call(
 			[
-				self.parameters['binary_path'], '-f',
+				self.parameters['binary_path'], '--config',
 				self.get_configuration_path(self.parameters['working_dir'])
 			]
 		)
