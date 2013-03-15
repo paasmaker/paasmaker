@@ -19,7 +19,7 @@ pm.stats.routergraph = (function(){
 		container = $(container);
 
 		// Subscribe to the router history events.
-		streamSocket.on(
+		pm.data.subscribe(
 			'router.stats.history',
 			function(serverStatCategory, serverInputId, start, end, history) {
 				if(serverStatCategory == statCategory && serverInputId == statInputId) {
@@ -67,7 +67,7 @@ pm.stats.routergraph = (function(){
 		graph.requestUpdate = function() {
 			// Request an update from the server.
 			var now = new Date();
-			streamSocket.emit(
+			pm.data.emit(
 				'router.stats.history',
 				statCategory,
 				statInputId,
@@ -179,7 +179,7 @@ pm.stats.routerstats = (function(){
 		});
 
 		// Listen to the router stats update event.
-		streamSocket.on(
+		pm.data.subscribe(
 			'router.stats.update',
 			function(serverCategoryName, serverCategoryId, serverStats) {
 				if( serverCategoryName == statCategory && serverCategoryId == statInputId ) {
@@ -191,7 +191,7 @@ pm.stats.routerstats = (function(){
 			}
 		);
 
-		streamSocket.on(
+		pm.data.subscribe(
 			'router.stats.error',
 			function(error, serverStatCategory, serverInputId)
 			{
@@ -199,13 +199,13 @@ pm.stats.routerstats = (function(){
 					// No stats available.
 					primaryStats.text("No stats available.");
 
-					timeout = setTimeout(function() { graph.requestUpdate() }, 1000);
+					timeout = setTimeout(function() { stats.requestUpdate() }, 1000);
 				}
 			}
 		);
 
 		stats.requestUpdate = function() {
-			streamSocket.emit('router.stats.update', statCategory, statInputId);
+			pm.data.emit('router.stats.update', statCategory, statInputId);
 		}
 
 		// To store the last set of numbers, for calculating deltas.

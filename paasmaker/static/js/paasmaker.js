@@ -12,32 +12,21 @@ if (!window.pm) { var pm = {}; }	// TODO: module handling
 $(function() {
 	// Page initialisation
 
-	// TODO: This connection timeout is low to force it to fallback to XHR quickly
-	// when websocket fails. This may be too short though for production use.
-	// Maybe we can more intelligently decide this and give socket.io a better hint?
-	// var streamSocket = new io.connect(window.location.protocol + '//' + window.location.host, {'connect timeout': 1000});
-	// streamSocket.on('disconnect',
-	// 	function()
-	// 	{
-	// 		streamSocket.socket.reconnect();
-	// 	}
-	// );
-
 	// Populate the workspaces dropdown.
 	// TODO: Make this more efficient without having the server include it in the HTML.
 	// NOTE: This doesn't handle errors - if you're not logged in, no list.
 	// TODO: update list when workspaces are added/edited
 	// var workspaceListContainer = $('.nav .workspace-list');
-	$.getJSON(
-		'/workspace/list?format=json',
-		function(data) {
+	pm.data.api({
+	    endpoint: '/workspace/list',
+		callback: function(data) {
 			var menu = $("<select class=\"\"></select>");
 			var optgroup = $("<optgroup label=\"Workspaces\">");
 			menu.append(
 	            $("<option value=\"overview\">Overview</option><option value=\"overview\"></option>")
             );
 			menu.append(optgroup);
-			data.data.workspaces.forEach(function(workspace) {
+			data.workspaces.forEach(function(workspace) {
 				optgroup.append(
 					$("<option value=\"" + workspace.id + "\">" + workspace.name + "</option>")
 				);
@@ -46,7 +35,7 @@ $(function() {
 			$("#workspace_switcher").append(menu);
 			menu.on('change', pm.workspace.switchTo);
 		}
-	);
+	});
 
 	// Holdover from previous interface: while loading, show a HTML5 feature report card
 	// Code from Modernizr 2.6.2
