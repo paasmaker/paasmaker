@@ -25,8 +25,6 @@
 		<link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
 		<link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
 		<link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png"> #}
-
-		<script src="{{ static_url("js/libs/modernizr-2.6.2.min.js") }}"></script>
 	</head>
 	<body>
 		<div class="navbar navbar-inverse navbar-fixed-top">
@@ -37,7 +35,7 @@
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 			</a>
-			<a class="brand" href="/">Paasmaker</a>
+			<a class="brand" href="/"><img src="{{ static_url("img/pm-black.png") }}" alt="Paasmaker"></a>
 			<div class="nav-collapse collapse">
 				{% if is_pacemaker %}
 					<p class="navbar-text pull-right">
@@ -51,11 +49,6 @@
 					<ul class="nav">
 						{# Don't bother showing any of this if you're not logged in. #}
 						{% if current_user %}
-							{% if user_permissions.has_permission(PERMISSION.SYSTEM_OVERVIEW, None) %}
-								<li>
-									<a href="/overview">Overview</a>
-								</li>
-							{% end %}
 							<li class="dropdown">
 								<a href="#" class="dropdown-toggle" data-toggle="dropdown">Workspaces <b class="caret"></b></a>
 								<ul class="dropdown-menu workspace-list">

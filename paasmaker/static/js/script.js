@@ -3,23 +3,22 @@ if (!window.pm) { var pm = {}; }	// TODO: module handling
 
 function testBrowserFeatures(resultContainer)
 {
-	resultContainer.empty();
+	var tests = {
+		"File API": function () { return !!(window.File && window.FileList && window.FileReader); },
+		"Resumable library uploads": function () { var r = new Resumable(); return r.support; },
+		"JSON parsing": function() { return (!!window.JSON && !!JSON.parse); },
+		"History API": function() { return !!(window.history && history.pushState); },
+		"Drag &amp; drop": function() { var div = document.createElement('div'); return ('draggable' in div) || ('ondragstart' in div && 'ondrop' in div); },
+		"Web Sockets": function() { return 'WebSocket' in window || 'MozWebSocket' in window; }
+	};
 
-	resultList = $('<ul></ul>');
-
-	var reportResult = function(name, result)
-	{
-		resultLabel = result ? 'Success' : 'Failure';
-		resultList.append($('<li>' + name + ': ' + resultLabel + '</li>'));
+	var resultList = $('<ul></ul>');
+	for (var test in tests) {
+		var labels = { true: 'yes!', false: 'no :-(' };
+		resultList.append($('<li>' + test + ': ' + labels[tests[test]()] + '</li>'));
 	}
-
-	reportResult("Websockets", Modernizr.websockets);
-
-	var r = new Resumable();
-
-	reportResult("HTML5 File uploads", r.support);
-
-	resultContainer.append(resultList);
+	resultContainer.empty();
+	resultContainer.append('<p>Feature tests for your browser:</p>', resultList);
 }
 
 $(document).ready(
@@ -48,9 +47,8 @@ $(document).ready(
 			});
 		}
 
-		if( $('.test-browser-features').length > 0 )
-		{
-			testBrowserFeatures($('.test-browser-features'));
+		if( $('#test-browser-features').length > 0 ) {
+			testBrowserFeatures($('#test-browser-features'));
 		}
 
 		if( $('.file-uploader-widget').length > 0 )

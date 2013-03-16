@@ -1,5 +1,15 @@
 /* Paasmaker CSS */
 
+/* Login page */
+.index_column { width: 45%; float: left; margin: 20px; }
+
+/* Overview / dashboard page */
+.overview_block { width: 30%; float: left; margin: 10px; }
+.router-stats-collection { clear: both; padding-top: 40px; }
+.overview_block table td { min-width: 5em; }
+td.overview_count { text-align: right; }
+.overview_more_link { margin-top: 1em; font-style: italic; }
+
 /* COMMON CSS STYLES */
 ul.errors
 {
