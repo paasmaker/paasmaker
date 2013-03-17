@@ -95,10 +95,10 @@
 		</div>
 		</div>
 		
-		<div class="container">
+		<div class="container" id="main">
 			{% block leftnav %}{% end %}
 
-			<div id="main" {% block mainmodifier %}{% end %}>
+			<div id="app_view_main" {% block mainmodifier %}{% end %}>
 				{% block pretitle %}{% end %}
 				<h1>{% block pagetitle %}{% end %}</h1>
 
@@ -129,7 +129,7 @@
 		<script src="{{ static_url("js/libs/jquery-1.8.3.min.js") }}"></script>
 		<script src="{{ static_url("js/libs/jquery.json-2.4.min.js") }}"></script>
 		<script src="{{ static_url("js/libs/jquery.flot.js") }}"></script>
-		<script src="{{ static_url("js/libs/bootstrap.min.js") }}"></script>
+		<script src="{{ static_url("js/libs/bootstrap.js") }}"></script>
 		<script src="{{ static_url("js/libs/resumable.js") }}"></script>
 		<script src="{{ static_url("js/libs/socket.io.js") }}"></script>
 		<script src="{{ static_url("js/libs/handlebars.js") }}"></script>
@@ -141,6 +141,8 @@
 		<script src="{{ static_url("js/logs/instance.js") }}"></script>
 		<script src="{{ static_url("js/jobs/display.js") }}"></script>
 		<script src="{{ static_url("js/widgets/upload.js") }}"></script>
+		
+		<script src="{{ static_url("js/pm.history.js") }}"></script>
 		{% block scripts %}
 		{% end %}
 	</body>
