@@ -64,3 +64,17 @@ pm.admin.config_dump = (function() {
 		}
 	};
 }());
+
+pm.admin.user_list = (function() {
+	// TODO: this does not respect permissions for creating or editing users
+	return {
+		switchTo: function() {
+			pm.data.api({
+				endpoint: 'user/list',
+				callback: function(data) {
+					$('#main').html(pm.handlebars.user_list(data));
+				}
+			});
+		}
+	};
+}());

@@ -1,0 +1,42 @@
+<h1>User List</h1>
+
+<div class="btn-group btn-group-header">
+	<!-- if user_permissions.has_permission(PERMISSION.USER_EDIT, None) -->
+		<a class="btn" href="/user/create"><i class="icon-plus"></i> Create User</a>
+</div>
+
+<table class="table table-striped table-bordered">
+	<tr>
+		<th>Name</th>
+		<th>Authentication Method</th>
+		<th>Login</th>
+		<th>Created</th>
+		<th>Enabled</th>
+	</tr>
+	{{# each users }}
+		<tr>
+			<td>
+				<!-- if user_permissions.has_permission(PERMISSION.USER_EDIT, None) -->
+				<a href="/user/{{ id }}">
+					{{ name }}
+				</a>
+			</td>
+			<td>
+				{{ auth_source }}
+			</td>
+			<td>
+				{{ login }}
+			</td>
+			<td>
+				{{ created }}
+			</td>
+			<td>
+				{{# if enabled }}
+					Enabled
+				{{else}}
+					Disabled
+				{{/if}}
+			</td>
+		</tr>
+	{{/each}}
+</table>

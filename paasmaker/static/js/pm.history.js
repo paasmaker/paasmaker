@@ -12,8 +12,8 @@ if (!window.pm) { var pm = {}; }	// TODO: module handling
 pm.routingTable = {
 	"/profile": pm.admin.profile,
 	"/configuration/plugins": pm.admin.plugins,
-	"/configuration/dump": pm.admin.config_dump
-
+	"/configuration/dump": pm.admin.config_dump,
+	"/user/list": pm.admin.user_list
 };
 
 pm.history = (function() {

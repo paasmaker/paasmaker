@@ -148,7 +148,7 @@ class UserListController(BaseController):
 		self.require_permission(constants.PERMISSION.USER_LIST)
 		users = self.session.query(paasmaker.model.User)
 		self._paginate('users', users)
-		self.render("user/list.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):
