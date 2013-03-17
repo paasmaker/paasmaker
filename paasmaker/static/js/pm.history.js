@@ -10,7 +10,8 @@ if (!window.pm) { var pm = {}; }	// TODO: module handling
 // Mapping of URLs that can be handled by the JavaScript code (i.e. without a page refresh)
 // Note: additions here should always be reflected in the relevant controller class
 pm.routingTable = {
-	"/profile": pm.admin.profile
+	"/profile": pm.admin.profile,
+	"/configuration/plugins": pm.admin.plugins
 
 };
 

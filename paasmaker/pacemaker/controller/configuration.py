@@ -38,7 +38,7 @@ class PluginInformationController(BaseController):
 		self.add_data('plugins', plugin_data)
 		self.add_data_template('json', json)
 
-		self.render("configuration/plugins.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):
