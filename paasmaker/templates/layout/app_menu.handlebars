@@ -1,0 +1,20 @@
+<div class="application-list">
+	<ul class="nav nav-list">
+		<li class="nav-header">Applications: {{ workspace.name }}</li>
+		{{# each applications }}
+			<li>
+				<a href="/application/{{ id }}">
+					<span class="application-list-name">{{ name }}</span>
+					<span class="application-list-details">
+						Health: {{ health }} &middot;
+						<!-- TODO in API: app.versions.filter(paasmaker.model.ApplicationVersion.deleted == None).count() -->
+						{{ versions.length }}&nbsp;version(s) &middot;
+						{{ services.length }}&nbsp;service(s)
+					</span>
+				</a>
+			</li>
+		{{/each}}
+		<li class="divider"></li>
+		<li><a href="/workspace/{{ workspace.id }}/applications/new">Create Application</a></li>
+	</ul>
+</div>

@@ -8,50 +8,49 @@
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 
 pm.workspace = (function() {
-	var workspaceViewTemplate =
-		"<div id=\"applications\"><ul>"
-		+ "{{#each data.applications}}"
-			+ "<li><a href=\"/application/{{id}}\">{{name}} [{{health}}]</a></li>"
-		+ "{{/each}}"
-		+ "</ul></div>"
-		+ "<div id=\"workspace\">"
-			+ "<h1>{{data.workspace.name}}</h1>"
-			+ "<div>Last updated {{data.workspace.updated}}</div>"
-		+ "</div>";
-
-	var workspaceView = Handlebars.compile(workspaceViewTemplate);
+	var app_menu = {};
 
 	return {
 
-		draw: function(workspace_id) {
+		updateAppMenu: function(new_workspace_id) {
+			if (new_workspace_id == app_menu.current_workspace_id) {
+				return false;	// don't redraw if unnecessary, but TODO: handle edits, etc.
+			}
+			app_menu.current_workspace_id = new_workspace_id
+		
 			pm.data.api({
-			    endpoint: "workspace/" + workspace_id + "/applications",
+			  endpoint: "workspace/" + new_workspace_id + "/applications",
 				callback: function(data) {
-					var contents = { list: $("<ul>"), data: data };
-					data.applications.forEach(function(app) {
-						contents.list.append(
-							$("<li><a href=\"\">" + app.name + "</a></li>")
-						);
-					});
-					$("#main").html(workspaceView(contents));
-					// app_list.on('click', function(e) { console.log(e.target); });
+					$('#app_menu_wrapper').html(pm.handlebars.app_menu(data))
 				}
 			});
 
 		},
 
-		// event handler for changes in the workspace switcher
-		switchTo: function(e) {
-			var workspace_id = $(e.target).val();
-
-			console.log("Switching to " + workspace_id);
-
-			if (workspace_id == "overview") {
-				pm.overview.init();
+		switchTo: function() {
+			var url_match = document.location.pathname.match(/\/(\d+)\//);
+		
+			if ($('#app_menu_wrapper').length && $('#app_view_main').length) {
+				$('#app_view_main').empty();
 			} else {
-				// do stuff
-				pm.workspace.draw(workspace_id);
+				$('#main').empty();
+				$('#main').append(
+					$("<div id=\"app_menu_wrapper\">"),
+					$("<div id=\"app_view_main\" class=\"with-application-list\">")
+				);
+				pm.history.loadingOverlay();
 			}
+			
+			pm.workspace.updateAppMenu(url_match[1]);
+		
+			pm.data.api({
+				endpoint: 'workspace/' + url_match[1],	// or just document.location?
+				callback: function(data) {
+					$('#app_view_main').html(pm.handlebars.workspace_main(data));
+					$('.loading-overlay').remove();
+					pm.stats.routerstats.redraw();
+				}
+			});
 		}
 
 	};

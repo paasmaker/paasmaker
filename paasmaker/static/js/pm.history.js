@@ -8,20 +8,30 @@
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 
 // Mapping of URLs that can be handled by the JavaScript code (i.e. without a page refresh)
-// Note: additions here should always be reflected in the relevant controller class
-pm.routingTable = {
-	"/profile": pm.admin.profile,
-	"/configuration/plugins": pm.admin.plugins,
-	"/configuration/dump": pm.admin.config_dump,
-	"/user/list": pm.admin.user_list,
-	"/role/list": pm.admin.role_list,
-	"/role/allocation/list": pm.admin.allocation_list
-};
+// Note: additions here should always be reflected in the relevant controller class, with client_side_render()
+pm.routingTable = [
+	[ /\/profile/, pm.admin.profile ],
+	[ /\/configuration\/plugins/, pm.admin.plugins ],
+	[ /\/configuration\/dump/, pm.admin.config_dump ],
+	[ /\/user\/list/, pm.admin.user_list ],
+	[ /\/role\/list/, pm.admin.role_list ],
+	[ /\/role\/allocation\/list/, pm.admin.allocation_list ],
+	[ /\/workspace\/\d+\/applications\/?$/, pm.workspace ]
+];
 
 pm.history = (function() {
 	var current_address;
 
 	return {
+		getRoute: function(pathname) {
+			for (var i=0, compare; compare = pm.routingTable[i]; i++) {
+				if (compare[0].test(pathname)) {
+					return compare[1];
+				}
+			}
+			return false;
+		},
+	
 		loadingOverlay: function() {
 			// cover the whole view with a loading spinner
 			var overlay = $("<div class=\"loading-overlay\"><img src=\"/static/img/spinner32.gif\" alt=\"\"></div>");
@@ -45,7 +55,8 @@ pm.history = (function() {
 				
 				pm.data.removeListeners();
 				pm.history.loadingOverlay();
-				pm.routingTable[address].switchTo.apply(pm.routingTable[address]);
+				var module = pm.history.getRoute(address);
+				module.switchTo.apply(module);
 			}
 		},
 
@@ -56,7 +67,7 @@ pm.history = (function() {
 			$(document).on('click', function(e) {
 				if (e.target.tagName == 'A') {
 					var parsed_url = e.target.href.match(/^https?\:\/\/[^\/]+(\/.*)$/);
-					if (pm.routingTable[parsed_url[1]]) {
+					if (pm.history.getRoute(parsed_url[1])) {
 						e.preventDefault();
 						window.history.pushState({ handle_in_js: true }, '', parsed_url[1]);
 						pm.history.onpopstate({ state: { handle_in_js: true } });

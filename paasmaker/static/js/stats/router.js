@@ -92,6 +92,13 @@ pm.stats.routergraph = (function(){
 pm.stats.routerstats = (function(){
 	var module = {};
 
+	module.redraw = function() {
+		$('.router-stats').each(function(i, el) {
+			el = $(el);
+			module.stats(streamSocket, el, el.data('name'), el.data('inputid'), el.data('title'));
+		});
+	};
+
 	module.stats = function(streamSocket, container, statCategory, statInputId, title) {
 		var stats = {};
 

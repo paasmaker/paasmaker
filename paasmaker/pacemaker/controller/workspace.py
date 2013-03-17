@@ -88,7 +88,7 @@ class WorkspaceEditController(BaseController):
 
 			self.add_data('workspace', workspace)
 
-			self.redirect('/workspace/list')
+			self.redirect('/workspace/' + str(workspace.id) + '/applications')
 		else:
 			self.add_data('workspace', workspace)
 			self.render("workspace/edit.html")

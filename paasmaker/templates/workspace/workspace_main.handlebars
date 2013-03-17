@@ -1,10 +1,9 @@
 <h1>Workspace: {{ workspace.name }}</h1>
 <div class="btn-toolbar">
-	{% if user_permissions.has_permission(PERMISSION.WORKSPACE_EDIT, None) %}
+	<!-- if user_permissions.has_permission(PERMISSION.WORKSPACE_EDIT, None) -->
 		<div class="btn-group btn-group-header">
 			<a class="btn" href="/workspace/{{ workspace.id }}"><i class="icon-edit"></i> Edit Workspace</a>
 		</div>
-	{% end %}
 	<div class="btn-group btn-group-header">
 		<a class="btn" href="/workspace/{{ workspace.id }}/applications/new"><i class="icon-plus"></i> Create Application</a>
 	</div>

@@ -91,8 +91,7 @@ class ApplicationListController(ApplicationRootController):
 		self._paginate('applications', applications)
 		self.add_data_template('paasmaker', paasmaker)
 		
-		self.add_data('page', 'applicationlist')
-		self.render("layout/app_nav.html")
+		self.client_side_render()
 		
 	@staticmethod
 	def get_routes(configuration):

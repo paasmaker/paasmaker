@@ -94,16 +94,9 @@ $(document).ready(
 			);
 		}
 
-		if( $('.router-stats').length > 0 )
-		{
-			$('.router-stats').each(
-				function(index, element)
-				{
-					element = $(element);
-					pm.stats.routerstats.stats(streamSocket, element, element.data('name'), element.data('inputid'), element.data('title'));
-				}
-			);
-		}
+		// search the page for .router-stats, and set
+		// up the stats widget in any that we find
+		pm.stats.routerstats.redraw();
 
 		// Disable any disabled buttons.
 		$('.btn.disabled').click(
