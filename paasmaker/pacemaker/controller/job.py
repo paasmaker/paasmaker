@@ -108,7 +108,7 @@ class JobListController(BaseController):
 			tag = "periodic"
 			if len(sub_type) > 0:
 				tag += ":" + sub_type[0:-1]
-			name = "Periodic Tasks"
+			name = "Systemwide Periodic Tasks"
 			ret = None
 			ret_name = None
 		elif job_list_type == 'instancetype':
