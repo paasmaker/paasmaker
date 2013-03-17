@@ -5,20 +5,22 @@
 {% end %}
 
 {% block pagetitle %}
-	Application List - {{ workspace.name }}
+	Workspace: {{ workspace.name }}
 {% end %}
 
 {% block body %}
 	<div class="btn-toolbar">
-		<div class="btn-group btn-group-header">
-			<a class="btn" href="/workspace/list"><i class="icon-backward"></i> Workspaces</a>
-		</div>
+		{% if user_permissions.has_permission(PERMISSION.WORKSPACE_EDIT, None) %}
+			<div class="btn-group btn-group-header">
+				<a class="btn" href="/workspace/{{ workspace.id }}"><i class="icon-edit"></i> Edit Workspace</a>
+			</div>
+		{% end %}
 		<div class="btn-group btn-group-header">
 			<a class="btn" href="/workspace/{{ workspace.id }}/applications/new"><i class="icon-plus"></i> Create Application</a>
 		</div>
 		<div class="btn-group btn-group-header">
 			<a class="btn" href="/job/list/workspace/{{ workspace.id }}">All Jobs</a>
-			<a class="btn" href="/job/list/workspace/{{ workspace.id }}?sub=cron">Cron Jobs</a>
+			<a class="btn" href="/job/list/workspace/{{ workspace.id }}?sub=cron">Crons</a>
 		</div>
 	</div>
 

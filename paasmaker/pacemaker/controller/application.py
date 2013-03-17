@@ -241,6 +241,13 @@ class ApplicationController(ApplicationRootController):
 
 		# TODO: Unit test.
 		self.add_data('application', application)
+		
+		count = {}
+		for version in application.versions:
+			count[version.id] = 0;
+			for type in version.instance_types:
+				count[version.id] = count[version.id] + type.instances.count()
+		self.add_data('instance_counts', count)
 
 		versions = application.versions.filter(
 			paasmaker.model.ApplicationVersion.deleted == None
@@ -355,6 +362,7 @@ class ApplicationServiceListController(ApplicationRootController):
 		self.require_permission(constants.PERMISSION.APPLICATION_SERVICE_DETAIL, workspace=application.workspace)
 
 		self._paginate('services', application.services)
+		self.add_data('application', application)
 		self.add_data_template('json', json)
 
 		self.render("application/services.html")

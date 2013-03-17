@@ -23,11 +23,10 @@
 		{% end %}
 	</td>
 	<td>
-		<a href="/version/{{ version.id }}">{{ len(version.instance_types) }} type(s)</a>
+		<a href="/version/{{ version.id }}">{{ instance_counts[version.id] }} instance(s) of {{ len(version.instance_types) }} type(s)</a>
 	</td>
 	<td>
 		<div class="table-button-box">
-			<a class="btn btn-mini" href="/version/{{ version.id }}/instances">Instances</a>
 			{% if version.state == constants.VERSION.PREPARED %}
 				<form method="POST" action="/version/{{ version.id }}/register">
 					<input type="submit" class="btn btn-mini btn-success" value="Register" />
