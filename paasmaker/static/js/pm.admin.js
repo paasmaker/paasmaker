@@ -28,13 +28,13 @@ pm.admin.plugins = (function() {
 			pm.data.api({
 				endpoint: 'configuration/plugins',
 				callback: function(data) {
-					valid_plugins = [];
+					var valid_plugins = [];
 				
 					for (var key in data.plugins) {
 						var item = data.plugins[key];
 						if (item.modes.indexOf('JOB') === -1) {
 							if (Object.keys(item.options).length > 0) {
-								item.options = JSON.stringify(item.options, undefined, 2);
+								item.options = JSON.stringify(item.options, undefined, 4);
 							} else {
 								item.options = '';
 							}
@@ -44,6 +44,21 @@ pm.admin.plugins = (function() {
 					}
 				
 					$('#main').html(pm.handlebars.configuration_plugins({ plugins: valid_plugins }));
+				}
+			});
+		}
+	};
+}());
+
+pm.admin.config_dump = (function() {
+	return {
+		switchTo: function() {
+			pm.data.api({
+				endpoint: 'configuration/dump',
+				callback: function(data) {
+					var config_string = JSON.stringify(data.configuration, undefined, 4);
+				
+					$('#main').html(pm.handlebars.configuration_dump({ configuration: config_string }));
 				}
 			});
 		}

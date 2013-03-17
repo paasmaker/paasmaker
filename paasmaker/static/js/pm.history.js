@@ -11,7 +11,8 @@ if (!window.pm) { var pm = {}; }	// TODO: module handling
 // Note: additions here should always be reflected in the relevant controller class
 pm.routingTable = {
 	"/profile": pm.admin.profile,
-	"/configuration/plugins": pm.admin.plugins
+	"/configuration/plugins": pm.admin.plugins,
+	"/configuration/dump": pm.admin.config_dump
 
 };
 

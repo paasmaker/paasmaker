@@ -19,7 +19,7 @@ class ConfigurationDumpController(BaseController):
 		self.add_data('configuration', self.configuration)
 		self.add_data_template('json', json)
 
-		self.render("configuration/dump.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):
