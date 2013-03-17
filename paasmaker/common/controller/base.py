@@ -571,6 +571,37 @@ class BaseController(tornado.web.RequestHandler):
 			raise ValueError("Invalid format '%s' supplied." % format)
 		self.format = format
 
+	def _get_handlebar_templates(self):
+		"""
+		Generate JavaScript literal strings for all of the .handlebars files in the
+		templates directory. This is a helper for development, because there's no easy
+		way to load a Handlebars template in a file from the browser.
+		
+		In each template, quotes and backslashes are escaped, newlines are stripped,
+		leading/trailing space is stripped, and multiple spaces are condensed.
+		
+		TODO: run this only in --debug=1, and/or implement Handlebars pre-compilation,
+		and don't use this if that is enabled.
+		"""
+		self.template_string = "pm.handlebars = {}\n"
+		
+		def walk_dir(args, dirname, files):
+			for file in files:
+				if file.endswith('.handlebars'):
+					name = file.replace('.handlebars', '')
+				
+					template = open(os.path.join(dirname, file), 'r').read()
+					template = template.replace("\\", "\\\\") \
+											.replace("\"", "\\\"") \
+											.replace("\n", " ") \
+											.replace("\r", " ") \
+											.strip()
+					template = ' '.join(template.split())
+					self.template_string += "pm.handlebars." + name + " = \"" + template + "\";\n"
+		
+		os.path.walk('paasmaker/templates/', walk_dir, None)
+		return self.template_string
+
 	def render(self, template, **kwargs):
 		"""
 		Render the response to the client, and finish the request.
@@ -597,6 +628,7 @@ class BaseController(tornado.web.RequestHandler):
 			variables.update(self.root_data)
 			variables['errors'] = self.errors
 			variables['warnings'] = self.warnings
+			variables['handlebars_templates'] = self._get_handlebar_templates()
 			variables.update(self.template)
 			variables.update(kwargs)
 			variables['PERMISSION'] = constants.PERMISSION
