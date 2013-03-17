@@ -13,7 +13,8 @@ pm.routingTable = {
 	"/profile": pm.admin.profile,
 	"/configuration/plugins": pm.admin.plugins,
 	"/configuration/dump": pm.admin.config_dump,
-	"/user/list": pm.admin.user_list
+	"/user/list": pm.admin.user_list,
+	"/role/list": pm.admin.role_list
 };
 
 pm.history = (function() {

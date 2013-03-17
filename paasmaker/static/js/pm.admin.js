@@ -78,3 +78,17 @@ pm.admin.user_list = (function() {
 		}
 	};
 }());
+
+pm.admin.role_list = (function() {
+	// TODO: this does not respect permissions for creating or editing roles
+	return {
+		switchTo: function() {
+			pm.data.api({
+				endpoint: 'role/list',
+				callback: function(data) {
+					$('#main').html(pm.handlebars.role_list(data));
+				}
+			});
+		}
+	};
+}());
