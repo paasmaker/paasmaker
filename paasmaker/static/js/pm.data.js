@@ -85,6 +85,12 @@ pm.data = (function() {
 			return streamSocket;
 		},
 
+		removeListeners: function() {
+			if (pm.data.getSocket()) {
+				pm.data.getSocket().removeAllListeners();
+			}
+		},
+
 		emit: function() {
 			pm.data.getSocket().emit.apply(streamSocket, arguments);
 		},
