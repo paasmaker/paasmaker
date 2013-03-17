@@ -14,7 +14,8 @@ pm.routingTable = {
 	"/configuration/plugins": pm.admin.plugins,
 	"/configuration/dump": pm.admin.config_dump,
 	"/user/list": pm.admin.user_list,
-	"/role/list": pm.admin.role_list
+	"/role/list": pm.admin.role_list,
+	"/role/allocation/list": pm.admin.allocation_list
 };
 
 pm.history = (function() {

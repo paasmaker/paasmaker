@@ -76,7 +76,7 @@ class RoleAllocationListController(BaseController):
 		)
 		self._paginate('allocations', allocations)
 
-		self.render("role/allocationlist.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):

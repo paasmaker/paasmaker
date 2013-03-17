@@ -92,3 +92,16 @@ pm.admin.role_list = (function() {
 		}
 	};
 }());
+
+pm.admin.allocation_list = (function() {
+	return {
+		switchTo: function() {
+			pm.data.api({
+				endpoint: 'role/allocation/list',
+				callback: function(data) {
+					$('#main').html(pm.handlebars.role_allocation_list(data));
+				}
+			});
+		}
+	};
+}());
