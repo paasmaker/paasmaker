@@ -204,7 +204,7 @@ textarea.example-configuration
 
 .application-list { float: left; width: 250px; border: 1px solid #e3e3e3; border-radius: 4px; }
 .application-list-name { display: block; font-size: larger; font-weight: bold; }
-.application-list-details { display: block; font-size: smaller; color: black; }
-.active .application-list-details { color: #e0e0e0; }
+.application-list-details { display: block; font-size: smaller; color: #999999; }
+.active .application-list-details { color: #e5e5e5; }
 
 .with-application-list { margin-left: 270px; }

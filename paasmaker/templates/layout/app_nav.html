@@ -15,9 +15,9 @@
 					<a href="/application/{{ app.id }}">
 						<span class="application-list-name">{{ app.name }}</span>
 						<span class="application-list-details">
-							Health: {{ app.health }} &#183;
-							{{ app.versions.filter(paasmaker.model.ApplicationVersion.deleted == None).count() }} version(s) &#183;
-							{{ len(app.services) }} service(s)
+							Health: {{ app.health }} &middot;
+							{{ app.versions.filter(paasmaker.model.ApplicationVersion.deleted == None).count() }}&nbsp;version(s) &middot;
+							{{ len(app.services) }}&nbsp;service(s)
 						</span>
 					</a>
 				</li>
