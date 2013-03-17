@@ -1,5 +1,15 @@
 /* Paasmaker CSS */
 
+/* Login page */
+.index_column { width: 45%; float: left; margin: 20px; }
+
+/* Overview / dashboard page */
+.overview_block { width: 30%; float: left; margin: 10px; }
+.router-stats-collection { clear: both; padding-top: 40px; }
+.overview_block table td { min-width: 5em; }
+td.overview_count { text-align: right; }
+.overview_more_link { margin-top: 1em; font-style: italic; }
+
 /* COMMON CSS STYLES */
 ul.errors
 {
@@ -113,6 +123,7 @@ textarea.example-configuration
 	float: right;
 	right: 0px;
 
+	min-height: 85px;
 	width: 250px;
 }
 
@@ -180,3 +191,20 @@ textarea.example-configuration
 {
 	display: none;
 }
+
+/* Workspace view - big graph */
+
+.workspace-overview .router-stats { width: 820px; height: 400px; position: relative; float: none; }
+.workspace-overview .router-stats .secondary, .workspace-overview .router-stats .graph { display: block; }
+.workspace-overview .router-stats .btn-group, .workspace-overview .router-stats .complete-title { display: none; }
+.workspace-overview .router-stats .values { width: 200px; margin: 10px 5px; float: right; }
+.workspace-overview .router-stats .graph { position: absolute; top: 10px; left: 10px; width: 600px; height: 400px; }
+
+/* Workspace view - application list */
+
+.application-list { float: left; width: 250px; border: 1px solid #e3e3e3; border-radius: 4px; }
+.application-list-name { display: block; font-size: larger; font-weight: bold; }
+.application-list-details { display: block; font-size: smaller; color: #999999; }
+.active .application-list-details { color: #e5e5e5; }
+
+.with-application-list { margin-left: 270px; }

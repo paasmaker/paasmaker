@@ -7,7 +7,7 @@
 {% block body %}
 	<div class="btn-group btn-group-header">
 		{% if user_permissions.has_permission(PERMISSION.USER_EDIT, None) %}
-			<a class="btn" href="/user/create">Create User</a>
+			<a class="btn" href="/user/create"><i class="icon-plus"></i> Create User</a>
 		{% end %}
 	</div>
 

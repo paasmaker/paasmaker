@@ -90,9 +90,10 @@ class ApplicationListController(ApplicationRootController):
 		self.add_data('workspace', workspace)
 		self._paginate('applications', applications)
 		self.add_data_template('paasmaker', paasmaker)
-
-		self.render("application/list.html")
-
+		
+		self.add_data('page', 'applicationlist')
+		self.render("layout/app_nav.html")
+		
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
@@ -241,6 +242,26 @@ class ApplicationController(ApplicationRootController):
 
 		# TODO: Unit test.
 		self.add_data('application', application)
+		
+		count = {}
+		for version in application.versions:
+			count[version.id] = 0;
+			for type in version.instance_types:
+				count[version.id] = count[version.id] + type.instances.count()
+		self.add_data('instance_counts', count)
+
+		workspace = self._get_workspace(application.workspace_id)
+		self.add_data('workspace', workspace)
+		self.add_data_template('paasmaker', paasmaker)
+
+		applications = self.session.query(
+			paasmaker.model.Application
+		).filter(
+			paasmaker.model.Application.workspace == workspace
+		).filter(
+			paasmaker.model.Application.deleted == None
+		)
+		self.add_data('applications', applications)
 
 		versions = application.versions.filter(
 			paasmaker.model.ApplicationVersion.deleted == None
@@ -255,8 +276,9 @@ class ApplicationController(ApplicationRootController):
 		self._paginate('versions', versions)
 		self.add_data_template('constants', constants)
 		self.add_data('current_version', current_version)
+		self.add_data('page', 'application')
 
-		self.render("application/versions.html")
+		self.render("layout/app_nav.html")
 
 	@staticmethod
 	def get_routes(configuration):
@@ -355,6 +377,7 @@ class ApplicationServiceListController(ApplicationRootController):
 		self.require_permission(constants.PERMISSION.APPLICATION_SERVICE_DETAIL, workspace=application.workspace)
 
 		self._paginate('services', application.services)
+		self.add_data('application', application)
 		self.add_data_template('json', json)
 
 		self.render("application/services.html")
