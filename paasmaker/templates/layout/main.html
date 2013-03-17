@@ -93,32 +93,36 @@
 		</div>
 		</div>
 		</div>
-
+		
 		<div class="container">
-			{% block pretitle %}{% end %}
-			<h1>{% block pagetitle %}{% end %}</h1>
+			{% block leftnav %}{% end %}
 
-			{% block errors %}
-				{% if len(errors) > 0 %}
-					<div class="alert alert-error">
-						<ul class="errors">
-							{% for error in errors %}
-								<li>{{ error }}</li>
-							{% end %}
-							{% try %}
-								{% for key, error in input_errors.iteritems() %}
-									<li>{{ key }}: {{ error }}</li>
+			<div id="main" {% block mainmodifier %}{% end %}>
+				{% block pretitle %}{% end %}
+				<h1>{% block pagetitle %}{% end %}</h1>
+
+				{% block errors %}
+					{% if len(errors) > 0 %}
+						<div class="alert alert-error">
+							<ul class="errors">
+								{% for error in errors %}
+									<li>{{ error }}</li>
 								{% end %}
-							{% except NameError, ex %}
-								{# Does't have input errors. Ignore. #}
-							{% end %}
-						</ul>
-					</div>
+								{% try %}
+									{% for key, error in input_errors.iteritems() %}
+										<li>{{ key }}: {{ error }}</li>
+									{% end %}
+								{% except NameError, ex %}
+									{# Does't have input errors. Ignore. #}
+								{% end %}
+							</ul>
+						</div>
+					{% end %}
 				{% end %}
-			{% end %}
 
-			{% block body %}
-			{% end %}
+				{% block body %}
+				{% end %}
+			</div>
 		</div>
 
 		<script src="{{ static_url("js/libs/jquery-1.8.3.min.js") }}"></script>

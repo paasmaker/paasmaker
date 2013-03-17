@@ -34,8 +34,10 @@ class VersionController(VersionRootController):
 
 	def get(self, version_id):
 		version = self._get_version(version_id)
-		self.add_data('version', version)
 		self.add_data_template('configuration', self.configuration)
+		
+		# TODO: for some reason the assignment name 'version' doesn't work here
+		self.add_data('version_to_view', version)
 
 		# For the API, fetch a list of types as well.
 		types = {}
@@ -44,7 +46,23 @@ class VersionController(VersionRootController):
 			types[instance_type.name]['version_url'] = instance_type.version_hostname(self.configuration)
 		self.add_data('types', types)
 
-		self.render("version/view.html")
+		workspace = self.session.query(
+			paasmaker.model.Workspace
+		).get(version.application.workspace_id)
+		self.add_data('workspace', workspace)
+		self.add_data_template('paasmaker', paasmaker)
+
+		applications = self.session.query(
+			paasmaker.model.Application
+		).filter(
+			paasmaker.model.Application.workspace == workspace
+		).filter(
+			paasmaker.model.Application.deleted == None
+		)
+		self.add_data('applications', applications)
+		self.add_data('page', 'version')
+
+		self.render("layout/app_nav.html")
 
 	@staticmethod
 	def get_routes(configuration):

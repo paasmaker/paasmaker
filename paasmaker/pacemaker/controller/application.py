@@ -90,9 +90,10 @@ class ApplicationListController(ApplicationRootController):
 		self.add_data('workspace', workspace)
 		self._paginate('applications', applications)
 		self.add_data_template('paasmaker', paasmaker)
-
-		self.render("application/list.html")
-
+		
+		self.add_data('page', 'applicationlist')
+		self.render("layout/app_nav.html")
+		
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
@@ -249,6 +250,19 @@ class ApplicationController(ApplicationRootController):
 				count[version.id] = count[version.id] + type.instances.count()
 		self.add_data('instance_counts', count)
 
+		workspace = self._get_workspace(application.workspace_id)
+		self.add_data('workspace', workspace)
+		self.add_data_template('paasmaker', paasmaker)
+
+		applications = self.session.query(
+			paasmaker.model.Application
+		).filter(
+			paasmaker.model.Application.workspace == workspace
+		).filter(
+			paasmaker.model.Application.deleted == None
+		)
+		self.add_data('applications', applications)
+
 		versions = application.versions.filter(
 			paasmaker.model.ApplicationVersion.deleted == None
 		).order_by(
@@ -262,8 +276,9 @@ class ApplicationController(ApplicationRootController):
 		self._paginate('versions', versions)
 		self.add_data_template('constants', constants)
 		self.add_data('current_version', current_version)
+		self.add_data('page', 'application')
 
-		self.render("application/versions.html")
+		self.render("layout/app_nav.html")
 
 	@staticmethod
 	def get_routes(configuration):

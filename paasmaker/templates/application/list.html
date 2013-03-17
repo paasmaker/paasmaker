@@ -1,64 +1,19 @@
-{% extends "../layout/main.html" %}
-
-{% block pretitle %}
-	<div class="router-stats well well-small" data-name="workspace" data-inputid="{{ workspace.id }}">Loading...</div>
-{% end %}
-
-{% block pagetitle %}
-	Workspace: {{ workspace.name }}
-{% end %}
-
-{% block body %}
-	<div class="btn-toolbar">
-		{% if user_permissions.has_permission(PERMISSION.WORKSPACE_EDIT, None) %}
-			<div class="btn-group btn-group-header">
-				<a class="btn" href="/workspace/{{ workspace.id }}"><i class="icon-edit"></i> Edit Workspace</a>
-			</div>
-		{% end %}
+<h1>Workspace: {{ workspace.name }}</h1>
+<div class="btn-toolbar">
+	{% if user_permissions.has_permission(PERMISSION.WORKSPACE_EDIT, None) %}
 		<div class="btn-group btn-group-header">
-			<a class="btn" href="/workspace/{{ workspace.id }}/applications/new"><i class="icon-plus"></i> Create Application</a>
+			<a class="btn" href="/workspace/{{ workspace.id }}"><i class="icon-edit"></i> Edit Workspace</a>
 		</div>
-		<div class="btn-group btn-group-header">
-			<a class="btn" href="/job/list/workspace/{{ workspace.id }}">All Jobs</a>
-			<a class="btn" href="/job/list/workspace/{{ workspace.id }}?sub=cron">Crons</a>
-		</div>
+	{% end %}
+	<div class="btn-group btn-group-header">
+		<a class="btn" href="/workspace/{{ workspace.id }}/applications/new"><i class="icon-plus"></i> Create Application</a>
 	</div>
+	<div class="btn-group btn-group-header">
+		<a class="btn" href="/job/list/workspace/{{ workspace.id }}">All Jobs</a>
+		<a class="btn" href="/job/list/workspace/{{ workspace.id }}?sub=cron">Cron Jobs</a>
+	</div>
+</div>
 
-	<table class="table table-striped table-bordered">
-		<tr>
-			<th>Application</th>
-			<th>Health</th>
-			<th>Versions</th>
-			<th>Services</th>
-		</tr>
-		{% for application in applications %}
-			<tr>
-				<td>
-					{{ application.name }}
-					{% if user_permissions.has_permission(PERMISSION.APPLICATION_DELETE, application.workspace_id) %}
-						{% if application.can_delete() %}
-							<form method="POST" action="/application/{{ application.id }}/delete" style="display: inline;">
-								<input type="submit" class="btn btn-mini btn-danger" value="Delete" />
-							</form>
-						{% end %}
-					{% end %}
-				</td>
-				<td>
-					{{ application.health }}
-				</td>
-				<td>
-					<a href="/application/{{ application.id }}">
-						{{ application.versions.filter(paasmaker.model.ApplicationVersion.deleted == None).count() }} versions
-					</a>
-				</td>
-				<td>
-					{% if user_permissions.has_permission(PERMISSION.APPLICATION_SERVICE_DETAIL, application.workspace_id) %}<a href="/application/{{ application.id }}/services">{% end %}
-						{{ len(application.services) }} services
-					{% if user_permissions.has_permission(PERMISSION.APPLICATION_SERVICE_DETAIL, application.workspace_id) %}</a>{% end %}
-				</td>
-			</tr>
-		{% end %}
-	</table>
-
-	{% module Template("include/pagination.html", page_data=applications_pagination) %}
-{% end %}
+<div class="workspace-overview">
+	<div class="router-stats well well-small" data-name="workspace" data-inputid="{{ workspace.id }}" data-title="Workspace: {{ workspace.name }}">Loading...</div>
+</div>

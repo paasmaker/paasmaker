@@ -1,0 +1,42 @@
+{% extends "../layout/main.html" %}
+
+{% block leftnav %}
+	<div class="application-list">
+		<ul class="nav nav-list">
+			<li class="nav-header">Applications: {{ workspace.name }}</li>
+			{% for app in applications %}
+				{% if page == 'application' and application.id == app.id %}
+					<li class="active">
+				{% elif page == 'version' and version_to_view.application.id == app.id %}
+					<li class="active">
+				{% else %}
+					<li>
+				{% end %}
+					<a href="/application/{{ app.id }}">
+						<span class="application-list-name">{{ app.name }}</span>
+						<span class="application-list-details">
+							Health: {{ app.health }} &#183;
+							{{ app.versions.filter(paasmaker.model.ApplicationVersion.deleted == None).count() }} version(s) &#183;
+							{{ len(app.services) }} service(s)
+						</span>
+					</a>
+				</li>
+			{% end %}
+			<li class="divider"></li>
+			<li><a href="/workspace/{{ workspace.id }}/applications/new">Create Application</a></li>
+		</ul>
+	</div>
+{% end %}
+{% block mainmodifier %}class="with-application-list"{% end %}
+
+{% block body %}
+	{% if page == 'version' %}
+		{% include '../version/view.html' %}
+	{% end %}
+	{% if page == 'application' %}
+		{% include '../application/versions.html' %}
+	{% end %}
+	{% if page == 'applicationlist' %}
+		{% include '../application/list.html' %}
+	{% end %}
+{% end %}
