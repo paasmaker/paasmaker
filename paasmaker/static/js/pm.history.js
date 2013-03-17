@@ -32,10 +32,15 @@ pm.history = (function() {
 			return false;
 		},
 	
-		loadingOverlay: function() {
-			// cover the whole view with a loading spinner
+		loadingOverlay: function(el) {
+			if (el) {
+				el = $(el);
+			} else {
+				// cover the whole view with a loading spinner
+				el = $('#main');
+			}
 			var overlay = $("<div class=\"loading-overlay\"><img src=\"/static/img/spinner32.gif\" alt=\"\"></div>");
-			$('#main').append(overlay);
+			el.append(overlay);
 			overlay.animate({ opacity: 0.8 });		
 		},
 		

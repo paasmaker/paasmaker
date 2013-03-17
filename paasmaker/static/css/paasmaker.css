@@ -198,6 +198,8 @@ textarea.example-configuration
 
 /* Workspace view - big graph */
 
+#app_view_main { min-height: 400px; position: relative; }
+
 .workspace-overview .router-stats { width: 820px; height: 400px; position: relative; float: none; }
 .workspace-overview .router-stats .secondary, .workspace-overview .router-stats .graph { display: block; }
 .workspace-overview .router-stats .btn-group, .workspace-overview .router-stats .complete-title { display: none; }

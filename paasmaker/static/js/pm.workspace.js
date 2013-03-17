@@ -14,17 +14,28 @@ pm.workspace = (function() {
 
 		updateAppMenu: function(new_workspace_id) {
 			if (new_workspace_id == app_menu.current_workspace_id) {
-				return false;	// don't redraw if unnecessary, but TODO: handle edits, etc.
+				if ($('#app_menu_wrapper a').length) {
+					// don't redraw if unnecessary, but TODO: handle edits, etc.
+					// TODO: find a better detection method?
+					return false;
+				} else {
+					// redraw, but a new ajax roundtrip shouldn't be needed
+					pm.workspace.redrawAppMenu();
+				}
 			}
 			app_menu.current_workspace_id = new_workspace_id
 		
 			pm.data.api({
 			  endpoint: "workspace/" + new_workspace_id + "/applications",
 				callback: function(data) {
-					$('#app_menu_wrapper').html(pm.handlebars.app_menu(data))
+					app_menu.data = data;	// TODO: add a proper cache to pm.data.js?
+					pm.workspace.redrawAppMenu();
 				}
 			});
-
+		},
+		
+		redrawAppMenu: function() {
+			$('#app_menu_wrapper').html(pm.handlebars.app_menu(app_menu.data));
 		},
 
 		switchTo: function() {
@@ -38,7 +49,7 @@ pm.workspace = (function() {
 					$("<div id=\"app_menu_wrapper\">"),
 					$("<div id=\"app_view_main\" class=\"with-application-list\">")
 				);
-				pm.history.loadingOverlay();
+				pm.history.loadingOverlay("#app_view_main");
 			}
 			
 			pm.workspace.updateAppMenu(url_match[1]);
