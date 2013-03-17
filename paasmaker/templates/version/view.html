@@ -9,10 +9,14 @@
 {% end %}
 
 {% block body %}
-	<div class="btn-group btn-group-header">
-		<a class="btn" href="/application/{{ version.application.id }}">Back to {{ version.application.name }}</a>
-		<a class="btn" href="/job/list/version/{{ version.id }}">All Jobs</a>
-		<a class="btn" href="/job/list/version/{{ version.id }}?sub=cron">Cron Jobs</a>
+	<div class="btn-toolbar">
+		<div class="btn-group btn-group-header">
+			<a class="btn" href="/application/{{ version.application.id }}"><i class="icon-backward"></i> Back to {{ version.application.name }}</a>
+		</div>
+		<div class="btn-group btn-group-header">
+			<a class="btn" href="/job/list/version/{{ version.id }}">All Jobs</a>
+			<a class="btn" href="/job/list/version/{{ version.id }}?sub=cron">Cron Jobs</a>
+		</div>
 	</div>
 
 	<h2>Summary</h2>

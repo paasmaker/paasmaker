@@ -7,7 +7,7 @@
 {% block body %}
 	<div class="btn-group btn-group-header">
 		{% if user_permissions.has_permission(PERMISSION.WORKSPACE_EDIT, None) %}
-			<a class="btn" href="/workspace/create">Create Workspace</a>
+			<a class="btn" href="/workspace/create"><i class="icon-plus"></i> Create Workspace</a>
 		{% end %}
 	</div>
 
