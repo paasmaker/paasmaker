@@ -142,10 +142,12 @@
 		<script src="{{ static_url("js/jobs/display.js") }}"></script>
 		<script src="{{ static_url("js/widgets/upload.js") }}"></script>
 		
+		<script src="{{ static_url("js/pm.admin.js") }}"></script>
 		<script src="{{ static_url("js/pm.history.js") }}"></script>
 		
 		<script type="text/javascript">
-			{% raw handlebars_templates %}
+			{% if "handlebars_templates" in globals() %}{% raw handlebars_templates %}{% end %}
+			{% if "js_commands" in globals() %}{% raw js_commands %}{% end %}
 		</script>
 		{% block scripts %}
 		{% end %}

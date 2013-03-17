@@ -370,6 +370,18 @@ class BaseController(tornado.web.RequestHandler):
 		else:
 			self.render("api/apionly.html")
 
+	def client_side_render(self):
+		"""
+		Handler for pages that are generated on the client side rather than on the server side.
+		Loads an empty main.html, with an extra script block that fires off the code in
+		pm.history.js to perform necessary ajax requests, etc.
+		"""
+		if self.format == 'html':
+			self.add_data('js_commands', 'pm.history.onpopstate({ state: { handle_in_js: true } });')
+			self.render("layout/main.html")
+		else:
+			self.render('')
+
 	def get_current_user(self):
 		"""
 		Get the currently logged in user. Only tests for HTTP cookies
@@ -597,7 +609,7 @@ class BaseController(tornado.web.RequestHandler):
 											.replace("\r", " ") \
 											.strip()
 					template = ' '.join(template.split())
-					self.template_string += "pm.handlebars." + name + " = \"" + template + "\";\n"
+					self.template_string += "pm.handlebars." + name + " = Handlebars.compile(\"" + template + "\");\n"
 		
 		os.path.walk('paasmaker/templates/', walk_dir, None)
 		return self.template_string
