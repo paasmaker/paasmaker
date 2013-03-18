@@ -837,7 +837,7 @@ class ApplicationVersion(OrmBase, Base):
 		return "<ApplicationVersion('%s'@'%s' - active: %s)>" % (self.version, self.application, str(self.is_current))
 
 	def flatten(self, field_list=None):
-		return super(ApplicationVersion, self).flatten(['application_id', 'version', 'is_current', 'health', 'scm_name', 'scm_parameters'])
+		return super(ApplicationVersion, self).flatten(['application_id', 'version', 'is_current', 'state', 'health', 'scm_name', 'scm_parameters'])
 
 	def flatten_for_heart(self):
 		"""

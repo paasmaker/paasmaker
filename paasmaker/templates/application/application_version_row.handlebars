@@ -1,0 +1,50 @@
+<tr>
+	<td>
+		<a href="/version/{{ id }}">Version {{ version }}</a>
+		{{#if is_current}}<i class="icon-star" title="Version is current"></i>{{/if}}
+	</td>
+	<td>
+		{{state}}
+	</td>
+	<td>
+		{{{health_string}}}
+	</td>
+	<td class="version_instance_count" data-version-id="{{id}}">
+		<img src="/static/img/load-inline.gif" alt="">
+	</td>
+	<td>
+		<div class="table-button-box">
+			{{! TODO: don't repeat so much code here? }}
+			{{#if buttons_to_show.register}}
+				<form method="POST" action="/version/{{ id }}/register">
+					<input type="submit" class="btn btn-mini btn-success" value="Register" />
+				</form>
+			{{/if}}
+			{{#if buttons_to_show.start}}
+				<form method="POST" action="/version/{{ id }}/start">
+					<input type="submit" class="btn btn-mini btn-success" value="Start" />
+				</form>
+			{{/if}}
+			{{#if buttons_to_show.stop}}
+				<form method="POST" action="/version/{{ id }}/stop">
+					<input type="submit" class="btn btn-mini btn-danger" value="Stop" />
+				</form>
+			{{/if}}
+			{{#if buttons_to_show.deregister}}
+				<form method="POST" action="/version/{{ id }}/deregister">
+					<input type="submit" class="btn btn-mini btn-warning" value="De Register" />
+				</form>
+			{{/if}}
+			{{#if buttons_to_show.makecurrent}}
+				<form method="POST" action="/version/{{ id }}/setcurrent">
+					<input type="submit" class="btn btn-mini btn-primary" value="Make Current" />
+				</form>
+			{{/if}}
+			{{#if buttons_to_show.delete}}
+				<form method="POST" action="/version/{{ id }}/delete">
+					<input type="submit" class="btn btn-mini btn-danger" value="Delete" />
+				</form>
+			{{/if}}
+		</div>
+	</td>
+</tr>

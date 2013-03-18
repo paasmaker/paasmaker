@@ -90,9 +90,9 @@ class ApplicationListController(ApplicationRootController):
 		self.add_data('workspace', workspace)
 		self._paginate('applications', applications)
 		self.add_data_template('paasmaker', paasmaker)
-		
+
 		self.client_side_render()
-		
+
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
@@ -241,7 +241,7 @@ class ApplicationController(ApplicationRootController):
 
 		# TODO: Unit test.
 		self.add_data('application', application)
-		
+
 		count = {}
 		for version in application.versions:
 			count[version.id] = 0;
@@ -277,7 +277,7 @@ class ApplicationController(ApplicationRootController):
 		self.add_data('current_version', current_version)
 		self.add_data('page', 'application')
 
-		self.render("layout/app_nav.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):

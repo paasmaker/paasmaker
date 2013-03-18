@@ -16,7 +16,8 @@ pm.routingTable = [
 	[ /\/user\/list/, pm.admin.user_list ],
 	[ /\/role\/list/, pm.admin.role_list ],
 	[ /\/role\/allocation\/list/, pm.admin.allocation_list ],
-	[ /\/workspace\/\d+\/applications\/?$/, pm.workspace ]
+	[ /\/workspace\/\d+\/applications\/?$/, pm.workspace ],
+	[ /\/application\/\d+\/?$/, pm.application ]
 ];
 
 pm.history = (function() {
@@ -31,7 +32,7 @@ pm.history = (function() {
 			}
 			return false;
 		},
-	
+
 		loadingOverlay: function(el) {
 			if (el) {
 				el = $(el);
@@ -41,23 +42,23 @@ pm.history = (function() {
 			}
 			var overlay = $("<div class=\"loading-overlay\"><img src=\"/static/img/spinner32.gif\" alt=\"\"></div>");
 			el.append(overlay);
-			overlay.animate({ opacity: 0.8 });		
+			overlay.animate({ opacity: 0.8 });
 		},
-		
+
 		/**
 		 * event handler for changes to page history; also runs at page load when the
 		 * server-side controller directs us to an empty main.html (i.e. for pages
 		 * that are served by handlebars templates instead of tornado templates)
 		 *
 		 * when switching to a new view, show a loading spinner and make sure to
-		 * close all WebSocket listeners; the new view will start its own if needed 
+		 * close all WebSocket listeners; the new view will start its own if needed
 		 */
 		onpopstate: function(e) {
 			if (e.state && e.state.handle_in_js) {
 				var address = document.location.pathname;
 				if (address == current_address) { return false; }
 				current_address = address;
-				
+
 				pm.data.removeListeners();
 				pm.history.loadingOverlay();
 				var module = pm.history.getRoute(address);
@@ -79,7 +80,7 @@ pm.history = (function() {
 					}
 				}
 			});
-			
+
 			window.addEventListener('popstate', pm.history.onpopstate);
 			// if (foo) {
 			// 	pm.history.onpopstate({ state: { handle_in_js: true } });
