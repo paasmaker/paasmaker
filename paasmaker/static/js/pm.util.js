@@ -64,3 +64,19 @@ pm.util = (function(){
 
 	return module;
 }());
+
+/******
+ * Helper functions for Handlebars templates
+ */
+
+/**
+ * {{#ifPermission 'FOO'}}{{/ifPermission}}
+ * TODO: this does not support permissions specific to workspaces
+ */
+Handlebars.registerHelper('ifPermission', function(conditional, options) {
+	if (pm.util.hasPermission(conditional)) {
+		return options.fn(this);
+	} else {
+		return options.inverse(this);
+	}
+});

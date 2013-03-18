@@ -1,8 +1,9 @@
 <h1>Role List</h1>
 
 <div class="btn-group btn-group-header">
-	<!-- if user_permissions.has_permission(PERMISSION.ROLE_EDIT, None) -->
+	{{#ifPermission 'ROLE_EDIT'}}
 		<a class="btn" href="/role/create"><i class="icon-plus"></i> Create Role</a>
+	{{/ifPermission}}
 </div>
 
 <table class="table table-striped table-bordered">
@@ -13,10 +14,9 @@
 	{{#each roles}}
 		<tr>
 			<td>
-				<!-- if user_permissions.has_permission(PERMISSION.ROLE_EDIT, None) -->
-				<a href="/role/{{ id }}">
+				{{#ifPermission 'ROLE_EDIT'}}<a href="/role/{{ id }}">{{/ifPermission}}
 					{{ name }}
-				</a>
+				{{#ifPermission 'ROLE_EDIT'}}</a>{{/ifPermission}}
 			</td>
 			<td>
 				<ul>
