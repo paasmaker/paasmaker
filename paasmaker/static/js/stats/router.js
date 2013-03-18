@@ -206,6 +206,7 @@ pm.stats.routerstats = (function(){
 				if(serverStatCategory == statCategory && serverInputId == statInputId) {
 					// No stats available.
 					primaryStats.text("No stats available.");
+					buttonBox.empty();
 
 					timeout = setTimeout(function() { stats.requestUpdate() }, 1000);
 				}
