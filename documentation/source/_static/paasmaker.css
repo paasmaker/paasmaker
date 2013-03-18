@@ -4,6 +4,8 @@ footer { text-align: center;}
 .related { display: none; }
 .sphinxsidebar { padding: 10px; }
 
+span.viewcode-link { padding-left: 10px; }
+
 /* Show the header links when you hover on the headers.
    Taken directly from Sphinx's styles. */
 a.headerlink {
