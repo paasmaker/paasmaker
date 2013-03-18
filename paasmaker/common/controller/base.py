@@ -118,6 +118,7 @@ class BaseController(tornado.web.RequestHandler):
 		self.params = {}
 		self.raw_params = {}
 		self.super_auth = False
+		self.extra_data_fields = {}
 
 		self.add_data_template('is_pacemaker', self.configuration.is_pacemaker())
 		self.add_data_template('is_router', self.configuration.is_router())
@@ -491,6 +492,20 @@ class BaseController(tornado.web.RequestHandler):
 		"""
 		self.template[key] = value
 
+	def add_extra_data_fields(self, model, fields):
+		"""
+		Add additional fields that the JSON encoder will add for the given
+		model objects. It is keyed by the object type.
+
+		:arg ORMBase model: The model to add the extra fields for.
+		:arg str|list: The fields to add to the output.
+		"""
+		if model not in self.extra_data_fields:
+			self.extra_data_fields[model] = set()
+		if not isinstance(fields, list):
+			fields = [fields]
+		self.extra_data_fields[model].update(fields)
+
 	def get_data(self, key):
 		"""
 		Get an existing data key previously added with ``add_data()``. Raises
@@ -588,7 +603,7 @@ class BaseController(tornado.web.RequestHandler):
 			variables['errors'] = self.errors
 			variables['warnings'] = self.warnings
 			self.set_header('Content-Type', 'application/json')
-			self.write(json.dumps(variables, cls=paasmaker.util.jsonencoder.JsonEncoder))
+			self.write(json.dumps(variables, cls=paasmaker.util.jsonencoder.JsonEncoder, model_additional=self.extra_data_fields))
 			# The super classes render() calls finish at this stage,
 			# so we do so here.
 			self.finish()

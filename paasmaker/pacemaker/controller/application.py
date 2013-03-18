@@ -352,10 +352,13 @@ class ApplicationServiceListController(ApplicationRootController):
 
 	def get(self, application_id):
 		application = self._get_application(application_id)
-		self.require_permission(constants.PERMISSION.APPLICATION_SERVICE_DETAIL, workspace=application.workspace)
+		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=application.workspace)
 
 		self._paginate('services', application.services)
 		self.add_data_template('json', json)
+
+		if self.has_permission(constants.PERMISSION.APPLICATION_SERVICE_DETAIL, workspace=application.workspace):
+			self.add_extra_data_fields(paasmaker.model.Service, 'credentials')
 
 		self.render("application/services.html")
 

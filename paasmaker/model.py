@@ -1317,7 +1317,10 @@ class Service(OrmBase, Base):
 		return "<Service('%s'->'%s')>" % (self.provider, self.application)
 
 	def flatten(self, field_list=None):
-		return super(Service, self).flatten(['application_id', 'name', 'provider', 'credentials', 'state'])
+		final_field_list = ['application_id', 'name', 'provider', 'state']
+		if field_list:
+			final_field_list.extend(field_list)
+		return super(Service, self).flatten(final_field_list)
 
 	@staticmethod
 	def get_or_create(session, application, name):

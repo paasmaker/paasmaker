@@ -24,6 +24,15 @@ class JsonEncoder(json.JSONEncoder):
 		result = json.dumps(data, cls=paasmaker.util.jsonencoder.JsonEncoder)
 
 	"""
+	def __init__(self, *args, **kwargs):
+		if 'model_additional' in kwargs:
+			self.model_additional = kwargs['model_additional']
+			del kwargs['model_additional']
+		else:
+			self.model_additional = {}
+
+		super(JsonEncoder, self).__init__(*args, **kwargs)
+
 	def default(self, obj):
 		if isinstance(obj, datetime.datetime):
 			# Dates are returned in ISO 8601 format, always in UTC.
@@ -33,8 +42,12 @@ class JsonEncoder(json.JSONEncoder):
 			return list(obj)
 		if isinstance(obj, paasmaker.model.OrmBase):
 			# These classes know how to flatten themselves.
-			# TODO: Pass a possibly mutatable list of fields to return.
-			return obj.flatten()
+			if type(obj) in self.model_additional:
+				# Add some additional fields.
+				return obj.flatten(self.model_additional[type(obj)])
+			else:
+				# Return the default set.
+				return obj.flatten()
 		if isinstance(obj, sqlalchemy.orm.query.Query):
 			# Flatten the query into objects.
 			flat = []
