@@ -1,0 +1,12 @@
+{{# each versions}}
+	<li class="version" data-application-id="{{application_id}}">
+		<a href="/version/{{id}}">
+			<span class="application-list-version">
+				Version {{id}}
+				{{#if is_current}}
+					<i class="icon-star" title="Version is current"></i>
+				{{/if}}
+			</span>
+		</a>
+	</li>
+{{/each}}
