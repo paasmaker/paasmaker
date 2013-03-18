@@ -24,20 +24,14 @@ For this guide, we're assuming that:
 * You are using some kind of source control to manage your code. In this example,
   we use Git to manage this.
 
-Create the git repository
--------------------------
+Create the source tree
+----------------------
 
-Use your normal tools to create a git repository, and hook it up to the remote repository.
+.. code-block:: bash
 
-For example, with BitBucket, you would do the following::
-
-	mkdir paasmaker-wordpress
-	cd paasmaker-wordpress
-	git init .
-	git remote add origin ssh://git@bitbucket.org/freefoote/paasmaker-wordpress-sample.git
-	... make your changes ...
-	git commit
-	git push -u origin master
+	$ mkdir paasmaker-wordpress
+	$ cd paasmaker-wordpress
+	$ git init .
 
 Download Wordpress and set up on Paasmaker
 ------------------------------------------
@@ -47,24 +41,32 @@ Download the latest version of Wordpress, and unpack it into your repository roo
 Before you do anything else, check in all the files, so you have a pristine copy of
 Wordpress, and you can easily see what you've changed since you downloaded it.
 
+.. note::
+	This isn't the best workflow for tracking remote changes to Wordpress. Please
+	let us know if you have suggestions on how to do this in a better way.
+
 At time of writing, we used version 3.5.1.
 
-For example::
+For example:
 
-	wget http://wordpress.org/latest.tar.gz
-	tar -zxvf latest.tar.gz
-	rm latest.tar.gz
-	git add .
-	git commit
+.. code-block:: bash
+
+	$ wget http://wordpress.org/latest.tar.gz
+	$ tar -zxvf latest.tar.gz
+	$ rm latest.tar.gz
+	$ git add .
+	$ git commit
 
 Now, before we go any further, we need to add a manifest file. Create ``manifest.yml``
-in the root of the repository, with the following contents::
+in the root of the repository, with the following contents:
+
+.. code-block:: yaml
 
 	manifest:
 	  format: 1
 
 	application:
-	  name: paasmaker-example-wordpress
+	  name: paasmaker-wordpress
 	  prepare:
 	    runtime:
 	      name: paasmaker.runtime.php
@@ -82,149 +84,137 @@ in the root of the repository, with the following contents::
 	      strategy: paasmaker.placement.default
 
 	services:
-	  - name: paasmaker-example-wordpress
+	  - name: wordpresssql
 	    provider: paasmaker.service.mysql
+
+.. note::
+	If you're Ubuntu 12.10 and above, check to see if you have PHP 5.4 instead of 5.3.
+	You can run ``php -v`` to check this. If it says 5.4, change 5.3 to 5.4 in the
+	manifest file.
+
+Next, download the latest version of the Paasmaker PHP interface from `the repository on BitBucket
+<https://bitbucket.org/paasmaker/paasmaker-interface-php/src>`_ - you're looking for
+``PmInterface.php``. Put it into the ``wordpress/`` directory in your project.
+
+Copy the ``wordpress/wp-config-sample.php`` file into ``wordpress/wp-config.php``.
+
+.. code-block:: bash
+
+	$ cp wordpress/wp-config-sample.php wordpress/wp-config.php
+
+Then make a few changes to ``wordpress/wp-config.php``. The highlighted lines show the updates.
+Don't forget to generate secret salts from `Wordpress's salt generator <https://api.wordpress.org/secret-key/1.1/salt/>`_.
+
+.. literalinclude:: support/paasmaker-wp-config.php
+	:language: php
+	:emphasize-lines: 17-39,56-65
+
+Your file structure in the repository should now look like this. Note that all the Wordpress
+files are in a subdirectory, and that's the public document root. This allows you to check
+in files that should not be public, such as the application manifest file.
+
+.. code-block:: none
+
+	.
+	+ manifest.yml
+	+ wordpress
+	  + wp-config.php
+	  + PmInterface.php
+	  + index.php
+	  + ... other wordpress files ...
 
 At this stage, you can add your application to Paasmaker, using the development directory
 SCM plugin. Find out the directory that you've put the files in, and enter that directory.
 Note that you should put the directory that has the ``manifest.yml`` file in it. You can
-register and then start the instance. At this stage, it won't work, and you **should not**
-do the installation via the web interface yet.
-
-Download the latest version of the Paasmaker PHP interface from `the repository on BitBucket
-<https://bitbucket.org/freefoote/paasmaker-interface-php/src>`_ - you're looking for
-``PmInterface.php``. Put it into the ``wordpress/`` directory in your project.
-
-Copy the ``wordpress/wp-config-sample.php`` file into ``wordpress/wp-config.php``, and then
-make a few changes to the file.::
-
-	<?php
-	/**
-	 * The base configurations of the WordPress.
-	 *
-	 * This file has the following configurations: MySQL settings, Table Prefix,
-	 * Secret Keys, WordPress Language, and ABSPATH. You can find more information
-	 * by visiting {@link http://codex.wordpress.org/Editing_wp-config.php Editing
-	 * wp-config.php} Codex page. You can get the MySQL settings from your web host.
-	 *
-	 * This file is used by the wp-config.php creation script during the
-	 * installation. You don't have to use the web site, you can just copy this file
-	 * to "wp-config.php" and fill in the values.
-	 *
-	 * @package WordPress
-	 */
-
-	// Your version of Wordpress won't be listening on port 80 or 443,
-	// so this convinces it otherwise.
-	define('WP_SITEURL', "http://" . $_SERVER['HTTP_X_FORWARDED_HOST'] . ':' . $_SERVER['HTTP_X_FORWARDED_PORT']);
-
-	require('PmInterface.php');
-
-	$interface = new \Paasmaker\PmInterface(array());
-
-	// This service name matches what you put in your manfiest file.
-	$databaseService = $interface->getService('paasmaker-example-wordpress');
-
-	// ** MySQL settings - You can get this info from your web host ** //
-	/** The name of the database for WordPress */
-	define('DB_NAME', $databaseService['database']);
-
-	/** MySQL database username */
-	define('DB_USER', $databaseService['username']);
-
-	/** MySQL database password */
-	define('DB_PASSWORD', $databaseService['password']);
-
-	/** MySQL hostname */
-	define('DB_HOST', $databaseService['hostname'] . ":" . $databaseService['port']);
-
-	/** Database Charset to use in creating database tables. */
-	define('DB_CHARSET', 'utf8');
-
-	/** The Database Collate type. Don't change this if in doubt. */
-	define('DB_COLLATE', '');
-
-	/**#@+
-	 * Authentication Unique Keys and Salts.
-	 *
-	 * Change these to different unique phrases!
-	 * You can generate these using the {@link https://api.wordpress.org/secret-key/1.1/salt/ WordPress.org secret-key service}
-	 * You can change these at any point in time to invalidate all existing cookies. This will force all users to have to log in again.
-	 *
-	 * @since 2.6.0
-	 */
-	// Paasmaker note: we used the link above (https://api.wordpress.org/secret-key/1.1/salt/) to
-	// generate the salt.
-	define('AUTH_KEY',         'snip');
-	define('SECURE_AUTH_KEY',  'snip');
-	define('LOGGED_IN_KEY',    'snip');
-	define('NONCE_KEY',        'snip');
-	define('AUTH_SALT',        'snip');
-	define('SECURE_AUTH_SALT', 'snip');
-	define('LOGGED_IN_SALT',   'snip');
-	define('NONCE_SALT',       'snip');
-
-	/**#@-*/
-
-	/**
-	 * WordPress Database Table prefix.
-	 *
-	 * You can have multiple installations in one database if you give each a unique
-	 * prefix. Only numbers, letters, and underscores please!
-	 */
-	$table_prefix  = 'wp_';
-
-	/**
-	 * WordPress Localized Language, defaults to English.
-	 *
-	 * Change this to localize WordPress. A corresponding MO file for the chosen
-	 * language must be installed to wp-content/languages. For example, install
-	 * de_DE.mo to wp-content/languages and set WPLANG to 'de_DE' to enable German
-	 * language support.
-	 */
-	define('WPLANG', '');
-
-	/**
-	 * For developers: WordPress debugging mode.
-	 *
-	 * Change this to true to enable the display of notices during development.
-	 * It is strongly recommended that plugin and theme developers use WP_DEBUG
-	 * in their development environments.
-	 */
-	define('WP_DEBUG', false);
-
-	/* That's all, stop editing! Happy blogging. */
-
-	/** Absolute path to the WordPress directory. */
-	if ( !defined('ABSPATH') )
-		define('ABSPATH', dirname(__FILE__) . '/');
-
-	/** Sets up WordPress vars and included files. */
-	require_once(ABSPATH . 'wp-settings.php');
+register and then start the instance.
 
 Now that you've done that, you can visit the instance and follow the installation instructions,
 selecting a site name and an administrative user. Your Wordpress installation is now working
-in development mode.
+in development mode. At this stage, it'll be writing to the database that Paasmaker created
+for you on your local machine.
 
 At this stage, you can check in the updated files, which will be ``wp-config.php``, ``manifest.yml``,
 and ``PmInterface.php``. You will also notice a ``paasmaker_env_web.sh`` file, which you should
 add to your version control's ignore list - it's not required here.
 
+.. code-block:: bash
+
+	$ echo "/paasmaker_env_web.sh" >> .gitignore
+	$ git add .
+	$ git commit
+
+Template redirect loop
+----------------------
+
 You will probably also need to workaround an issue where Wordpress will enter a redirect loop
-on the public side of the blog. This is an issue with Wordpress being behind proxies (which is
-the case with Paasmaker). To work around this, edit the ``wordpress/wp-includes/template-loader.php``
-file, and comment out the top block::
+on the public side of the blog, redirecting the user's custom template. This is an issue with Wordpress
+being behind proxies (which is the case with Paasmaker). To work around this, edit the
+``wordpress/wp-includes/template-loader.php`` file, and comment out the top block:
+
+.. code-block:: php
 
 	/*if ( defined('WP_USE_THEMES') && WP_USE_THEMES )
 		do_action('template_redirect');*/
 
+Installing plugins
+------------------
+
+You should not install plugins on your production version of Wordpress. This is because Wordpress
+downloads and writes the files out to the instance directory, which Paasmaker will delete when
+the instance is recycled.
+
+Instead, you should install the plugins locally when running Paasmaker in development. This allows
+you to track the files that it requires.
+
+For our example, you can go ahead and install plugins if you're using the local SCM directory
+mode. Then check in the files once it's installed.
+
+Fixing the hostname issue
+-------------------------
+
+A discussion point around Wordpress has always been around relative and absolute URLs used
+by Wordpress. We won't get into the discussion other than to show how to work around this
+issue so you can host the blog with Paasmaker.
+
+Install the `Root Relative URLs <http://wordpress.org/extend/plugins/root-relative-urls/>`_
+plugin via the web console. Then activate it. Once you activate it, initially your Wordpress
+will stop working and appear unstyled and without images. This is because the plugin does
+not take into account the port number of the incoming request. To fix this, edit one of the
+plugin files and comment out a line:
+
+.. code-block:: php
+
+	# In file wordpress/wp-content/plugins/root-relative-urls/sb_root_relative_urls.php
+	# Change this, starting at line 72:
+	return MP_WP_Root_Relative_URLS::scheme(
+	    'http://' . @$_SERVER['HTTP_HOST'] .
+	    (!empty($relative) ? '/' . $relative : '') .
+	    (isset($url['fragment']) ? '#' . $url['fragment'] : '')
+	);
+
+	# To this:
+	return MP_WP_Root_Relative_URLS::scheme(
+	    // 'http://' . @$_SERVER['HTTP_HOST'] .
+	    (!empty($relative) ? '/' . $relative : '') .
+	    (isset($url['fragment']) ? '#' . $url['fragment'] : '')
+	);
+
+This update removes the hostname from all links on the page that are not required to be
+absolute.
+
+TODO: This currently breaks the WP Read Only plugin below.
+
 Using Amazon S3
 ---------------
 
-Using your development site, use the plugin browser tool to locate the "Amazon S3 for WordPress
-with CloudFront 0.4.1.1". Install it on your development site.
+Using your development site, use the plugin browser tool to locate the `WP Read Only
+<http://wordpress.org/extend/plugins/wpro/>`_ plugin, which automatically uploads images
+to S3, and then links them into your posts automatically. It's designed for multi node
+scaling systems like Paasmaker.
 
-Before you configure it, check in all the files that it downloaded for you. You can then configure
-the plugin by going to Settings -> Amazon S3.
+Once you've installed the plugin, don't forget to check in the files into your repository.
 
-TODO: This is currently not working. Research and fix this.
+Going into production
+---------------------
+
+Add notes here.
