@@ -68,4 +68,3 @@ the code.
    developer-managed
    developer-model
    developer-router
-   developer-controller

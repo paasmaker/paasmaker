@@ -39,3 +39,9 @@ a point of failure; however, applications will continue to run whilst the Redis
 is unavailable, but no more jobs can be started. It is expected that a system
 administrator will be notified in this case and can take corrective action within
 a short period of time.
+
+BaseController
+--------------
+
+A full treatment of this is in the :doc:`developer-major-basecontroller`
+document.
