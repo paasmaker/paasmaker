@@ -85,12 +85,14 @@ class InstanceStartupJob(BaseJob):
 			def is_running(message):
 				# It's apparently running. No reason to start it.
 				# Although one should ask why we got here.
+				# TODO: Unit test this code path.
 				self.logger.info("Instance is already running. No action taken.")
 				self.logger.warning("We don't know why it was already running.")
 
 				self.instance_data['instance']['state'] = constants.INSTANCE.RUNNING
 				self.configuration.instances.save()
 
+				state_key = "state-%s" % self.instance_id
 				self.success({state_key: constants.INSTANCE.RUNNING}, "Found instance already running.")
 
 			# See if it's running.
