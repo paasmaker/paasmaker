@@ -5,15 +5,60 @@ pm.stats = {};
 pm.stats.routergraph = (function(){
 	var module = {};
 
-	module.graph = function(streamSocket, container, statCategory, statInputId) {
+	var byteTicks = function(axis) {
+		var ticks = [];
+		var order_of_magnitude = 1;
+		var multiplier_index = 0;
+		var multipliers = [1, 2.5, 10, 25, 100, 250]
+		var number_of_ticks = 1;	// not counting the tick at zero
+		var labels = ['', 'kb', 'Mb', 'Gb', 'Tb'];
+
+		while (axis.max > Math.pow(1024, order_of_magnitude) * multipliers[multiplier_index] * number_of_ticks) {
+			number_of_ticks ++;
+			if (number_of_ticks > 3) {
+				number_of_ticks = 1;
+				multiplier_index ++;
+			}
+			if (multiplier_index >= multipliers.length) {
+				number_of_ticks = 1;
+				multiplier_index = 0;
+				order_of_magnitude ++;
+			}
+		}
+
+		for (var i = 0, value = 0; value < axis.max; i ++) {
+			value = i * Math.pow(1024, order_of_magnitude) * multipliers[multiplier_index];
+			ticks.push([
+			    value,
+			    (value / Math.pow(1024, order_of_magnitude)) + labels[order_of_magnitude]
+			]);
+		}
+		return ticks;
+	};
+
+	module.types = {
+		'requests': {
+			series: { color: '#edc240', shadowSize: 1, bars: { show: true, fill: true, barWidth: 1000 } },
+			yaxis: { min: 0 },
+			xaxis: { mode: "time", minTickSize: [30, "second"], }
+		},
+		'bytes': {
+			series: { color: '#cb4b4b', shadowSize: 1, bars: { show: true, fill: true, barWidth: 1000 } },
+			yaxis: { min: 0, ticks: byteTicks },
+			xaxis: { mode: "time", minTickSize: [30, "second"], }
+		},
+		'time': {
+			series: { color: '#afd8f8', shadowSize: 1, lines: { show: true } },
+			yaxis: { min: 0 },
+			xaxis: { mode: "time", minTickSize: [30, "second"], }
+		}
+	};
+
+	module.graph = function(container, metric, statCategory, statInputId) {
 		var graph = {};
 		var plot;
 		var timeout;
-		var graphOptions = {
-			series: { shadowSize: 1, bars: { show: true, fill: true, barWidth: 1000 } },
-			yaxis: { min: 0 },
-			xaxis: { mode: "time", minTickSize: [30, "second"], }
-		};
+		var graphOptions = module.types[metric];
 
 		// Resolve the container.
 		container = $(container);
@@ -33,33 +78,35 @@ pm.stats.routergraph = (function(){
 		// Set up the Flot object.
 		plot = $.plot(container, [], graphOptions);
 
-		graph.showGraph = function(start, end, graphPoints)
-		{
-			if( graphPoints.length == 0 ) {
-				// No data returned. Fake it!
-				graphPoints.push([start, 0]);
-				graphPoints.push([end, 0]);
-			}
-			else
-			{
-				if( graphPoints[0][0] != start ) {
-					// Doesn't start with the start time. Insert
-					// a point to make it make sense.
-					graphPoints.splice(0, 0, [start, 0])
+		graph.processData = function(start, end, graphPoints) {
+			// The python code doesn't return zero values, so walk over graphPoints
+			// and insert zeroes for any timestamps that are missing.
+			var time = Math.floor(start);
+			var points_index = 0;
+			var processed_points = [];
+
+			while (time < Math.floor(end) + 1) {
+				var point = graphPoints[points_index] || [null, 0];
+				if (!point[0] || point[0] > time) {
+					processed_points.push([ time * 1000, 0 ]);
+				} else {
+					processed_points.push([ point[0] * 1000, point[1] ]);
+					points_index ++;
 				}
-				if( graphPoints[graphPoints.length - 1][0] != end ) {
-					// Doesn't end with the end time. Insert a
-					// point to make it make sense.
-					graphPoints.push([end, 0])
-				}
+				time ++;
 			}
 
-			// Now convert all the times to unix timestamp milliseconds.
-			for( var i = 0; i < graphPoints.length; i++ ) {
-				graphPoints[i][0] *= 1000;
+			if (graphPoints[points_index]) {
+				// move the last element of graphPoints if we missed it; TODO: test if this is needed
+				console.log(graphPoints.length, points_index);
+				processed_points.push([ graphPoints[points_index][0] * 1000, graphPoints[points_index][1] ]);
 			}
 
-			plot.setData([graphPoints]);
+			return processed_points;
+		}
+
+		graph.showGraph = function(start, end, points) {
+			plot.setData([graph.processData(start, end, points)]);
 			plot.setupGrid();
 			plot.draw();
 		}
@@ -71,7 +118,7 @@ pm.stats.routergraph = (function(){
 				'router.stats.history',
 				statCategory,
 				statInputId,
-				'requests',
+				metric,
 				(now.getTime() / 1000) - 60 // Start - 60 seconds ago to now.
 			);
 		};
@@ -95,28 +142,16 @@ pm.stats.routerstats = (function(){
 	module.redraw = function() {
 		$('.router-stats').each(function(i, el) {
 			el = $(el);
-			module.stats(streamSocket, el, el.data('name'), el.data('inputid'), el.data('title'));
+			module.stats(el, el.data('name'), el.data('inputid'), el.data('title'));
 		});
 	};
 
-	module.stats = function(streamSocket, container, statCategory, statInputId, title) {
+	module.stats = function(container, statCategory, statInputId, title) {
 		var stats = {};
 
 		// Resolve the container.
 		container = $(container);
 		container.empty();
-
-		// A template for each stats section.
-		var statsSectionTemplateRaw = '{{#each statset}}' +
-				'<div class="stats-row clearfix">' +
-					'<span class="title">{{title}}:</span>' +
-					'<span class="value">{{value}}' +
-						'{{#if diff}} | <span class="diff">{{diff}}/s</span>{{/if}}' +
-					'</span>' +
-				'</div>' +
-			'{{/each}}';
-
-		var statsSectionTemplate = Handlebars.compile(statsSectionTemplateRaw);
 
 		// Create top level containers.
 		if (title) {
@@ -145,7 +180,7 @@ pm.stats.routerstats = (function(){
 
 		stats.showGraph = function() {
 			graphArea.show();
-			graphWidget = pm.stats.routergraph.graph(streamSocket, graphArea, statCategory, statInputId);
+			graphWidget = pm.stats.routergraph.graph(graphArea, 'requests', statCategory, statInputId);
 			graphButton.text('Hide Graph');
 		}
 
@@ -168,8 +203,7 @@ pm.stats.routerstats = (function(){
 			e.preventDefault();
 		});
 
-		// On startup, if the graph area is already visible, show the
-		// graph.
+		// On startup, if the graph area is already visible, show the graph.
 		if( graphArea.is(':visible') ) {
 			stats.showGraph();
 		}
@@ -249,6 +283,7 @@ pm.stats.routerstats = (function(){
 					{
 						title: 'Average Time',
 						value: pm.util.number_format(update.time_average),
+						unit: 'ms',
 						diff: ''
 					}
 				]
@@ -288,9 +323,10 @@ pm.stats.routerstats = (function(){
 				]
 			}
 
-			primaryStats.html(statsSectionTemplate(primaryStatsSet));
-			secondaryStats.html(statsSectionTemplate(secondaryStatsSet));
-			buttonBox.show();
+			primaryStats.html(pm.handlebars.router_stats_section(primaryStatsSet));
+			secondaryStats.html(pm.handlebars.router_stats_section(secondaryStatsSet));
+
+			buttonBox.show();	// in case no stats were available and we hid it
 
 			lastNumbers = update;
 		}

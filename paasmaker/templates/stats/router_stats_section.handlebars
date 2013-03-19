@@ -1,0 +1,9 @@
+{{#each statset}}
+	<div class="stats-row clearfix">
+		<span class="title">{{title}}:</span>
+		<span class="value">{{value}}
+			{{#if unit}}<span class="unit">{{unit}}</span>{{/if}}
+			{{#if diff}} | <span class="diff">{{diff}}/s</span>{{/if}}
+		</span>
+	</div>
+{{/each}}
