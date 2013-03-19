@@ -5,6 +5,8 @@ pm.stats = {};
 pm.stats.routergraph = (function(){
 	var module = {};
 
+	// graph tick generator for the y-axis of byte graphs: ensure the
+	// ticks are only round numbers of bytes/kilobytes/megabytes etc.
 	var byteTicks = function(axis) {
 		var ticks = [];
 		var order_of_magnitude = 1;
@@ -38,27 +40,57 @@ pm.stats.routergraph = (function(){
 
 	module.types = {
 		'requests': {
-			series: { color: '#edc240', shadowSize: 1, bars: { show: true, fill: true, barWidth: 1000 } },
-			yaxis: { min: 0 },
-			xaxis: { mode: "time", minTickSize: [30, "second"], }
+			socket_request: 'requests',
+			flot_options: {
+				series: { color: '#edc240', shadowSize: 1, bars: { show: true, fill: true, barWidth: 1000 } },
+				yaxis: { min: 0 },
+				xaxis: { mode: "time", minTickSize: [30, "second"], }
+			}
 		},
 		'bytes': {
-			series: { color: '#cb4b4b', shadowSize: 1, bars: { show: true, fill: true, barWidth: 1000 } },
-			yaxis: { min: 0, ticks: byteTicks },
-			xaxis: { mode: "time", minTickSize: [30, "second"], }
+			socket_request: 'bytes',
+			flot_options: {
+				series: { color: '#cb4b4b', shadowSize: 1, bars: { show: true, fill: true, barWidth: 1000 } },
+				yaxis: { min: 0, ticks: byteTicks },
+				xaxis: { mode: "time", minTickSize: [30, "second"], }
+			}
 		},
 		'time': {
-			series: { color: '#afd8f8', shadowSize: 1, lines: { show: true } },
-			yaxis: { min: 0 },
-			xaxis: { mode: "time", minTickSize: [30, "second"], }
+			socket_request: 'time',
+			flot_options: {
+				series: { color: '#afd8f8', shadowSize: 1, lines: { show: true } },
+				yaxis: { min: 0 },
+				xaxis: { mode: "time", minTickSize: [30, "second"], }
+			}
+		},
+		'requests_by_code': {
+			socket_request: ['1xx', '2xx', '3xx', '4xx', '5xx'],
+			legend: {
+				'1xx': '1xx Informational',
+				'2xx': '2xx Successful',
+				'3xx': '3xx Redirection',
+				'4xx': '4xx Client Error',
+				'5xx': '5xx Server Error'
+			},
+			colours: {
+				'1xx': '#3333e0',
+				'2xx': '#66e000',
+				'3xx': '#dada00',
+				'4xx': '#ff9966',
+				'5xx': '#a90000'
+			},
+			flot_options: {
+				yaxis: { min: 0 },
+				xaxis: { mode: "time", minTickSize: [30, "second"], }
+			}
 		}
 	};
 
-	module.graph = function(container, metric, statCategory, statInputId) {
+	module.graph = function(container, metric_type, statCategory, statInputId) {
 		var graph = {};
 		var plot;
 		var timeout;
-		var graphOptions = module.types[metric];
+		var graphOptions = module.types[metric_type];
 
 		// Resolve the container.
 		container = $(container);
@@ -76,11 +108,38 @@ pm.stats.routergraph = (function(){
 		);
 
 		// Set up the Flot object.
-		plot = $.plot(container, [], graphOptions);
+		plot = $.plot(container, [], module.types[metric_type].flot_options);
 
 		graph.processData = function(start, end, graphPoints) {
+			// If we requested one metric, the structure of graphPoints will already be correct;
+			// if we requested several, reformat to suit Flot (adding labels / colours).
+			if (typeof module.types[metric_type].socket_request === 'string') {
+				return [ graph.processTimeSeries(start, end, graphPoints) ];
+			} else {
+				var flot_friendly_data = [];
+
+				for (var metric in graphPoints) {
+					var series = {};
+					series.data = graph.processTimeSeries(start, end, graphPoints[metric]);
+
+					if (module.types[metric_type].legend) {
+						series.label = module.types[metric_type].legend[metric];
+					}
+					if (module.types[metric_type].colours) {
+						series.color = module.types[metric_type].colours[metric];
+					}
+
+					flot_friendly_data.push(series);
+				}
+
+				return flot_friendly_data;
+			}
+		}
+
+		graph.processTimeSeries = function(start, end, graphPoints) {
 			// The python code doesn't return zero values, so walk over graphPoints
-			// and insert zeroes for any timestamps that are missing.
+			// and insert zeroes for any timestamps that are missing. Also, convert
+			// unix timestamps in seconds to milliseconds, to suit Flot.
 			var time = Math.floor(start);
 			var points_index = 0;
 			var processed_points = [];
@@ -106,7 +165,7 @@ pm.stats.routergraph = (function(){
 		}
 
 		graph.showGraph = function(start, end, points) {
-			plot.setData([graph.processData(start, end, points)]);
+			plot.setData(graph.processData(start, end, points));
 			plot.setupGrid();
 			plot.draw();
 		}
@@ -118,7 +177,7 @@ pm.stats.routergraph = (function(){
 				'router.stats.history',
 				statCategory,
 				statInputId,
-				metric,
+				module.types[metric_type].socket_request,
 				(now.getTime() / 1000) - 60 // Start - 60 seconds ago to now.
 			);
 		};
