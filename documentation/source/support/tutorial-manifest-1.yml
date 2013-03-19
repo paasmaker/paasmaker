@@ -1,0 +1,14 @@
+manifest:
+  format: 1
+
+application:
+  name: python-simple
+
+instances:
+  - name: web
+    quantity: 1
+    runtime:
+      plugin: paasmaker.runtime.shell
+      parameters:
+        launch_command: "python app.py"
+      version: 1

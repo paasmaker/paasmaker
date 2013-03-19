@@ -12,6 +12,7 @@ below, to understand how Paasmaker works and how it runs your applications.
 .. toctree::
    :maxdepth: 2
 
+   user-gettingstarted
    user-concepts
    user-application-manifest
 
@@ -26,6 +27,8 @@ An important point
 	Your applications must store data either in a database of some kind,
 	or an external filesystem (such as Amazon S3). This is a limitation
 	of most PaaS systems and is not unique to Paasmaker.
+
+.. _user-languages-entry:
 
 Integrating with different languages
 ------------------------------------

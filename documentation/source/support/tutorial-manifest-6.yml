@@ -1,0 +1,34 @@
+manifest:
+  format: 1
+
+application:
+  name: paasmaker-tutorial
+  prepare:
+    runtime:
+      plugin: paasmaker.runtime.shell
+      version: 1
+    commands:
+      - plugin: paasmaker.prepare.shell
+        parameters:
+          commands:
+            - pwd > prepare.txt
+
+instances:
+  - name: web
+    quantity: 2
+    runtime:
+      plugin: paasmaker.runtime.shell
+      parameters:
+        launch_command: "python app.py"
+      version: 1
+    startup:
+      - plugin: paasmaker.startup.shell
+        parameters:
+          commands:
+            - pwd > startup.txt
+    hostnames:
+      - tutorial.local.paasmaker.net
+
+services:
+  - name: mysqldatabase
+    plugin: paasmaker.service.mysql

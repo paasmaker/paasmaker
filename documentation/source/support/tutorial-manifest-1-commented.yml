@@ -1,0 +1,31 @@
+# This is the manifest format, for when it is updated
+# in the future.
+manifest:
+  format: 1
+
+# This section describes the application settings.
+# Currently, we only supply the application name.
+application:
+  name: paasmaker-tutorial
+
+# This section describes instance types in this
+# source code tree. It is a list (array) of types,
+# and in this case we have only one, which we've called
+# 'web'.
+instances:
+  - name: web
+    # We want one instance of this type.
+    quantity: 1
+    # This section describes what language it is.
+    runtime:
+      # We are using the 'shell' runtime that starts
+      # the application by running a shell command.
+      # The current working directory is the instance
+      # root directory.
+      plugin: paasmaker.runtime.shell
+      parameters:
+        launch_command: "python app.py"
+      # This is the version of the runtime. For
+      # runtimes like Ruby or PHP, this will be the
+      # actual version of the language in use.
+      version: 1

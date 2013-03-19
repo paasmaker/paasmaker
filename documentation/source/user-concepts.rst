@@ -149,6 +149,8 @@ Exclusive Instance Type
 	are not designed for instances that serve HTTP traffic, but Paasmaker does not stop
 	you from doing this.
 
+.. _user-application-lifecycle:
+
 Following an Application lifecycle
 ----------------------------------
 
@@ -226,6 +228,8 @@ Then, to run your application, Paasmaker takes the following steps:
    Paasmaker will also generate a default hostname per version so you can access any version, and
    insert that into the routing table. You can use this to test a new version of your application
    before making it current.
+
+.. _user-application-lifecycle-routing-switchover:
 
 Once you decide that your application is ready to become the current version, you can use the
 "Make Current" feature of Paasmaker. For simplicity, below we refer to **A** as the currently active
