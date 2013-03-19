@@ -103,25 +103,45 @@ class UploadController(BaseController):
 			totalsize = 0
 			for part in parts:
 				totalsize += os.path.getsize(part)
+
+			self.add_data('identifier', identifier)
+
 			if totalsize == int(self.params['resumableTotalSize']):
 				logger.info("Assembling file because we have all the parts.")
 				# Must have all the parts.
-				# TODO: Make async.
 				output_path = self.configuration.get_scratch_path_exists('uploads')
 				output_file = os.path.join(output_path, "%s" % identifier)
-				fp = open(output_file, 'w')
-				for part in parts:
-					partfp = open(part, 'r')
-					fp.write(partfp.read())
-					partfp.close()
-					os.unlink(part)
-				fp.close()
-				logger.info("Finished assembling file.")
 
-			# Send back a 200 response code.
-			self.add_data('success', True)
-			self.add_data('identifier', identifier)
-			self.render("api/apionly.html")
+				# Get ready to async assemble.
+				fp = open(output_file, 'w')
+				parts.reverse()
+
+				def assemble_chunk():
+					try:
+						part = parts.pop()
+						partfp = open(part, 'r')
+						fp.write(partfp.read())
+						partfp.close()
+						os.unlink(part)
+
+						# Call us back in the next IO loop iteration.
+						self.configuration.io_loop.add_callback(assemble_chunk)
+					except IndexError, ex:
+						# No more parts.
+						fp.close()
+						logger.info("Finished assembling file.")
+						self._completed_upload()
+					# end of assemble_chunk()
+
+				# Start async processing of chunks.
+				assemble_chunk()
+			else:
+				self._completed_upload()
+
+	def _completed_upload(self):
+		# Send back a 200 response code.
+		self.add_data('success', True)
+		self.render("api/apionly.html")
 
 	@staticmethod
 	def get_routes(configuration):
@@ -174,7 +194,9 @@ class UploadControllerTest(BaseControllerTest):
 		# Create a test file.
 		uploadfile = tempfile.mkstemp()[1]
 		# 1MiB - a good test because it doesn't align to a binary boundary.
-		testdata = "Hello" * 200000
+		# NOTE: This boundary doesn't match the server boundary. If it
+		# does, a subtle bug can be allowed to exist.
+		testdata = "Hello" * 400000
 		open(uploadfile, 'w').write(testdata)
 		# Calculate the MD5 of the supplied file.
 		calc = paasmaker.util.streamingchecksum.StreamingChecksum(uploadfile, self.io_loop, logging)
