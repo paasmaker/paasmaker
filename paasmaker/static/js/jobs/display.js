@@ -67,13 +67,27 @@ pm.jobs.display.prototype.handleZeroSizeLog = function(job_id)
 	container.addClass('no-data');
 }
 
+pm.jobs.display.prototype.isScrolledToBottom = function(el) {
+	var content_height = el[0].scrollHeight;
+	var current_view_bottom = el[0].scrollTop + el.innerHeight();
+	return (content_height == current_view_bottom);
+}
+
 pm.jobs.display.prototype.handleNewLines = function(job_id, lines, position)
 {
 	var container = $('.' + job_id + ' .log', this.container);
 	container.removeClass('no-data');
 	var formatted = this.formatLogLines(lines.join(''));
+
+	if (this.isScrolledToBottom(container)) { var reset_scroll = true; }
+
 	container.append(formatted);
 	container.attr('data-position', position);
+
+	if (reset_scroll) {
+		// TODO: test this across browsers
+		container[0].scrollTop = container[0].scrollHeight;
+	}
 }
 
 pm.jobs.display.prototype.renderJobTree = function(tree, level, container)
