@@ -1,0 +1,32 @@
+manifest:
+  format: 1
+
+application:
+  name: paasmaker-symfony2
+  prepare:
+    runtime:
+      plugin: paasmaker.runtime.shell
+      version: 1
+    commands:
+      - plugin: paasmaker.prepare.shell
+        parameters:
+          commands:
+            - composer.phar install
+
+instances:
+  - name: web
+    quantity: 1
+    runtime:
+      plugin: paasmaker.runtime.php
+      version: 5.3
+      parameters:
+        document_root: web
+    startup:
+      - plugin: paasmaker.startup.shell
+        parameters:
+          commands:
+            - php app/console doctrine:schema:update --force
+
+services:
+  - name: symfonysql
+    plugin: paasmaker.service.mysql

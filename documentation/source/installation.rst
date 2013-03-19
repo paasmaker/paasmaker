@@ -157,9 +157,17 @@ and password ``paasmaker``.
 	controller via the router component. If you want to access the Pacemaker directly
 	(for testing/debugging), use port 42500 instead.
 
-If this is your first time with Paasmaker, move on to the getting started guide.
+If this is your first time with Paasmaker, move on to the :doc:`getting started guide
+<user-gettingstarted>`.
 
-TODO: write and link this guide.
+.. WARNING::
+	In the supplied configuration, when you stop Paasmaker, it will stop all
+	managed services, applications, and the router. To start them up again,
+	just start Paasmaker again.
+
+	In production, Paasmaker does not shut things down to prevent any traffic loss
+	during Paasmaker restarts. This configuration was chosen for development
+	to clean up after itself once you're done experimenting.
 
 Common Problems
 ---------------

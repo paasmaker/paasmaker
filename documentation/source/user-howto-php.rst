@@ -16,6 +16,7 @@ and CMS systems, including pitfalls for them.
    :maxdepth: 2
 
    user-howto-php-wordpress
+   user-howto-php-symfony2
 
 Integrating with any PHP project
 --------------------------------
@@ -38,7 +39,7 @@ the following command:
 
 If you are not using composer, you will need to fetch the PmInterface.php file and
 check it into your project. You can get the latest version from `the BitBucket
-repository <https://bitbucket.org/freefoote/paasmaker-interface-php/src>`_.
+repository <https://bitbucket.org/paasmaker/paasmaker-interface-php/src>`_.
 
 Once you've included the file, and loaded it in (using ``require()`` if you're not
 using composer or an autoloader), you can start it up and query it as follows:
