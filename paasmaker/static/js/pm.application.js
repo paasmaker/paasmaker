@@ -42,7 +42,7 @@ pm.application = (function() {
 				};
 
 				// replicate the behaviour of nice_state(); TODO: icons etc?
-				version.state = version.state[0] + version.state.substr(1).toLowerCase();
+				version.display_state = version.state[0] + version.state.substr(1).toLowerCase();
 
 				processed_versions.push(version);
 			};
@@ -75,11 +75,6 @@ pm.application = (function() {
 				callback: function(data) {
 					pm.workspace.updateAppMenu(data.application.workspace_id);
 
-					data.versions = pm.application.processVersionData(data.versions, data);
-					if (data.current_version) {
-						data.current_version = pm.application.processVersionData(data.current_version, data);
-					}
-
 					if (pm.util.hasPermission('APPLICATION_DELETE', data.application.workspace_id)) {
 						// check if this app can be deleted, i.e. no versions in READY or RUNNING states
 						data.application.can_delete = true;
@@ -89,6 +84,11 @@ pm.application = (function() {
 								break;
 							}
 						}
+					}
+
+					data.versions = pm.application.processVersionData(data.versions, data);
+					if (data.current_version) {
+						data.current_version = pm.application.processVersionData(data.current_version, data);
 					}
 
 					// render main template body (but with empty tables)
