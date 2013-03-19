@@ -33,7 +33,46 @@ class JobManager(object):
 		Prepare the job manager, setting up the appropriate backend.
 		Calls the supplied callbacks when ready.
 		"""
-		self.backend.setup(callback, error_callback)
+		def abort_existing_jobs(message):
+			my_uuid = self.configuration.get_node_uuid()
+			def got_running_jobs(joblist):
+				# Abort them.
+				if len(joblist) == 0:
+					# Nothing to do.
+					callback(message)
+				else:
+					# Abort those jobs.
+					def abort_one(aborted_message):
+						try:
+							job_id = joblist.pop()
+
+							self.force_abort(job_id, my_uuid, abort_one)
+
+						except KeyError, ex:
+							# No more to pop off.
+							callback(message)
+
+						# end of abort_one()
+
+					# Start aborting.
+					abort_one('First job')
+
+				# end of got_running_jobs()
+
+			# On startup, mark any jobs that were RUNNING
+			# as ABORTED. This handles jobs that did not finish
+			# due to an error that caused Paasmaker to crash.
+			# This frees up other nodes who might be depending on
+			# the jobs.
+			self.backend.get_node_jobs(
+				my_uuid,
+				got_running_jobs,
+				state=constants.JOB.RUNNING
+			)
+
+			# end of abort_existing_jobs()
+
+		self.backend.setup(abort_existing_jobs, error_callback)
 		self.watchdog = JobManagerBackendWatchdog(self.configuration, self.backend)
 
 	def set_context(self, job_id, context, callback):
@@ -1130,3 +1169,53 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.assertEquals(len(result), 1, "Returned incorrect number of tagged jobs.")
 		self.assertEquals(result[0], root_id, "Wrong tagged job returned.")
+
+	def test_manager_startup_abort_jobs(self):
+		root = JobSpecifier()
+		root.set_job('paasmaker.job.success', {}, "Example root job.")
+
+		sub1 = root.add_child()
+		sub1.set_job('paasmaker.job.success', {}, "Example sub1 job.", tags=['test'])
+
+		sub1_1 = sub1.add_child()
+		sub1_1.set_job('paasmaker.job.success', {}, "Example subsub1 job.")
+
+		sub2 = root.add_child()
+		sub2.set_job('paasmaker.job.success', {}, "Example sub2 job.")
+
+		self.manager.add_tree(root, self.stop)
+		root_id = self.wait()
+
+		# Start processing them.
+		self.manager.allow_execution(root_id, callback=self.stop)
+		self.wait()
+
+		# TODO: This test is time sensitive. This is obviously not a good
+		# thing to be.
+		self.short_wait_hack(length=0.05)
+
+		# Immediately prepare the system again. This should
+		# query and cancel running jobs.
+		self.manager.prepare(self.stop, self.stop)
+		self.wait()
+
+		#self.dump_job_tree(root_id)
+		#self.wait()
+
+		# Wait for it to settle down.
+		self.short_wait_hack(length=0.2)
+
+		subsub1_status = self.get_state(sub1_1.job_id)
+		sub1_status = self.get_state(sub1.job_id)
+		sub2_status = self.get_state(sub2.job_id)
+		root_status = self.get_state(root.job_id)
+
+		# TODO: This is rather unscientific and based on the time it takes.
+		# At least one of the jobs should have been aborted.
+		aborted_count = 0
+		if subsub1_status == constants.JOB.ABORTED: aborted_count += 1
+		if sub1_status == constants.JOB.ABORTED: aborted_count += 1
+		if sub2_status == constants.JOB.ABORTED: aborted_count += 1
+		if root_status == constants.JOB.ABORTED: aborted_count += 1
+
+		self.assertTrue(aborted_count > 0, "None of the jobs got aborted. See notes in the unit test.")

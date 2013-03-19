@@ -74,10 +74,17 @@ class RedisJobBackend(JobBackend):
 		if not hasattr(self, 'pubsub_client'):
 			self.pubsub_client = None
 
+		connection_required = False
 		if self.redis is None or not self.redis.connection.connected():
+			connection_required = True
 			self.configuration.get_jobs_redis(self.redis_ready, error_callback)
 		if self.pubsub_client is None or not self.pubsub_client.connection.connected():
+			connection_required = True
 			self.configuration.get_jobs_redis(self.pubsub_redis_ready, error_callback)
+
+		if not connection_required:
+			# Just call the callback.
+			callback("Already connected. No action to take.")
 
 	def redis_ready(self, client):
 		self.redis = client
