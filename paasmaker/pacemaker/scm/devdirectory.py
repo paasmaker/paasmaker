@@ -111,41 +111,45 @@ class DevDirectorySourcePrepareJob(paasmaker.common.job.prepare.SourcePreparerJo
 
 class DevDirectoryPreInstanceStartupJob(paasmaker.common.job.heart.PreInstanceStartupJob):
 	def _environment_ready(self, message):
-		self.logger.info("Environment ready.")
-		# Set an extra dev mode environment variable.
-		self.instance_data['environment']['PM_DEV_MODE'] = 'True'
-		# Save the instance data. Which now includes a mutated environment.
-		self.configuration.instances.save()
+		if self.instance_data['application_version']['source_package_type'] == 'devdirectory':
+			self.logger.info("Environment ready.")
+			# Set an extra dev mode environment variable.
+			self.instance_data['environment']['PM_DEV_MODE'] = 'True'
+			# Save the instance data. Which now includes a mutated environment.
+			self.configuration.instances.save()
 
-		# Don't perform any startup tasks that we're supposed to.
-		# (The default version of this plugin would do that).
-		# Instead, write out a shell script that encapsulates all the environment
-		# variables that we would have used, to allow you to run commands
-		# locally that use the Paasmaker environment.
+			# Don't perform any startup tasks that we're supposed to.
+			# (The default version of this plugin would do that).
+			# Instead, write out a shell script that encapsulates all the environment
+			# variables that we would have used, to allow you to run commands
+			# locally that use the Paasmaker environment.
 
-		formatted_variables = []
-		for variable, value in self.instance_data['environment'].iteritems():
-			formatted_variables.append('export %s="%s"' % (variable, value.replace('"', '\\"')))
+			formatted_variables = []
+			for variable, value in self.instance_data['environment'].iteritems():
+				formatted_variables.append('export %s="%s"' % (variable, value.replace('"', '\\"')))
 
-		output_name = os.path.join(
-			self.instance_path,
-			'paasmaker_env_%s.sh' % self.instance_data['instance_type']['name']
-		)
+			output_name = os.path.join(
+				self.instance_path,
+				'paasmaker_env_%s.sh' % self.instance_data['instance_type']['name']
+			)
 
-		fp = open(output_name, 'w')
-		fp.write("#!/bin/bash\n")
-		fp.write("# Environment for %s - created by Paasmaker on instance registration.\n" % self.instance_data['instance_type']['name'])
-		fp.write("# Don't edit by hand. To recreate, you will need to deregister and re-register your instance.\n")
-		fp.write("\n\n")
-		fp.write("\n".join(formatted_variables))
-		fp.write("\n\n")
-		fp.write("$@\n")
-		fp.write("\n")
+			fp = open(output_name, 'w')
+			fp.write("#!/bin/bash\n")
+			fp.write("# Environment for %s - created by Paasmaker on instance registration.\n" % self.instance_data['instance_type']['name'])
+			fp.write("# Don't edit by hand. To recreate, you will need to deregister and re-register your instance.\n")
+			fp.write("\n\n")
+			fp.write("\n".join(formatted_variables))
+			fp.write("\n\n")
+			fp.write("$@\n")
+			fp.write("\n")
 
-		fp.close()
+			fp.close()
 
-		# Make it executable.
-		existing_mode = os.stat(output_name).st_mode
-		os.chmod(output_name, existing_mode | stat.S_IEXEC)
+			# Make it executable.
+			existing_mode = os.stat(output_name).st_mode
+			os.chmod(output_name, existing_mode | stat.S_IEXEC)
 
-		self.done("Not processing startup tasks - but has written a script out to capture the environment.")
+			self.done("Not processing startup tasks - but has written a script out to capture the environment.")
+		else:
+			# Do what the parent job would have done.
+			super(DevDirectoryPreInstanceStartupJob, self)._environment_ready(message)
