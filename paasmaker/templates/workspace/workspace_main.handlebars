@@ -15,5 +15,20 @@
 </div>
 
 <div class="workspace-overview">
-	<div class="router-stats well well-small" data-name="workspace" data-inputid="{{ workspace.id }}" data-title="Workspace: {{ workspace.name }}">Loading...</div>
+	<div class="overview-graph" data-name="workspace" data-inputid="{{ workspace.id }}" data-metric="requests">
+		<h3>Requests</h3>
+		<div class="graph-container"><br><br>Loading ...</div>
+	</div>
+	<div class="overview-graph" data-name="workspace" data-inputid="{{ workspace.id }}" data-metric="bytes">
+		<h3>Bytes transferred</h3>
+		<div class="graph-container"><br><br>Loading ...</div>
+	</div>
+	<div class="overview-graph" data-name="workspace" data-inputid="{{ workspace.id }}" data-metric="time">
+		<h3>Request time</h3>
+		<div class="graph-container"><br><br>Loading ...</div>
+	</div>
+	<!-- <div class="overview-graph" data-name="workspace" data-inputid="{{ workspace.id }}" data-metric="requests_by_code">
+		<h3>Response codes</h3>
+		<div class="graph-container"><br><br>Loading ...</div>
+	</div> -->
 </div>

@@ -91,7 +91,7 @@ pm.workspace = (function() {
 				callback: function(data) {
 					$('#app_view_main').html(pm.handlebars.workspace_main(data));
 					$('.loading-overlay').remove();
-					pm.stats.routerstats.redraw();
+					pm.stats.workspace.redraw();
 				}
 			});
 		}

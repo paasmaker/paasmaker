@@ -195,6 +195,21 @@ pm.stats.routergraph = (function(){
 	return module;
 }());
 
+
+
+pm.stats.workspace = (function(){
+	return {
+		redraw: function() {
+			$('.overview-graph').each(function(i, el) {
+				el = $(el);
+				pm.stats.routergraph.graph($('.graph-container', el), el.data('metric'), el.data('name'), el.data('inputid'));
+			});
+		}
+	}
+}());
+
+
+
 pm.stats.routerstats = (function(){
 	var module = {};
 
