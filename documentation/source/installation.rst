@@ -163,11 +163,11 @@ If this is your first time with Paasmaker, move on to the :doc:`getting started 
 .. WARNING::
 	In the supplied configuration, when you stop Paasmaker, it will stop all
 	managed services, applications, and the router. To start them up again,
-	just start Paasmaker again.
+	just start Paasmaker again. This configuration was chosen for development
+	to clean up after itself once you're done experimenting.
 
 	In production, Paasmaker does not shut things down to prevent any traffic loss
-	during Paasmaker restarts. This configuration was chosen for development
-	to clean up after itself once you're done experimenting.
+	during Paasmaker restarts.
 
 Common Problems
 ---------------
