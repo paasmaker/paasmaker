@@ -206,7 +206,7 @@ pm.stats.routerstats = (function(){
 				if(serverStatCategory == statCategory && serverInputId == statInputId) {
 					// No stats available.
 					primaryStats.text("No stats available.");
-					buttonBox.empty();
+					buttonBox.hide();
 
 					timeout = setTimeout(function() { stats.requestUpdate() }, 1000);
 				}
@@ -290,6 +290,7 @@ pm.stats.routerstats = (function(){
 
 			primaryStats.html(statsSectionTemplate(primaryStatsSet));
 			secondaryStats.html(statsSectionTemplate(secondaryStatsSet));
+			buttonBox.show();
 
 			lastNumbers = update;
 		}
