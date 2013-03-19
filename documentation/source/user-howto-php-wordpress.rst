@@ -13,6 +13,10 @@ a special framework.
 	not follow this guide and use Amazon S3, or do not use another method to preserve
 	the files that get uploaded, you may lose data.
 
+	Additionally, plugins and themes installed directly into a production instance
+	will be lost when that instance is recycled. If you follow the workflow suggested
+	in the guide, you can avoid this issue.
+
 Getting Started
 ---------------
 
@@ -24,8 +28,10 @@ For this guide, we're assuming that:
 * You are using some kind of source control to manage your code. In this example,
   we use Git to manage this.
 
-Create the source tree
-----------------------
+Download Wordpress and set up on Paasmaker
+------------------------------------------
+
+Create a directory, and set it up for git.
 
 .. code-block:: bash
 
@@ -33,21 +39,12 @@ Create the source tree
 	$ cd paasmaker-wordpress
 	$ git init .
 
-Download Wordpress and set up on Paasmaker
-------------------------------------------
-
 Download the latest version of Wordpress, and unpack it into your repository root.
 
 Before you do anything else, check in all the files, so you have a pristine copy of
 Wordpress, and you can easily see what you've changed since you downloaded it.
 
-.. note::
-	This isn't the best workflow for tracking remote changes to Wordpress. Please
-	let us know if you have suggestions on how to do this in a better way.
-
-At time of writing, we used version 3.5.1.
-
-For example:
+At time of writing, we used version 3.5.1:
 
 .. code-block:: bash
 
@@ -56,6 +53,10 @@ For example:
 	$ rm latest.tar.gz
 	$ git add .
 	$ git commit
+
+.. note::
+	This isn't the best workflow for tracking remote changes to Wordpress. Please
+	let us know if you have suggestions on how to do this in a better way.
 
 Now, before we go any further, we need to add a manifest file. Create ``manifest.yml``
 in the root of the repository, with the following contents:
@@ -67,25 +68,19 @@ in the root of the repository, with the following contents:
 
 	application:
 	  name: paasmaker-wordpress
-	  prepare:
-	    runtime:
-	      name: paasmaker.runtime.php
-	      version: 5.3
 
 	instances:
 	  - name: web
 	    quantity: 1
 	    runtime:
-	      name: paasmaker.runtime.php
+	      plugin: paasmaker.runtime.php
 	      version: 5.3
 	      parameters:
 	        document_root: wordpress
-	    placement:
-	      strategy: paasmaker.placement.default
 
 	services:
 	  - name: wordpresssql
-	    provider: paasmaker.service.mysql
+	    plugin: paasmaker.service.mysql
 
 .. note::
 	If you're Ubuntu 12.10 and above, check to see if you have PHP 5.4 instead of 5.3.
@@ -93,7 +88,7 @@ in the root of the repository, with the following contents:
 	manifest file.
 
 Next, download the latest version of the Paasmaker PHP interface from `the repository on BitBucket
-<https://bitbucket.org/paasmaker/paasmaker-interface-php/src>`_ - you're looking for
+<https://bitbucket.org/paasmaker/paasmaker-interface-php/src>`_; you're looking for
 ``PmInterface.php``. Put it into the ``wordpress/`` directory in your project.
 
 Copy the ``wordpress/wp-config-sample.php`` file into ``wordpress/wp-config.php``.
@@ -117,7 +112,7 @@ in files that should not be public, such as the application manifest file.
 
 	.
 	+ manifest.yml
-	+ wordpress
+	+ wordpress/
 	  + wp-config.php
 	  + PmInterface.php
 	  + index.php
@@ -135,7 +130,8 @@ for you on your local machine.
 
 At this stage, you can check in the updated files, which will be ``wp-config.php``, ``manifest.yml``,
 and ``PmInterface.php``. You will also notice a ``paasmaker_env_web.sh`` file, which you should
-add to your version control's ignore list - it's not required here.
+add to your version control's ignore list, as it's written out by Paasmaker when it starts your
+instance.
 
 .. code-block:: bash
 
@@ -143,78 +139,137 @@ add to your version control's ignore list - it's not required here.
 	$ git add .
 	$ git commit
 
-Template redirect loop
-----------------------
+Template redirect loop and the hostname issue
+---------------------------------------------
 
-You will probably also need to workaround an issue where Wordpress will enter a redirect loop
-on the public side of the blog, redirecting the user's custom template. This is an issue with Wordpress
-being behind proxies (which is the case with Paasmaker). To work around this, edit the
-``wordpress/wp-includes/template-loader.php`` file, and comment out the top block:
+If you try to visit the public side of the blog, you will notice that it enters a redirect loop.
+Additionally, Wordpress has a preference for absolute URLs (including the domain name) which
+will interfere with moving the blog between development and production.
+
+There isn't an easy way to fix this issue, and we don't intend to enter the debate here.
+Our solution is to add some more functions, and patch your template to use them as a filter
+for URLs. This solution is not particularly elegant.
+
+In ``wordpress/wp-includes/functions.php``, add the following code to the bottom. This code
+is adapted from `this blog post about relative URLs <http://www.deluxeblogtips.com/2012/06/relative-urls.html>`_.
 
 .. code-block:: php
 
-	/*if ( defined('WP_USE_THEMES') && WP_USE_THEMES )
-		do_action('template_redirect');*/
+	# In wordpress/wp-includes/functions.php :
+	function pm_make_link_relative( $link ) {
+	    return preg_replace( '|https?://[^/]+(/.*)|i', '$1', $link );
+	}
 
-Installing plugins
-------------------
+	function pm_relative_urls() {
+	    // Don't do anything if:
+	    // - In feed
+	    // - In sitemap by WordPress SEO plugin
+	    if ( is_feed() || get_query_var( 'sitemap' ) )
+	        return;
+	    $filters = array(
+	        'post_link',
+	        'post_type_link',
+	        'page_link',
+	        'attachment_link',
+	        'get_shortlink',
+	        'post_type_archive_link',
+	        'get_pagenum_link',
+	        'get_comments_pagenum_link',
+	        'term_link',
+	        'search_link',
+	        'day_link',
+	        'month_link',
+	        'year_link',
+	        'option_siteurl',
+	        'blog_option_siteurl',
+	        'option_home',
+	        'admin_url',
+	        'home_url',
+	        'includes_url',
+	        'site_url',
+	        'plugins_url',
+	        'content_url',
+	        'site_option_siteurl',
+	        'network_home_url',
+	        'network_site_url'
+	    );
+	    foreach ( $filters as $filter )
+	    {
+	        add_filter( $filter, 'pm_make_link_relative' );
+	    }
+	}
+
+Then, each template that you use will need an additional filter applied to it.
+In our example case, we were using the twentytwelve theme, which required this
+additional line:
+
+.. code-block:: php
+
+	# In wordpress/wp-content/themes/twentytwelve/functions.php
+
+	add_action( 'after_setup_theme', 'twentytwelve_setup' );
+	# This line is the new line. It should appear after the line above.
+	add_action( 'template_redirect', 'pm_relative_urls' );
+
+Each theme should be structured similarly, but you may need to locate the correct
+location to insert this code.
+
+This fix has not been tested with multi user blogs.
+
+Installing plugins and themes
+-----------------------------
 
 You should not install plugins on your production version of Wordpress. This is because Wordpress
 downloads and writes the files out to the instance directory, which Paasmaker will delete when
 the instance is recycled.
 
 Instead, you should install the plugins locally when running Paasmaker in development. This allows
-you to track the files that it requires.
+you to track the files that it requires with your source control system.
 
 For our example, you can go ahead and install plugins if you're using the local SCM directory
 mode. Then check in the files once it's installed.
 
-Fixing the hostname issue
--------------------------
-
-A discussion point around Wordpress has always been around relative and absolute URLs used
-by Wordpress. We won't get into the discussion other than to show how to work around this
-issue so you can host the blog with Paasmaker.
-
-Install the `Root Relative URLs <http://wordpress.org/extend/plugins/root-relative-urls/>`_
-plugin via the web console. Then activate it. Once you activate it, initially your Wordpress
-will stop working and appear unstyled and without images. This is because the plugin does
-not take into account the port number of the incoming request. To fix this, edit one of the
-plugin files and comment out a line:
-
-.. code-block:: php
-
-	# In file wordpress/wp-content/plugins/root-relative-urls/sb_root_relative_urls.php
-	# Change this, starting at line 72:
-	return MP_WP_Root_Relative_URLS::scheme(
-	    'http://' . @$_SERVER['HTTP_HOST'] .
-	    (!empty($relative) ? '/' . $relative : '') .
-	    (isset($url['fragment']) ? '#' . $url['fragment'] : '')
-	);
-
-	# To this:
-	return MP_WP_Root_Relative_URLS::scheme(
-	    // 'http://' . @$_SERVER['HTTP_HOST'] .
-	    (!empty($relative) ? '/' . $relative : '') .
-	    (isset($url['fragment']) ? '#' . $url['fragment'] : '')
-	);
-
-This update removes the hostname from all links on the page that are not required to be
-absolute.
-
-TODO: This currently breaks the WP Read Only plugin below.
-
 Using Amazon S3
 ---------------
 
-Using your development site, use the plugin browser tool to locate the `WP Read Only
+Using your development site, use the plugin browser tool to locate the `WP Read Only (WPRO)
 <http://wordpress.org/extend/plugins/wpro/>`_ plugin, which automatically uploads images
 to S3, and then links them into your posts automatically. It's designed for multi node
 scaling systems like Paasmaker.
 
-Once you've installed the plugin, don't forget to check in the files into your repository.
+Once you've installed the plugin, you can activate it and configure it via the settings.
+You will need to make sure that the bucket endpoint matches where you created the Amazon
+S3 bucket.
+
+Be sure to check in the plugin files once you're happy.
 
 Going into production
 ---------------------
 
-Add notes here.
+Assuming that you've checked in all your changes, and hooked up git to a remote URL and
+pushed all those changes there, you can then deploy Wordpress on your production infrastructure.
+
+During this, Paasmaker will create a new database for you. When you start up Wordpress
+for the first time, it will run through the setup Wizard again. This is then your production
+instance and you should treat the content you enter as such.
+
+You will need to activate any plugins that you want again, and reconfigure them. This is
+because we're not copying the database from development to production.
+
+To install new plugins, you will need to do this in your development environment, and then
+check in the new files. Once you deploy your new revision on Paasmaker, the plugins will
+show up in the plugins list and can be activated and configured on live.
+
+The same applies for themes; you will need to install or develop themes in your development
+environment, and then check them in and deploy them. This has the added advantage of tracking
+your changes with source control.
+
+Changing the sitename
+---------------------
+
+During installation, Wordpress recorded the current absolute domain name. In my example,
+this ended up being ``http://1.web.paasmaker-wordpress.test.local.paasmaker.net:42530``,
+and can't be changed without modifying the database. It would have also set the Site Address
+to the same value, but this can be changed. If you go into the Admin area, under Settings > General,
+you can enter the correct site URL, which it will use when it needs an absolute link in the live
+environment. This is critical to showing the correct URL to users.
