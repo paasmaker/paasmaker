@@ -146,16 +146,31 @@ If you try to visit the public side of the blog, you will notice that it enters 
 Additionally, Wordpress has a preference for absolute URLs (including the domain name) which
 will interfere with moving the blog between development and production.
 
-There isn't an easy way to fix this issue, and we don't intend to enter the debate here.
-Our solution is to add some more functions, and patch your template to use them as a filter
-for URLs. This solution is not particularly elegant.
+To stop the redirects, edit ``wordpress/wp-includes/template-loader.php`` and comment
+out the template redirect (this may prevent per-user themes from working):
+
+.. code-block:: php
+
+	<?php
+	// In wordpress/wp-includes/template-loader.php:
+	/**
+	 * Loads the correct template based on the visitor's url
+	 * @package WordPress
+	 */
+	/*if ( defined('WP_USE_THEMES') && WP_USE_THEMES )
+		do_action('template_redirect');*/
+
+As to the relative URLs, there isn't an easy way to fix this issue, and we don't intend to
+enter the debate here. Our solution is to add some more functions, and patch your template
+to use them as a filter for URLs. This solution is not particularly elegant.
 
 In ``wordpress/wp-includes/functions.php``, add the following code to the bottom. This code
 is adapted from `this blog post about relative URLs <http://www.deluxeblogtips.com/2012/06/relative-urls.html>`_.
 
 .. code-block:: php
 
-	# In wordpress/wp-includes/functions.php :
+	<?php
+	// In wordpress/wp-includes/functions.php :
 	function pm_make_link_relative( $link ) {
 	    return preg_replace( '|https?://[^/]+(/.*)|i', '$1', $link );
 	}
@@ -205,11 +220,12 @@ additional line:
 
 .. code-block:: php
 
-	# In wordpress/wp-content/themes/twentytwelve/functions.php
+	<?php
+	// In wordpress/wp-content/themes/twentytwelve/functions.php
 
 	add_action( 'after_setup_theme', 'twentytwelve_setup' );
-	# This line is the new line. It should appear after the line above.
-	add_action( 'template_redirect', 'pm_relative_urls' );
+	// This line is the new line. It should appear after the line above.
+	add_action( 'wp', 'pm_relative_urls' );
 
 Each theme should be structured similarly, but you may need to locate the correct
 location to insert this code.
@@ -241,6 +257,10 @@ Once you've installed the plugin, you can activate it and configure it via the s
 You will need to make sure that the bucket endpoint matches where you created the Amazon
 S3 bucket.
 
+The WPRO plugin is a drop in replacement for all your media. So, for development when
+you're using the development directory mode, you could leave it disabled, and just enable
+it on the production system.
+
 Be sure to check in the plugin files once you're happy.
 
 Going into production
@@ -263,6 +283,15 @@ show up in the plugins list and can be activated and configured on live.
 The same applies for themes; you will need to install or develop themes in your development
 environment, and then check them in and deploy them. This has the added advantage of tracking
 your changes with source control.
+
+Changing permalinks settings
+----------------------------
+
+Due to how Wordpress and PHP work, to change the permalink settings, Wordpress must
+write out a new ``.htaccess`` file in the document root. For this reason, you will need to
+adjust these settings in development and check in the updated ``.htaccess`` file. You
+can then deploy this to production as normal, although you will need to make the same
+change in the database on production so the production databse is up to date.
 
 Changing the sitename
 ---------------------
