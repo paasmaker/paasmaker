@@ -23,7 +23,7 @@
 		</tr>
 		{% for entry in table %}
 			<tr>
-				<td><a target="_blank" href="http://{{ entry['hostname'] }}">{{ entry['hostname'] }}</a></td>
+				<td><a target="_blank" href="http://{{ entry['hostname'] }}{{ frontend_domain_postfix }}">{{ entry['hostname'] }}</a></td>
 				<td>
 					{% for instance in entry['instances'] %}
 						<code>{{ instance.instance_id[0:8] }}</code>
