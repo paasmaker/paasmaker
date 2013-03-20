@@ -146,7 +146,7 @@ class RbenvRuntime(BaseRuntime):
 			self.logger.info("Using version %s (requested %s)", real_version, version)
 
 			environment['RBENV_VERSION'] = real_version
-			if not environment.has_key('PATH'):
+			if 'PATH' not in environment:
 				error_message = "The environment is missing a PATH variable. This is unusual, so not continuing."
 				self.logger.error(error_message)
 				error_callback(error_message)
@@ -171,7 +171,7 @@ class RbenvRuntime(BaseRuntime):
 		instance = self.configuration.instances.get_instance(instance_id)
 		launch_params = {}
 		port = None
-		if instance['instance'].has_key('port'):
+		if 'port' in instance['instance']:
 			port = instance['instance']['port']
 			launch_params['port'] = instance['instance']['port']
 		launch_command = self.parameters['launch_command'] % launch_params
@@ -230,7 +230,7 @@ class RbenvRuntime(BaseRuntime):
 			error_callback(message)
 
 		port = None
-		if instance['instance'].has_key('port'):
+		if 'port' in instance['instance']:
 			port = instance['instance']['port']
 
 		self._wait_for_shutdown(
@@ -328,7 +328,7 @@ class RbenvRuntimeTest(BaseRuntimeTest):
 		instance.environment('1.9.3', environment, self.success_callback, self.failure_callback)
 
 		self.assertTrue(self.success, "Did not succeed.")
-		self.assertTrue(environment.has_key('RBENV_VERSION'), "Missing RBENV_VERSION in output.")
+		self.assertTrue('RBENV_VERSION' in environment, "Missing RBENV_VERSION in output.")
 		self.assertTrue('1.9.3-p' in environment['RBENV_VERSION'], "Missing specific version.")
 
 	def test_startup(self):
