@@ -266,6 +266,30 @@ if context['runtime_php_enable']:
 if context['service_managedmysql_enable']:
 	install.helpers.install_packages(context, context.get_package_set('service-mysql'))
 
+	# On Linux, fix up AppArmor profiles.
+	if context['PLATFORM'] == install.constants.LINUX:
+		apparmor_control = "/etc/apparmor.d/local/usr.sbin.mysqld"
+		if os.path.exists(apparmor_control):
+			search_token = os.path.join(paasmaker_home, "scratch")
+
+			contents = open(apparmor_control, 'r').read()
+			if search_token not in contents:
+				logger.info("Updating AppArmor local profile for MySQL.")
+
+				temp_file = tempfile.NamedTemporaryFile(delete=False)
+				temp_file.write(contents)
+				temp_file.write("  ")
+				temp_file.write(search_token)
+				temp_file.write('/ r,\n')
+				temp_file.write("  ")
+				temp_file.write(search_token)
+				temp_file.write('/ rwk,\n')
+
+				# Move that temp file into place with sudo.
+				install.helpers.generic_command(context, ['sudo', 'mv', temp_file.name, apparmor_control])
+
+				install.helpers.generic_command(context, ['sudo', 'service', 'apparmor', 'reload'])
+
 if context['service_managedpostgres_enable']:
 	install.helpers.install_packages(context, context.get_package_set('service-postgres'))
 

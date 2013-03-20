@@ -29,6 +29,29 @@ To enable the plugin:
 	    root_password: paasmaker
 	  title: Managed MySQL Service
 
+.. warning::
+	On Ubuntu, `AppArmor <https://wiki.ubuntu.com/AppArmor>`_ is
+	configured by default to prevent mysqld from writing outside
+	of ``/var``, which will prevent this service from starting.
+	You will have to add Paasmaker's scratch directory to
+	``/etc/apparmor.d/local/usr.sbin.mysqld`` like so:
+
+	.. code-block:: none
+
+		/path/to/paasmaker/scratch/ r,
+		/path/to/paasmaker/scratch/** rwk,
+
+	And then reload AppArmor:
+
+	.. code-block:: bash
+
+		$ sudo service apparmor reload
+
+	The installer script will do this for you automatically
+	on Ubuntu if you ask for the managed MySQL service. We
+	plan to have this automatically patch other operating systems
+	in the future.
+
 Application Configuration
 -------------------------
 
