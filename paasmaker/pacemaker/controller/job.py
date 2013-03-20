@@ -125,7 +125,7 @@ class JobListController(BaseController):
 			# TODO: We're not checking permissions here. But the theory is that
 			# the job ID will be hard to guess. Revisit this at a later date.
 			job_list = [input_id]
-			name = "Detail for job"
+			name = "Job Status"
 			ret_name = "previous"
 
 		# Optional return URL.
