@@ -10,6 +10,28 @@ on. Traffic for that instance is then routed to that TCP port. If the applicatio
 crashes or fails, it will be restarted by the health manager. For performance,
 you may like to use a performant Ruby environment such as `Thin <http://code.macournoyer.com/thin/>`_.
 
+.. WARNING::
+	If you used the :doc:`installation <installation>` guide to install Paasmaker,
+	and used the ``example-paasmaker-hacking.yml`` install configuration, you won't
+	have Ruby support enabled. This is because it can take some time to compile and
+	install Ruby, so we've chosen to distribute with this option turned off.
+
+	You can easily enable it in that file and re-run the installer again to install
+	Ruby support. Note that this can take around an hour; compiling Ruby takes time.
+
+	If you already have rbenv installed, Paasmaker will detect this if you use the
+	``runtime_rbenv_for_user`` option set to true, and have installed rbenv in
+	``~/.rbenv``.
+
+.. WARNING::
+	There is currently an issue with Paasmaker if you're using the Thin application
+	server with your Ruby applications, as suggested by these documents. When the Paasmaker
+	node shuts down, Thin gets a signal and decides to shut down. Paasmaker specifically
+	tries to shield instances from these signals (and it works in other languages) but
+	something about Thin causes it to shut down.
+
+	If you are able to debug this or offer a solution, please let us know.
+
 Integrating with common Frameworks and CMSs
 -------------------------------------------
 

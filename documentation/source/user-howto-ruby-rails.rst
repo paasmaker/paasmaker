@@ -18,27 +18,12 @@ For this guide, we're assuming that:
 * You are using some kind of source control to manage your code. In this example,
   we use Git to manage this.
 
-Create the git repository
--------------------------
-
-Use your normal tools to create a git repository, and hook it up to the remote repository.
-
-For example, with BitBucket, you would do the following:
-
-.. code-block:: bash
-
-	$ mkdir paasmaker-rails-simple
-	$ cd paasmaker-rails-simple
-	$ git init .
-	$ git remote add origin ssh://git@bitbucket.org/freefoote/paasmaker-rails-simple.git
-	... make your changes ...
-	$ git commit
-	$ git push -u origin master
-
 Install Rails
 -------------
 
-First, install the Rails gem onto your machine, to give you the rails command line tool:
+At time of writing, we used Rails 3.2.13.
+
+Install the Rails gem onto your machine, to give you the rails command line tool:
 
 .. code-block:: bash
 
@@ -50,6 +35,7 @@ rails boilerplate. Then check in all the files as a pristine copy of Rails.
 .. code-block:: bash
 
 	$ cd paasmaker-rails-simple
+	$ git init .
 	$ rails new .
 	$ git add .
 	$ git commit
@@ -63,10 +49,10 @@ by creating the ``manifest.yml`` file in the root, with these contents:
 	  format: 1
 
 	application:
-	  name: paasmaker-rails-simple
+	  name: paasmaker-rails
 	  prepare:
 	    runtime:
-	      name: paasmaker.runtime.ruby.rbenv
+	      plugin: paasmaker.runtime.ruby.rbenv
 	      version: 1.9.3
 	    commands:
 	      - plugin: paasmaker.prepare.shell
@@ -78,7 +64,7 @@ by creating the ``manifest.yml`` file in the root, with these contents:
 	  - name: web
 	    quantity: 1
 	    runtime:
-	      name: paasmaker.runtime.ruby.rbenv
+	      plugin: paasmaker.runtime.ruby.rbenv
 	      parameters:
 	        launch_command: "thin start -p %(port)d"
 	      version: 1.9.3
@@ -88,12 +74,10 @@ by creating the ``manifest.yml`` file in the root, with these contents:
 	          commands:
 	            - bundle install
 	            - rake db:migrate
-	    placement:
-	      strategy: paasmaker.placement.default
 
 	services:
 	  - name: railsexample
-	    provider: paasmaker.service.mysql
+	    plugin: paasmaker.service.mysql
 
 We now need to configure rails to read in the configuration from Paasmaker. Also, include
 gems to add support for MySQL and Postgres. Add the following gems to the ``Gemfile``:
@@ -118,6 +102,8 @@ Now, you can edit ``config/environment.rb`` to make the following changes. The n
 is the one in the middle.
 
 .. code-block:: ruby
+
+	# In file config/environment.rb:
 
 	# Load the rails application
 	require File.expand_path('../application', __FILE__)
@@ -178,24 +164,38 @@ in the ``manifest.yml`` file. In ``config/database.yml``:
 Now, using the development mode plugin, create the application by supplying the directory
 on your local machine. Paasmaker will allocate you a new database and set up your application.
 Once it starts up correctly, you can view the front page, which will just be the default Rails
-start page.
+start page. In my example, the URL I got is `http://1.web.paasmaker-rails.test.local.paasmaker.net:42530/
+<http://1.web.paasmaker-rails.test.local.paasmaker.net:42530/>`_.
 
 .. NOTE::
 	In development mode, the prepare and startup commands are not run. So you will need to
 	make sure you've run ``bundle install`` before you try to start your applicaton. How
-	to do database updates are described shortly.
+	to do database updates is described shortly.
 
-Also, at the moment it will be running in 'production' mode. This is not what you want for
+Also, at the moment it will be running in ``production`` mode. This is not what you want for
 development. To fix this, edit the workspace that you added the application to, and add
-a key called 'RAILS_ENV', and set it's value to 'development'. Stop, de-register, and
+a key called ``RAILS_ENV``, and set it's value to ``development``. Stop, de-register, and
 then restart your application. Your application then should start in development mode,
-which means autoreloading will work.
+which means autoreloading will work. This makes it easier to develop as you don't have
+to keep stopping and starting you application each time you make a change.
+
+.. note::
+	Just stopping your instance and starting it again is not enough. You must deregister
+	it first, as Paasmaker only updates the instance metadata on instance registration.
+
+Now that it's running, you will need to add ``paasmaker_web_env.sh`` to the .gitignore file.
+You won't want to check in ``paasmaker_web_env.sh``, as it can't be shared between developers.
+Also check in all the other changes up until this point, so you can see what was required to
+get the application to this stage.
+
+.. code-block:: bash
+
+	$ echo "/paasmaker_env_web.sh" >> .gitignore
+	$ git add .
+	$ git commit
 
 Developing with Rails
 ---------------------
-
-The first thing you will want to do is to add ``paasmaker_web_env.sh`` to the .gitignore file.
-You won't want to check this in, as it can't be shared between developers.
 
 As an example, we'll add a simple ActiveRecord ORM object, and work with it in the controller.
 This is based on small sections of the `Rails getting started guide
@@ -239,5 +239,5 @@ You can add more startup tasks if you need to, to dump out production assets to 
 you might be able to dump the production assets at prepare time, so this is only processed once,
 as opposed to having to dump the assets for each startup.
 
-By default, it will run rails in production mode, so you can put any production specific settings
-into that mode.
+By default, the Paasmaker interface will select production mode, so you can put any production
+specific settings into that mode.
