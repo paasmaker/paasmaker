@@ -122,12 +122,13 @@ pm.stats.routerstats = (function(){
 		var graphArea = $('<div class="graph"></div>');
 		var buttonBox = $('<div class="btn-group"></div>');
 
-		container.append(primaryStats);
-		container.append(secondaryStats);
+		container.append(
+			$('<div class="values">').append(primaryStats,secondaryStats)
+		);
 		container.append(graphArea);
 		container.append(buttonBox);
 
-		var showAllButton = $('<a href="#" class="show-all btn btn-mini">Show all</a>');
+		var showAllButton = $('<a href="#" class="show-all btn btn-mini">Show All</a>');
 		var graphButton = $('<a href="#" class="show-graph btn btn-mini">Show Graph</a>');
 
 		buttonBox.append(showAllButton);

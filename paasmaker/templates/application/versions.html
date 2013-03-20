@@ -1,32 +1,128 @@
-{% extends "../layout/main.html" %}
+<ul class="breadcrumb">
+  <li><a href="/workspace/{{ workspace.id }}/applications">{{ workspace.name }}</a> <span class="divider">/</span></li>
+  <li class="active">{{ application.name }}</li>
+</ul>
 
-{% block pretitle %}
-	<div class="router-stats well well-small" data-name="application" data-inputid="{{ application.id }}">Loading...</div>
-{% end %}
+<div class="router-stats well well-small" data-name="application" data-inputid="{{ application.id }}">Loading...</div>
 
-{% block pagetitle %}
-	Application {{ application.name }}
-{% end %}
+<h1>Application: {{ application.name }}</h1>
 
-{% block body %}
+<div class="btn-toolbar">
 	<div class="btn-group btn-group-header">
-		<a class="btn" href="/workspace/{{ application.workspace.id }}/applications">Back to {{ application.workspace.name }}</a>
-		<a class="btn" href="/application/{{ application.id }}/newversion">Create new version</a>
-		<a class="btn" href="/job/list/application/{{ application.id }}">All Jobs</a>
-		<a class="btn" href="/job/list/application/{{ application.id }}?sub=cron">Cron Jobs</a>
+		<a class="btn" href="/application/{{ application.id }}/newversion"><i class="icon-plus"></i> Create new version</a>
 	</div>
-
-	<table class="table table-striped table-bordered">
-		{% module Template("application/version_row_header.html") %}
-		{% if current_version %}
-			{# Show the current version first - always - then repeat the header and show the rest. #}
-			{% module Template("application/version_row.html", version=current_version, nice_state=nice_state, constants=constants) %}
-			{% module Template("application/version_row_header.html") %}
+	<div class="btn-group btn-group-header">
+		<a class="btn" href="/job/list/application/{{ application.id }}">All Jobs</a>
+		{% if user_permissions.has_permission(PERMISSION.APPLICATION_SERVICE_DETAIL, application.workspace_id) %}
+			<a class="btn" href="/application/{{ application.id }}/services">Services</a>
 		{% end %}
-		{% for version in versions %}
-			{% module Template("application/version_row.html", version=version, nice_state=nice_state, constants=constants) %}
+		<a class="btn" href="/job/list/application/{{ application.id }}?sub=cron">Crons</a>
+	</div>
+	{% if user_permissions.has_permission(PERMISSION.APPLICATION_DELETE, application.workspace_id) %}
+		{% if application.can_delete() %}
+			<div class="btn-group btn-group-header">
+				<a class="btn btn-danger" data-toggle="modal" data-target="#app_delete_modal"><i class="icon-trash icon-white"></i> Delete Application</a>
+			</div>
 		{% end %}
-	</table>
+	{% end %}
+</div>
 
-	{% module Template("include/pagination.html", page_data=versions_pagination) %}
-{% end %}
+<div id="app_delete_modal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="Delete Application" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="myModalLabel">Delete Application</h3>
+  </div>
+  <div class="modal-body">
+    <p>Are you sure you want to delete {{ application.name }}?</p>
+		<p>This action cannot be undone.</p>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+		<form method="POST" action="/application/{{ application.id }}/delete" style="display: inline;">
+			<input type="submit" class="btn btn-primary btn-danger" value="Delete Application" />
+		</form>
+  </div>
+</div>
+
+<table class="table table-striped table-bordered">
+	{% if current_version %}
+		<tr>
+			<th>Current version</th>
+			<th>State</th>
+			<th>Health</th>
+			<th>Instances</th>
+			<th>Actions</th>
+		</tr>
+		<tr>
+			<td>
+				<a href="/version/{{ current_version.id }}">Version {{ current_version.version }}</a>
+			</td>
+			<td>
+				<span class="version-{{ current_version.state }}">{{ nice_state(current_version.state) }}</span>
+			</td>
+			<td>
+				{% set health_data = current_version.health %}
+				{% if health_data['overall'] == constants.HEALTH.OK %}
+					{{ health_data['overall'] }}
+				{% else %}
+					{% for itype in health_data['types'] %}
+						{{ itype }}: {{ health_data['types'][itype]['state'] }} - {{ health_data['types'][itype]['message'] }}<br />
+					{% end %}
+				{% end %}
+			</td>
+			<td>
+				<a href="/version/{{ current_version.id }}">{{ instance_counts[current_version.id] }} instance(s) of {{ len(current_version.instance_types) }} type(s)</a>
+			</td>
+			<td>
+				<div class="table-button-box">
+					{% if current_version.state == constants.VERSION.PREPARED %}
+						<form method="POST" action="/version/{{ current_version.id }}/register">
+							<input type="submit" class="btn btn-mini btn-success" value="Register" />
+						</form>
+					{% end %}
+					{% if current_version.state == constants.VERSION.READY or current_version.state == constants.VERSION.PREPARED %}
+						<form method="POST" action="/version/{{ current_version.id }}/start">
+							<input type="submit" class="btn btn-mini btn-success" value="Start" />
+						</form>
+					{% end %}
+					{% if current_version.state == constants.VERSION.RUNNING %}
+						<form method="POST" action="/version/{{ current_version.id }}/stop">
+							<input type="submit" class="btn btn-mini btn-danger" value="Stop" />
+						</form>
+					{% end %}
+					{% if current_version.state == constants.VERSION.READY %}
+						<form method="POST" action="/version/{{ current_version.id }}/deregister">
+							<input type="submit" class="btn btn-mini btn-warning" value="De Register" />
+						</form>
+					{% end %}
+					{% if current_version.state == constants.VERSION.RUNNING and not current_version.is_current %}
+						<form method="POST" action="/version/{{ current_version.id }}/setcurrent">
+							<input type="submit" class="btn btn-mini btn-primary" value="Make Current" />
+						</form>
+					{% end %}
+					{% if not current_version.is_current and current_version.state == constants.VERSION.PREPARED %}
+						<form method="POST" action="/version/{{ current_version.id }}/delete">
+							<input type="submit" class="btn btn-mini btn-danger" value="Delete" />
+						</form>
+					{% end %}
+				</div>
+			</td>
+		</tr>
+</table>
+
+<table class="table table-striped table-bordered">
+	<tr>
+		<th>Number</th>
+		<th>Current</th>
+		<th>State</th>
+		<th>Health</th>
+		<th>Instances</th>
+		<th>Actions</th>
+	</tr>
+	{% end %}
+	{% for version in versions %}
+		{% module Template("application/version_row.html", version=version, instance_counts=instance_counts, nice_state=nice_state, constants=constants) %}
+	{% end %}
+</table>
+
+{% module Template("include/pagination.html", page_data=versions_pagination) %}

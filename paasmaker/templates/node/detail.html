@@ -1,12 +1,14 @@
 {% extends "../layout/main.html" %}
 
-{% block pagetitle %}
-	Node {{ node.name }}
-{% end %}
-
 {% block body %}
+	<ul class="breadcrumb">
+		<li><a href="/node/list">Nodes</a> <span class="divider">/</span></li>
+		<li class="active">{{ node.name }}</li>
+	</ul>
+
+	<h1>Node {{ node.name }}</h1>
+	
 	<ul>
-		<li>Name: {{ node.name }}</li>
 		<li>UUID: <code>{{ node.uuid }}</code></li>
 		<li>Route: {{ node.route }}:{{ node.apiport }}</li>
 		<li>State: {{ node.state }}</li>

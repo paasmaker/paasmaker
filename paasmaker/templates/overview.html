@@ -1,46 +1,55 @@
 {% extends "layout/main.html" %}
 
 {% block body %}
-	<h1>System Overview</h1>
+  <div class="overview_block">
+    <h2>Instances</h2>
+    <table>
+      <tr>
+        <th>State</th>
+        <th>Count</th>
+      </tr>
+      {% for instance in instances %}
+        <tr>
+          <td><span class="instance-{{ instance[0] }}">{{ nice_state(instance[0]) }}</span></td>
+          <td class="overview_count">{{ instance[1] }}</td>
+        </tr>
+      {% end %}
+    </table>
+  </div>
 
-	<h2>Instances</h2>
+  <div class="overview_block">
+    <h2>Nodes</h2>
+    <table>
+      <tr>
+        <th>State</th>
+        <th>Count</th>
+      </tr>
+      {% for node in nodes %}
+        <tr>
+          <td><span class="node-{{ node[0] }}">{{ nice_state(node[0]) }}</span></td>
+          <td class="overview_count">{{ node[1] }}</td>
+        </tr>
+      {% end %}
+    </table>
+    <p class="overview_more_link"><a href="/node/list">View all</a></p>
+  </div>
 
-	<table>
-		<tr>
-			<th>State</th>
-			<th>Count</th>
-		</tr>
-		{% for instance in instances %}
-			<tr>
-				<td><span class="instance-{{ instance[0] }}">{{ nice_state(instance[0]) }}</span></td>
-				<td>{{ instance[1] }}</td>
-			</tr>
-		{% end %}
-	</table>
-
-	<h2>Nodes</h2>
-
-	<table>
-		<tr>
-			<th>State</th>
-			<th>Count</th>
-		</tr>
-		{% for node in nodes %}
-			<tr>
-				<td><span class="node-{{ node[0] }}">{{ nice_state(node[0]) }}</span></td>
-				<td>{{ node[1] }}</td>
-			</tr>
-		{% end %}
-	</table>
-
-	<h2>Routing</h2>
+  <div class="overview_block">
+    <h2>Applications</h2>
+    <ul>
+      {% for application in applications %}
+        <li><a href="/application/{{ application.id }}">{{ application.name }} [{{ application.health }}]</a></li>
+      {% end %}
+    </ul>
+	</div>
 
 	<div class="router-stats-collection">
 		<div class="router-stats well well-small" data-name="uncaught" data-inputid="0" data-title="Uncaught Requests">Loading...</div>
 		<div class="router-stats well well-small" data-name="pacemaker" data-inputid="0" data-title="Pacemaker Requests">Loading...</div>
 
 		{% for workspace in workspaces %}
-			<div class="router-stats well well-small" data-name="workspace" data-inputid="{{ workspace.id }}" data-title="Workspace {{ workspace.name }}">Loading...</div>
+			<div class="router-stats well well-small" data-name="workspace" data-inputid="{{ workspace.id }}" data-title="Workspace: {{ workspace.name }}">Loading...</div>
 		{% end %}
 	</div>
+
 {% end %}
