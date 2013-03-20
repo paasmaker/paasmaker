@@ -63,7 +63,7 @@ class CommandSupervisorLauncher(object):
 		# TODO: Make sure this command line is secure and stuff.
 		# Why are we doing it this way? We want the process to fork into the background,
 		# so if the parent process dies, it doesn't take down any running supervisors.
-		command_line = "%s %s > %s 2>&1 &" % (supervisor, payload_path, payload['log_file'])
+		command_line = "nohup %s %s > %s 2>&1 &" % (supervisor, payload_path, payload['log_file'])
 		subprocess.check_call(command_line, shell=True)
 
 	def _get_supervisor_dir(self):
@@ -92,7 +92,7 @@ class CommandSupervisorLauncher(object):
 			fp = open(pidfile, 'r')
 			pid = int(fp.read())
 			fp.close()
-			os.kill(pid, signal.SIGHUP)
+			os.kill(pid, signal.SIGTERM)
 
 	def is_running(self):
 		"""
@@ -186,6 +186,15 @@ class CommandSupervisorTest(BaseControllerTest):
 		)
 
 		# Give the process some time to start.
+		self.short_wait_hack(length=0.5)
+
+		self.assertTrue(launcher.is_running(), "Supervisor is not running.")
+
+		# Send it a SIGHUP. It should ignore that.
+		pid = int(open(launcher._get_pid_path(), 'r').read())
+		os.kill(pid, signal.SIGHUP)
+
+		# Wait for a little while, and make sure it's still running.
 		self.short_wait_hack(length=0.5)
 
 		self.assertTrue(launcher.is_running(), "Supervisor is not running.")

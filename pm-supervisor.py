@@ -53,6 +53,10 @@ class CommandSupervisor(object):
 		self.kill()
 		self.log_helper("INFO", "Got signal %d" % signum)
 
+	def sighup_handler(self, signum, frame):
+		# Do nothing.
+		pass
+
 	def run(self):
 		# Prepare to run.
 		# NOTE: Assumes that data is as expected...
@@ -63,7 +67,11 @@ class CommandSupervisor(object):
 		pidfile = self.data['pidfile']
 
 		# Install our signal handler.
-		signal.signal(signal.SIGHUP, self.signal_handler)
+		signal.signal(signal.SIGTERM, self.signal_handler)
+
+		# And skip SIGHUPs, as that's the whole point of
+		# using the command supervisors.
+		signal.signal(signal.SIGHUP, self.sighup_handler)
 
 		try:
 			self.log_helper("INFO", "Running command: %s" % str(self.data['command']))
