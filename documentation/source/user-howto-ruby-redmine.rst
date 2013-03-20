@@ -13,26 +13,9 @@ For this guide, we're assuming that:
   with the development mode plugin.
 * Your local installation of Paasmaker has the Ruby runtime enabled and configured.
   We're also assuming that you've installed a version of 1.9.3 (any patch level).
-* You have rbenv installed for your user.
+* You have rbenv installed for your user and set up.
 * You are using some kind of source control to manage your code. In this example,
   we use Git to manage this.
-
-Create the git repository
--------------------------
-
-Use your normal tools to create a git repository, and hook it up to the remote repository.
-
-For example, with BitBucket, you would do the following:
-
-.. code-block:: bash
-
-	$ mkdir paasmaker-redmine
-	$ cd paasmaker-redmine
-	$ git init .
-	$ git remote add origin ssh://git@bitbucket.org/freefoote/paasmaker-redmine.git
-	... make your changes ...
-	$ git commit
-	$ git push -u origin master
 
 Install Redmine
 ---------------
@@ -44,6 +27,12 @@ a few development libraries. On Ubuntu, you can get those libraries with the fol
 
 	$ sudo apt-get install imagemagick libmagickwand-dev
 
+.. note::
+	Paasmaker doesn't currently have a mechanism to ensure these are installed on
+	production servers. You'll need to ensure you've done this ahead of time in production.
+	We hope to add a secure way to be able to do this via an application manifest (or other
+	method) in the future.
+
 Redmine is available as a tar.gz download, or you can fetch from subversion. In this case,
 we're going to export a stable copy from Subversion into our local repository. The reason
 that we're taking a copy is to track our updates to Redmine.
@@ -54,7 +43,9 @@ in our source control system.
 
 .. code-block:: bash
 
+	$ mkdir paasmaker-redmine
 	$ cd paasmaker-redmine
+	$ git init .
 	$ svn export --force http://svn.redmine.org/redmine/branches/2.2-stable/ .
 	$ git add .
 	$ git commit
@@ -74,9 +65,7 @@ Then update your bundle:
 	$ bundle install
 
 Now, set up a manifest file in the root of the project. Call it ``manifest.yml`` with
-the following contents. You should adjust this for your environment. This sets up
-Redmine with a Postgres database - if you want a MySQL one instead, use the appropriate
-service to do this.
+the following contents. You should adjust this for your environment.
 
 .. code-block:: yaml
 
@@ -110,44 +99,28 @@ service to do this.
 	            - bundle install --without development test
 	            - rake db:migrate
 	            - REDMINE_LANG=en rake redmine:load_default_data
-	    placement:
-	      plugin: paasmaker.placement.default
 
 	services:
 	  - name: redminesql
-	    plugin: paasmaker.service.postgres
+	    plugin: paasmaker.service.mysql
 
-Now, you can edit ``config/environment.rb`` to make the following changes. The new block
-is the one in the middle.
+Now, you can edit ``config/environment.rb`` to make the following changes:
 
-.. code-block:: ruby
-
-	# Load the rails application
-	require File.expand_path('../application', __FILE__)
-
-	# Make sure there's no plugin in vendor/plugin before starting
-	vendor_plugins_dir = File.join(Rails.root, "vendor", "plugins")
-	if Dir.glob(File.join(vendor_plugins_dir, "*")).any?
-	  $stderr.puts "Plugins in vendor/plugins (#{vendor_plugins_dir}) are no longer allowed. " +
-	    "Please, put your Redmine plugins in the `plugins` directory at the root of your " +
-	    "Redmine directory (#{File.join(Rails.root, "plugins")})"
-	  exit 1
-	end
-
-	# For Paasmaker, determine the rails environment.
-	require 'paasmaker'
-	interface = Paasmaker::Interface.new([])
-	ENV['RAILS_ENV'] = interface.get_rails_env('production')
-
-	# Store the interface into a global variable for later use.
-	$PAASMAKER_INTERFACE = interface
-
-	# Initialize the rails application
-	RedmineApp::Application.initialize!
+.. literalinclude:: support/redmine-environment.rb
+	:language: ruby
+	:emphasize-lines: 6-21
 
 Make a copy of the ``config/database.yml.example`` as ``config/database.yml``. You will
 need to remove ``config/database.yml`` from the ``.gitignore`` file, because you will need
-to check in the configuration file.
+to check in the configuration file. This is safe, because with Paasmaker, you're not
+checking in actual database credentials, and only placeholders that get replaced at runtime
+with the correct values supplied by Paasmaker.
+
+.. code-block:: bash
+
+	$ cp config/database.yml.example config/database.yml
+	$ gedit .gitignore
+	... remove config/database.yml from .gitignore ...
 
 Once you've copied the ``config/database.yml`` file, adjust it to read as so. Note that in
 the call to ``get_service()``, the name matches up with the service name in the
@@ -155,11 +128,12 @@ the call to ``get_service()``, the name matches up with the service name in the
 
 .. code-block:: yaml
 
+	# In file config/database.yml
 	<% interface = $PAASMAKER_INTERFACE %>
-	<% database = interface.get_service('postgres') %>
+	<% database = interface.get_service('redminesql') %>
 
 	production:
-	  adapter: postgresql
+	  adapter: mysql
 	  database: "<%= database['database'] %>"
 	  host: "<%= database['hostname'] %>"
 	  username: "<%= database['username'] %>"
@@ -167,7 +141,7 @@ the call to ``get_service()``, the name matches up with the service name in the
 	  port: <%= database['port'] %>
 
 	development:
-	  adapter: postgresql
+	  adapter: mysql
 	  database: "<%= database['database'] %>"
 	  host: "<%= database['hostname'] %>"
 	  username: "<%= database['username'] %>"
@@ -196,15 +170,15 @@ the call to ``get_service()``, the name matches up with the service name in the
 	  adapter: sqlite3
 	  database: db/test.sqlite3
 
-You will need to generate a secret token used for logins. This command will generate it:
+You will need to generate a secret token used for logins. There is a command to generate it,
+and then you'll need to remove ``/config/initializers/secret_token.rb`` from the .gitignore
+so you can check it in:
 
 .. code-block:: bash
 
 	$ rake generate_secret_token
-
-However, you will need to remove ``/config/initializers/secret_token.rb`` from ``.gitignore``
-to be able to check it in. If you don't check it in and deploy it, the nodes will end up
-with different tokens, which will lead to some interesting behaviours in future.
+	$ gedit .gitignore
+	... remove the line /config/initializers/secret_token.rb ...
 
 .. note::
 	Some people will consider that checking in the secret token reduces security. However,
@@ -238,15 +212,20 @@ a key called 'RAILS_ENV', and set it's value to 'development'. Stop, de-register
 then restart your application. Your application then should start in development mode,
 which means autoreloading will work correctly.
 
-Now, you can access your Redmine installation using the default username and password, admin/admin.
-It may take a few seconds to load the front page the first time as the caches are populated.
+.. note::
+	Just stopping your instance and starting it again is not enough. You must deregister
+	it first, as Paasmaker only updates the instance metadata on instance registration.
+
+Now, you can access your Redmine installation using the default username and password,
+``admin`` and ``admin``. It may take a few seconds to load the front page the first time
+as the caches are populated.
 
 Storing attachments on Amazon S3
 --------------------------------
 
 By default, Redmine will store uploaded files onto the filesystem alongside the code. For
-many installations this works well; however, on Paasmaker, it will delete all the instance
-files once it's done. This poses a problem for long term file storage with Redmine.
+many installations this works well; however, on Paasmaker, all the uploads will vanish when
+the instance is deregistered. This poses a problem for long term file storage with Redmine.
 
 However, there is a plugin for Redmine that allows uploading files to Amazon S3. Combine
 this with Paasmaker's S3 Bucket service, and we can have it upload files to S3 automatically.
@@ -266,7 +245,7 @@ choose an appropriate region for your new bucket.
 .. code-block:: yaml
 
 	services:
-	  - name: postgres
+	  - name: redminesql
 	    provider: paasmaker.service.postgres
 	  - name: pmredmine
 	    provider: paasmaker.service.s3bucket
@@ -306,8 +285,9 @@ Now edit ``config/s3.yml`` to hook up the bucket it created for you:
 
 Restart the application, and then try to upload some files. You should see
 a brand new bucket in your Amazon S3 account, and when you attach files, they
-should appear in the bucket automatically. Note that the upload will make Redmine
-slower to upload files.
+should appear in the bucket automatically. Note that this plugin will make Redmine
+slower to upload files, as it has to go to S3 directly, but the result is that
+your files are persistent.
 
 Check in your changes, and deploy as appropriate.
 
@@ -319,6 +299,9 @@ and Redmine was sensitive to this because it's based on Rails.
 
 To keep your Redmine installation secure, you should update your Redmine
 installation. You can use this method to update to the latest version.
+
+.. note::
+	This isn't an ideal workflow, and feel free to submit better suggestions.
 
 * Have an up to date checkout of your version of Redmine.
 * Download the latest tar.gz release of Redmine. I fetched it from
