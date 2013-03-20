@@ -221,9 +221,16 @@ class InstanceManager(object):
 		:arg callable callback: The callback to call when complete.
 		"""
 		# TODO: Add unit tests for this. Desperately required.
+		# TODO: Refactor this code. It's way too complicated and has far
+		# too many code paths for a single method.
 		instances = self.catalog.keys()
 		altered_instances = []
 		logger.info("Checking %d instances on startup.", len(instances))
+
+		# Fetch the flag that indicates if we're supposed to shut down
+		# applications on exit. This alters how we handle SUSPENDED instances
+		# in development mode.
+		always_shutdown = self.configuration.get_flat('heart.shutdown_on_exit')
 
 		def next_instance():
 			if len(instances) > 0:
@@ -242,23 +249,49 @@ class InstanceManager(object):
 				# end of on_success_instance()
 
 			def on_error_instance(message, exception=None):
-				# It's no longer running. Mark it as SUSPENDED.
-				logger.error("Instance %s is no longer running!", instance_id)
-				logger.error(message)
+				def real_on_error_instance(message, exception=None):
+					# Normal production handling.
+					# It's no longer running. Mark it as SUSPENDED.
+					logger.error("Instance %s is no longer running!", instance_id)
+					logger.error(message)
 
-				# Record the error against the instance.
-				instance_logger = self.configuration.get_job_logger(instance_id)
-				instance_logger.error("Determined not to be running. Pacemaker will decide the fate now.")
-				instance_logger.error(message)
-				if exception:
-					instance_logger.error("Exception:", exc_info=exception)
-				instance_logger.finished()
+					# Record the error against the instance.
+					instance_logger = self.configuration.get_job_logger(instance_id)
+					instance_logger.error("Determined not to be running. Pacemaker will decide the fate now.")
+					instance_logger.error(message)
+					if exception:
+						instance_logger.error("Exception:", exc_info=exception)
+					instance_logger.finished()
 
-				data = self.get_instance(instance_id)
-				data['instance']['state'] = constants.INSTANCE.SUSPENDED
-				self.save()
-				altered_instances.append(instance_id)
-				next_instance()
+					data = self.get_instance(instance_id)
+					data['instance']['state'] = constants.INSTANCE.SUSPENDED
+					self.save()
+					altered_instances.append(instance_id)
+					next_instance()
+					# end of real_on_error_instance()
+
+				if always_shutdown:
+					# Development mode handling. The instance
+					# was placed into suspended state, and sure enough,
+					# it's no longer running. So try to start it up.
+					instance_logger = self.configuration.get_job_logger(instance_id)
+					data = self.get_instance(instance_id)
+					runtime = self.configuration.plugins.instantiate(
+						data['instance_type']['runtime_name'],
+						paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
+						data['instance_type']['runtime_parameters'],
+						instance_logger
+					)
+
+					runtime.start(
+						instance_id,
+						on_success_instance,
+						real_on_error_instance
+					)
+				else:
+					# Do the production handling.
+					real_on_error_instance(message, exception)
+
 				# end of on_error_instance()
 
 			data = self.get_instance(instance_id)
@@ -292,11 +325,12 @@ class InstanceManager(object):
 
 					next_instance()
 				else:
+					instance_logger = self.configuration.get_job_logger(instance_id)
 					runtime = self.configuration.plugins.instantiate(
 						data['instance_type']['runtime_name'],
 						paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
 						data['instance_type']['runtime_parameters'],
-						logger # CAUTION: TODO: Not a job logger!
+						instance_logger
 					)
 
 					runtime.status(
@@ -321,6 +355,8 @@ class InstanceManager(object):
 		:arg callable callback: The callback to call when complete.
 		"""
 		# TODO: Add unit tests for this. Desperately required.
+		# TODO: Refactor this code. It's way too complicated and has far
+		# too many code paths for a single method.
 		instances = self.catalog.keys()
 		altered_instances = []
 		logger.info("Checking %d instances on shutdown.", len(instances))
@@ -408,11 +444,12 @@ class InstanceManager(object):
 							next_instance()
 							# end of on_error_instance()
 
+						instance_logger = self.configuration.get_job_logger(instance_id)
 						runtime = self.configuration.plugins.instantiate(
 							data['instance_type']['runtime_name'],
 							paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
 							data['instance_type']['runtime_parameters'],
-							logger # CAUTION: TODO: Not a job logger!
+							instance_logger
 						)
 
 						runtime.stop(
