@@ -758,6 +758,47 @@ class BaseController(tornado.web.RequestHandler):
 		# unit tests or other short lived systems.
 		self.add_data('token', self.create_signed_value('user', unicode(user.id)))
 
+	def _my_workspace_list(self, idset=False):
+		"""
+		Return a SQLalchemy query of the workspaces that the currently
+		logged in user can view. This is based on their permissions.
+
+		:arg bool idset: If true, the resulting query will only return
+			workspace IDs, which is useful for using it as a subquery
+			for permissions purposes.
+		"""
+		if idset:
+			workspaces = self.session.query(
+				paasmaker.model.Workspace.id
+			)
+		else:
+			workspaces = self.session.query(
+				paasmaker.model.Workspace
+			)
+
+		# Check to see if we have global workspace list permissions.
+		if not self.has_permission(constants.PERMISSION.WORKSPACE_LIST):
+			# Nope, you have a limited selection. So limit the query to those.
+			workspaces = self.session.query(
+				paasmaker.model.Workspace
+			).filter(
+				paasmaker.model.Workspace.id.in_(
+					paasmaker.model.WorkspaceUserRoleFlat.list_of_workspaces_for_user(
+						self.session,
+						self.get_current_user()
+					)
+				)
+			)
+
+		# Common filters.
+		workspaces = workspaces.filter(
+			paasmaker.model.Workspace.deleted == None
+		).order_by(
+			paasmaker.model.Workspace.name.asc()
+		)
+
+		return workspaces
+
 ##
 ## TEST CODE
 ##

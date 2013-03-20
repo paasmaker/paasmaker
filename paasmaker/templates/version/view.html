@@ -8,20 +8,19 @@
 
 <h1>
 	Version {{ version_to_view.version }} of {{ version_to_view.application.name }}
-	{% if version_to_view.is_current %}
-		<a href="#" class="btn btn-success disabled">
-			<i class="icon-ok icon-white"></i> Current
-		</a>
-	{% else %}
-		<a href="#" class="btn disabled">
-			<i class="icon-minus"></i> Not current
-		</a>
-	{% end %}
-	</a>
 </h1>
 
 <div class="btn-toolbar">
 	<div class="btn-group btn-group-header">
+		{% if version_to_view.is_current %}
+			<a href="#" class="btn btn-success disabled">
+				<i class="icon-ok icon-white"></i> Current
+			</a>
+		{% else %}
+			<a href="#" class="btn disabled">
+				<i class="icon-minus"></i> Not current
+			</a>
+		{% end %}
 		<a class="btn" href="/job/list/version/{{ version_to_view.id }}">All Jobs</a>
 		<a class="btn" href="/job/list/version/{{ version_to_view.id }}?sub=cron">Crons</a>
 	</div>

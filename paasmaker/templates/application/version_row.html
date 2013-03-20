@@ -1,6 +1,6 @@
 <tr>
 	<td>
-		<a href="/version/{{ version.id }}">Version {{ version.version }}</a>
+		<a href="/version/{{ version.id }}">v{{ version.version }}</a>
 	</td>
 	<td>
 		{% if version.is_current and version.state != constants.VERSION.RUNNING %}
@@ -23,7 +23,7 @@
 		{% end %}
 	</td>
 	<td>
-		<a href="/version/{{ version.id }}">{{ instance_counts[version.id] }} instance(s) of {{ len(version.instance_types) }} type(s)</a>
+		<a href="/version/{{ version.id }}">{{ instance_counts[version.id] }} / {{ len(version.instance_types) }}</a>
 	</td>
 	<td>
 		<div class="table-button-box">

@@ -94,13 +94,13 @@
 		</div>
 		</div>
 		</div>
-		
+
 		<div class="container">
 			{% block leftnav %}{% end %}
 
 			<div id="main" {% block mainmodifier %}{% end %}>
 				{% block pretitle %}{% end %}
-				<h1>{% block pagetitle %}{% end %}</h1>
+				{% block pagetitle %}{% end %}
 
 				{% block errors %}
 					{% if len(errors) > 0 %}

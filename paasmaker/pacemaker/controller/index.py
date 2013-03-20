@@ -39,23 +39,22 @@ class IndexController(BaseController):
 		)
 		self.add_data('nodes', node_status_counts)
 
+		# Workspace list. Based on permissions.
+		workspace_list = self._my_workspace_list()
+		self.add_data_template('workspaces', workspace_list)
+
 		# Generate a quick link list of 5 applications;
 		# TODO: sort by recentness of version deployed,
 		# or some other freshness measure
-		self.application_list = self.session.query(
+		my_workspace_idset = self._my_workspace_list(idset=True)
+		application_list = self.session.query(
 			paasmaker.model.Application
+		).filter(
+			paasmaker.model.Application.workspace_id.in_(my_workspace_idset)
 		).order_by(
 			paasmaker.model.Application.name.asc()
-		).limit(5).all()
-		self.add_data_template('applications', list(self.application_list))
-		
-		# Workspace routing stats.
-		self.workspace_list = self.session.query(
-			paasmaker.model.Workspace
-		).order_by(
-			paasmaker.model.Workspace.name.asc()
-		).all()
-		self.add_data_template('workspaces', list(self.workspace_list))
+		).limit(5)
+		self.add_data_template('applications', application_list)
 
 		self.render("overview.html")
 

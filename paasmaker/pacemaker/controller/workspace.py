@@ -104,30 +104,9 @@ class WorkspaceListController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def get(self):
-		# Check to see if we have global workspace list permissions.
-		workspaces = self.session.query(
-			paasmaker.model.Workspace
-		)
-
-		if not self.has_permission(constants.PERMISSION.WORKSPACE_LIST):
-			# Nope, you have a limited selection. So limit the query to those.
-			workspaces = self.session.query(
-				paasmaker.model.Workspace
-			).filter(
-				paasmaker.model.Workspace.id.in_(
-					paasmaker.model.WorkspaceUserRoleFlat.list_of_workspaces_for_user(
-						self.session,
-						self.get_current_user()
-					)
-				)
-			)
-
-		# Common filters.
-		workspaces = workspaces.filter(
-			paasmaker.model.Workspace.deleted == None
-		).order_by(
-			paasmaker.model.Workspace.name.asc()
-		)
+		# This helper fetches only the workspaces the logged in user
+		# has permissions to access.
+		workspaces = self._my_workspace_list()
 
 		self._paginate('workspaces', workspaces)
 		self.render("workspace/list.html")

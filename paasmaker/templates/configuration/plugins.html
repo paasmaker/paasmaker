@@ -1,7 +1,7 @@
 {% extends "../layout/main.html" %}
 
 {% block pagetitle %}
-	Active Plugins
+	<h1>Active Plugins</h1>
 {% end %}
 
 {% block body %}
@@ -12,7 +12,7 @@
 			<th>Configuration</th>
 			<th>Available Modes</th>
 		</tr>
-		
+
 		{% for name, plugin in plugins.iteritems() %}
 			{% if not 'JOB' in plugin['modes'] %}
 				<tr>

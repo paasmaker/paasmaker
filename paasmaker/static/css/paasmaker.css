@@ -1,14 +1,20 @@
 /* Paasmaker CSS */
 
+/* Layout */
+ul.breadcrumb { padding-left: 0px; margin-bottom: 0px; }
+
 /* Login page */
 .index_column { width: 45%; float: left; margin: 20px; }
 
 /* Overview / dashboard page */
-.overview_block { width: 30%; float: left; margin: 10px; }
-.router-stats-collection { clear: both; padding-top: 40px; }
-.overview_block table td { min-width: 5em; }
-td.overview_count { text-align: right; }
-.overview_more_link { margin-top: 1em; font-style: italic; }
+.overview-block { width: 250px; float: left; margin-right: 10px; min-height: 150px; }
+.overview-block .title { text-align: center; font-weight: bold; }
+.router-stats-collection { clear: both; }
+.overview-block table { width: 100%; }
+.overview-block table td { min-width: 5em; }
+.overview-block ul { list-style-type: none; margin-left: 0px; }
+td.overview-count { text-align: right; }
+.overview-more-link { margin-top: 1em; font-style: italic; }
 
 /* COMMON CSS STYLES */
 ul.errors

@@ -44,8 +44,8 @@
   </div>
 </div>
 
+{% if current_version %}
 <table class="table table-striped table-bordered">
-	{% if current_version %}
 		<tr>
 			<th>Current version</th>
 			<th>State</th>
@@ -109,17 +109,17 @@
 			</td>
 		</tr>
 </table>
+{% end %}
 
 <table class="table table-striped table-bordered">
 	<tr>
-		<th>Number</th>
+		<th>#</th>
 		<th>Current</th>
 		<th>State</th>
 		<th>Health</th>
-		<th>Instances</th>
+		<th>Instances/Types</th>
 		<th>Actions</th>
 	</tr>
-	{% end %}
 	{% for version in versions %}
 		{% module Template("application/version_row.html", version=version, instance_counts=instance_counts, nice_state=nice_state, constants=constants) %}
 	{% end %}

@@ -90,10 +90,10 @@ class ApplicationListController(ApplicationRootController):
 		self.add_data('workspace', workspace)
 		self._paginate('applications', applications)
 		self.add_data_template('paasmaker', paasmaker)
-		
+
 		self.add_data('page', 'applicationlist')
 		self.render("layout/app_nav.html")
-		
+
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
@@ -211,7 +211,10 @@ class ApplicationNewController(ApplicationRootController):
 			raw_scm_parameters['location'] = upload_location
 
 		def job_started():
-			self._redirect_job(self.get_data('job_id'), '/workspace/%d/applications' % workspace.id)
+			if application:
+				self._redirect_job(self.get_data('job_id'), '/application/%d' % application.id)
+			else:
+				self._redirect_job(self.get_data('job_id'), '/workspace/%d/applications' % workspace.id)
 
 		def application_job_ready(job_id):
 			self.add_data('job_id', job_id)
@@ -242,7 +245,7 @@ class ApplicationController(ApplicationRootController):
 
 		# TODO: Unit test.
 		self.add_data('application', application)
-		
+
 		count = {}
 		for version in application.versions:
 			count[version.id] = 0;

@@ -1,8 +1,27 @@
 {% extends "layout/main.html" %}
 
 {% block body %}
-  <div class="overview_block">
-    <h2>Instances</h2>
+  <h1>System Overview</h1>
+  <div class="overview-block well well-small">
+    <div class="title">Workspaces</div>
+    <ul>
+      {% for workspace in workspaces %}
+        <li><a href="/workspace/{{ workspace.id }}">{{ workspace.name }}</a></li>
+      {% end %}
+    </ul>
+  </div>
+
+  <div class="overview-block well well-small">
+    <div class="title">Applications</div>
+    <ul>
+      {% for application in applications %}
+        <li><a href="/application/{{ application.id }}">{{ application.name }} [{{ application.health }}]</a></li>
+      {% end %}
+    </ul>
+  </div>
+
+  <div class="overview-block well well-small">
+    <div class="title">Instances</div>
     <table>
       <tr>
         <th>State</th>
@@ -11,14 +30,14 @@
       {% for instance in instances %}
         <tr>
           <td><span class="instance-{{ instance[0] }}">{{ nice_state(instance[0]) }}</span></td>
-          <td class="overview_count">{{ instance[1] }}</td>
+          <td class="overview-count">{{ instance[1] }}</td>
         </tr>
       {% end %}
     </table>
   </div>
 
-  <div class="overview_block">
-    <h2>Nodes</h2>
+  <div class="overview-block well well-small">
+    <div class="title">Nodes</div>
     <table>
       <tr>
         <th>State</th>
@@ -27,21 +46,12 @@
       {% for node in nodes %}
         <tr>
           <td><span class="node-{{ node[0] }}">{{ nice_state(node[0]) }}</span></td>
-          <td class="overview_count">{{ node[1] }}</td>
+          <td class="overview-count">{{ node[1] }}</td>
         </tr>
       {% end %}
     </table>
-    <p class="overview_more_link"><a href="/node/list">View all</a></p>
+    <p class="overview-more-link"><a href="/node/list">View all</a></p>
   </div>
-
-  <div class="overview_block">
-    <h2>Applications</h2>
-    <ul>
-      {% for application in applications %}
-        <li><a href="/application/{{ application.id }}">{{ application.name }} [{{ application.health }}]</a></li>
-      {% end %}
-    </ul>
-	</div>
 
 	<div class="router-stats-collection">
 		<div class="router-stats well well-small" data-name="uncaught" data-inputid="0" data-title="Uncaught Requests">Loading...</div>
