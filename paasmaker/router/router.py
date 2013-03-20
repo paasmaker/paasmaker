@@ -57,11 +57,11 @@ http {
 			set $instancekey "null";
 			rewrite_by_lua_file %(router_root)s/rewrite.lua;
 
-			proxy_set_header            Host $host;
+			proxy_set_header            Host $host:$server_port;
 			proxy_buffering             off;
 			proxy_set_header            X-Forwarded-For $proxy_add_x_forwarded_for;
 			proxy_set_header            X-Forwarded-Port $server_port;
-			proxy_set_header            X-Forwarded-Host $host;
+			proxy_set_header            X-Forwarded-Host $host:$server_port;
 			proxy_redirect              off;
 			proxy_connect_timeout       10;
 			proxy_send_timeout          60;
