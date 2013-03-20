@@ -31,8 +31,7 @@ class CommandSupervisorLauncher(object):
 		into a log file. If the supervised command exits, it will
 		report it back to the heart via the exit key supplied.
 
-		:arg str|list command: The command line to execute. Either
-			a list or string is allowed.
+		:arg str|list command: The command line to execute.
 		:arg str cwd: The working directory for the command.
 		:arg dict environment: The environment for the command.
 			Typically this will select the appropriate runtime.
@@ -63,7 +62,8 @@ class CommandSupervisorLauncher(object):
 		# TODO: Make sure this command line is secure and stuff.
 		# Why are we doing it this way? We want the process to fork into the background,
 		# so if the parent process dies, it doesn't take down any running supervisors.
-		command_line = "nohup %s %s > %s 2>&1 &" % (supervisor, payload_path, payload['log_file'])
+		command_line = "%s %s > %s 2>&1 &" % (supervisor, payload_path, payload['log_file'])
+		#command_line = "%s %s > /tmp/supervisor.foo 2>&1 &" % (supervisor, payload_path)
 		subprocess.check_call(command_line, shell=True)
 
 	def _get_supervisor_dir(self):
@@ -214,7 +214,7 @@ class CommandSupervisorTest(BaseControllerTest):
 			job_contents = open(job_path, 'r').read()
 
 		self.assertIn("Start...", job_contents, "Missing output.")
-		self.assertIn("Killed", job_contents, "Missing output.")
+		self.assertIn("code -15", job_contents, "Missing output.")
 
 	def test_abort_detached(self):
 		# Make me a launcher.
@@ -249,7 +249,7 @@ class CommandSupervisorTest(BaseControllerTest):
 			job_contents = open(job_path, 'r').read()
 
 		self.assertIn("Start...", job_contents, "Missing output.")
-		self.assertIn("Killed", job_contents, "Missing output.")
+		self.assertIn("code -15", job_contents, "Missing output.")
 
 	def test_bad_command(self):
 		# Make me a launcher.
@@ -275,4 +275,4 @@ class CommandSupervisorTest(BaseControllerTest):
 		if os.path.exists(job_path):
 			job_contents = open(job_path, 'r').read()
 
-		self.assertIn("No such file", job_contents, "Missing output.")
+		self.assertIn("No such file or directory", job_contents, "Missing output.")
