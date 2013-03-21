@@ -75,9 +75,9 @@ class CommandSupervisor(object):
 		# Install our signal handler.
 		signal.signal(signal.SIGTERM, self.signal_handler)
 
-		# And skip SIGHUPs, as that's the whole point of
-		# using the command supervisors.
+		# And skip a few other signals.
 		signal.signal(signal.SIGHUP, signal.SIG_IGN)
+		signal.signal(signal.SIGINT, signal.SIG_IGN)
 
 		try:
 			self.log_helper("INFO", "Running command: %s" % str(self.data['command']))
@@ -147,8 +147,8 @@ class CommandSupervisor(object):
 
 	def kill(self):
 		if self.process:
-			os.kill(self.process.pid, signal.SIGTERM)
-			self.log_helper("INFO", "Sent of SIGTERM signal.")
+			self.process.terminate()
+			self.log_helper("INFO", "Sent off SIGTERM signal.")
 
 	def announce_completion(self, code, depth=1):
 		self.log_helper("INFO", "Tring to report error code back to heart node.")
