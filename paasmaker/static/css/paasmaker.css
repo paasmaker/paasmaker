@@ -2,6 +2,7 @@
 
 /* Layout */
 ul.breadcrumb { padding-left: 0px; margin-bottom: 0px; }
+body .navbar .brand { padding: 7px 20px 3px; }
 
 /* Login page */
 .index_column { width: 45%; float: left; margin: 20px; }
