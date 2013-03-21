@@ -35,10 +35,11 @@ a few development libraries. On Ubuntu, you can get those libraries with the fol
 
 Redmine is available as a tar.gz download, or you can fetch from subversion. In this case,
 we're going to export a stable copy from Subversion into our local repository. The reason
-that we're taking a copy is to track our updates to Redmine.
+that we're taking a copy is to track our updates to Redmine, and also you need a way to get
+your version to Paasmaker.
 
 Go into the directory, and export the latest revision. At time of writing, this is
-2.2.2, and we ended up with r11258. We immediately check it in to have a pristine version
+2.3.0, and we ended up with r11670. We immediately check it in to have a pristine version
 in our source control system.
 
 .. code-block:: bash
@@ -46,7 +47,7 @@ in our source control system.
 	$ mkdir paasmaker-redmine
 	$ cd paasmaker-redmine
 	$ git init .
-	$ svn export --force http://svn.redmine.org/redmine/branches/2.2-stable/ .
+	$ svn export --force http://svn.redmine.org/redmine/branches/2.3-stable/ .
 	$ git add .
 	$ git commit
 
@@ -55,10 +56,16 @@ In it, place the following gems. You will also need to remove ``Gemfile.local`` 
 
 .. code-block:: ruby
 
+	# Create Gemfile.local :
 	gem 'thin'
 	gem 'paasmaker-interface'
 
-Then update your bundle:
+.. code-block:: bash
+
+	$ gedit .gitignore
+	... remove Gemfile.local ...
+
+Then install your bundle:
 
 .. code-block:: bash
 
@@ -82,6 +89,7 @@ the following contents. You should adjust this for your environment.
 	      - plugin: paasmaker.prepare.shell
 	        parameters:
 	          commands:
+	            - gem install paasmaker-interface
 	            - bundle install --without development test
 
 	instances:
@@ -96,6 +104,7 @@ the following contents. You should adjust this for your environment.
 	      - plugin: paasmaker.startup.shell
 	        parameters:
 	          commands:
+	            - gem install paasmaker-interface
 	            - bundle install --without development test
 	            - rake db:migrate
 	            - REDMINE_LANG=en rake redmine:load_default_data
@@ -108,7 +117,39 @@ Now, you can edit ``config/environment.rb`` to make the following changes:
 
 .. literalinclude:: support/redmine-environment.rb
 	:language: ruby
-	:emphasize-lines: 6-21
+	:emphasize-lines: 15-21
+
+Create the file ``paasmaker-placeholder.yml`` in the root with the following contents.
+This is a dummy file for the Paasmaker interface to load later on, when you run
+``bundle install`` again later.
+
+.. code-block:: yaml
+
+	# Create file paasmaker-placeholder.yml :
+	services:
+	  redminesql:
+	    database: "dummydb"
+	    host: "localhost"
+	    username: "user"
+	    password: "password"
+	    port: 3306
+
+	application:
+	  name: paasmaker-redmine
+	  version: 1
+	  workspace: Test
+	  workspace_stub: test
+
+Starting from version 2.3, Redmine ships with a Gemfile that reads ``config/database.yml``
+to figure out what database gems to install. We are about to modify database.yml to read
+values from Paasmaker, which will cause the interface to stop working. If the interface
+is not run on Paasmaker, it needs to have an override file to load the missing values from.
+The file ``paasmaker-placeholder.yml`` fills in those missing values just enough so that
+the Gemfile logic can load the correct database gems.
+
+.. note::
+	On versions prior to 2.3, you can skip including ``paasmaker-placeholder.yml``, and referencing
+	if in ``config/environment.rb``.
 
 Make a copy of the ``config/database.yml.example`` as ``config/database.yml``. You will
 need to remove ``config/database.yml`` from the ``.gitignore`` file, because you will need
@@ -129,11 +170,12 @@ the call to ``get_service()``, the name matches up with the service name in the
 .. code-block:: yaml
 
 	# In file config/database.yml
-	<% interface = $PAASMAKER_INTERFACE %>
+	<% require 'paasmaker' %>
+	<% interface = Paasmaker::Interface.new(['paasmaker-placeholder.yml']) %>
 	<% database = interface.get_service('redminesql') %>
 
 	production:
-	  adapter: mysql
+	  adapter: mysql2
 	  database: "<%= database['database'] %>"
 	  host: "<%= database['hostname'] %>"
 	  username: "<%= database['username'] %>"
@@ -141,7 +183,7 @@ the call to ``get_service()``, the name matches up with the service name in the
 	  port: <%= database['port'] %>
 
 	development:
-	  adapter: mysql
+	  adapter: mysql2
 	  database: "<%= database['database'] %>"
 	  host: "<%= database['hostname'] %>"
 	  username: "<%= database['username'] %>"
@@ -169,6 +211,12 @@ the call to ``get_service()``, the name matches up with the service name in the
 	test_sqlite3:
 	  adapter: sqlite3
 	  database: db/test.sqlite3
+
+Run ``bundle install`` again to pick up the database gems.
+
+.. code-block:: bash
+
+	$ bundle install
 
 You will need to generate a secret token used for logins. There is a command to generate it,
 and then you'll need to remove ``/config/initializers/secret_token.rb`` from the .gitignore
@@ -205,10 +253,11 @@ commands now to bootstrap the database:
 
 	$ ./paasmaker_env_web.sh rake db:migrate
 	$ REDMINE_LANG=en ./paasmaker_env_web.sh rake redmine:load_default_data
+	$ echo "/paasmaker_env_web.sh" >> .gitignore
 
-Also, at the moment it will be running in 'production' mode. This is not what you want for
+Also, at the moment it will be running in ``production`` mode. This is not what you want for
 development. To fix this, edit the workspace that you added the application to, and add
-a key called 'RAILS_ENV', and set it's value to 'development'. Stop, de-register, and
+a key called ``RAILS_ENV``, and set it's value to ``development``. Stop, de-register, and
 then restart your application. Your application then should start in development mode,
 which means autoreloading will work correctly.
 
@@ -291,41 +340,9 @@ your files are persistent.
 
 Check in your changes, and deploy as appropriate.
 
-Updating Redmine
-----------------
+Moving to production
+--------------------
 
-Around the beginning of 2013, Rails had a few security vulnerabilities,
-and Redmine was sensitive to this because it's based on Rails.
-
-To keep your Redmine installation secure, you should update your Redmine
-installation. You can use this method to update to the latest version.
-
-.. note::
-	This isn't an ideal workflow, and feel free to submit better suggestions.
-
-* Have an up to date checkout of your version of Redmine.
-* Download the latest tar.gz release of Redmine. I fetched it from
-  `the Redmine download page on RubyForge <http://rubyforge.org/frs/?group_id=1850>`_.
-* Unpack it into a temporary directory. For example:
-
-  .. code-block:: bash
-
-  	$ tar -zxvf redmine-2.2.3.tar.gz
-  	$ cp -Rv redmine-2.2.3/* /path/to/your/redmine/checkout
-
-* Review the changes. In my example, I went to version 2.2.3. The only file
-  that I had changed that was overridden was config/environment.rb, so I
-  reverted that file, and then checked in all other changes.
-
-  .. code-block:: bash
-
-  	$ git status
-  	$ git diff
-  	$ git checkout config/environment.rb
-  	$ git add .
-  	$ git commit
-
-* Make sure that you can still ``bundle install``. Quite likely you'll
-  actually want to ``bundle update`` to fetch all the dependencies.
-
-* Redeploy your version of Redmine using Paasmaker.
+When you move to production and create the application, it will get it's own
+live database and configuration details. You can then configure this as you
+need for your environment.

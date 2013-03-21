@@ -79,7 +79,7 @@ Then, in your application code, you can do the following:
 	service_credentials = interface.get_service('service-name')
 	database_name = service_credentials['database']
 
-	interface.is_on_paasmaker()
+	on_paas = interface.is_on_paasmaker?()
 
 If you're developing outside Paasmaker, the Interface constructor
 takes a list of override configuration files. For example, you
@@ -93,7 +93,7 @@ might instead do this:
 	service_credentials = interface.get_service('service-name')
 	database_name = service_credentials['database']
 
-	interface.is_on_paasmaker()
+	on_paas = interface.is_on_paasmaker?()
 
 And then have the following ``development.yml`` file.
 

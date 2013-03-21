@@ -14,7 +14,7 @@ end
 
 # For Paasmaker, determine the rails environment.
 require 'paasmaker'
-interface = Paasmaker::Interface.new([])
+interface = Paasmaker::Interface.new(['paasmaker-placeholder.yml'])
 ENV['RAILS_ENV'] = interface.get_rails_env('production')
 
 # Store the interface into a global variable for later use.
