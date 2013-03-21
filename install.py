@@ -283,7 +283,7 @@ if context['service_managedmysql_enable']:
 				temp_file.write('/ r,\n')
 				temp_file.write("  ")
 				temp_file.write(search_token)
-				temp_file.write('/ rwk,\n')
+				temp_file.write('/** rwk,\n')
 
 				# Move that temp file into place with sudo.
 				install.helpers.generic_command(context, ['sudo', 'mv', temp_file.name, apparmor_control])
