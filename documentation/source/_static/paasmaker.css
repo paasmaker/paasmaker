@@ -2,6 +2,7 @@
 /* Layout */
 footer { text-align: center;}
 body .navbar .brand { padding: 7px 20px 3px; }
+h1 { margin-top: 0px; }
 
 .related { display: none; }
 .sphinxsidebar { padding-left: 10px; padding-right: 10px; }
