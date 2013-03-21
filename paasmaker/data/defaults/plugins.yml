@@ -153,6 +153,9 @@ plugins:
   - name: paasmaker.health.stuckjobs
     class: paasmaker.pacemaker.health.stuckjobs.StuckJobsHealthCheck
     title: Stuck Jobs
+  - name: paasmaker.health.routerdowninstances
+    class: paasmaker.pacemaker.health.routerdowninstances.RouterDownInstancesHealthCheck
+    title: Router Down instances cleaner
 
   # STATS PLUGINS
   - name: paasmaker.stats.default

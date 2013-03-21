@@ -139,6 +139,7 @@ test_sets = {
 	paasmaker.pacemaker.health.downnodes: ['normal', 'health', 'node'],
 	paasmaker.pacemaker.health.adjustinstances: ['normal', 'health', 'repair'],
 	paasmaker.pacemaker.health.stuckjobs: ['normal', 'health', 'stuckjobs'],
+	paasmaker.pacemaker.health.routerdowninstances: ['normal', 'health', 'repair', 'routerrepair'],
 
 	paasmaker.common.helper.periodicmanager: ['normal', 'periodic', 'periodicmanager'],
 	paasmaker.common.periodic.logs: ['normal', 'periodic'],

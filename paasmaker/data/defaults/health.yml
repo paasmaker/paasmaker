@@ -6,6 +6,9 @@ groups:
       - plugin: paasmaker.health.downnodes
         order: 10
         parameters: {}
+      - plugin: paasmaker.health.routerdowninstances
+        order: 10
+        parameters: {}
       - plugin: paasmaker.health.adjustinstances
         order: 20
         parameters: {}

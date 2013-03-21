@@ -73,7 +73,7 @@ class RoutingUpdateJob(BaseJob):
 		self.failed(message)
 
 	@staticmethod
-	def setup_for_instance(configuration, session, instance, add, callback):
+	def setup_for_instance(configuration, session, instance, add, callback, parent=None):
 		tags = []
 		instance_type = instance.application_instance_type
 		tags.append('workspace:%d' % instance_type.application_version.application.workspace.id)
@@ -95,7 +95,8 @@ class RoutingUpdateJob(BaseJob):
 			},
 			update_title,
 			callback=callback,
-			tags=tags
+			tags=tags,
+			parent=parent
 		)
 
 class RouterTableUpdate(object):

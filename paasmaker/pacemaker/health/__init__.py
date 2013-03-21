@@ -2,3 +2,4 @@
 import downnodes
 import adjustinstances
 import stuckjobs
+import routerdowninstances
