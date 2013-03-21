@@ -26,6 +26,18 @@
 	</div>
 </div>
 
+<ul>
+	<li><b>State:</b> {{ version_to_view.state }}</li>
+	<li><b>SCM:</b> {{ version_to_view.scm_name }}</li>
+	{% set scm_params = version_to_view.scm_parameters %}
+	{% if 'formatted_location' in scm_params %}
+		<li><b>Original source location:</b> {{ scm_params['formatted_location'] }}</li>
+	{% elif 'location' in version_to_view.scm_parameters %}
+		<li><b>Original source location:</b> {{ scm_params['location'] }}</li>
+	{% end %}
+	<li><b>Package type:</b> {{ version_to_view.source_package_type }}</li>
+</ul>
+
 <h2>Instance Types</h2>
 <table class="table table-striped table-bordered">
 	<tr>
@@ -112,3 +124,7 @@
 		{% end %}
 	</table>
 {% end %}
+
+<h2>Manifest</h2>
+
+<pre>{{ version_to_view.manifest }}</pre>

@@ -90,7 +90,8 @@ class GitSCM(BaseSCM):
 				this_revision = subprocess.check_output(['git', 'log', '-n', '1', '--format=oneline']).split(" ")[0].strip()
 				parameters = {
 					'revision': this_revision,
-					'tool_version': git_version
+					'tool_version': git_version,
+					'formatted_location': '%s (at %s)' % (self.parameters['location'], this_revision[0:8])
 				}
 
 				self.callback(self.output_dir, "Successfully switched to the appropriate revision.", parameters)

@@ -28,7 +28,8 @@ class ZipSCM(BaseSCM):
 			self.logger.info("Zip command returned code: %d", code)
 			#self.configuration.debug_cat_job_log(self.logger.job_id)
 			if code == 0:
-				callback(path, "Successfully extracted files.")
+				# Mask the original filename that was uploaded with the parameters returned.
+				callback(path, "Successfully extracted files.", {'location': 'uploaded file'})
 			else:
 				error_callback("Unable to extract files.")
 
