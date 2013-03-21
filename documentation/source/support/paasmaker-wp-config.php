@@ -14,16 +14,12 @@
  * @package WordPress
  */
 
-// Your version of Wordpress won't be listening on port 80 or 443,
-// so this convinces it otherwise.
-define('WP_SITEURL', "http://" . $_SERVER['HTTP_X_FORWARDED_HOST'] . ':' . $_SERVER['HTTP_X_FORWARDED_PORT']);
-
 require('PmInterface.php');
 
 $interface = new \Paasmaker\PmInterface(array());
 
 // This service name matches what you put in your manfiest file.
-$databaseService = $interface->getService('paasmaker-example-wordpress');
+$databaseService = $interface->getService('wordpresssql');
 
 // ** MySQL settings - You can get this info from your web host ** //
 /** The name of the database for WordPress */

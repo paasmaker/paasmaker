@@ -102,7 +102,7 @@ Don't forget to generate secret salts from `Wordpress's salt generator <https://
 
 .. literalinclude:: support/paasmaker-wp-config.php
 	:language: php
-	:emphasize-lines: 17-39,56-65
+	:emphasize-lines: 17-35,52-61
 
 Your file structure in the repository should now look like this. Note that all the Wordpress
 files are in a subdirectory, and that's the public document root. This allows you to check
@@ -139,30 +139,36 @@ instance.
 	$ git add .
 	$ git commit
 
-Template redirect loop and the hostname issue
----------------------------------------------
+The hostname issue
+------------------
 
-If you try to visit the public side of the blog, you will notice that it enters a redirect loop.
-Additionally, Wordpress has a preference for absolute URLs (including the domain name) which
-will interfere with moving the blog between development and production.
+When you went through the installation process, Wordpress used the hostname as the site URL.
+In my case, this was http://1.web.paasmaker-wordpress.test.local.paasmaker.net:42530, which
+isn't the real site URL. If you update the Site URL in the settings to be the production
+URL, Wordpress will then insert that into all links on the page (and try to redirect you
+to that URL when you visit the page). In production, this would prevent you from previewing
+the new version before you made it current, as it will be on a different hostname that is not
+the site URL.
 
-To stop the redirects, edit ``wordpress/wp-includes/template-loader.php`` and comment
-out the template redirect (this may prevent per-user themes from working):
+There isn't an easy way to fix this issue, and it is a debated topic on the internet. We don't
+intend to enter the debate here, only to present a few modifications to get around it. Our solution
+is to add some more functions, and patch your template to use them as a filter for URLs. This
+solution is not particularly elegant.
+
+Stop the themes from doing redirects. This stops per-user themes from working, but stops it
+from redirecting to a version without the correct port number for testing. Edit
+``wordpress/wp-includes/template-loader.php`` and comment out the top block:
 
 .. code-block:: php
 
 	<?php
-	// In wordpress/wp-includes/template-loader.php:
+	// In wordpress/wp-includes/template-loader.php :
 	/**
-	 * Loads the correct template based on the visitor's url
-	 * @package WordPress
-	 */
+	* Loads the correct template based on the visitor's url
+	* @package WordPress
+	*/
 	/*if ( defined('WP_USE_THEMES') && WP_USE_THEMES )
-		do_action('template_redirect');*/
-
-As to the relative URLs, there isn't an easy way to fix this issue, and we don't intend to
-enter the debate here. Our solution is to add some more functions, and patch your template
-to use them as a filter for URLs. This solution is not particularly elegant.
+	       do_action('template_redirect');*/
 
 In ``wordpress/wp-includes/functions.php``, add the following code to the bottom. This code
 is adapted from `this blog post about relative URLs <http://www.deluxeblogtips.com/2012/06/relative-urls.html>`_.
@@ -229,6 +235,9 @@ additional line:
 
 Each theme should be structured similarly, but you may need to locate the correct
 location to insert this code.
+
+Now that this code is in place, you can update the site URL in the settings, and
+your site will still work across the testing domain names.
 
 This fix has not been tested with multi user blogs.
 
