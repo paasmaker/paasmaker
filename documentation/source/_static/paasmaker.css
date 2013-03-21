@@ -1,8 +1,11 @@
 
+/* Layout */
 footer { text-align: center;}
+body .navbar .brand { padding: 7px 20px 3px; }
 
 .related { display: none; }
-.sphinxsidebar { padding: 10px; }
+.sphinxsidebar { padding-left: 10px; padding-right: 10px; }
+.sphinxsidebarwrapper h3 { line-height: 1em; margin-top: 0px; }
 
 span.viewcode-link { padding-left: 10px; }
 
