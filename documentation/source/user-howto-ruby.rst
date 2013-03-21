@@ -10,7 +10,7 @@ on. Traffic for that instance is then routed to that TCP port. If the applicatio
 crashes or fails, it will be restarted by the health manager. For performance,
 you may like to use a performant Ruby environment such as `Thin <http://code.macournoyer.com/thin/>`_.
 
-.. WARNING::
+.. NOTE::
 	If you used the :doc:`installation <installation>` guide to install Paasmaker,
 	and used the ``example-paasmaker-hacking.yml`` install configuration, you won't
 	have Ruby support enabled. This is because it can take some time to compile and
@@ -23,14 +23,27 @@ you may like to use a performant Ruby environment such as `Thin <http://code.mac
 	``runtime_rbenv_for_user`` option set to true, and have installed rbenv in
 	``~/.rbenv``.
 
-.. WARNING::
-	There is currently an issue with Paasmaker if you're using the Thin application
-	server with your Ruby applications, as suggested by these documents. When the Paasmaker
-	node shuts down, Thin gets a signal and decides to shut down. Paasmaker specifically
-	tries to shield instances from these signals (and it works in other languages) but
-	something about Thin causes it to shut down.
+.. NOTE::
+	This note only applies if you have ``heart.shutdown_on_exit`` set to false, which
+	is not the default configuration for development.
 
-	If you are able to debug this or offer a solution, please let us know.
+	If you use the Thin application server (as these instructions do), and have Paasmaker
+	set up to not shutdown instances on exit (which is not the default configuration for
+	development), and then stop Paasmaker with a SIGINT (which will happen when you hit CTRL+C
+	if you're running it in debug mode), Thin will get this signal and then exit, which works
+	outside the normal instance shutdown management flow.
+
+	This can be annoying during development (with a non-standard configuration) if you restart
+	your Paasmaker node a lot, as Paasmaker won't restart this instance automatically as it ends
+	up in the wrong state. This is for the safety of the system. Once you've restarted your Paasmaker,
+	you can stop and start the version to get the instance running ahead of the window when the health
+	manager restarts it for you.
+
+	If you stop Paasmaker by sending it a SIGTERM, as normal, the instances will continue to
+	run in the background as normal.
+
+	This is not an issue in production systems unless you manually run your nodes in debug
+	mode and stop them with CTRL+C.
 
 Integrating with common Frameworks and CMSs
 -------------------------------------------
