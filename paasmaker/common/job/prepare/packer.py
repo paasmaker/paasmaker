@@ -15,7 +15,7 @@ class SourcePackerJob(BaseJob):
 		# This is the working directory for this.
 		self.path = context['working_path']
 
-		package_prefix = "%d_%d.tar.gz" % (context['application_id'], context['application_version_id'])
+		package_prefix = "%d_%d" % (context['application_id'], context['application_version_id'])
 		package_path = self.configuration.get_scratch_path_exists('packed')
 
 		package_full_prefix = os.path.join(package_path, package_prefix)
