@@ -160,6 +160,10 @@ DEFAULT_INSTALLER_CONFIGURATION = {
 	'runtime_rbenv_for_user': True,
 	'runtime_rbenv_versions': ['1.9.3-p327'],
 
+	'runtime_nvm_enable': False,
+	'runtime_nvm_for_user': True,
+	'runtime_nvm_versions': ['v0.8.22'],
+
 	'service_managedmysql_enable': False,
 	'service_managedmysql_disable_system_mysql': False,
 

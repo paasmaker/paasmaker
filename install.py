@@ -23,6 +23,7 @@ import subprocess
 import copy
 import tempfile
 import getpass
+import glob
 
 if len(sys.argv) == 1:
 	# No arguments.
@@ -252,6 +253,44 @@ if context['runtime_rbenv_enable']:
 		else:
 			logging.info("Ruby version %s is already installed.", version)
 
+# NVM
+if context['runtime_nvm_enable']:
+	nvm_path = os.path.expanduser('~/.nvm')
+	if not context['runtime_nvm_for_user']:
+		# Install to a local directory just for Paasmaker.
+		nvm_path = "thirdparty/nvm"
+
+	if not os.path.exists(nvm_path):
+		# Install it.
+		if context['runtime_nvm_for_user']:
+			# If installing for the user, use the supplied install script,
+			# as that does all the profile/bashrc lifting.
+			install.helpers.generic_command_shell(
+				context,
+				"curl https://raw.github.com/creationix/nvm/master/install.sh | sh"
+			)
+		else:
+			# Just clone the repo into the path.
+			install.helpers.generic_command(
+				context,
+				['git', 'clone', 'git://github.com/creationix/nvm.git', nvm_path]
+			)
+
+	# Install any versions requested.
+	nvm_script = os.path.join(nvm_path, "nvm.sh")
+
+	# Get the current versions from the filesystem.
+	current_versions = set()
+	for path in glob.glob(os.path.join(nvm_path, 'v*')):
+		current_versions.add(os.path.basename(path))
+
+	for version in context['runtime_nvm_versions']:
+		if version not in current_versions:
+			install.helpers.generic_command_shell(
+				context,
+				'bash -c ". %s; nvm install %s"' % (nvm_script, version)
+			)
+
 # PHP / Static runtime.
 if context['runtime_php_enable']:
 	# To enable, all we really need to do is install Apache and some PHP packages.
@@ -416,6 +455,19 @@ if context['runtime_rbenv_enable']:
 			'title': 'Ruby (rbenv) Runtime',
 			'parameters': {
 				'rbenv_path': rbenv_path
+			}
+		}
+	)
+
+if context['runtime_nvm_enable']:
+	enable_plugin(
+		configuration['plugins'],
+		{
+			'name': 'paasmaker.runtime.node.nvm',
+			'class': 'paasmaker.heart.runtime.NvmRuntime',
+			'title': 'Nodejs (nvm) Runtime',
+			'parameters': {
+				'nvm_path': nvm_path
 			}
 		}
 	)

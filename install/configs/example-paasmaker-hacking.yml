@@ -21,6 +21,10 @@ runtime_rbenv_enable: false
 runtime_rbenv_versions: ['1.9.3-p327']
 runtime_rbenv_for_user: false
 
+runtime_nvm_enable: true
+runtime_nvm_for_user: true
+runtime_nvm_versions: ['v0.8.22']
+
 service_managedmysql_enable: true
 service_managedmysql_disable_system_mysql: false
 
