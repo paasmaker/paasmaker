@@ -80,6 +80,26 @@ pm.data = (function() {
 			);
 		},
 
+		/**
+		 * Convenience wrapper around pm.data.api for simple API calls that just
+		 * need their output directly rendered with a particular Handlebars template.
+		 *
+		 * @param options object with these properties:
+		 *  - endpoint: URL of the API endpoint to call
+		 *  - template: compiled Handlebars template to use
+		 *  - element: element in which to render the template
+		 */
+		template_from_api: function(options) {
+			pm.data.api({
+				endpoint: options.endpoint,
+				callback: function(data) {
+					$(options.element).html(
+                    	options.template.apply(this, [data])
+                    );
+				}
+			});
+		},
+
 		// Preferred method for getting access to the socket.io connection object
 		getSocket: function() {
 			return streamSocket;

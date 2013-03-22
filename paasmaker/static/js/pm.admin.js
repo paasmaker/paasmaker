@@ -12,11 +12,10 @@ pm.admin = {};
 pm.admin.profile = (function() {
 	return {
 		switchTo: function() {
-			pm.data.api({
+			pm.data.template_from_api({
 				endpoint: 'profile',
-				callback: function(data) {
-					$('#main').html(pm.handlebars.user_profile({ current_user: data }));
-				}
+				element: '#main',
+				template: pm.handlebars.user_profile
 			});
 		}
 	};
@@ -29,7 +28,7 @@ pm.admin.plugins = (function() {
 				endpoint: 'configuration/plugins',
 				callback: function(data) {
 					var valid_plugins = [];
-				
+
 					for (var key in data.plugins) {
 						var item = data.plugins[key];
 						if (item.modes.indexOf('JOB') === -1) {
@@ -38,11 +37,11 @@ pm.admin.plugins = (function() {
 							} else {
 								item.options = '';
 							}
-						
+
 							valid_plugins.push(item);
 						}
 					}
-				
+
 					$('#main').html(pm.handlebars.configuration_plugins({ plugins: valid_plugins }));
 				}
 			});
@@ -57,7 +56,7 @@ pm.admin.config_dump = (function() {
 				endpoint: 'configuration/dump',
 				callback: function(data) {
 					var config_string = JSON.stringify(data.configuration, undefined, 4);
-				
+
 					$('#main').html(pm.handlebars.configuration_dump({ configuration: config_string }));
 				}
 			});
@@ -69,11 +68,10 @@ pm.admin.user_list = (function() {
 	// TODO: this does not respect permissions for creating or editing users
 	return {
 		switchTo: function() {
-			pm.data.api({
+			pm.data.template_from_api({
 				endpoint: 'user/list',
-				callback: function(data) {
-					$('#main').html(pm.handlebars.user_list(data));
-				}
+				element: '#main',
+				template: pm.handlebars.user_list
 			});
 		}
 	};
@@ -83,11 +81,10 @@ pm.admin.role_list = (function() {
 	// TODO: this does not respect permissions for creating or editing roles
 	return {
 		switchTo: function() {
-			pm.data.api({
+			pm.data.template_from_api({
 				endpoint: 'role/list',
-				callback: function(data) {
-					$('#main').html(pm.handlebars.role_list(data));
-				}
+				element: '#main',
+				template: pm.handlebars.role_list
 			});
 		}
 	};
@@ -96,11 +93,10 @@ pm.admin.role_list = (function() {
 pm.admin.allocation_list = (function() {
 	return {
 		switchTo: function() {
-			pm.data.api({
+			pm.data.template_from_api({
 				endpoint: 'role/allocation/list',
-				callback: function(data) {
-					$('#main').html(pm.handlebars.role_allocation_list(data));
-				}
+				element: '#main',
+				template: pm.handlebars.role_allocation_list
 			});
 		}
 	};
