@@ -1,0 +1,72 @@
+<h2>Instance type: {{ instance_type.name }}</h2>
+<table class="table table-striped table-bordered">
+	<tr>
+		<td>
+			Runtime: {{ instance_type.runtime_name }}
+		</td>
+		<td>
+			Name: {{ instance_type.name }}
+		</td>
+		<td>
+			Quantity: {{ instance_type.quantity }}
+		</td>
+		<td>
+			{{#if instance_type.standalone }}
+				Instance is standalone
+			{{else}}
+				Hostnames: <br>
+				{{#each instance_type.hostnames}}
+					<!-- {{#if version.is_current}}
+						<a href="http://{{ hostname }}{{ frontend_domain_postfix }}/" target="_blank">
+					{{/if}}
+						{{ this }}
+					{% if is_current %}
+						</a>
+					{% end %} -->
+					{{this}}<br />
+				{{/each}}
+				<a href="http://{{ version_hostname }}{{ frontend_domain_postfix }}" target="_blank">
+					{{ instance_type.version_hostname }}
+				</a>
+			{{/if}}
+		</td>
+		<td>
+			{{#if instance_type.exclusive}}
+				Exclusive
+			{{else}}
+				Not exclusive
+			{{/if}}
+		</td>
+	</tr>
+	<tr>
+		<th>ID</th>
+		<th>Node</th>
+		<th>Port</th>
+		<th>Created</th>
+		<th>State</th>
+	</tr>
+	{{#each instances}}
+		<tr>
+			<td>
+				<code>{{ instance_id }}</code>
+				<a href="#" class="toggle {{ instance_id }}"></a>
+			</td>
+			<td>
+				<a href="/node/{{ node_id }}">{{ node_id }}</a>
+			</td>
+			<td>
+				{{ port }}
+			</td>
+			<td>
+				{{ created }} - {{ created_age }} seconds ago
+			</td>
+			<td>
+				<span class="instance-{{ state }}">{{ state }}</span>
+			</td>
+		</tr>
+		<tr>
+			<td colspan="5" class="instance-log-container {{ instance_id }}" data-instance="{{ instance_id }}">
+			</td>
+		</tr>
+	{{/each}}
+</table>

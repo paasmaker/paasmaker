@@ -1,0 +1,60 @@
+<ul class="breadcrumb">
+  <li><a href="/workspace/{{ workspace.id }}/applications">{{ workspace.name }}</a> <span class="divider">/</span></li>
+  <li><a href="/application/{{ application.id }}">{{ application.name }}</a> <span class="divider">/</span></li>
+  <li class="active">Version {{ version.version }}</li>
+</ul>
+
+<div class="router-stats well well-small" data-name="version" data-inputid="{{version.id}}">Loading...</div>
+
+<h1>
+	Version {{version.version}}
+	{{#if version.is_current}}
+		<a href="#" class="btn btn-success disabled">
+			<i class="icon-ok icon-white"></i> Current
+		</a>
+	{{else}}
+		<a href="#" class="btn disabled">
+			<i class="icon-minus"></i> Not current
+		</a>
+	{{/if}}
+</h1>
+
+<div class="btn-toolbar">
+	<div class="btn-group btn-group-header">
+		<a class="btn" href="/job/list/version/{{version.id}}">All Jobs</a>
+		<a class="btn" href="/job/list/version/{{version.id}}?sub=cron">Crons</a>
+	</div>
+	{{#ifPermission 'APPLICATION_VIEW_MANIFEST'}}
+		<div class="btn-group btn-group-header">
+			<a class="btn" data-toggle="modal" data-target="#app_manifest_modal">View Manifest</a>
+		</div>
+	{{/ifPermission}}
+</div>
+
+<ul>
+	<li><b>State:</b> {{ version.state }}</li>
+	<li><b>SCM:</b> {{ version.scm_name }}</li>
+	{{#if version.scm_parameters.formatted_location}}
+		<li><b>Original source location:</b> {{version.scm_parameters.formatted_location}}</li>
+	{{else}}
+		{{#if version.scm_parameters.location}}
+			<li><b>Original source location:</b> {{version.scm_parameters.location}}</li>
+		{{/if}}
+	{{/if}}
+	{{#if version.using_dev_directory_plugin}}
+		<li><b>Package type:</b> {{ version.source_package_type }}</li>
+	{{/if}}
+</ul>
+
+<div id="app_manifest_modal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="Application Manifest" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="myModalLabel">Application Manifest - Version {{version.version}}</h3>
+  </div>
+  <div class="modal-body">
+    <p>Loading ...</p>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+  </div>
+</div>

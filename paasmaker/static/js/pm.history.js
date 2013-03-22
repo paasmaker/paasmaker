@@ -10,14 +10,15 @@ if (!window.pm) { var pm = {}; }	// TODO: module handling
 // Mapping of URLs that can be handled by the JavaScript code (i.e. without a page refresh)
 // Note: additions here should always be reflected in the relevant controller class, with client_side_render()
 pm.routingTable = [
-	[ /\/profile/, pm.admin.profile ],
-	[ /\/configuration\/plugins/, pm.admin.plugins ],
-	[ /\/configuration\/dump/, pm.admin.config_dump ],
-	[ /\/user\/list/, pm.admin.user_list ],
-	[ /\/role\/list/, pm.admin.role_list ],
-	[ /\/role\/allocation\/list/, pm.admin.allocation_list ],
-	[ /\/workspace\/\d+\/applications\/?$/, pm.workspace ],
-	[ /\/application\/\d+\/?$/, pm.application ]
+	[ /^\/profile/, pm.admin.profile ],
+	[ /^\/configuration\/plugins/, pm.admin.plugins ],
+	[ /^\/configuration\/dump/, pm.admin.config_dump ],
+	[ /^\/user\/list/, pm.admin.user_list ],
+	[ /^\/role\/list/, pm.admin.role_list ],
+	[ /^\/role\/allocation\/list/, pm.admin.allocation_list ],
+	[ /^\/workspace\/\d+\/applications\/?$/, pm.workspace ],
+	[ /^\/application\/\d+\/?$/, pm.application ],
+	[ /^\/version\/\d+\/?$/, pm.version ]
 ];
 
 pm.history = (function() {
@@ -73,7 +74,7 @@ pm.history = (function() {
 			$(document).on('click', function(e) {
 				if (e.target.tagName == 'A') {
 					var parsed_url = e.target.href.match(/^https?\:\/\/[^\/]+(\/.*)$/);
-					if (pm.history.getRoute(parsed_url[1])) {
+					if (parsed_url && pm.history.getRoute(parsed_url[1])) {
 						e.preventDefault();
 						window.history.pushState({ handle_in_js: true }, '', parsed_url[1]);
 						pm.history.onpopstate({ state: { handle_in_js: true } });

@@ -837,7 +837,7 @@ class ApplicationVersion(OrmBase, Base):
 		return "<ApplicationVersion('%s'@'%s' - active: %s)>" % (self.version, self.application, str(self.is_current))
 
 	def flatten(self, field_list=None):
-		return super(ApplicationVersion, self).flatten(['application_id', 'version', 'is_current', 'state', 'health', 'scm_name', 'scm_parameters'])
+		return super(ApplicationVersion, self).flatten(['application_id', 'version', 'is_current', 'state', 'health', 'scm_name', 'scm_parameters', 'source_package_type'])
 
 	def flatten_for_heart(self):
 		"""
@@ -1018,7 +1018,13 @@ class ApplicationInstanceType(OrmBase, Base):
 		return "<ApplicationInstanceType('%s':'%s')>" % (self.name, self.runtime_name)
 
 	def flatten(self, field_list=None):
-		return super(ApplicationInstanceType, self).flatten(['name', 'application_version_id', 'quantity', 'runtime_name', 'runtime_version', 'placement_provider', 'exclusive', 'standalone'])
+		flatten = super(ApplicationInstanceType, self).flatten(['name', 'application_version_id', 'quantity', 'runtime_name', 'runtime_version', 'placement_provider', 'exclusive', 'standalone'])
+
+		flatten['hostnames'] = []
+		for hostname in self.hostnames:
+			flatten['hostnames'].append(hostname.hostname)
+
+		return flatten
 
 	def flatten_for_heart(self):
 		"""
@@ -1176,7 +1182,7 @@ class ApplicationInstance(OrmBase, Base):
 		return "<ApplicationInstance('%s'@'%s' - %s)>" % (self.application_instance_type, self.node, self.state)
 
 	def flatten(self, field_list=None):
-		return super(ApplicationInstance, self).flatten(['application_instance_type_id', 'node_id', 'state', 'port'])
+		return super(ApplicationInstance, self).flatten(['instance_id', 'application_instance_type_id', 'node_id', 'state', 'port'])
 
 	def flatten_for_heart(self):
 		"""
