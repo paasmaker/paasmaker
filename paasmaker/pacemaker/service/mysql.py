@@ -26,25 +26,24 @@ class MySQLServiceParametersSchema(colander.MappingSchema):
 	# No parameters required. Plugins just ask for a database.
 	pass
 
-# MySQL service.
-class MySQLService(BaseService):
-	MODES = {
-		paasmaker.util.plugin.MODE.SERVICE_CREATE: MySQLServiceParametersSchema()
-	}
-	OPTIONS_SCHEMA = MySQLServiceConfigurationSchema()
-	API_VERSION = "0.9.0"
+def administrative_connection_helper(options):
+	connection = torndb.Connection(
+		"%s:%d" % (options['hostname'], options['port']),
+		'mysql', # TODO: Select a different database.
+		user=options['username'],
+		password=options['password']
+	)
 
-	def create(self, name, callback, error_callback):
-		# Choose a username, password, and database name.
-		# The username and database name are based off the supplied name.
-		username = self._safe_name(name, max_length=16)
-		database = username
-		password = self._generate_password()
+	return connection
 
-		self.logger.info("Chosen username/database name %s", username)
+class ThreadedMySQLDatabaseCreator(paasmaker.util.threadcallback.ThreadCallback):
+	"""
+	Helper class to do the sync MySQL work on a thread, to avoid it locking up
+	the Tornado process.
+	"""
 
-		# TODO: None of this is async. It better not take long.
-		connection = self._get_connection()
+	def _work(self, options, username, database, password):
+		connection = administrative_connection_helper(options)
 
 		# Create the user.
 		connection.execute(
@@ -76,18 +75,56 @@ class MySQLService(BaseService):
 			password
 		)
 
-		callback(
-			{
-				'protocol': 'mysql',
-				'hostname': self.options['hostname'],
-				'username': username,
-				'database': database,
-				'password': password,
-				'port': self.options['port']
-			},
-			"Successfully created database."
-		)
+		self._callback("Completed successfully.")
 
+class ThreadedMySQLDatabaseDeletor(paasmaker.util.threadcallback.ThreadCallback):
+	"""
+	Helper class to do the sync MySQL work on a thread, to avoid it locking up
+	the Tornado process.
+	"""
+
+	def _work(self, options, existing_credentials):
+		connection = administrative_connection_helper(options)
+
+		# TODO: These values should be safe to insert back into the query directly,
+		# however, they may not be. Fix this.
+		connection.execute("DROP DATABASE %s" % existing_credentials['database'])
+		connection.execute("DROP USER %s" % existing_credentials['username'])
+
+		self._callback("Completed successfully.")
+
+# MySQL service.
+class MySQLService(BaseService):
+	MODES = {
+		paasmaker.util.plugin.MODE.SERVICE_CREATE: MySQLServiceParametersSchema()
+	}
+	OPTIONS_SCHEMA = MySQLServiceConfigurationSchema()
+	API_VERSION = "0.9.0"
+
+	def create(self, name, callback, error_callback):
+		# Choose a username, password, and database name.
+		# The username and database name are based off the supplied name.
+		username = self._safe_name(name, max_length=16)
+		database = username
+		password = self._generate_password()
+
+		self.logger.info("Chosen username/database name %s", username)
+
+		def completed_database(message):
+			callback(
+				{
+					'protocol': 'mysql',
+					'hostname': self.options['hostname'],
+					'username': username,
+					'database': database,
+					'password': password,
+					'port': self.options['port']
+				},
+				"Successfully created database."
+			)
+
+		maker = ThreadedMySQLDatabaseCreator(self.configuration.io_loop, completed_database, error_callback)
+		maker.work(self.options, username, database, password)
 
 	def update(self, name, existing_credentials, callback, error_callback):
 		# No action to take here.
@@ -95,27 +132,14 @@ class MySQLService(BaseService):
 
 	def remove(self, name, existing_credentials, callback, error_callback):
 		# Remove the database.
-		connection = self._get_connection()
-
 		self.logger.info("Dropping database %s", existing_credentials['database'])
 
-		# TODO: These values should be safe to insert back into the query directly,
-		# however, they may not be. Fix this.
-		connection.execute("DROP DATABASE %s" % existing_credentials['database'])
-		connection.execute("DROP USER %s" % existing_credentials['username'])
+		def completed_deleting(message):
+			self.logger.info("Completed.")
+			callback("Removed successfully.")
 
-		self.logger.info("Completed.")
-		callback("Removed successfully.")
-
-	def _get_connection(self):
-		connection = torndb.Connection(
-			"%s:%d" % (self.options['hostname'], self.options['port']),
-			'mysql', # TODO: Select a different database.
-			user=self.options['username'],
-			password=self.options['password']
-		)
-
-		return connection
+		maker = ThreadedMySQLDatabaseDeletor(self.configuration.io_loop, completed_deleting, error_callback)
+		maker.work(self.options, existing_credentials)
 
 class MySQLServiceTest(BaseServiceTest):
 	def setUp(self):
