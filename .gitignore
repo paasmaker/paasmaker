@@ -10,3 +10,4 @@
 /paasmaker-development.db
 /paasmaker.yml
 /thirdparty/
+/paasmaker_env_web.sh

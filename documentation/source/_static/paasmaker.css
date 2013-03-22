@@ -12,6 +12,9 @@ span.viewcode-link { padding-left: 10px; }
 
 dl.class { border-bottom: 1px solid #eeeeee; }
 
+ul.search { margin-left: 0px; list-style-type: none; }
+ul.search li { border-bottom: 1px solid #eeeeee; padding-bottom: 2px; margin-bottom: 5px; }
+
 /* Show the header links when you hover on the headers.
    Taken directly from Sphinx's styles. */
 a.headerlink {
