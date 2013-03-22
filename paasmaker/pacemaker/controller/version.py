@@ -35,7 +35,7 @@ class VersionController(VersionRootController):
 	def get(self, version_id):
 		version = self._get_version(version_id)
 		self.add_data_template('configuration', self.configuration)
-		
+
 		# TODO: for some reason the assignment name 'version' doesn't work here
 		self.add_data('version_to_view', version)
 
@@ -92,6 +92,23 @@ class VersionInstancesController(VersionRootController):
 	def get_routes(configuration):
 		routes = []
 		routes.append((r"/version/(\d+)/instances", VersionInstancesController, configuration))
+		return routes
+
+class VersionManifestController(VersionRootController):
+
+	def get(self, version_id):
+		version = self._get_version(version_id)
+		self.require_permission(constants.PERMISSION.APPLICATION_VIEW_MANIFEST, workspace=version.application.workspace)
+
+		self.add_data('version', version)
+		self.add_data('manifest', version.manifest)
+
+		self.render("api/apionly.html")
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/version/(\d+)/manifest", VersionManifestController, configuration))
 		return routes
 
 class VersionRegisterController(VersionRootController):

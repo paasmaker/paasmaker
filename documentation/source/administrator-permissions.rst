@@ -144,3 +144,7 @@ APPLICATION_SERVICE_DETAIL
 	With this permission, the user can view the full details for services
 	on applications. This will allow them to see the full credentials for
 	services, which may not be desirable.
+
+APPLICATION_VIEW_MANIFEST
+	Allows a user to view :doc:`manifest files <user-application-manifest>`
+	uploaded with each version of any application in the workspace.
