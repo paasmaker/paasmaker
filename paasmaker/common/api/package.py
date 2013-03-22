@@ -31,7 +31,7 @@ class PackageSizeAPIRequest(APIRequest):
 		self.package = package
 
 	def get_endpoint(self):
-		return '/files/package/size?%s' % urllib.urlencode([('name', self.package)])
+		return '/files/package/size?%s' % urllib.urlencode([('name', self.package), ('bypass_ssl', 'true')])
 
 # TODO: Can only download from the master at the moment. This requires
 # changes to the pacemaker to allow it to locate the correct location for the file.
@@ -93,7 +93,7 @@ class PackageDownloadAPIRequest(APIRequest):
 			self.package_fp = open(self.output_file, 'w')
 
 			# And proceed to download the file.
-			endpoint = self.get_master() + '/files/package/download?%s' % urllib.urlencode([('name', self.package)])
+			endpoint = self.get_master() + '/files/package/download?%s' % urllib.urlencode([('name', self.package), ('bypass_ssl', 'true')])
 			headers = {}
 			headers['Auth-Paasmaker'] = self.configuration.get_flat('node_token')
 
