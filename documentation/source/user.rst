@@ -40,6 +40,7 @@ Below are some notes on integrating with specific languages.
 
    user-howto-php
    user-howto-ruby
+   user-howto-python
 
 Preparing and starting applications
 -----------------------------------
@@ -51,6 +52,7 @@ and startup phase of applications.
 	:maxdepth: 2
 
 	plugin-prepare-shell
+	plugin-prepare-pythonpip
 	plugin-startup-filesystemlinker
 
 Runtime Plugins

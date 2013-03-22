@@ -43,6 +43,7 @@ Startup and Prepare plugins
 	:maxdepth: 2
 
 	plugin-prepare-shell
+	plugin-prepare-pythonpip
 	plugin-startup-filesystemlinker
 
 Authentication Plugins
