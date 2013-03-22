@@ -157,6 +157,14 @@ that you normally would for your standard setup. You can even install Apache,
 PHP, MySQL, or Postgres as normal - Paasmaker is designed to work alongside
 these on existing systems.
 
+One thing that you'll probably like to do is install NTP, to keep the servers
+synchronised correctly, which keeps all your stats accurate. The simplest
+thing to do is to install NTP:
+
+.. code-block:: bash
+
+	$ sudo apt-get install ntp
+
 Create the initial Paasmaker database
 -------------------------------------
 
@@ -214,9 +222,9 @@ to set up CNAME records in your DNS system to point to the load balancer.
 
 These are the domain names configured:
 
-* production.paasmaker.net: CNAME to your Pacemaker instance hostname. (If you use a CNAME,
+* ``production.paasmaker.net``: CNAME to your Pacemaker instance hostname. (If you use a CNAME,
   EC2 instances get the internal address, and external clients get a public address).
-* *.production.paasmaker.net: wildcard CNAME to the Elastic Load Balancer.
+* ``*.production.paasmaker.net``: wildcard CNAME to the Elastic Load Balancer.
 
 The first DNS record is used by all nodes to locate the master node. This solves a chicken
 and egg issue of locating the master node. The second DNS record is used by applications
