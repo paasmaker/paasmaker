@@ -73,7 +73,7 @@ The basic flow of using the command supervisor is as follows:
      it writes the exit code to a location on the filesystem, so that the Heart can
      read this on next startup and take the appropriate action.
 
-  2. The ``pm-supervisor.py`` script receives a SIGHUP. This is how Paasmaker indicates
+  2. The ``pm-supervisor.py`` script receives a SIGTERM. This is how Paasmaker indicates
      that the instance should shut down. ``pm-supervisor.py`` then sends the instance
      that it's looking after a SIGTERM, which allows it to shut down normally and exit.
      Once it has exited, it will send the command return code to the managing Heart,

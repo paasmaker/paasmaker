@@ -64,7 +64,10 @@ the code.
    developer-coding-conventions
    developer-coding-tornado
    developer-configuration
-   developer-utils
+   developer-controller
    developer-managed
    developer-model
    developer-router
+   developer-instances
+   developer-health
+   developer-utils

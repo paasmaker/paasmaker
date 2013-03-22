@@ -1448,6 +1448,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 	def get_job_logger(self, job_id):
 		"""
 		Get a JobLoggingAdapter for the given job ID.
+
 		:arg str job_id: The job ID to fetch the logger for.
 		"""
 		return paasmaker.util.joblogging.JobLoggerAdapter(

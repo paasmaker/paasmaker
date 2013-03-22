@@ -7,6 +7,11 @@ The database components are handled via the SQLAlchemy library.
 The documentation below shows the model classes built in to Paasmaker,
 and covers any special methods that they provide.
 
+Diagramatically, the models look like this:
+
+.. image:: images/database-model.png
+    :alt: Database model diagram
+
 Base Class
 ----------
 

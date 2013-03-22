@@ -15,8 +15,9 @@ class InstanceManager(object):
 	"""
 	A class to manage instance data, for each heart node.
 
-	Instance data is written out to a flat file on each node. This is so
-	each heart doesn't require a database or other special storage system.
+	Instance data is written out to a flat JSON encoded file on each node.
+	This is so each heart doesn't require a database or other special storage
+	system.
 	"""
 	def __init__(self, configuration):
 		self.configuration = configuration
@@ -32,7 +33,7 @@ class InstanceManager(object):
 	def load(self):
 		"""
 		Load the heart catalog from disk. Starts with an empty
-		catalog if this is the first time.
+		catalog if this is the first time this node has been active.
 		"""
 		# Load the catalog from the disk.
 		path = self._get_catalog_path()

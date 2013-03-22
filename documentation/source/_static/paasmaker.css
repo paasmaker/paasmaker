@@ -10,6 +10,8 @@ h1 { margin-top: 0px; }
 
 span.viewcode-link { padding-left: 10px; }
 
+dl.class { border-bottom: 1px solid #eeeeee; }
+
 /* Show the header links when you hover on the headers.
    Taken directly from Sphinx's styles. */
 a.headerlink {
