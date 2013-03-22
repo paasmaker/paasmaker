@@ -272,7 +272,7 @@ class RbenvRuntimeTest(BaseRuntimeTest):
 
 	def test_options(self):
 		instance = self.configuration.plugins.instantiate(
-			'paasmaker.runtime.shell',
+			'paasmaker.runtime.ruby.rbenv',
 			paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
 			{
 				'launch_command': 'test.py'
