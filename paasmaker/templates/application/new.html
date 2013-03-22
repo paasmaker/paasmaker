@@ -22,7 +22,7 @@
 						{% raw scm['form'] %}
 
 						<label for="manifest_path">Manifest Path:</label>
-						<input name="manifest_path" id="manifest_path" type="text" value="manifest.yml" required="required" />
+						<input name="manifest_path" id="manifest_path" type="text" value="{% if 'manifest_path' in last_scm_params %}{{ last_scm_params['manifest_path'] }}{% else %}manifest.yml{% end %}" required="required" />
 
 						<br />
 						<input type="submit" value="Create" class="btn" />

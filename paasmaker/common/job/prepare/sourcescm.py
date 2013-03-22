@@ -18,6 +18,7 @@ class SourceSCMJob(BaseJob):
 	}
 
 	def start_job(self, context):
+		self.context = context
 		try:
 			self.scm_plugin = self.configuration.plugins.instantiate(
 				self.parameters['scm_name'],
@@ -38,6 +39,7 @@ class SourceSCMJob(BaseJob):
 
 	def scm_success(self, path, message, parameters={}):
 		# Emit the path via the context.
+		parameters['manifest_path'] = self.context['manifest_path']
 		self.success({'working_path': path, 'scm_output': parameters}, message)
 
 	def scm_failure(self, message):
