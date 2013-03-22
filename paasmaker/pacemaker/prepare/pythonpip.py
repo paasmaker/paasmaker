@@ -81,12 +81,15 @@ class PythonPipPrepare(BasePrepare):
 
 		if not os.path.exists(requirements_checkfile):
 			self.logger.info("New requirements file - downloading packages.")
-			open(requirements_checkfile, 'w')  # This is equivalent to 'touch'.
 
 			# We need to download and cache the packages first.
 			# In theory, this should mean we can reinstall the same packages again
 			# later without touching the internet at all.
 			fp.write("pip install --download %s -r %s\n" % (download_cache_path, self.parameters['requirements_name']))
+
+			# Now that we've successfully downloaded it, record that we've downloaded
+			# this set of packages.
+			open(requirements_checkfile, 'w')  # This is equivalent to 'touch'.
 		else:
 			self.logger.info("Previously seen requirements file - using existing cache only.")
 
