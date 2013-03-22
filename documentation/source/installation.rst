@@ -194,4 +194,54 @@ Configuring Paasmaker
 
 The installer will write out a file, called ``paasmaker.yml`` that contains
 the settings for your Paasmaker installation. The most common thing that you'll
-want to do is to add new plugins. Check the documentation from
+want to do is to add new plugins. Check the documentation for each plugin
+to see how to add it to your installation.
+
+Sharable links, or trying this out on EC2
+-----------------------------------------
+
+This installation guide results in a configuration that works on your machine
+only. If you try to share links it gives you with other people, they won't work,
+because all the DNS names resolve to localhost.
+
+This also means that if you install this on a remote EC2 instance, the same
+thing will happen - you won't be able to access applications.
+
+There is a workaround you can use for testing purposes. Firstly, find the IP
+address of the machine on an interface that you want to share. For example,
+if you're using a remote EC2 instance, get the public hostname and resolve
+that into an IP address.
+
+Once you have that, you can set your cluster hostname to a `xip.io <http://xip.io>`_
+resolved name. Then, all your links will work correctly.
+
+Edit the installation configuration file, ``install/configs/example-paasmaker-hacking.yml``,
+and update the ``cluster_hostname`` variable:
+
+.. code-block:: yaml
+
+	# In file install/configs/example-paasmaker-hacking.yml :
+	...
+	cluster_hostname: 10.0.0.1.xip.io
+	...
+
+And then re-run the installer:
+
+.. code-block:: bash
+
+	$ ./install.py install/configs/example-paasmaker-hacking.yml
+
+When you restart your Paasmaker node, it will then be available via http://pacemaker.10.0.0.1.xip.io,
+and any applications will be <application>.10.0.0.1.xip.io.
+
+.. warning::
+	Paasmaker currently doesn't support changing the ``cluster_hostname`` of an
+	existing installation. If you change it, any new applications get the new name
+	as they're inserted into the routing table, but old ones are not updated. We hope
+	to have the pacemaker detect and fix this automatically in the future.
+
+	A workaround is to stop and start all applications once you've changed the name.
+
+.. note::
+	We don't have an arrangement with the xip.io guys, and they provide an amazing
+	free service! We hope to be able to provide our own service in the future for testing.
