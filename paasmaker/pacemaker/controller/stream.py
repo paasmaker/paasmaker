@@ -18,6 +18,7 @@ logger.addHandler(logging.NullHandler())
 
 # Send back log lines in batches of this size (bytes).
 BLOCK_READ = 8192
+MAX_LOG_SIZE = 102400 # Don't send back more logs than this size.
 
 # TODO: Add hooks so that plugins can also use this connection.
 
@@ -257,9 +258,19 @@ class StreamConnection(tornadio2.SocketConnection):
 		def found_log(result_job_id, result):
 			if isinstance(result, basestring):
 				logger.info("Found job log %s locally.", job_id)
+
+				read_position = position
+
+				log_size = os.path.getsize(result)
+				if log_size > MAX_LOG_SIZE:
+					# Don't send back any more than MAX_LOG_SIZE of the file.
+					# Yes, this will potentially chop log lines in half.
+					# TODO: Make it not chop log lines in half.
+					read_position = log_size - MAX_LOG_SIZE
+
 				# It's the path to the log.
 				# Step 1: Feed since when they last saw.
-				self.send_job_log(job_id, position)
+				self.send_job_log(job_id, read_position)
 				# Step 2: subscribe for future updates.
 				pub.subscribe(self.log_message_update, self.configuration.get_job_message_pub_topic(job_id))
 				self.log_job_watcher.add_watch(job_id)
