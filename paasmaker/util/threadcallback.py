@@ -68,7 +68,19 @@ class ThreadCallback(threading.Thread):
 
 		# Add a callback to handle the result.
 		# This transfers control back to the main IO loop.
-		self.io_loop.add_callback(self._do_result_callback)
+		try:
+			self.io_loop.add_callback(self._do_result_callback)
+		except ValueError, ex:
+			# Sometimes, in unit tests, the add_callback() fires after
+			# the IO loop for the test is closed, resulting in
+			# exceptions that magically appear, even though the test
+			# passed. Detect this very specific error message and
+			# eat it, otherwise let the exception bubble up.
+			# TODO: This is hackish.
+			if str(ex) == "I/O operation on closed file":
+				pass
+			else:
+				raise ex
 
 	def _work(self, *args, **kwargs):
 		"""
