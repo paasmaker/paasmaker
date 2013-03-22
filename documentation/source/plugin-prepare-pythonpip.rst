@@ -21,6 +21,15 @@ The basic process it takes is this:
 	This plugin is not heavily tested. Please let us know about your experiences
 	with this plugin.
 
+.. note::
+	If you have issues with this plugin, for example if you aborted the prepare
+	and on subsequent times it fails, you might want to clear out the checkfiles
+	to reset the cache:
+
+	.. code-block:: bash
+
+		$ rm scratch/paasmaker.prepare.pythonpip/*.checkfile
+
 Application Configuration
 -------------------------
 

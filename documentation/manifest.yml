@@ -2,7 +2,7 @@ manifest:
   format: 1
 
 application:
-  name: doc.paasmaker.org
+  name: docs.paasmaker.org
   prepare:
     runtime:
       plugin: paasmaker.runtime.shell
