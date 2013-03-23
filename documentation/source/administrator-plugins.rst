@@ -19,6 +19,7 @@ Runtime Plugins
 	plugin-runtime-php
 	plugin-runtime-static
 	plugin-runtime-rbenv
+	plugin-runtime-nvm
 
 Service Plugins
 ---------------
