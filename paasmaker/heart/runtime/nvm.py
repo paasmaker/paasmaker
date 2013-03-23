@@ -21,7 +21,7 @@ class NvmRuntimeOptionsSchema(colander.MappingSchema):
 		default="~/.nvm",
 		missing="~/.nvm")
 
-class NvnRuntimeParametersSchema(colander.MappingSchema):
+class NvmRuntimeParametersSchema(colander.MappingSchema):
 	launch_command = colander.SchemaNode(colander.String(),
 		title="Launch command",
 		description="The command to launch the instance. Substitutes %(port)d with the allocated port.")
@@ -72,7 +72,7 @@ def natsorted(seq, cmp=natcmp):
 
 class NvmRuntime(BaseRuntime):
 	MODES = {
-		paasmaker.util.plugin.MODE.RUNTIME_EXECUTE: NvnRuntimeParametersSchema(),
+		paasmaker.util.plugin.MODE.RUNTIME_EXECUTE: NvmRuntimeParametersSchema(),
 		paasmaker.util.plugin.MODE.RUNTIME_ENVIRONMENT: NvmEnvironmentParametersSchema(),
 		paasmaker.util.plugin.MODE.RUNTIME_VERSIONS: None
 	}
