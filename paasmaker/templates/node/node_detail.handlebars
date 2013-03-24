@@ -1,0 +1,71 @@
+<ul class="breadcrumb">
+	<li><a href="/node/list">Nodes</a> <span class="divider">&middot;</span></li>
+	<li class="active">{{ name }}</li>
+</ul>
+
+<h1>
+	Node {{ name }}
+
+	{{#if pacemaker}}
+		<a href="#" class="btn disabled">
+			<i class="icon-calendar"></i> Pacemaker
+		</a>
+	{{/if}}
+	{{#if heart}}
+		<a href="#" class="btn disabled">
+			<i class="icon-heart"></i> Heart
+		</a>
+	{{/if}}
+	{{#if router}}
+		<a href="#" class="btn disabled">
+			<i class="icon-random"></i> Router
+		</a>
+	{{/if}}
+</h1>
+
+<div class="node-chart node-disk">
+	<div class="chart"></div><div class="legend"></div>
+</div>
+<div class="node-chart node-memory">
+	<div class="chart"></div><div class="legend"></div>
+</div>
+
+<ul class="node-details">
+	<li>UUID: <code>{{ uuid }}</code></li>
+	<li>Route: {{ route }}:{{ apiport }}</li>
+	<li>State: {{ state }}</li>
+	<li title="Started at {{formatted_start_time}}">Uptime: {{uptime_string}}</li>
+	<li title="{{formatted_last_heard}}">Last report: {{updated_age}} seconds ago</li>
+	<li>Score: {{formatted_score}}</li>
+</ul>
+
+{{#if runtimes}}
+	<table class="table table-bordered node-runtime">
+		<tr>
+			<th>Runtimes</th>
+			<th>Version(s)</th>
+		</tr>
+		{{#each runtimes}}
+			<tr>
+				<td>{{name}}</td>
+				<td>{{versions}}</td>
+			</tr>
+		{{/each}}
+	</table>
+{{/if}}
+
+<h2 class="node-instances">Instances</h2>
+<table class="table table-striped table-bordered node-instances">
+	<tr>
+		<th>ID</th>
+		<th>Application</th>
+		<th>Version</th>
+		<th>State</th>
+	</tr>
+</table>
+
+<h2>Tags</h2>
+<pre>{{formatted_tags}}</pre>
+
+<h2>Stats</h2>
+<pre>{{formatted_stats}}</pre>

@@ -72,8 +72,8 @@ pm.admin.user_list = (function() {
 				endpoint: 'user/list',
 				callback: function(data) {
 					for (var i=0; i < data.users.length; i++) {
-						data.users[i].created_moment = pm.util.parseDate(data.users[i].created);
-						data.users[i].updated_moment = pm.util.parseDate(data.users[i].updated);
+						data.users[i].created_moment = pm.util.formatDate(data.users[i].created);
+						data.users[i].updated_moment = pm.util.formatDate(data.users[i].updated);
 					}
 				
 					$('#main').html(pm.handlebars.user_list(data));

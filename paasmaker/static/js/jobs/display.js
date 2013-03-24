@@ -147,7 +147,7 @@ pm.jobs.display.prototype.createContainer = function(job_id, level, data)
 		// TODO: this is hackish, but for now the timestamp is embedded at the end of
 		// the title string for each job; parse it out and reformat using moment.js
 		var raw_date = title.substr(-26);
-		var moment = pm.util.parseDate(raw_date);
+		var moment = pm.util.formatDate(raw_date);
 		
 		// remove old unformatted date, and "at" if present
 		title = title.substring(0, title.length - 26);

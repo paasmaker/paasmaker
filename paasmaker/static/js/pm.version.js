@@ -2,7 +2,7 @@
  * Paasmaker 0.9.0
  * Insert licence notice here
  *
- * pm.application.js - interface for viewing an application and its versions
+ * pm.version.js - interface for viewing a version and its running instances
  */
 
 if (!window.pm) { var pm = {}; }	// TODO: module handling
@@ -15,8 +15,8 @@ pm.version = (function() {
 			var processed_instances = [];
 
 			instance_array.forEach(function(instance) {
-				instance.created_moment = pm.util.parseDate(instance.created);
-				instance.updated_moment = pm.util.parseDate(instance.updated);
+				instance.created_moment = pm.util.formatDate(instance.created);
+				instance.updated_moment = pm.util.formatDate(instance.updated);
 				
 				processed_instances.push(instance);
 			});

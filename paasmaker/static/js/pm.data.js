@@ -88,14 +88,19 @@ pm.data = (function() {
 		 *  - endpoint: URL of the API endpoint to call
 		 *  - template: compiled Handlebars template to use
 		 *  - element: element in which to render the template
+		 *  - callback: optional callback to run after rendering
 		 */
 		template_from_api: function(options) {
 			pm.data.api({
 				endpoint: options.endpoint,
 				callback: function(data) {
 					$(options.element).html(
-                    	options.template.apply(this, [data])
-                    );
+						options.template.apply(this, [data])
+					);
+					
+					if (options.callback) {
+						options.callback.apply(this, [data]);
+					}
 				}
 			});
 		},

@@ -1,0 +1,24 @@
+<tr>
+	<td class="contains-uuid">
+		<a href="#" class="toggle {{instance_id}}">
+			<code class="uuid-shrink" title="{{instance_id}}"></code>
+		</a>
+	</td>
+	<td>
+		<a href="/application/{{application.id}}">
+			{{application.name}}
+		</a>
+	</td>
+	<td>
+		<a href="/version/{{version.id}}">
+			Version {{version.version}}
+		</a>
+	</td>
+	<td>
+		{{state}}
+	</td>
+</tr>
+<tr>
+	<td colspan="4" class="instance-log-container {{instance_id}}" data-instance="{{instance_id}}">
+	</td>
+</tr>
