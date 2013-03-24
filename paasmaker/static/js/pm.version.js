@@ -88,7 +88,6 @@ pm.version = (function() {
 					// render main template body (but with empty tables)
 					$('#app_view_main').html(pm.handlebars.version_view(data));
 
-
 					// TODO: permissions are also checked in template, but without workspace ID
 					// if (pm.util.hasPermission('APPLICATION_VIEW_MANIFEST', workspace_id)) {
 					$('#app_manifest_modal').on('show', function() {
@@ -105,6 +104,11 @@ pm.version = (function() {
 							for (var type_name in instance_data.instances) {
 								$('#app_view_main').append(pm.handlebars.version_instance_types(instance_data.instances[type_name]));
 							}
+
+							// after rendering instances, add event handlers for viewing logs
+							$('.instance-log-container').each(function(i, element) {
+									new pm.logs.instance(streamSocket, $(element).attr('data-instance'));
+							});
 						}
 					});
 

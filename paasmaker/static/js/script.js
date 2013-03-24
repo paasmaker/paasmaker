@@ -84,15 +84,6 @@ $(document).ready(
 				}
 			);
 		}
-		if( $('.instance-log-container').length > 0 )
-		{
-			$('.instance-log-container').each(
-				function(index, element)
-				{
-					new pm.logs.instance(streamSocket, $(element).attr('data-instance'));
-				}
-			);
-		}
 
 		// search the page for .router-stats, and set
 		// up the stats widget in any that we find
