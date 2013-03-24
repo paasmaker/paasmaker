@@ -38,6 +38,8 @@ class VersionController(VersionRootController):
 
 		self.add_data('version', version)
 
+		self.add_data('frontend_domain_postfix', self.configuration.get_flat('pacemaker.frontend_domain_postfix'))
+
 		self.client_side_render()
 
 	@staticmethod

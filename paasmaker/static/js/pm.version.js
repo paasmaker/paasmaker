@@ -48,14 +48,14 @@ pm.version = (function() {
 
 			pm.data.api({
 				endpoint: 'version/' + url_match[1],	// or just document.location?
-				callback: function(data) {
-					if (data.version.source_package_type && data.version.source_package_type == 'devdirectory') {
+				callback: function(version_data) {
+					if (version_data.version.source_package_type && version_data.version.source_package_type == 'devdirectory') {
 						// when the dev directory plugin is enabled, show some additional details
-						data.version.using_dev_directory_plugin = true;
+						version_data.version.using_dev_directory_plugin = true;
 					}
 
 					// render main template body (but with empty tables)
-					$('#app_view_main').html(pm.handlebars.version_view(data));
+					$('#app_view_main').html(pm.handlebars.version_view(version_data));
 
 					// TODO: permissions are also checked in template, but without workspace ID
 					// if (pm.util.hasPermission('APPLICATION_VIEW_MANIFEST', workspace_id)) {
@@ -71,9 +71,13 @@ pm.version = (function() {
 						endpoint: 'version/' + url_match[1] + '/instances',
 						callback: function(instance_data) {
 							for (var type_name in instance_data.instances) {
-								instance_data.instances[type_name].instances = pm.version.processInstanceData(instance_data.instances[type_name].instances)
+								var this_view = instance_data.instances[type_name];
 							
-								$('#app_view_main').append(pm.handlebars.version_instance_types(instance_data.instances[type_name]));
+								this_view.instances = pm.version.processInstanceData(this_view.instances);
+								this_view.version_is_current = version_data.version.is_current;
+								this_view.frontend_domain_postfix = version_data.frontend_domain_postfix;
+							
+								$('#app_view_main').append(pm.handlebars.version_instance_types(this_view));
 							}
 
 							// after rendering instances, add event handlers for viewing logs
@@ -82,29 +86,6 @@ pm.version = (function() {
 							});
 						}
 					});
-
-					// add rows for each version from separate template file;
-					// then fire off a separate API request to get instance counts
-					// data.instance_types.forEach(function(version) {
-					// 	$('table.all_versions').append(pm.handlebars.application_version_row(version));
-
-					// 	pm.data.api({
-					// 		endpoint: 'version/' + version.id + '/instances',
-					// 		callback: function(instance_data) {
-					// 			var instance_total = 0;
-					// 			for (var type in instance_data.instances) {
-					// 				instance_total += instance_data.instances[type].instances.length;
-					// 			}
-
-					// 			$("td.version_instance_count[data-version-id=\"" + version.id + "\"]").html(
-			  //                   	"<a href=\"/version/" + version.id + "\">"
-			  //                   	+ instance_total + " instance(s) of "
-			  //                   	+ Object.keys(instance_data.instances).length + " type(s)"
-			  //                   	+ "</a>"
-			  //                   );
-					// 		}
-					// 	});
-					// });
 
 					$('.loading-overlay').remove();
 					pm.stats.routerstats.redraw();

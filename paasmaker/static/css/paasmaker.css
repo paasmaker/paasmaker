@@ -211,11 +211,15 @@ textarea.example-configuration
 .application-list { float: left; width: 250px; border: 1px solid #e3e3e3; border-radius: 4px; }
 .application-list-name { display: block; font-size: larger; font-weight: bold; }
 
-/* only used in app_nav.html, remove when that is removed */
-.application-list-details { display: block; font-size: smaller; color: #999999; }
-.active .application-list-details { color: #e5e5e5; }
-
 .application-list-state { float: right; }
 .application-list .version { padding-left: 1.5em; }
 
 .with-application-list { margin-left: 270px; }
+
+/* Version view - instance types list */
+.instance-type-column { width: 45%; float: left; }
+
+
+/* these two only used in app_nav.html, remove when that is removed */
+.application-list-details { display: block; font-size: smaller; color: #999999; }
+.active .application-list-details { color: #e5e5e5; }

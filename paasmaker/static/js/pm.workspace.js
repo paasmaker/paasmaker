@@ -61,7 +61,7 @@ pm.workspace = (function() {
 								if (version.id == data.current_version.id) {
 									version.is_current = true;
 								}
-								if (highlight_key && highlight_key.version && highlight_key.version == data.current_version.id) {
+								if (highlight_key && highlight_key.version && highlight_key.version == version.id) {
 									version.is_active = true;
 								}
 								processed_version_list.push(version);
