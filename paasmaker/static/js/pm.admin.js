@@ -68,10 +68,16 @@ pm.admin.user_list = (function() {
 	// TODO: this does not respect permissions for creating or editing users
 	return {
 		switchTo: function() {
-			pm.data.template_from_api({
+			pm.data.api({
 				endpoint: 'user/list',
-				element: '#main',
-				template: pm.handlebars.user_list
+				callback: function(data) {
+					for (var i=0; i < data.users.length; i++) {
+						data.users[i].created_moment = pm.util.parseDate(data.users[i].created);
+						data.users[i].updated_moment = pm.util.parseDate(data.users[i].updated);
+					}
+				
+					$('#main').html(pm.handlebars.user_list(data));
+				}
 			});
 		}
 	};

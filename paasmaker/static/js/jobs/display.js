@@ -134,7 +134,7 @@ pm.jobs.display.prototype.createContainer = function(job_id, level, data)
 	details.append($('<span class="toolbox"></span>'));
 	details.append($('<span class="title"></span>'));
 	details.append($('<span class="summary"></span>'));
-	details.append($('<span class="time"></span>'));
+	// details.append($('<span class="time"></span>'));
 	details.append($('<pre class="log"></pre>'));
 	thisJobContainer.append(details);
 
@@ -142,7 +142,20 @@ pm.jobs.display.prototype.createContainer = function(job_id, level, data)
 	childrenContainer.addClass('children-' + job_id);
 	thisJobContainer.append(childrenContainer);
 
-	$('.title', thisJobContainer).text(data.title);
+	var title = data.title;
+	if (/[0-9T\-\:\.]{26}/.test(title)) {
+		// TODO: this is hackish, but for now the timestamp is embedded at the end of
+		// the title string for each job; parse it out and reformat using moment.js
+		var raw_date = title.substr(-26);
+		var moment = pm.util.parseDate(raw_date);
+		
+		// remove old unformatted date, and "at" if present
+		title = title.substring(0, title.length - 26);
+		if (title.substr(-4) == " at ") { title = title.substring(0, title.length - 3); }
+		title += " <span title=\"" + raw_date + "\">" + moment.calendar + "</span>";
+	}
+	$('.title', thisJobContainer).html(title);
+	
 	if( data.summary && data.state != 'SUCCESS' )
 	{
 		$('.summary', thisJobContainer).text('Summary: ' + data.summary);

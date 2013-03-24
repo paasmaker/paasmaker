@@ -10,50 +10,18 @@ if (!window.pm) { var pm = {}; }	// TODO: module handling
 pm.version = (function() {
 
 	return {
+	
+		processInstanceData: function(instance_array) {
+			var processed_instances = [];
 
-		processVersionData: function(versions, data) {
-			var processed_versions = [];
-
-			var modifier = function(version) {
-				version.health_string = '';
-
-				if (version.health.overall && version.health.overall == 'OK') {
-					version.health_string += version.health.overall;
-				} else {
-					for (var instance_type in version.health.types) {
-						var h = version.health.types[instance_type];
-						if (h.state != 'OK') {
-							version.health_string += instance_type + ': ' + h.state;
-							if (h.message) {
-								version.health_string += ' - ' + h.message;
-							}
-							version.health_string += '<br>';
-						}
-					}
-				}
-
-				version.buttons_to_show = {
-					register: (version.state == 'PREPARED'),
-					start: (version.state == 'READY' || version.state == 'PREPARED'),
-					stop: (version.state == 'RUNNING'),
-					deregister: (version.state == 'READY'),
-					makecurrent: (version.state == 'RUNNING' && !version.is_current),
-					delete: (version.state == 'PREPARED' && !version.is_current)
-				};
-
-				// replicate the behaviour of nice_state(); TODO: icons etc?
-				version.display_state = version.state[0] + version.state.substr(1).toLowerCase();
-
-				processed_versions.push(version);
-			};
-
-			if (versions.length) {
-				versions.forEach(modifier);
-				return processed_versions;
-			} else {
-				modifier(versions);
-				return processed_versions[0];
-			}
+			instance_array.forEach(function(instance) {
+				instance.created_moment = pm.util.parseDate(instance.created);
+				instance.updated_moment = pm.util.parseDate(instance.updated);
+				
+				processed_instances.push(instance);
+			});
+			
+			return processed_instances;
 		},
 
 		switchTo: function() {
@@ -102,6 +70,8 @@ pm.version = (function() {
 						endpoint: 'version/' + url_match[1] + '/instances',
 						callback: function(instance_data) {
 							for (var type_name in instance_data.instances) {
+								instance_data.instances[type_name].instances = pm.version.processInstanceData(instance_data.instances[type_name].instances)
+							
 								$('#app_view_main').append(pm.handlebars.version_instance_types(instance_data.instances[type_name]));
 							}
 

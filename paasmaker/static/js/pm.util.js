@@ -32,6 +32,26 @@ pm.util = (function(){
 		return module.hasPermissionFromTable(currentUserPermissions, permission, workspace_id);
 	}
 
+
+	/**
+	 * Helper function to parse dates returned from the pacemaker in ISO-8601 format
+	 * (which include microseconds but omit the timezone, UTC).
+	 *
+	 * Returns an object with names corresponding to the Moment.js methods: fromNow
+	 * for a friendly "time ago" string, format for a traditional month-name string,
+	 * and calendar for a variable "Yesterday at 6:45 PM" string.
+	 */
+	module.parseDate = function(date_string) {	
+		var retval = {};
+		
+		var date = moment(date_string + ' +0000', 'YYYY-MM-DD_HH:mm:ss.______ Z');
+		retval.format = date.format('MMMM Do YYYY, HH:mm:ss Z');
+		retval.calendar = date.calendar();
+		retval.fromNow = date.fromNow();
+		
+		return retval;
+	}
+
 	// number_format from: http://phpjs.org/functions/number_format/
 	module.number_format = function(number, decimals, dec_point, thousands_sep) {
 		number = (number + '').replace(/[^0-9+\-Ee.]/g, '');

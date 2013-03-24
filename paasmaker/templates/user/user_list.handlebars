@@ -27,8 +27,8 @@
 			<td>
 				{{ login }}
 			</td>
-			<td>
-				{{ created }}
+			<td title="{{created_moment.format}}">
+				{{created_moment.calendar}}
 			</td>
 			<td>
 				{{# if enabled }}
