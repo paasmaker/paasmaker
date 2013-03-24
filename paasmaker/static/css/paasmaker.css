@@ -65,11 +65,6 @@ textarea.example-configuration
 	float: left;
 }
 
-.job-status .state span
-{
-	display: none;
-}
-
 .icon-loading
 {
 	background-image: url('../img/loading.gif');
@@ -118,6 +113,10 @@ textarea.example-configuration
 {
 	height: auto;
 }
+
+/* Summary jobs view */
+.job-overview .details .title { margin-left: 5px; }
+.job-overview li { list-style-type: none; }
 
 /* INSTANCE LOGS */
 .instance-log-container pre
@@ -210,8 +209,11 @@ textarea.example-configuration
 
 #main_right_view { min-height: 400px; position: relative; }
 
-.workspace-overview .overview-graph { width: 360px; height: 260px; padding: 10px; margin: 10px; position: relative; display: inline-block; border: 1px solid #E3E3E3; border-radius: 3px }
+.workspace-overview .overview-graph { width: 360px; height: 260px; padding: 10px; margin: 10px; position: relative; display: inline-block; border: 1px solid #E3E3E3; border-radius: 3px; }
 .workspace-overview .overview-graph h3 { font-size: 13px; line-height: 15px; margin: 0; position: absolute; top: 20px; left: 40px; }
+
+/* Workspace view - job summary */
+.workspace-overview .job-overview { width: 760px; height: 260px; padding: 10px; margin: 10px; display: inline-block; border: 1px solid #E3E3E3; border-radius: 3px; overflow: auto; }
 
 /* Workspace view - application list */
 

@@ -96,6 +96,13 @@ pm.workspace = (function() {
 					$('#main_right_view').html(pm.handlebars.workspace_main(data));
 					$('.loading-overlay').remove();
 					pm.stats.workspace.redraw();
+					
+					pm.data.api({
+						endpoint: 'job/list/workspace/' + url_match[1],
+						callback: function(job_data) {
+							pm.jobs.summary.show($('.workspace-overview .job-overview'), job_data.jobs);
+						}
+					});
 				}
 			});
 		}

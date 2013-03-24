@@ -2,62 +2,99 @@
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 if (!pm.jobs) { pm.jobs = {}; }
 
-pm.jobs.display = function(container, streamSocket)
-{
+pm.jobs.summary = (function() {
+	return {
+		renderSummaryTree: function(job_id, tree_item) {
+			var el = $('li[rel=' + job_id + ']');
+			if (el.length) {
+				$('a.title', el).text(tree_item.title);
+				$('span.state', el).attr('data-state', tree_item.state);
+				pm.jobs.display.prototype.setStateClass($('span.state', el), tree_item.state)
+				pm.jobs.display.prototype.setStateIcon($('span.state', el), tree_item.state)
+			}
+		},
+		
+		show: function(container, job_ids) {			
+			pm.data.subscribe(
+				'job.status',
+				function(job_id, status) {
+					console.log(job_id, status);
+					var el = $('li[rel=' + job_id + '] span.state');
+					if (el.length) {
+						el.attr('data-state', status.state);	// TODO: use .data() instead?
+						pm.jobs.display.prototype.setStateClass(el, status.state)
+						pm.jobs.display.prototype.setStateIcon(el, status.state)
+					}
+				}
+			);
+			
+			pm.data.subscribe(
+				'job.tree',
+				function(job_id, tree) {
+					//if(job_ids.indexOf(job_id) !== -1) {
+						pm.jobs.summary.renderSummaryTree(job_id, tree);
+					//}
+				}
+			);
+		
+			job_ids.forEach(function(job_id) {
+				var details = $('<li>');
+				details.append($('<span class="state"></span>'));
+				details.append($('<a href="/job/detail/' + job_id + '" class="title"></a>'));
+				details.addClass('details');
+				details.attr('rel', job_id);	// TODO: use .data() instead?
+				container.append(details);
+				
+				pm.data.emit('job.subscribe', job_id);
+			});
+		}
+		
+	};
+}());
+
+pm.jobs.display = function(container) {
 	this.container = container;
-	this.streamSocket;
 	this.job_id = container.attr('data-job');
 	this.logSubscribed = {};
 
 	var _self = this;
 
 	// Subscribe to the events we want.
-	this.streamSocket = streamSocket;
-	this.streamSocket.on('job.tree',
-		function(job_id, tree)
-		{
-			if(_self.job_id == job_id)
-			{
+	pm.data.subscribe('job.tree',
+		function(job_id, tree) {
+			if(_self.job_id == job_id) {
 				_self.renderJobTree([tree], 0);
 			}
 		}
 	);
 
-	this.streamSocket.on('job.new',
-		function(data)
-		{
-			_self.newJob(data);
-		}
-	);
+	pm.data.subscribe('job.new', function(data) {
+		_self.newJob(data);
+	});
 
-	this.streamSocket.on('job.status',
-		function(job_id, status)
-		{
+	pm.data.subscribe('job.status',
+		function(job_id, status) {
 			_self.updateStatus(status);
 		}
 	);
 
-	this.streamSocket.on('log.lines',
-		function(job_id, lines, position)
-		{
-			if(_self.logSubscribed[job_id])
-			{
+	pm.data.subscribe('log.lines',
+		function(job_id, lines, position) {
+			if(_self.logSubscribed[job_id]) {
 				_self.handleNewLines(job_id, lines, position);
 			}
 		}
 	);
 
-	this.streamSocket.on('log.zerosize',
-		function(job_id)
-		{
-			if(_self.logSubscribed[job_id])
-			{
+	pm.data.subscribe('log.zerosize',
+		function(job_id) {
+			if(_self.logSubscribed[job_id]) {
 				_self.handleZeroSizeLog(job_id);
 			}
 		}
 	);
 
-	_self.streamSocket.emit('job.subscribe', _self.job_id);
+	pm.data.emit('job.subscribe', this.job_id);
 }
 
 pm.jobs.display.prototype.handleZeroSizeLog = function(job_id)
@@ -285,9 +322,6 @@ pm.jobs.display.prototype.setStateIcon = function(element, state)
 	icon.addClass(BOOTSTRAP_ICON_MAP[state]);
 
 	element.html(icon);
-	var textual = $('<span></span>');
-	textual.text(state);
-	element.append(textual);
 }
 
 pm.jobs.display.prototype.updateStatus = function(status)
@@ -316,14 +350,14 @@ pm.jobs.display.prototype.toggleSubscribeLog = function(job_id, container)
 	if( this.logSubscribed[job_id] )
 	{
 		container.slideUp();
-		this.streamSocket.emit('log.unsubscribe', job_id);
+		pm.data.emit('log.unsubscribe', job_id);
 		this.logSubscribed[job_id] = false;
 	}
 	else
 	{
 		var position = container.attr('data-position');
 		this.logSubscribed[job_id] = true;
-		this.streamSocket.emit('log.subscribe', job_id, position);
+		pm.data.emit('log.subscribe', job_id, position);
 		container.slideDown();
 	}
 }
