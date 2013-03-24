@@ -58,6 +58,15 @@
 									{% end %}
 								</ul>
 							</li>
+							{% if user_permissions.has_permission(PERMISSION.NODE_LIST, None) %}
+								<li class="dropdown">
+									<a href="#" class="dropdown-toggle" data-toggle="dropdown">Nodes <b class="caret"></b></a>
+									<ul class="dropdown-menu node-list">
+										<li><a href="/node/list">All Nodes</a></li>
+										<li role="presentation" class="divider"></li>
+									</ul>
+								</li>
+							{% end %}
 							<li class="dropdown">
 								<a href="#" class="dropdown-toggle" data-toggle="dropdown">Administration <b class="caret"></b></a>
 								<ul class="dropdown-menu">
@@ -66,24 +75,22 @@
 										<li><a href="/user/list">Users</a></li>
 									{% end %}
 									{% if user_permissions.has_permission(PERMISSION.ROLE_LIST, None) %}
+										<li role="presentation" class="divider"></li>
 										<li><a href="/role/list">Roles</a></li>
 									{% end %}
 									{% if user_permissions.has_permission(PERMISSION.ROLE_ASSIGN, None) %}
 										<li><a href="/role/allocation/list">Role Allocations</a></li>
 									{% end %}
-									{% if user_permissions.has_permission(PERMISSION.NODE_LIST, None) %}
-										<li><a href="/node/list">Nodes</a></li>
-									{% end %}
-									{% if user_permissions.has_permission(PERMISSION.SYSTEM_ADMINISTRATION, None) %}
-										<li><a href="/router/dump">Router Table Dump</a></li>
-										<li><a href="/configuration/dump">System Configuration</a></li>
-										<li><a href="/configuration/plugins">Plugins</a></li>
-									{% end %}
 									{% if user_permissions.has_permission(PERMISSION.HEALTH_CHECK, None) %}
-										<li><a href="/job/list/health">Health Check Results</a></li>
+										<li role="presentation" class="divider"></li>
+										<li><a href="/job/list/health">Health Checks</a></li>
 									{% end %}
 									{% if user_permissions.has_permission(PERMISSION.SYSTEM_ADMINISTRATION, None) %}
 										<li><a href="/job/list/periodic">Periodic Tasks</a></li>
+										<li role="presentation" class="divider"></li>
+										<li><a href="/router/dump">Router Table Dump</a></li>
+										<li><a href="/configuration/dump">System Configuration</a></li>
+										<li><a href="/configuration/plugins">Plugins</a></li>
 									{% end %}
 								</ul>
 							</li>
@@ -98,7 +105,7 @@
 		<div class="container" id="main">
 			{% block leftnav %}{% end %}
 
-			<div id="app_view_main" {% block mainmodifier %}{% end %}>
+			<div id="main_right_view" {% block mainmodifier %}{% end %}>
 				{% block pretitle %}{% end %}
 				<h1>{% block pagetitle %}{% end %}</h1>
 

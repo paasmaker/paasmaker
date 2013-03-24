@@ -1,0 +1,22 @@
+<div class="application-list">
+	<ul class="nav nav-list">
+		<li class="nav-header">Nodes</li>
+		{{# each nodes}}
+			<li class="node {{#if is_active}}active{{/if}}" data-node-id="{{ id }}">
+				{{#ifPermission 'NODE_DETAIL_VIEW'}}<a href="/node/{{id}}">{{/ifPermission}}
+					<span class="application-list-state">
+						{{#if pacemaker}}<i class="icon-calendar {{#if is_active}}icon-white{{/if}}" title="Pacemaker"></i>{{/if}}
+						{{#if heart}}<i class="icon-heart {{#if is_active}}icon-white{{/if}}" title="Heart"></i>{{/if}}
+						{{#if router}}<i class="icon-random {{#if is_active}}icon-white{{/if}}" title="Router"></i>{{/if}}
+						<span class="badge {{state_class.badge}}" title="State: {{state}}"><i class="{{state_class.icon}} icon-white"></i></span>
+					</span>
+					<span class="application-list-name">{{name}}</span>
+					<span class="application-list-details">
+						Last heard: {{updated_age}}s &middot;
+						Score: {{score}}
+					</span>
+				{{#ifPermission 'NODE_DETAIL_VIEW'}}</a>{{/ifPermission}}
+			</li>
+		{{/each}}
+	</ul>
+</div>

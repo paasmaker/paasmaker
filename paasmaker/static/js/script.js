@@ -100,24 +100,29 @@ $(document).ready(
 		// Populate the workspaces dropdown.
 		// TODO: Make this more efficient without having the server include it in the HTML.
 		// NOTE: This doesn't handle errors - if you're not logged in, no list.
-		var workspaceListContainer = $('.nav .workspace-list');
-		if( workspaceListContainer.length > 0 )
-		{
-			$.getJSON(
-				'/workspace/list?format=json',
-				function(data, text, xhr)
-				{
-					for( var i = 0; i < data.data.workspaces.length; i++ )
-					{
-						workspace = data.data.workspaces[i];
-						thisA = $('<a href="/workspace/' + workspace.id + '/applications"></a>');
-						thisA.text(workspace.name);
-						thisLi = $('<li></li>');
-						thisLi.append(thisA);
-						workspaceListContainer.append(thisLi);
-					}
+		if ($('.nav .workspace-list').length) {
+			pm.data.api({
+				endpoint: 'workspace/list',
+				callback: function(data) {
+					data.workspaces.forEach(function(workspace) {
+						var thisLi = $('<li>');
+						thisLi.append($('<a href="/workspace/' + workspace.id + '/applications">' + workspace.name + '</a>'));
+						$('.nav .workspace-list').append(thisLi);
+					});
 				}
-			);
+			});
+		}
+		if ($('.nav .node-list').length) {
+			pm.data.api({
+				endpoint: 'node/list',
+				callback: function(data) {
+					data.nodes.forEach(function(node) {
+						var thisLi = $('<li>');
+						thisLi.append($('<a href="/node/' + node.id + '">' + node.name + '</a>'));
+						$('.nav .node-list').append(thisLi);
+					});
+				}
+			});
 		}
 
 		// On the new applications page, collapse the options until you click one.

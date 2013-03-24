@@ -31,13 +31,25 @@
 </div>
 
 <ul class="node-details">
-	<li>UUID: <code>{{ uuid }}</code></li>
-	<li>Route: {{ route }}:{{ apiport }}</li>
-	<li>State: {{ state }}</li>
-	<li title="Started at {{formatted_start_time}}">Uptime: {{uptime_string}}</li>
-	<li title="{{formatted_last_heard}}">Last report: {{updated_age}} seconds ago</li>
-	<li>Score: {{formatted_score}}</li>
+	<li><strong>UUID:</strong> <code>{{ uuid }}</code></li>
+	<li><strong>Route:</strong> {{ route }}:{{ apiport }}</li>
+	<li><strong>State:</strong> {{ state }}</li>
+	<li title="Started at {{formatted_start_time}}"><strong>Uptime:</strong> {{uptime_string}}</li>
+	<li title="{{formatted_last_heard}}"><strong>Last report:</strong> {{updated_age}} seconds ago</li>
+	<li><strong>Score:</strong> {{formatted_score}}</li>
 </ul>
+
+<h2 class="node-instances">Instances</h2>
+<table class="table table-striped table-bordered node-instances">
+	<tr>
+		<th>ID</th>
+		<th>Application</th>
+		<th>Version</th>
+		<th>State</th>
+	</tr>
+</table>
+
+<hr>
 
 {{#if runtimes}}
 	<table class="table table-bordered node-runtime">
@@ -54,18 +66,17 @@
 	</table>
 {{/if}}
 
-<h2 class="node-instances">Instances</h2>
-<table class="table table-striped table-bordered node-instances">
+<table class="table table-bordered">
 	<tr>
-		<th>ID</th>
-		<th>Application</th>
-		<th>Version</th>
-		<th>State</th>
+		<th>Tags</th>
+		<th>Stats</th>
+	</tr>
+	<tr>
+		<td>
+			<pre>{{formatted_tags}}</pre>
+		</td>
+		<td>
+			<pre>{{formatted_stats}}</pre>
+		</td>
 	</tr>
 </table>
-
-<h2>Tags</h2>
-<pre>{{formatted_tags}}</pre>
-
-<h2>Stats</h2>
-<pre>{{formatted_stats}}</pre>

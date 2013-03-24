@@ -208,7 +208,7 @@ textarea.example-configuration
 
 /* Workspace view - big graph */
 
-#app_view_main { min-height: 400px; position: relative; }
+#main_right_view { min-height: 400px; position: relative; }
 
 .workspace-overview .overview-graph { width: 360px; height: 260px; padding: 10px; margin: 10px; position: relative; display: inline-block; border: 1px solid #E3E3E3; border-radius: 3px }
 .workspace-overview .overview-graph h3 { font-size: 13px; line-height: 15px; margin: 0; position: absolute; top: 20px; left: 40px; }
@@ -232,12 +232,9 @@ textarea.example-configuration
 .node-chart .chart { top: 0; height:100px; }
 .node-chart .legend { top: 110px; height: 40px; }
 
-/* Node view - detail tables */
-.node-details, .node-runtime { width: 33%; float: left; }
-.node-details { margin: 20px 15px 20px 30px; }
-.node-runtime { margin-top: 12px; }
-h2.node-instances { clear: both; }
-
-/* these two only used in app_nav.html, remove when that is removed */
+/* Node view - side menu (from old app_nav.html) */
 .application-list-details { display: block; font-size: smaller; color: #999999; }
 .active .application-list-details { color: #e5e5e5; }
+
+/* Node view - list by type */
+.node-list-category { width: 32%; float: left; }

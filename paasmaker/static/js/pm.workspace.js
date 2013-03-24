@@ -13,7 +13,7 @@ pm.workspace = (function() {
 
 		updateAppMenu: function(new_workspace_id, highlight_key) {
 			// if (new_workspace_id == app_menu.current_workspace_id) {
-			// 	if ($('#app_menu_wrapper a').length) {
+			// 	if ($('#left_menu_wrapper a').length) {
 			// 		// don't redraw if unnecessary, but TODO: handle edits, etc.
 			// 		// TODO: find a better detection method?
 			// 		return false;
@@ -49,8 +49,8 @@ pm.workspace = (function() {
 		},
 
 		redrawAppMenu: function(app_data, highlight_key) {
-			$('#app_menu_wrapper').html(pm.handlebars.app_menu(app_data));
-			$('#app_menu_wrapper li.application').each(function(i, el) {
+			$('#left_menu_wrapper').html(pm.handlebars.app_menu(app_data));
+			$('#left_menu_wrapper li.application').each(function(i, el) {
 				var app_id = $(el).data('application-id');
 				pm.data.api({
 					endpoint: "application/" + app_id,
@@ -77,15 +77,15 @@ pm.workspace = (function() {
 		switchTo: function() {
 			var url_match = document.location.pathname.match(/\/(\d+)\//);
 
-			if ($('#app_menu_wrapper').length && $('#app_view_main').length) {
-				$('#app_view_main').empty();
+			if ($('#left_menu_wrapper').length && $('#main_right_view').length) {
+				$('#main_right_view').empty();
 			} else {
 				$('#main').empty();
 				$('#main').append(
-					$("<div id=\"app_menu_wrapper\">"),
-					$("<div id=\"app_view_main\" class=\"with-application-list\">")
+					$("<div id=\"left_menu_wrapper\">"),
+					$("<div id=\"main_right_view\" class=\"with-application-list\">")
 				);
-				pm.history.loadingOverlay("#app_view_main");
+				pm.history.loadingOverlay("#main_right_view");
 			}
 
 			pm.workspace.updateAppMenu(url_match[1]);
@@ -93,7 +93,7 @@ pm.workspace = (function() {
 			pm.data.api({
 				endpoint: 'workspace/' + url_match[1],	// or just document.location?
 				callback: function(data) {
-					$('#app_view_main').html(pm.handlebars.workspace_main(data));
+					$('#main_right_view').html(pm.handlebars.workspace_main(data));
 					$('.loading-overlay').remove();
 					pm.stats.workspace.redraw();
 				}

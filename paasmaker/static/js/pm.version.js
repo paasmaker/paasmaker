@@ -24,18 +24,37 @@ pm.version = (function() {
 			return processed_instances;
 		},
 
+		updateNodeNames: function() {
+			var node_ids = {};
+			$('a.version-instance-list-node').each(function(i, el) {
+				node_ids[$(el).data('node-id')] = true;
+			});
+			for (var id in node_ids) {
+				pm.data.api({
+					endpoint: 'node/' + id,
+					callback: function(node_data) {
+						$('a.version-instance-list-node').each(function(i, el) {
+							if ($(el).data('node-id') == node_data.node.id) {
+								$(el).text(node_data.node.name)
+							}
+						});
+					}
+				});
+			}
+		},
+
 		switchTo: function() {
 			var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
 
-			if ($('#app_menu_wrapper a').length && $('#app_view_main').length) {
-				$('#app_view_main').empty();
+			if ($('#left_menu_wrapper a').length && $('#main_right_view').length) {
+				$('#main_right_view').empty();
 			} else {
 				$('#main').empty();
 				$('#main').append(
-					$("<div id=\"app_menu_wrapper\">"),
-					$("<div id=\"app_view_main\" class=\"with-application-list\">")
+					$("<div id=\"left_menu_wrapper\">"),
+					$("<div id=\"main_right_view\" class=\"with-application-list\">")
 				);
-				pm.history.loadingOverlay("#app_view_main");
+				pm.history.loadingOverlay("#main_right_view");
 			}
 
 			pm.data.get_app_parents({
@@ -55,7 +74,7 @@ pm.version = (function() {
 					}
 
 					// render main template body (but with empty tables)
-					$('#app_view_main').html(pm.handlebars.version_view(version_data));
+					$('#main_right_view').html(pm.handlebars.version_view(version_data));
 
 					// TODO: permissions are also checked in template, but without workspace ID
 					// if (pm.util.hasPermission('APPLICATION_VIEW_MANIFEST', workspace_id)) {
@@ -77,15 +96,16 @@ pm.version = (function() {
 								this_view.version_is_current = version_data.version.is_current;
 								this_view.frontend_domain_postfix = version_data.frontend_domain_postfix;
 							
-								$('#app_view_main').append(pm.handlebars.version_instance_types(this_view));
+								$('#main_right_view').append(pm.handlebars.version_instance_types(this_view));
 							}
 
-							// after rendering instances, set up expandable UUIDs
-							// and add event handlers for viewing logs
+							// after rendering instances, set up expandable UUIDs, add event
+							// handlers for viewing logs, and fetch node names from the API
 							pm.widgets.uuid.update();
 							$('.instance-log-container').each(function(i, element) {
 									new pm.logs.instance(streamSocket, $(element).attr('data-instance'));
 							});
+							pm.version.updateNodeNames();
 						}
 					});
 

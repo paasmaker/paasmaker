@@ -92,15 +92,15 @@ pm.application = (function() {
 		switchTo: function() {
 			var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
 
-			if ($('#app_menu_wrapper a').length && $('#app_view_main').length) {
-				$('#app_view_main').empty();
+			if ($('#left_menu_wrapper a').length && $('#main_right_view').length) {
+				$('#main_right_view').empty();
 			} else {
 				$('#main').empty();
 				$('#main').append(
-					$("<div id=\"app_menu_wrapper\">"),
-					$("<div id=\"app_view_main\" class=\"with-application-list\">")
+					$("<div id=\"left_menu_wrapper\">"),
+					$("<div id=\"main_right_view\" class=\"with-application-list\">")
 				);
-				pm.history.loadingOverlay("#app_view_main");
+				pm.history.loadingOverlay("#main_right_view");
 			}
 
 			pm.data.get_app_parents({
@@ -131,7 +131,7 @@ pm.application = (function() {
 					}
 
 					// render main template body (but with empty tables)
-					$('#app_view_main').html(pm.handlebars.application_versions(data));
+					$('#main_right_view').html(pm.handlebars.application_versions(data));
 
 					// add rows for each version from separate template file;
 					// then fire off a separate API request to get instance counts
