@@ -148,7 +148,7 @@ class DefaultStats(BaseStats):
 		result['page_size'] = int(paasmaker.util.DarwinSubprocess.check_output(['sysctl', '-n', 'hw.pagesize']))
 		result['mem_total'] = int(paasmaker.util.DarwinSubprocess.check_output(['sysctl', '-n', 'hw.memsize']))
 
-		raw_memory = subprocess.check_output("vm_stat")
+		raw_memory = paasmaker.util.DarwinSubprocess.check_output("vm_stat")
 		raw_memory = raw_memory.split("\n")
 
 		def extract(ln):
