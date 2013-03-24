@@ -43,9 +43,10 @@
 	</tr>
 	{{#each instances}}
 		<tr>
-			<td>
-				<code>{{ instance_id }}</code>
-				<a href="#" class="toggle {{ instance_id }}"></a>
+			<td class="contains-uuid">
+				<a href="#" class="toggle {{ instance_id }}">
+					<code class="uuid-shrink" title="{{instance_id}}"></code>
+				</a>
 			</td>
 			<td>
 				<a href="/node/{{ node_id }}">{{ node_id }}</a>

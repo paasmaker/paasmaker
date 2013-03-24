@@ -80,7 +80,9 @@ pm.version = (function() {
 								$('#app_view_main').append(pm.handlebars.version_instance_types(this_view));
 							}
 
-							// after rendering instances, add event handlers for viewing logs
+							// after rendering instances, set up expandable UUIDs
+							// and add event handlers for viewing logs
+							pm.widgets.uuid.update();
 							$('.instance-log-container').each(function(i, element) {
 									new pm.logs.instance(streamSocket, $(element).attr('data-instance'));
 							});

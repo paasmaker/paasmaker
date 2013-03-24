@@ -10,7 +10,7 @@ pm.logs.instance = function(streamSocket, instance_id)
 
 	// Set up the container.
 	this.toggle = $('.toggle.' + instance_id);
-	this.toggle.html($('<i class="icon-list"></i>'));
+	this.toggle.append($('<i class="icon-list" title="Show instance log"></i>'));
 	this.container = $('.instance-log-container.' + instance_id);
 	this.pre = $('<pre></pre>');
 	this.container.hide();

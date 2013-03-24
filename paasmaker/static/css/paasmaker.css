@@ -14,6 +14,13 @@ td.overview_count { text-align: right; }
 .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; text-align: center; background: white; opacity: 0; }
 .loading-overlay img { position: absolute; top: 50%; }
 
+/* Instance log / job log display */
+a.toggle { text-decoration: none; }
+
+/* UUID display for instances, nodes etc. */
+td.contains-uuid { width: 320px; }
+code.uuid-shrink { cursor: pointer; }
+
 /* COMMON CSS STYLES */
 ul.errors
 {
