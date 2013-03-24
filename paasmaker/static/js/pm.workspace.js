@@ -8,11 +8,10 @@
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 
 pm.workspace = (function() {
-	var app_menu = {};
 
 	return {
 
-		updateAppMenu: function(new_workspace_id) {
+		updateAppMenu: function(new_workspace_id, highlight_key) {
 			// if (new_workspace_id == app_menu.current_workspace_id) {
 			// 	if ($('#app_menu_wrapper a').length) {
 			// 		// don't redraw if unnecessary, but TODO: handle edits, etc.
@@ -36,19 +35,21 @@ pm.workspace = (function() {
 				callback: function(data) {
 					processed_app_list = [];
 					data.applications.forEach(function(app) {
+						if (highlight_key && highlight_key.application && highlight_key.application == app.id) {
+							app.is_active = true;
+						}
 						app.health_class = bootstrap_health_classes[app.health];
 						processed_app_list.push(app);
 					});
 					data.applications = processed_app_list;
 
-					app_menu.data = data;	// TODO: add a proper cache to pm.data.js?
-					pm.workspace.redrawAppMenu();
+					pm.workspace.redrawAppMenu(data, highlight_key);
 				}
 			});
 		},
 
-		redrawAppMenu: function() {
-			$('#app_menu_wrapper').html(pm.handlebars.app_menu(app_menu.data));
+		redrawAppMenu: function(app_data, highlight_key) {
+			$('#app_menu_wrapper').html(pm.handlebars.app_menu(app_data));
 			$('#app_menu_wrapper li.application').each(function(i, el) {
 				var app_id = $(el).data('application-id');
 				pm.data.api({
@@ -59,6 +60,9 @@ pm.workspace = (function() {
 							data.versions.forEach(function(version) {
 								if (version.id == data.current_version.id) {
 									version.is_current = true;
+								}
+								if (highlight_key && highlight_key.version && highlight_key.version == data.current_version.id) {
+									version.is_active = true;
 								}
 								processed_version_list.push(version);
 							});

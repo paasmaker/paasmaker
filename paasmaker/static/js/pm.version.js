@@ -38,16 +38,17 @@ pm.version = (function() {
 				pm.history.loadingOverlay("#app_view_main");
 			}
 
+			pm.data.get_app_parents({
+				version_id: url_match[1],
+				callback: function(parents) {
+					pm.workspace.updateAppMenu(parents.workspace.id, { version: url_match[1] });
+					pm.application.updateBreadcrumbs(parents.workspace, parents.application, parents.version);
+				}
+			});
+
 			pm.data.api({
 				endpoint: 'version/' + url_match[1],	// or just document.location?
 				callback: function(data) {
-					pm.data.api({
-						endpoint: 'application/' + data.version.application_id,
-						callback: function(app_data) {
-							pm.workspace.updateAppMenu(app_data.application.workspace_id);
-						}
-					});
-
 					if (data.version.source_package_type && data.version.source_package_type == 'devdirectory') {
 						// when the dev directory plugin is enabled, show some additional details
 						data.version.using_dev_directory_plugin = true;

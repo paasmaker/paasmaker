@@ -11,6 +11,39 @@ pm.application = (function() {
 
 	return {
 
+		updateBreadcrumbs: function(workspace_data, application_data, version_data) {
+			$('ul.breadcrumb').empty();
+			
+			if (workspace_data) {
+				var ws_li = $("<li>");
+				$('ul.breadcrumb').append(ws_li);
+				if (application_data || version_data) {
+					var ws_link = $("<a>", { "href": "/workspace/" + workspace_data.id + "/applications" });
+					ws_li.append(ws_link);
+					ws_link.text(workspace_data.name);
+					ws_li.append("<span class=\"divider\">&middot;</span>");
+				} else {
+					ws_li.text(workspace_data.name);
+				}
+			}
+			if (application_data) {
+				var app_li = $("<li>");
+				$('ul.breadcrumb').append(app_li);
+				if (version_data) {
+					var app_link = $("<a>", { "href": "/application/" + application_data.id });
+					app_li.append(app_link);
+					app_link.text(application_data.name);
+					app_li.append("<span class=\"divider\">&middot;</span>");
+				} else {
+					app_li.text(application_data.name);
+				}
+			}
+			if (version_data) {
+				var ver_li = $("<li>").text("Version " + version_data.version);
+				$('ul.breadcrumb').append(ver_li);
+			}
+		},
+
 		processVersionData: function(versions, data) {
 			var processed_versions = [];
 
@@ -70,11 +103,17 @@ pm.application = (function() {
 				pm.history.loadingOverlay("#app_view_main");
 			}
 
+			pm.data.get_app_parents({
+				application_id: url_match[1],
+				callback: function(parents) {
+					pm.workspace.updateAppMenu(parents.workspace.id, { application: url_match[1] });
+					pm.application.updateBreadcrumbs(parents.workspace, parents.application, parents.version);
+				}
+			});
+			
 			pm.data.api({
 				endpoint: 'application/' + url_match[1],	// or just document.location?
 				callback: function(data) {
-					pm.workspace.updateAppMenu(data.application.workspace_id);
-
 					if (pm.util.hasPermission('APPLICATION_DELETE', data.application.workspace_id)) {
 						// check if this app can be deleted, i.e. no versions in READY or RUNNING states
 						data.application.can_delete = true;

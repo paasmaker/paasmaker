@@ -100,6 +100,58 @@ pm.data = (function() {
 			});
 		},
 
+		/**
+		 * Convenience wrapper to get the parent objects of an application or version when
+		 * showing a detail view in the interface (e.g. for menus and breadcrumbs).
+		 *
+		 * @param options object with these properties:
+		 *  - application_id or version_id: database ID of the object to fetch parents for
+		 *  - callback: function to run with output value as the only argument. Output value
+		 *    is an object with properties workspace, application, and optionally version
+		 *    each corresponding to the objects returned by the API.
+		 */
+		get_app_parents: function(options) {
+			var retval = {};
+			
+			var version_received = function(data) {
+				retval.version = data.version;
+				get_application(data.version.application_id);
+			}
+			var application_received = function(data) {
+				retval.application = data.application;
+				get_workspace(data.application.workspace_id);
+			}
+			var workspace_received = function(data) {
+				retval.workspace = data.workspace;
+				options.callback.apply(this, [retval]);
+			}
+		
+			get_version = function(id) {
+				pm.data.api({
+					endpoint: 'version/' + id,
+					callback: version_received
+				});
+			}
+			get_application = function(id) {
+				pm.data.api({
+					endpoint: 'application/' + id,
+					callback: application_received
+				});
+			}
+			get_workspace = function(id) {
+				pm.data.api({
+					endpoint: 'workspace/' + id,
+					callback: workspace_received
+				});
+			}
+		
+			if (options.version_id) {
+				get_version(options.version_id);
+			} else if (options.application_id) {
+				get_application(options.application_id);
+			}
+		},
+
 		// Preferred method for getting access to the socket.io connection object
 		getSocket: function() {
 			return streamSocket;
