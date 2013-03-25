@@ -100,6 +100,15 @@ class JobListController(BaseController):
 			name = "Health Checks"
 			ret = None
 			ret_name = None
+		elif job_list_type == 'node':
+			# You must have SYSTEM_ADMINISTRATION permission.
+			self.require_permission(constants.PERMISSION.SYSTEM_ADMINISTRATION)
+
+			name = "Node %s" % input_id
+			ret = "/node/list"
+			ret_name = "node list"
+			tag = "node:%s" % (input_id)
+
 		elif job_list_type == 'periodic':
 			# You must have SYSTEM_ADMINISTRATION permission.
 			self.require_permission(constants.PERMISSION.SYSTEM_ADMINISTRATION)
@@ -160,6 +169,7 @@ class JobListController(BaseController):
 		routes = []
 		# The route for, eg, /job/list/workspace/1
 		routes.append((r"/job/list/(workspace|application|version|instancetype)/(\d+)", JobListController, configuration))
+		routes.append((r"/job/list/(node)/([-\da-z]+)", JobListController, configuration))
 		routes.append((r"/job/list/(health|periodic)", JobListController, configuration))
 		# The route for job detail. Eg, /job/detail/<jobid>
 		routes.append((r"/job/(detail)/([-\w\d]+)", JobListController, configuration))
