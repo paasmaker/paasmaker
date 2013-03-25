@@ -18,7 +18,7 @@ td.overview_count { text-align: right; }
 a.toggle { text-decoration: none; }
 
 /* UUID display for instances, nodes etc. */
-td.contains-uuid { width: 320px; }
+td.contains-uuid { width: 265px; }
 code.uuid-shrink { cursor: pointer; }
 
 /* COMMON CSS STYLES */
@@ -229,6 +229,10 @@ textarea.example-configuration
 
 /* Version view - instance types list */
 .instance-type-column { width: 45%; float: left; }
+
+/* Version view - instance logs */
+td.instance-log-button { width: 75px; }
+td.instance-log-button a i { vertical-align: text-bottom; }
 
 /* Node view - stats charts */
 .node-chart { display: inline-block; position: relative; width: 100px; height: 150px; margin-right: 15px; float: right; }

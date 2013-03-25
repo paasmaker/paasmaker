@@ -40,13 +40,12 @@
 		<th>Port</th>
 		<th>Created</th>
 		<th>State</th>
+		<th></th>
 	</tr>
 	{{#each instances}}
 		<tr>
 			<td class="contains-uuid">
-				<a href="#" class="toggle {{ instance_id }}">
-					<code class="uuid-shrink" title="{{instance_id}}"></code>
-				</a>
+				<code class="uuid-shrink" title="{{instance_id}}"></code>
 			</td>
 			<td>
 				<a href="/node/{{node_id}}" class="version-instance-list-node" data-node-id="{{node_id}}">{{node_id}}</a>
@@ -60,9 +59,12 @@
 			<td>
 				<span class="instance-{{ state }}">{{ state }}</span>
 			</td>
+			<td class="instance-log-button">
+				<a href="#" class="btn btn-mini toggle {{ instance_id }}"><i class="icon-list"></i> View Log</a>
+			</td>
 		</tr>
 		<tr>
-			<td colspan="5" class="instance-log-container {{ instance_id }}" data-instance="{{ instance_id }}">
+			<td colspan="6" class="instance-log-container {{ instance_id }}" data-instance="{{ instance_id }}">
 			</td>
 		</tr>
 	{{/each}}
