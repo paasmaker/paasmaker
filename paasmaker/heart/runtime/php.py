@@ -57,6 +57,12 @@ class PHPRuntime(BaseRuntime):
 	OPTIONS_SCHEMA = PHPRuntimeOptionsSchema()
 	API_VERSION = "0.9.0"
 
+	def _check_options(self):
+		super(PHPRuntime, self)._check_options()
+		# Set this correct path now, so status() works
+		# properly without having to fetch the managed Apache.
+		self.options['config_dir'] = self._get_config_path()
+
 	VHOST_TEMPLATE = """
 NameVirtualHost *:%(port)d
 Listen %(port)d
@@ -94,13 +100,20 @@ Listen %(port)d
 		# Nothing to set up - so just proceed.
 		callback("Ready.")
 
+	def _get_managed_path(self):
+		directory = self.configuration.get_scratch_path(self.called_name)
+		return directory
+
+	def _get_config_path(self):
+		return os.path.join(self._get_managed_path(), 'configuration')
+
 	def _get_managed_instance(self, callback, error_callback):
 		if self.options['managed']:
 			self.apache_server = paasmaker.util.apachedaemon.ApacheDaemon(self.configuration)
 			# This makes the directory named by the plugins registered name. So if you
 			# have multiple PHP plugins with different names, you'll get one apache per
 			# plugin.
-			directory = self.configuration.get_scratch_path(self.called_name)
+			directory = self._get_managed_path()
 
 			# Set the config path.
 			try:
@@ -116,8 +129,6 @@ Listen %(port)d
 				)
 
 			def on_apache_started(message):
-				# Set the config dir for later.
-				self.options['config_dir'] = self.apache_server.get_config_dir()
 				# Let the caller know we're ready.
 				callback(message)
 
