@@ -132,8 +132,8 @@ class ApplicationDeleteServiceJob(BaseJob):
 				self.service.state = constants.SERVICE.ERROR
 				self.session.add(self.service)
 				self.session.commit()
+				self.failed("Plugin with mode SERVICE_DELETE doesn't exist for service %s" % self.service.provider)
 				self.session.close()
-				self.failed("Plugin with mode SERVICE_DELETE doesn't exist for service %s" %self.service.provider)
 				return
 
 			service_plugin = self.configuration.plugins.instantiate(
