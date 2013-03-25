@@ -106,6 +106,7 @@ the following contents. You should adjust this for your environment.
 	          commands:
 	            - gem install paasmaker-interface
 	            - bundle install --without development test
+	            - rbenv rehash
 	            - rake db:migrate
 	            - REDMINE_LANG=en rake redmine:load_default_data
 
