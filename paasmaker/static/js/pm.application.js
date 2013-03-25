@@ -11,48 +11,49 @@ pm.application = (function() {
 
 	return {
 
-		updateBreadcrumbs: function(workspace_data, application_data, version_data, job_id) {
+		updateBreadcrumbs: function(data) {
 			$('ul.breadcrumb').empty();
 
-			if (workspace_data) {
+			if (data.workspace) {
 				var ws_li = $("<li>");
 				$('ul.breadcrumb').append(ws_li);
-				if (application_data || version_data || job_id) {
-					var ws_link = $("<a>", { "href": "/workspace/" + workspace_data.id + "/applications" });
+				if (data.application || data.version || data.suffix) {
+					var ws_link = $("<a>", { "href": "/workspace/" + data.workspace.id + "/applications" });
 					ws_li.append(ws_link);
-					ws_link.text(workspace_data.name);
+					ws_link.text(data.workspace.name);
 					ws_li.append("<span class=\"divider\">&middot;</span>");
 				} else {
-					ws_li.text(workspace_data.name);
+					ws_li.text(data.workspace.name);
 				}
 			}
-			if (application_data) {
+			if (data.application) {
 				var app_li = $("<li>");
 				$('ul.breadcrumb').append(app_li);
-				if (version_data || job_id) {
-					var app_link = $("<a>", { "href": "/application/" + application_data.id });
+				if (data.version || data.suffix) {
+					var app_link = $("<a>", { "href": "/application/" + data.application.id });
 					app_li.append(app_link);
-					app_link.text(application_data.name);
+					app_link.text(data.application.name);
 					app_li.append("<span class=\"divider\">&middot;</span>");
 				} else {
-					app_li.text(application_data.name);
+					app_li.text(data.application.name);
 				}
 			}
-			if (version_data) {
+			if (data.version) {
 				var ver_li = $("<li>");
 				$('ul.breadcrumb').append(ver_li);
-				if (job_id) {
-					var ver_link = $("<a>", { "href": "/version/" + version_data.id });
+				if (data.suffix) {
+					var ver_link = $("<a>", { "href": "/version/" + data.version.id });
 					ver_li.append(ver_link);
-					ver_link.text("Version " + version_data.version);
+					ver_link.text("Version " + data.version.version);
 					ver_li.append("<span class=\"divider\">&middot;</span>");
 				} else {
-					ver_li.text("Version " + version_data.version);
+					ver_li.text("Version " + data.version.version);
 				}
 			}
-			if (job_id) {
-				var job_li = $("<li>").text("Job " + job_id);
-				$('ul.breadcrumb').append(job_li);
+			if (data.suffix) {
+				$('ul.breadcrumb').append(
+					$("<li>").text(data.suffix)
+				);
 			}
 		},
 
@@ -141,7 +142,11 @@ pm.application = (function() {
 				application_id: url_match[1],
 				callback: function(parents) {
 					pm.workspace.updateAppMenu(parents.workspace.id, { application: url_match[1] });
-					pm.application.updateBreadcrumbs(parents.workspace, parents.application, parents.version);
+					pm.application.updateBreadcrumbs({
+						workspace: parents.workspace,
+						application: parents.application,
+						version: parents.version
+					});
 				}
 			});
 

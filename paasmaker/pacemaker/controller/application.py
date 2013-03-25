@@ -171,7 +171,16 @@ class ApplicationNewController(ApplicationRootController):
 			result_list.append(result)
 
 		self.add_data('scms', result_list)
-		self.render("application/new.html")
+
+		# Special case for this controller: because SCM plugins generate their own form and return an
+		# HTML string, this controller supports a ?raw=true suffix on the URL to return the contents
+		# of the template rendered without any chrome from main.html. This can then be injected into
+		# the page by JavaScript. Without the suffix, treat as a normal client_side_render().
+		# TODO: a better method for SCM plugins to define their inputs
+		if self.get_argument('raw', '') == 'true':
+			self.render("application/new.html")
+		else:
+			self.client_side_render()
 
 	def post(self, input_id):
 		if self.request.uri.startswith('/application'):

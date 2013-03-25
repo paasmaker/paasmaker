@@ -33,6 +33,8 @@ pm.workspace = (function() {
 			pm.data.api({
 				endpoint: "workspace/" + new_workspace_id + "/applications",
 				callback: function(data) {
+					if (highlight_key && highlight_key.newApplication) { data.new_application_active = true; }
+
 					processed_app_list = [];
 					data.applications.forEach(function(app) {
 						if (highlight_key && highlight_key.application && highlight_key.application == app.id) {
@@ -96,7 +98,7 @@ pm.workspace = (function() {
 					$('#main_right_view').html(pm.handlebars.workspace_main(data));
 					$('.loading-overlay').remove();
 					pm.stats.workspace.redraw();
-					
+
 					pm.data.api({
 						endpoint: 'job/list/workspace/' + url_match[1],
 						callback: function(job_data) {

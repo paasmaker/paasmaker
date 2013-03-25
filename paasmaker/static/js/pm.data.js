@@ -224,6 +224,8 @@ pm.data = (function() {
 				get_version(options.version_id);
 			} else if (options.application_id) {
 				get_application(options.application_id);
+			} else if (options.workspace_id) {
+				get_workspace(options.workspace_id);
 			}
 		},
 

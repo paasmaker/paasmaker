@@ -75,7 +75,11 @@ pm.version = (function() {
 				version_id: url_match[1],
 				callback: function(parents) {
 					pm.workspace.updateAppMenu(parents.workspace.id, { version: url_match[1] });
-					pm.application.updateBreadcrumbs(parents.workspace, parents.application, parents.version);
+					pm.application.updateBreadcrumbs({
+						workspace: parents.workspace,
+						application: parents.application,
+						version: parents.version
+					});
 				}
 			});
 

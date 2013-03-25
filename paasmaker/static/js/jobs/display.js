@@ -83,7 +83,12 @@ pm.jobs.version_action = (function() {
 			pm.data.get_app_parents({
 				version_id: state.version_id,
 				callback: function(parents) {
-					pm.application.updateBreadcrumbs(parents.workspace, parents.application, parents.version, state.job_id);
+					pm.application.updateBreadcrumbs({
+						workspace: parents.workspace,
+						application: parents.application,
+						version: parents.version,
+						suffix: "Job " + state.job_id
+					});
 				}
 			});
 

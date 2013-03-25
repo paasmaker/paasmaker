@@ -16,6 +16,6 @@
 			</li>
 			<li class="divider"></li>
 		{{/each}}
-		<li><a href="/workspace/{{ workspace.id }}/applications/new">Create Application</a></li>
+		<li {{#if new_application_active}}class="active"{{/if}}><a href="/workspace/{{ workspace.id }}/applications/new">Create Application</a></li>
 	</ul>
 </div>

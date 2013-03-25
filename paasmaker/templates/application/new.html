@@ -1,40 +1,38 @@
-{% extends "../layout/main.html" %}
+<ul class="breadcrumb"></ul>
 
-{% block pagetitle %}
+<h1>
 	{% if new_application %}
 		New Application - {{ workspace.name }}
 	{% else %}
 		New Version - {{ application.name }}
 	{% end %}
-{% end %}
+</h1>
 
-{% block body %}
-	<div class="scm-container">
-		{% for scm in scms %}
-			<div class="scm {% if last_scm_name == scm['plugin'] %}scm-active{% end %}">
-				<h3>{{ scm['title'] }}</h3>
-				<div class="inner well well-small">
-					<form method="POST">
-						<input type="hidden" name="scm" value="{{ scm['plugin'] }}" />
+<div class="scm-container">
+	{% for scm in scms %}
+		<div class="scm {% if last_scm_name == scm['plugin'] %}scm-active{% end %}">
+			<h3>{{ scm['title'] }}</h3>
+			<div class="inner well well-small">
+				<form method="POST">
+					<input type="hidden" name="scm" value="{{ scm['plugin'] }}" />
 
-						{% raw scm['form'] %}
+					{% raw scm['form'] %}
 
-						<label for="manifest_path">Manifest Path:</label>
-						<input name="manifest_path" id="manifest_path" type="text" value="manifest.yml" required="required" />
+					<label for="manifest_path">Manifest Path:</label>
+					<input name="manifest_path" id="manifest_path" type="text" value="manifest.yml" required="required" />
 
-						<br />
-						<input type="submit" value="Create" class="btn" />
-					</form>
-					{% if len(scm['listers']) > 0 %}
-						{% for lister in scm['listers'] %}
-							<h4>{{ lister['title'] }}</h4>
-							<select class="scm-list" data-plugin="{{ lister['plugin'] }}">
-								<option value="">Loading...</option>
-							</select>
-						{% end %}
+					<br />
+					<input type="submit" value="Create" class="btn" />
+				</form>
+				{% if len(scm['listers']) > 0 %}
+					{% for lister in scm['listers'] %}
+						<h4>{{ lister['title'] }}</h4>
+						<select class="scm-list" data-plugin="{{ lister['plugin'] }}">
+							<option value="">Loading...</option>
+						</select>
 					{% end %}
-				</div>
+				{% end %}
 			</div>
-		{% end %}
-	</div>
-{% end %}
+		</div>
+	{% end %}
+</div>
