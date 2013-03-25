@@ -96,7 +96,8 @@ class ThreadedMySQLDatabaseDeletor(paasmaker.util.threadcallback.ThreadCallback)
 # MySQL service.
 class MySQLService(BaseService):
 	MODES = {
-		paasmaker.util.plugin.MODE.SERVICE_CREATE: MySQLServiceParametersSchema()
+		paasmaker.util.plugin.MODE.SERVICE_CREATE: MySQLServiceParametersSchema(),
+		paasmaker.util.plugin.MODE.SERVICE_DELETE: None
 	}
 	OPTIONS_SCHEMA = MySQLServiceConfigurationSchema()
 	API_VERSION = "0.9.0"

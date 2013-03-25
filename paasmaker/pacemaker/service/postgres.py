@@ -30,7 +30,8 @@ class PostgresServiceParametersSchema(colander.MappingSchema):
 
 class PostgresService(BaseService):
 	MODES = {
-		paasmaker.util.plugin.MODE.SERVICE_CREATE: PostgresServiceParametersSchema()
+		paasmaker.util.plugin.MODE.SERVICE_CREATE: PostgresServiceParametersSchema(),
+		paasmaker.util.plugin.MODE.SERVICE_DELETE: None
 	}
 	OPTIONS_SCHEMA = PostgresServiceConfigurationSchema()
 	API_VERSION = "0.9.0"
