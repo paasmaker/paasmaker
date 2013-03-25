@@ -10,17 +10,17 @@ if (!window.pm) { var pm = {}; }	// TODO: module handling
 pm.version = (function() {
 
 	return {
-	
+
 		processInstanceData: function(instance_array) {
 			var processed_instances = [];
 
 			instance_array.forEach(function(instance) {
 				instance.created_moment = pm.util.formatDate(instance.created);
 				instance.updated_moment = pm.util.formatDate(instance.updated);
-				
+
 				processed_instances.push(instance);
 			});
-			
+
 			return processed_instances;
 		},
 
@@ -41,6 +41,20 @@ pm.version = (function() {
 					}
 				});
 			}
+		},
+
+		actionButton: function(e) {
+			pm.history.loadingOverlay("#main_right_view");
+			pm.data.post({
+				endpoint: $(e.target).attr('href'),
+				callback: function(data) {
+					$('.loading-overlay').remove();
+					// pushState so the Back button works, but TODO: this should be in pm.history?
+					var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
+					window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.job_id);
+					pm.jobs.version_action.switchTo({ job_id: data.job_id, version_id: url_match[1] });
+				}
+			});
 		},
 
 		switchTo: function() {
@@ -73,6 +87,9 @@ pm.version = (function() {
 						version_data.version.using_dev_directory_plugin = true;
 					}
 
+					version_data.version.health_string = pm.application.getHealthString(version_data.version);
+					version_data.version.buttons_to_show = pm.application.getButtonMap(version_data.version);
+
 					// render main template body (but with empty tables)
 					$('#main_right_view').html(pm.handlebars.version_view(version_data));
 
@@ -91,11 +108,11 @@ pm.version = (function() {
 						callback: function(instance_data) {
 							for (var type_name in instance_data.instances) {
 								var this_view = instance_data.instances[type_name];
-							
+
 								this_view.instances = pm.version.processInstanceData(this_view.instances);
 								this_view.version_is_current = version_data.version.is_current;
 								this_view.frontend_domain_postfix = version_data.frontend_domain_postfix;
-							
+
 								$('#main_right_view').append(pm.handlebars.version_instance_types(this_view));
 							}
 

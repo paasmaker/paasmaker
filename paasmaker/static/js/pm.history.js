@@ -59,13 +59,13 @@ pm.history = (function() {
 		onpopstate: function(e) {
 			if (e.state && e.state.handle_in_js) {
 				var address = document.location.pathname;
-				if (address == current_address) { return false; }
+				// if (address == current_address) { return false; }
 				current_address = address;
 
 				pm.data.removeListeners();
 				pm.history.loadingOverlay();
 				var module = pm.history.getRoute(address);
-				module.switchTo.apply(module);
+				module.switchTo.apply(module, [e.state]);
 			}
 		},
 
@@ -75,11 +75,21 @@ pm.history = (function() {
 			// reload. If so, do a pushState so the history event handler will respond.
 			$(document).on('click', function(e) {
 				if (e.target.tagName == 'A') {
-					var parsed_url = e.target.href.match(/^https?\:\/\/[^\/]+(\/.*)$/);
-					if (parsed_url && pm.history.getRoute(parsed_url[1])) {
+					if (e.target.className.indexOf('job-action-button') !== -1) {
+						// action button: these only occur on ajax-generated pages, so find
+						// the controller for the current page and run its actionButton method
 						e.preventDefault();
-						window.history.pushState({ handle_in_js: true }, '', parsed_url[1]);
-						pm.history.onpopstate({ state: { handle_in_js: true } });
+						var module = pm.history.getRoute(current_address);
+						module.actionButton.apply(module, arguments);
+
+					} else {
+						// regular link: check if we should intercept it
+						var parsed_url = e.target.href.match(/^https?\:\/\/[^\/]+(\/.*)$/);
+						if (parsed_url && pm.history.getRoute(parsed_url[1])) {
+							e.preventDefault();
+							window.history.pushState({ handle_in_js: true }, '', parsed_url[1]);
+							pm.history.onpopstate({ state: { handle_in_js: true } });
+						}
 					}
 				}
 			});

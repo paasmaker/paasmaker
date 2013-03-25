@@ -13,8 +13,8 @@ pm.jobs.summary = (function() {
 				pm.jobs.display.prototype.setStateIcon($('span.state', el), tree_item.state)
 			}
 		},
-		
-		show: function(container, job_ids) {			
+
+		show: function(container, job_ids) {
 			pm.data.subscribe(
 				'job.status',
 				function(job_id, status) {
@@ -27,7 +27,7 @@ pm.jobs.summary = (function() {
 					}
 				}
 			);
-			
+
 			pm.data.subscribe(
 				'job.tree',
 				function(job_id, tree) {
@@ -36,7 +36,7 @@ pm.jobs.summary = (function() {
 					//}
 				}
 			);
-		
+
 			job_ids.forEach(function(job_id) {
 				var details = $('<li>');
 				details.append($('<span class="state"></span>'));
@@ -44,11 +44,47 @@ pm.jobs.summary = (function() {
 				details.addClass('details');
 				details.attr('rel', job_id);	// TODO: use .data() instead?
 				container.append(details);
-				
+
 				pm.data.emit('job.subscribe', job_id);
 			});
 		}
-		
+
+	};
+}());
+
+pm.jobs.version_action = (function() {
+	return {
+		switchTo: function(state) {
+			// This code is only called from existing version views (not from pm.history),
+			// so setting up the wrappers isn't currently necessary
+			// if ($('#left_menu_wrapper a').length && $('#main_right_view').length) {
+			// 	$('#main_right_view').empty();
+			// } else {
+			// 	$('#main').empty();
+			// 	$('#main').append(
+			// 		$("<div id=\"left_menu_wrapper\">"),
+			// 		$("<div id=\"main_right_view\" class=\"with-application-list\">")
+			// 	);
+			// 	pm.history.loadingOverlay("#main_right_view");
+			// }
+
+			var job_well = $("<div>");
+			job_well.addClass("job-root well well-small");
+			job_well.attr("data-job", state.job_id);
+
+			$('#main_right_view').empty()
+								 .append($('<ul class="breadcrumb">'))
+								 .append(job_well);
+
+			pm.data.get_app_parents({
+				version_id: state.version_id,
+				callback: function(parents) {
+					pm.application.updateBreadcrumbs(parents.workspace, parents.application, parents.version, state.job_id);
+				}
+			});
+
+			new pm.jobs.display(job_well);
+		}
 	};
 }());
 
@@ -165,7 +201,7 @@ pm.jobs.display.prototype.createContainer = function(job_id, level, data)
 	var thisJobContainer = $('<div class="job-status level' + level + '"></div>');
 	thisJobContainer.attr('data-level', level);
 
-	var details = $('<div class="details clearfix"></div>');
+	var details = $('<div class="details"></div>');
 	details.addClass(job_id);
 	details.append($('<span class="state"></span>'));
 	details.append($('<span class="toolbox"></span>'));
@@ -185,14 +221,14 @@ pm.jobs.display.prototype.createContainer = function(job_id, level, data)
 		// the title string for each job; parse it out and reformat using moment.js
 		var raw_date = title.substr(-26);
 		var moment = pm.util.formatDate(raw_date);
-		
+
 		// remove old unformatted date, and "at" if present
 		title = title.substring(0, title.length - 26);
 		if (title.substr(-4) == " at ") { title = title.substring(0, title.length - 3); }
 		title += " <span title=\"" + raw_date + "\">" + moment.calendar + "</span>";
 	}
 	$('.title', thisJobContainer).html(title);
-	
+
 	if( data.summary && data.state != 'SUCCESS' )
 	{
 		$('.summary', thisJobContainer).text('Summary: ' + data.summary);

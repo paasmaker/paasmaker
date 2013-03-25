@@ -25,10 +25,32 @@
 			<a class="btn" data-toggle="modal" data-target="#app_manifest_modal">View Manifest</a>
 		</div>
 	{{/ifPermission}}
+	<div class="btn-group btn-group-header">
+		{{! TODO: this copied from application_version_row.handlebars }}
+		{{#if version.buttons_to_show.register}}
+			<a class="btn btn-success job-action-button" href="/version/{{version.id}}/register">Register</a>
+		{{/if}}
+		{{#if version.buttons_to_show.start}}
+			<a class="btn btn-success job-action-button" href="/version/{{version.id}}/start">Start</a>
+		{{/if}}
+		{{#if version.buttons_to_show.stop}}
+			<a class="btn btn-danger job-action-button" href="/version/{{version.id}}/stop">Stop</a>
+		{{/if}}
+		{{#if version.buttons_to_show.deregister}}
+			<a class="btn btn-warning job-action-button" href="/version/{{version.id}}/deregister">De Register</a>
+		{{/if}}
+		{{#if version.buttons_to_show.makecurrent}}
+			<a class="btn btn-primary job-action-button" href="/version/{{version.id}}/setcurrent">Make Current</a>
+		{{/if}}
+		{{#if version.buttons_to_show.delete}}
+			<a class="btn btn-danger job-action-button" href="/version/{{version.id}}/delete">Delete</a>
+		{{/if}}
+	</div>
 </div>
 
 <ul>
 	<li><b>State:</b> {{ version.state }}</li>
+	<li><b>Health:</b> {{version.health.overall}} {{{version.health_string}}}</li>
 	<li><b>SCM:</b> {{ version.scm_name }}</li>
 	{{#if version.scm_parameters.formatted_location}}
 		<li><b>Original source location:</b> {{version.scm_parameters.formatted_location}}</li>

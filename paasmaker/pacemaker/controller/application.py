@@ -315,8 +315,7 @@ class ApplicationSetCurrentController(ApplicationRootController):
 
 		# TODO: Unit test.
 		def job_started():
-			# Redirect to clear the post.
-			self._redirect_job(self.get_data('job_id'), '/application/%d' % application.id)
+			self.action_success(self.get_data('job_id'), "/application/%d" % application.id)
 
 		def current_job_ready(job_id):
 			self.add_data('job_id', job_id)

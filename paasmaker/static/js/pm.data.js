@@ -16,7 +16,7 @@ pm.data = (function() {
 	return {
 
 		/**
-		 * Very simple wrapper for calls to the pacemaker's JSON API:
+		 * Wrapper for GET calls to the pacemaker's JSON API:
 		 *  - appends ?format=json so other code doesn't need to
 		 *  - parses JSON and gets out the .data property
 		 *  - detects (but doesn't yet handle) errors and warnings
@@ -81,6 +81,76 @@ pm.data = (function() {
 		},
 
 		/**
+		 * Wrapper for POST calls to the pacemaker's JSON API:
+		 *  - appends ?format=json so other code doesn't need to
+		 *  - parses JSON and gets out the .data property
+		 *  - detects (but doesn't yet handle) errors and warnings
+		 *
+		 * @param options object with these properties:
+		 *  - endpoint: URL of the API endpoint to call
+		 *  - callback: function to call when request completes
+		 *  - body_data: (optional) string to pass into POST body
+		 *  - arguments: (optional) key-value mapping of arguments to append to the URL
+		 *  - warningCallback: (optional) function to call when API returns a warning
+		 *  - errorCallback: (optional) function to call when API returns an error
+		 */
+		post: function(options) {
+			// TODO: this code is duplicated above
+			if (!options.arguments) { options.arguments = {}; }
+			if (!options.body_data) { options.body_data = {}; }
+
+			if (options.endpoint.substr(0, 1) !== '/') {
+				options.endpoint = '/' + options.endpoint;
+			}
+
+			if (options.endpoint.indexOf('?') !== -1) {
+				// parse out existing arguments if there are any in the endpoint string
+				var query_string = options.endpoint.split('?');
+				options.endpoint = query_string[0];
+
+				query_string.split('&').forEach(function(arg) {
+					arg_parts = arg.split('=');
+					options.arguments[decodeURIComponent(arg_parts[0])] = decodeURIComponent(arg_parts[1]);
+				});
+			}
+
+			// make sure ?format=json is included, then rebuild the query string
+			options.arguments.format = "json";
+			var arg_string = '';
+			for (var key in options.arguments) {
+				arg_string += encodeURIComponent(key) + '=' + encodeURIComponent(options.arguments[key]);
+			}
+
+			$.post(
+				options.endpoint + '?' + arg_string,
+				options.body_data,
+				function(responseData) {
+					if (responseData.errors && responseData.errors.length > 0) {
+						console.log("API call to " + endpoint + " returned an error!");
+						console.log(responseData.errors);
+						if (options.errorCallback) {
+							options.errorCallback.apply(this, arguments);
+						}
+					}
+					if (responseData.warnings && responseData.warnings.length > 0) {
+						console.log("WARNING WARNING: API call to " + endpoint + " returned a warning!");
+						console.log(responseData.warnings);
+						if (options.warningCallback) {
+							options.warningCallback.apply(this, arguments);
+						}
+					}
+
+					if (responseData.success) {
+						var modified_args = arguments;
+						modified_args[0] = responseData;
+						options.callback.apply(this, modified_args);
+					}
+				},
+				"json"
+			);
+		},
+
+		/**
 		 * Convenience wrapper around pm.data.api for simple API calls that just
 		 * need their output directly rendered with a particular Handlebars template.
 		 *
@@ -97,7 +167,7 @@ pm.data = (function() {
 					$(options.element).html(
 						options.template.apply(this, [data])
 					);
-					
+
 					if (options.callback) {
 						options.callback.apply(this, [data]);
 					}
@@ -117,7 +187,7 @@ pm.data = (function() {
 		 */
 		get_app_parents: function(options) {
 			var retval = {};
-			
+
 			var version_received = function(data) {
 				retval.version = data.version;
 				get_application(data.version.application_id);
@@ -130,7 +200,7 @@ pm.data = (function() {
 				retval.workspace = data.workspace;
 				options.callback.apply(this, [retval]);
 			}
-		
+
 			get_version = function(id) {
 				pm.data.api({
 					endpoint: 'version/' + id,
@@ -149,7 +219,7 @@ pm.data = (function() {
 					callback: workspace_received
 				});
 			}
-		
+
 			if (options.version_id) {
 				get_version(options.version_id);
 			} else if (options.application_id) {
@@ -169,10 +239,12 @@ pm.data = (function() {
 		},
 
 		emit: function() {
+			// console.log('pm.data.emit:', arguments);
 			pm.data.getSocket().emit.apply(streamSocket, arguments);
 		},
 
 		subscribe: function(eventName, callback, capture) {
+			// console.log('pm.data.subscribe on ' + eventName);
 			pm.data.getSocket().on(
 				eventName,
 				function() {

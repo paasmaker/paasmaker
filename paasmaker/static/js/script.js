@@ -75,12 +75,10 @@ $(document).ready(
 			}
 		);
 
-		if( $('.job-root').length > 0 )
-		{
+		if( $('.job-root').length > 0 ) {
 			$('.job-root').each(
-				function(index, element)
-				{
-					new pm.jobs.display($(element), streamSocket);
+				function(index, element) {
+					new pm.jobs.display($(element));
 				}
 			);
 		}

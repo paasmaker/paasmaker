@@ -103,7 +103,7 @@ class VersionRegisterController(VersionRootController):
 		self.add_data('version', version)
 
 		def on_job_started():
-			self._redirect_job(self.get_data('job_id'), '/application/%d' % version.application.id)
+			self.action_success(self.get_data('job_id'), "/application/%d" % version.application.id)
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -133,7 +133,7 @@ class VersionStartupController(VersionRootController):
 			raise tornado.web.HTTPError(400, "Incorrect state.")
 
 		def on_job_started():
-			self._redirect_job(self.get_data('job_id'), '/application/%d' % version.application.id)
+			self.action_success(self.get_data('job_id'), "/application/%d" % version.application.id)
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -163,7 +163,7 @@ class VersionShutdownController(VersionRootController):
 			raise tornado.web.HTTPError(400, "Incorrect state.")
 
 		def on_job_started():
-			self._redirect_job(self.get_data('job_id'), '/application/%d' % version.application.id)
+			self.action_success(self.get_data('job_id'), "/application/%d" % version.application.id)
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -193,7 +193,7 @@ class VersionDeRegisterController(VersionRootController):
 			raise tornado.web.HTTPError(400, "Incorrect state.")
 
 		def on_job_started():
-			self._redirect_job(self.get_data('job_id'), '/application/%d' % version.application.id)
+			self.action_success(self.get_data('job_id'), "/application/%d" % version.application.id)
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -232,7 +232,7 @@ class VersionDeleteController(VersionRootController):
 		self.session.add(version)
 		self.session.commit()
 
-		self.redirect("/application/%d" % version.application.id)
+		self.action_success("/application/%d" % version.application.id)
 
 	@staticmethod
 	def get_routes(configuration):

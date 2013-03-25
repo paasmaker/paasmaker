@@ -11,13 +11,13 @@ pm.application = (function() {
 
 	return {
 
-		updateBreadcrumbs: function(workspace_data, application_data, version_data) {
+		updateBreadcrumbs: function(workspace_data, application_data, version_data, job_id) {
 			$('ul.breadcrumb').empty();
-			
+
 			if (workspace_data) {
 				var ws_li = $("<li>");
 				$('ul.breadcrumb').append(ws_li);
-				if (application_data || version_data) {
+				if (application_data || version_data || job_id) {
 					var ws_link = $("<a>", { "href": "/workspace/" + workspace_data.id + "/applications" });
 					ws_li.append(ws_link);
 					ws_link.text(workspace_data.name);
@@ -29,7 +29,7 @@ pm.application = (function() {
 			if (application_data) {
 				var app_li = $("<li>");
 				$('ul.breadcrumb').append(app_li);
-				if (version_data) {
+				if (version_data || job_id) {
 					var app_link = $("<a>", { "href": "/application/" + application_data.id });
 					app_li.append(app_link);
 					app_link.text(application_data.name);
@@ -39,40 +39,61 @@ pm.application = (function() {
 				}
 			}
 			if (version_data) {
-				var ver_li = $("<li>").text("Version " + version_data.version);
+				var ver_li = $("<li>");
 				$('ul.breadcrumb').append(ver_li);
+				if (job_id) {
+					var ver_link = $("<a>", { "href": "/version/" + version_data.id });
+					ver_li.append(ver_link);
+					ver_link.text("Version " + version_data.version);
+					ver_li.append("<span class=\"divider\">&middot;</span>");
+				} else {
+					ver_li.text("Version " + version_data.version);
+				}
 			}
+			if (job_id) {
+				var job_li = $("<li>").text("Job " + job_id);
+				$('ul.breadcrumb').append(job_li);
+			}
+		},
+
+		getButtonMap: function(version) {
+			return {
+				register: (version.state == 'PREPARED'),
+				start: (version.state == 'READY' || version.state == 'PREPARED'),
+				stop: (version.state == 'RUNNING'),
+				deregister: (version.state == 'READY'),
+				makecurrent: (version.state == 'RUNNING' && !version.is_current),
+				delete: (version.state == 'PREPARED' && !version.is_current)
+			};
+		},
+
+		getHealthString: function(version) {
+			var health_string = '';
+
+			if (version.health.overall && version.health.overall == 'OK') {
+				health_string += version.health.overall;
+			} else {
+				for (var instance_type in version.health.types) {
+					var h = version.health.types[instance_type];
+					if (h.state != 'OK') {
+						health_string += instance_type + ': ' + h.state;
+						if (h.message) {
+							health_string += ' - ' + h.message;
+						}
+						health_string += '<br>';
+					}
+				}
+			}
+
+			return health_string;
 		},
 
 		processVersionData: function(versions, data) {
 			var processed_versions = [];
 
 			var modifier = function(version) {
-				version.health_string = '';
-
-				if (version.health.overall && version.health.overall == 'OK') {
-					version.health_string += version.health.overall;
-				} else {
-					for (var instance_type in version.health.types) {
-						var h = version.health.types[instance_type];
-						if (h.state != 'OK') {
-							version.health_string += instance_type + ': ' + h.state;
-							if (h.message) {
-								version.health_string += ' - ' + h.message;
-							}
-							version.health_string += '<br>';
-						}
-					}
-				}
-
-				version.buttons_to_show = {
-					register: (version.state == 'PREPARED'),
-					start: (version.state == 'READY' || version.state == 'PREPARED'),
-					stop: (version.state == 'RUNNING'),
-					deregister: (version.state == 'READY'),
-					makecurrent: (version.state == 'RUNNING' && !version.is_current),
-					delete: (version.state == 'PREPARED' && !version.is_current)
-				};
+				version.health_string = pm.application.getHealthString(version);
+				version.buttons_to_show = pm.application.getButtonMap(version);
 
 				// replicate the behaviour of nice_state(); TODO: icons etc?
 				version.display_state = version.state[0] + version.state.substr(1).toLowerCase();
@@ -87,6 +108,19 @@ pm.application = (function() {
 				modifier(versions);
 				return processed_versions[0];
 			}
+		},
+
+		actionButton: function(e) {
+			pm.history.loadingOverlay("#main_right_view");
+			pm.data.post({
+				endpoint: $(e.target).attr('href'),
+				callback: function(data) {
+					$('.loading-overlay').remove();
+					// pushState so the Back button works, but TODO: this should be in pm.history?
+					window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.job_id);
+					pm.jobs.version_action.switchTo({ job_id: data.job_id, version_id: $(e.target).data('version-id') });
+				}
+			});
 		},
 
 		switchTo: function() {
@@ -110,7 +144,7 @@ pm.application = (function() {
 					pm.application.updateBreadcrumbs(parents.workspace, parents.application, parents.version);
 				}
 			});
-			
+
 			pm.data.api({
 				endpoint: 'application/' + url_match[1],	// or just document.location?
 				callback: function(data) {

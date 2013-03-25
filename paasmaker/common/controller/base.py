@@ -586,20 +586,20 @@ class BaseController(tornado.web.RequestHandler):
 		Generate JavaScript literal strings for all of the .handlebars files in the
 		templates directory. This is a helper for development, because there's no easy
 		way to load a Handlebars template in a file from the browser.
-		
+
 		In each template, quotes and backslashes are escaped, newlines are stripped,
 		leading/trailing space is stripped, and multiple spaces are condensed.
-		
+
 		TODO: run this only in --debug=1, and/or implement Handlebars pre-compilation,
 		and don't use this if that is enabled.
 		"""
 		self.template_string = "pm.handlebars = {}\n"
-		
+
 		def walk_dir(args, dirname, files):
 			for file in files:
 				if file.endswith('.handlebars'):
 					name = file.replace('.handlebars', '')
-				
+
 					template = open(os.path.join(dirname, file), 'r').read()
 					template = template.replace("\\", "\\\\") \
 											.replace("\"", "\\\"") \
@@ -608,7 +608,7 @@ class BaseController(tornado.web.RequestHandler):
 											.strip()
 					template = ' '.join(template.split())
 					self.template_string += "pm.handlebars." + name + " = Handlebars.compile(\"" + template + "\");\n"
-		
+
 		os.path.walk('paasmaker/templates/', walk_dir, None)
 		return self.template_string
 
@@ -645,6 +645,41 @@ class BaseController(tornado.web.RequestHandler):
 			if 'current_user' in variables and variables['current_user'] is not None:
 				variables['user_permissions'] = self.PERMISSIONS_CACHE[str(variables['current_user'].id)]
 			super(BaseController, self).render(template, **variables)
+
+	def action_success(self, job_id=None, redirect_to=None):
+		"""
+		Run after a POST action (e.g. starting an ApplicationVersion)
+		to convey success to the browser-side code.
+
+		In JSON mode, returns an object in the normal format (and including
+		job_id if provided), but also with success: true.
+		In HTML mode, redirects the user to the URL given in redirect_to
+		(or to the detail view of job_id), in emulation of old behaviour.
+		"""
+		if job_id is not None:
+			if redirect_to is not None:
+				redirect_to = ("/job/detail/%s?ret=%s" % (
+						job_id,
+						tornado.escape.url_escape(redirect_to)
+					)
+				)
+			else:
+				redirect_to = ("/job/detail/%s" % job_id)
+
+		if self.format == 'json':
+			variables = {}
+			if job_id is not None:
+				variables['job_id'] = job_id
+			variables['data'] = self.data
+			variables['success'] = True
+			variables['errors'] = self.errors
+			variables['warnings'] = self.warnings
+			self.set_header('Content-Type', 'application/json')
+			self.write(json.dumps(variables, cls=paasmaker.util.jsonencoder.JsonEncoder))
+			self.finish()
+		elif self.format == 'html':
+			if redirect_to is not None:
+				self.redirect(redirect_to)
 
 	def write_error(self, status_code, **kwargs):
 		"""
