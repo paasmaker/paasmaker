@@ -142,7 +142,7 @@ class S3BucketService(BaseService):
 		creator.work(bucket_name, region, self.options, self.parameters)
 
 	def update(self, name, existing_credentials, callback, error_callback):
-		callback(existing_credentials)
+		callback(existing_credentials, "No update required.")
 
 	def remove(self, name, existing_credentials, callback, error_callback):
 		# Remove the bucket.
