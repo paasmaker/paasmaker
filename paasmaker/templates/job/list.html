@@ -24,7 +24,7 @@
 			// for node jobs list: short-term fix till we ajaxify this page
 			var h1_text = $('#main_right_view h1').text().trim();
 			var uuid = h1_text.substr(-36);
-			if (/[0-9a-f\-]+/.test(uuid)) {
+			if (/^[0-9a-f\-]+$/.test(uuid)) {
 				$('#main_right_view h1').text(
 					h1_text.substring(0, (h1_text.length - 36))
 				).append(
