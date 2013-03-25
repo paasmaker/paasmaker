@@ -293,12 +293,16 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 
 			if not process_running:
 				# It finished.
-				callback("Process is finished.")
-				return
-			if not standalone and not port_in_use:
-				# Port is free.
-				callback("Port is now free.")
-				return
+				# See if the port is free.
+				if not standalone and not port_in_use:
+					# Port is free.
+					callback("Port is now free.")
+					return
+				elif standalone:
+					# Finished.
+					callback("Process is finished.")
+					return
+
 			if time.time() > end_timeout:
 				timeout_callback("Failed to end up in appropriate state in time.")
 				return

@@ -185,11 +185,12 @@ class RbenvRuntime(BaseRuntime):
 				instance['environment']
 			)
 
-			def errored_out(message):
-				error_callback(message)
+			def errored_out(message, exception=None):
+				error_callback(message, exception=exception)
 
 			def timed_out(message):
 				# Failed to start up in time. Stop the instance.
+				self.logger.error("Timed out waiting for startup; stopping instance...")
 				self.stop(instance_id, errored_out, errored_out)
 
 			self._wait_for_startup(
