@@ -256,7 +256,7 @@ pm.data = (function() {
 			);
 		},
 
-		init: function() {
+		initSocket: function() {
 
 			// Set up the web socket for getting stats, job, and other data
 			// from the pacemaker (or long poll -- handled by socket.io)
@@ -264,12 +264,9 @@ pm.data = (function() {
 			// when websocket fails. This may be too short though for production use.
 			// Maybe we can more intelligently decide this and give socket.io a better hint?
 			streamSocket = new io.connect(window.location.protocol + '//' + window.location.host, {'connect timeout': 1000});
-			streamSocket.on('disconnect',
-				function()
-				{
-					streamSocket.socket.reconnect();
-				}
-			);
+			streamSocket.on('disconnect', function() {
+				streamSocket.socket.reconnect();
+			});
 
 		}
 

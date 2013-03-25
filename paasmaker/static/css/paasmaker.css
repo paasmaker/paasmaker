@@ -215,9 +215,11 @@ textarea.example-configuration
 /* Workspace view - job summary */
 .workspace-overview .job-overview { width: 760px; height: 260px; padding: 10px; margin: 10px; display: inline-block; border: 1px solid #E3E3E3; border-radius: 3px; overflow: auto; }
 
-/* Workspace view - application list */
+/* Left menu navigation: application (or node) list */
 
-.application-list { float: left; width: 250px; border: 1px solid #e3e3e3; border-radius: 4px; }
+#left_menu_wrapper { position: relative; }
+
+.application-list { position: absolute; top: 0; left: 0; width: 250px; border: 1px solid #e3e3e3; border-radius: 4px; }
 .application-list-name { display: block; font-size: larger; font-weight: bold; }
 
 .application-list-state { float: right; }
@@ -251,3 +253,20 @@ table.node-jobs .job-overview { margin-bottom: 0; }
 
 /* Separate node jobs list page */
 h1 code.uuid-shrink { vertical-align: middle; font-size: 24px; }
+
+/* New application / new version page */
+.scm-container form label { width: 420px; line-height: 30px; height: 40px; }
+.scm-container form label input { float: right; vertical-align: middle; }
+
+.scm-form-submit { width: 420px; text-align: right; }
+
+.scm-container .tab-pane { position: relative; }
+.scm-list-container { position: absolute; top: 0; right: 0; }
+.scm-list-container h4 { margin: 0; font-size: inherit; font-weight: normal; font-style: italic; }
+
+/* File upload widget */
+.file-uploader-widget { width: 420px; text-align: right; margin: 10px 0 30px 0; }
+.file-uploader-widget div.drop, .file-uploader-widget div.status { display: inline-block; width: 170px; text-align: left; margin-right: 30px; }
+
+.file-uploader-widget div.status { font-style: italic; }
+.file-uploader-widget progress { width: 220px; }

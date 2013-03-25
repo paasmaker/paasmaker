@@ -10,18 +10,67 @@ if (!window.pm) { var pm = {}; }	// TODO: module handling
 pm.upload = (function() {
 
 	return {
+	
+		// copy from script.js: if scm list plugins are enabled, load their output
+		loadRepositoryLists: function() {
+			$('.scm-list').each(
+				function(index, element)
+				{
+					var el = $(element);
+					var plugin = el.attr('data-plugin');
+					$.getJSON(
+						'/scm/list/repos?plugin=' + escape(plugin),
+						function(data, text, xhr)
+						{
+							el.empty();
+							el.append($('<option value="">Select...</option>'));
+							for(var i = 0; i < data.data.repositories.length; i++ )
+							{
+								var entry = data.data.repositories[i];
+								var op = $('<option></option>');
+								op.text(entry.title);
+								op.val(entry.url);
+
+								el.append(op);
+							}
+						}
+					);
+					el.change(
+						function(e)
+						{
+							// TODO: This assumes a lot about the HTML.
+							var inner = el.parent().parent();
+							var location = $('input.lister-target', $(inner));
+							location.val(el.val());
+						}
+					);
+				}
+			);
+		},
 
 		actionButton: function(e) {
-			console.log(e); return;
+			// this code mostly duplicated with pm.version.js
+			var parent_form = $(e.target).parents('form');
+		
 			pm.history.loadingOverlay("#main_right_view");
 			pm.data.post({
-				endpoint: $(e.target).attr('href'),
+				endpoint: document.location.pathname,
+				body_data: $(parent_form).serialize(),
 				callback: function(data) {
 					$('.loading-overlay').remove();
+					
 					// pushState so the Back button works, but TODO: this should be in pm.history?
-					var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
+					var state = { job_id: data.job_id }, url_match;
+					url_match = document.location.pathname.match(/\/application\/(\d+)\/newversion/);
+					if (url_match) {
+						state.application_id = url_match[1];
+					} else {
+						url_match = document.location.pathname.match(/\/workspace\/(\d+)\/applications\/new/);
+						state.workspace_id = url_match[1];
+					}
+					
 					window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.job_id);
-					pm.jobs.version_action.switchTo({ job_id: data.job_id, version_id: url_match[1] });
+					pm.jobs.version_action.switchTo(state);
 				}
 			});
 		},
@@ -71,6 +120,17 @@ pm.upload = (function() {
 				success: function(form_string) {
 					$('#main_right_view').html(form_string);
 
+					$('.scm-container li a:first').tab('show');
+					$('.scm-container li a').click(function(e) {
+						e.preventDefault();
+						$(e.target).tab('show');
+					})
+
+					$('.file-uploader-widget').each(function(i, element) {
+						new pm.widgets.upload($(element));
+					});
+
+					pm.upload.loadRepositoryLists();
 					pm.data.get_app_parents(parent_search);
 					$('.loading-overlay').remove();
 				}

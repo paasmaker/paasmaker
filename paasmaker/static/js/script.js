@@ -54,26 +54,8 @@ $(document).ready(
 			testBrowserFeatures($('#test-browser-features'));
 		}
 
-		if( $('.file-uploader-widget').length > 0 )
-		{
-			$('.file-uploader-widget').each(
-				function(index, element)
-				{
-					new pm.widgets.upload($(element));
-				}
-			);
-		}
-
-		// TODO: This connection timeout is low to force it to fallback to XHR quickly
-		// when websocket fails. This may be too short though for production use.
-		// Maybe we can more intelligently decide this and give socket.io a better hint?
-		streamSocket = new io.connect(window.location.protocol + '//' + window.location.host, {'connect timeout': 1000});
-		streamSocket.on('disconnect',
-			function()
-			{
-				streamSocket.socket.reconnect();
-			}
-		);
+		// set up the socket.io handler
+		pm.data.initSocket();
 
 		if( $('.job-root').length > 0 ) {
 			$('.job-root').each(
@@ -83,8 +65,8 @@ $(document).ready(
 			);
 		}
 
-		// search the page for .router-stats, and set
-		// up the stats widget in any that we find
+		// search the page for .router-stats, and set up the stats widget in any that we find
+		// (no longer needed on ajax view pages like version list, but used on overview)
 		pm.stats.routerstats.redraw();
 
 		// Disable any disabled buttons.
@@ -110,6 +92,7 @@ $(document).ready(
 				}
 			});
 		}
+		// Similarly, populate the nodes dropdown.
 		if ($('.nav .node-list').length) {
 			pm.data.api({
 				endpoint: 'node/list',
@@ -123,63 +106,6 @@ $(document).ready(
 			});
 		}
 
-		// On the new applications page, collapse the options until you click one.
-		var scms = $('.scm-container');
-		if( scms.length > 0 )
-		{
-			$('.scm', scms).not('.scm-active').each(
-				function(index, element)
-				{
-					var el = $(element);
-					var inner = $('.inner', el);
-					inner.hide();
-					var show = $('<a href="#"><i class="icon-plus-sign"></i> Show...</a>');
-					show.click(
-						function(e)
-						{
-							inner.show();
-							show.hide();
-							e.preventDefault();
-						}
-					);
-					el.append(show);
-				}
-			);
-
-			$('.scm-list').each(
-				function(index, element)
-				{
-					var el = $(element);
-					var plugin = el.attr('data-plugin');
-					$.getJSON(
-						'/scm/list/repos?plugin=' + escape(plugin),
-						function(data, text, xhr)
-						{
-							el.empty();
-							el.append($('<option value="">Select...</option>'));
-							for(var i = 0; i < data.data.repositories.length; i++ )
-							{
-								var entry = data.data.repositories[i];
-								var op = $('<option></option>');
-								op.text(entry.title);
-								op.val(entry.url);
-
-								el.append(op);
-							}
-						}
-					);
-					el.change(
-						function(e)
-						{
-							// TODO: This assumes a lot about the HTML.
-							var inner = el.parent();
-							var location = $('input.lister-target', $(inner));
-							location.val(el.val());
-						}
-					);
-				}
-			);
-		}
 	}
 )
 

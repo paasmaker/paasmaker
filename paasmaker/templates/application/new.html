@@ -8,31 +8,48 @@
 	{% end %}
 </h1>
 
-<div class="scm-container">
-	{% for scm in scms %}
-		<div class="scm {% if last_scm_name == scm['plugin'] %}scm-active{% end %}">
-			<h3>{{ scm['title'] }}</h3>
-			<div class="inner well well-small">
-				<form method="POST">
+<div class="scm-container tabbable">
+	<ul class="nav nav-tabs">
+		{% for scm in scms %}
+			<li class="{% if last_scm_name == scm['plugin'] %}active{% end %}">
+				<a href="#tab-{{ scm['plugin'].replace('.', '-') }}">
+					{{ scm['title'] }}
+				</a>
+			</li>
+		{% end %}
+	</ul>
+	<div class="tab-content">
+		{% for scm in scms %}
+			<div class="tab-pane {% if last_scm_name == scm['plugin'] %}active{% end %}" id="tab-{{ scm['plugin'].replace('.', '-') }}">
+			
+				{% if len(scm['listers']) > 0 %}
+					<div class="scm-list-container well">
+						{% for lister in scm['listers'] %}
+							<h4>{{ lister['title'] }}</h4>
+							<select class="scm-list" data-plugin="{{ lister['plugin'] }}">
+								<option value="">Loading...</option>
+							</select>
+						{% end %}
+					</div>
+				{% end %}
+				
+				<form method="POST" class="scm-form">
 					<input type="hidden" name="scm" value="{{ scm['plugin'] }}" />
 
 					{% raw scm['form'] %}
 
-					<label for="manifest_path">Manifest Path:</label>
-					<input name="manifest_path" id="manifest_path" type="text" value="manifest.yml" required="required" />
+					<label>
+						Manifest Path:
+						<input name="manifest_path" id="manifest_path" type="text" value="manifest.yml" required="required">
+					</label>
 
-					<br />
-					<input type="submit" value="Create" class="btn" />
+					<div class="scm-form-submit">
+						<a class="btn btn-success job-action-button" href="#">
+							Create <i class="icon-chevron-right icon-white"></i>
+						</a>
+					</div>
 				</form>
-				{% if len(scm['listers']) > 0 %}
-					{% for lister in scm['listers'] %}
-						<h4>{{ lister['title'] }}</h4>
-						<select class="scm-list" data-plugin="{{ lister['plugin'] }}">
-							<option value="">Loading...</option>
-						</select>
-					{% end %}
-				{% end %}
 			</div>
-		</div>
-	{% end %}
+		{% end %}
+	</div>
 </div>

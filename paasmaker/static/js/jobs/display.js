@@ -80,8 +80,7 @@ pm.jobs.version_action = (function() {
 								 .append($('<ul class="breadcrumb">'))
 								 .append(job_well);
 
-			pm.data.get_app_parents({
-				version_id: state.version_id,
+			var parent_options = {
 				callback: function(parents) {
 					pm.application.updateBreadcrumbs({
 						workspace: parents.workspace,
@@ -90,7 +89,13 @@ pm.jobs.version_action = (function() {
 						suffix: "Job " + state.job_id
 					});
 				}
-			});
+			};
+			
+			if (state.version_id) { parent_options.version_id = state.version_id; }
+			if (state.application_id) { parent_options.application_id = state.application_id; }
+			if (state.workspace_id) { parent_options.workspace_id = state.workspace_id; }
+
+			pm.data.get_app_parents(parent_options);
 
 			new pm.jobs.display(job_well);
 		}

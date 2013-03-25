@@ -219,7 +219,7 @@ class ApplicationNewController(ApplicationRootController):
 			raw_scm_parameters['location'] = upload_location
 
 		def job_started():
-			self._redirect_job(self.get_data('job_id'), '/workspace/%d/applications' % workspace.id)
+			self.action_success(self.get_data('job_id'), '/workspace/%d/applications' % workspace.id)
 
 		def application_job_ready(job_id):
 			self.add_data('job_id', job_id)
