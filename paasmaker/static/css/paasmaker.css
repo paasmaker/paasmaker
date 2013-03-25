@@ -238,5 +238,16 @@ textarea.example-configuration
 .application-list-details { display: block; font-size: smaller; color: #999999; }
 .active .application-list-details { color: #e5e5e5; }
 
+/* Node view - instance list, runtime list */
+.node-table-header th { background: #F9F9F9; /* from Bootstrap .table-striped */ }
+
 /* Node view - list by type */
 .node-list-category { width: 32%; float: left; }
+
+/* Node view - jobs list */
+.all-jobs-button { float: right; }
+.all-jobs-button a { font-weight: normal; }
+table.node-jobs .job-overview { margin-bottom: 0; }
+
+/* Separate node jobs list page */
+h1 code.uuid-shrink { vertical-align: middle; font-size: 24px; }

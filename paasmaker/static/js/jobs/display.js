@@ -37,6 +37,10 @@ pm.jobs.summary = (function() {
 				}
 			);
 
+			if (job_ids.length == 0) {
+				container.append("<li>No recent jobs to show</li>");
+			}
+
 			job_ids.forEach(function(job_id) {
 				var details = $('<li>');
 				details.append($('<span class="state"></span>'));
