@@ -243,15 +243,21 @@ if context['runtime_rbenv_enable']:
 				context,
 				'%s; %s rbenv install --verbose %s' % (rbenv_locator, rbenv_configure_options, version)
 			)
-			install.helpers.generic_command_shell(
-				context,
-				'%s; export RBENV_VERSION="%s"; rbenv rehash; gem install bundler; rbenv rehash' % (rbenv_locator, version)
-			)
-
 			# TODO: Figure out why the above command causes the install script to terminate.
 			# On Linux/Ubuntu at least.
 		else:
 			logging.info("Ruby version %s is already installed.", version)
+
+		# Ensure bundler is installed for this version.
+		# This check runs every time you run the installer, to work
+		# around where the installer gets terminated sometimes at the
+		# end of the ruby compliation/installation.
+		rbenv_bundler = subprocess.check_output('%s; rbenv shell %s; gem list' % (rbenv_locator, version), shell=True)
+		if not 'bundler ' in rbenv_bundler:
+			install.helpers.generic_command_shell(
+				context,
+				'%s; export RBENV_VERSION="%s"; rbenv rehash; gem install bundler; rbenv rehash' % (rbenv_locator, version)
+			)
 
 # NVM
 if context['runtime_nvm_enable']:
