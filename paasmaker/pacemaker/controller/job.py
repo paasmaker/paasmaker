@@ -64,6 +64,17 @@ class JobListController(BaseController):
 
 		return instance_type
 
+	def _get_node(self, node_id):
+		node = self.session.query(paasmaker.model.Node).get(int(node_id))
+
+		if not node:
+			raise tornado.web.HTTPError(404, "No such node.")
+
+		# You must have SYSTEM_ADMINISTRATION permission.
+		self.require_permission(constants.PERMISSION.SYSTEM_ADMINISTRATION)
+
+		return node
+
 	def get(self, job_list_type, input_id=None):
 		tag = None
 		job_list = None
@@ -101,9 +112,7 @@ class JobListController(BaseController):
 			ret = None
 			ret_name = None
 		elif job_list_type == 'node':
-			# You must have SYSTEM_ADMINISTRATION permission.
-			self.require_permission(constants.PERMISSION.SYSTEM_ADMINISTRATION)
-			node = self.session.query(paasmaker.model.Node).get(int(input_id))
+			node = self._get_node(input_id)
 			name = "Node %s" % node.uuid
 			ret = "/node/list"
 			ret_name = "node list"
