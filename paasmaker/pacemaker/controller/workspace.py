@@ -57,12 +57,12 @@ class WorkspaceEditController(BaseController):
 		return workspace
 
 	def get(self, workspace_id=None):
-		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=workspace)
-
 		workspace = self._get_workspace(workspace_id)
 		if not workspace:
 			workspace = self._default_workspace()
 		self.add_data('workspace', workspace)
+
+		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=workspace)
 
 		# Workaround for the fact that this controller is used for two things:
 		# /workspace/1 in HTML format shows the edit page
