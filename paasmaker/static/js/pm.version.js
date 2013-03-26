@@ -58,18 +58,8 @@ pm.version = (function() {
 		},
 
 		switchTo: function() {
+			pm.leftmenu.redrawContainers();
 			var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
-
-			if ($('#left_menu_wrapper a').length && $('#main_right_view').length) {
-				$('#main_right_view').empty();
-			} else {
-				$('#main').empty();
-				$('#main').append(
-					$("<div id=\"left_menu_wrapper\">"),
-					$("<div id=\"main_right_view\" class=\"with-application-list\">")
-				);
-				pm.history.loadingOverlay("#main_right_view");
-			}
 
 			pm.data.api({
 				endpoint: 'version/' + url_match[1],	// or just document.location?
@@ -92,7 +82,7 @@ pm.version = (function() {
 							$('#main_right_view').html(pm.handlebars.version_view(version_data));
 
 							// once the main template is rendered, fill in breadcrumbs and redraw the app menu
-							pm.workspace.updateAppMenu(parents.workspace.id, { version: url_match[1] });
+							pm.leftmenu.updateAppMenu(parents.workspace.id, { version: url_match[1] });
 							pm.application.updateBreadcrumbs({
 								workspace: parents.workspace,
 								application: parents.application,

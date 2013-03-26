@@ -176,6 +176,41 @@ pm.data = (function() {
 		},
 
 		/**
+		 * Wrapper for making multiple requests to pm.data.api in sequence (i.e. one by one),
+		 * then optionally calling a final callback when everything is finished.
+		 *
+		 * @param options object with these properties:
+		 * - requests array of objects, each having an "endpoint" property and a "callback"
+		 *            property; each endpoint is requested in array order, then the
+		 *            corresponding callback is run (as if it had been sent to pm.data.api)
+		 * - final_callback optional callback to run after all requests have completed
+		 */
+		sequential_get: function(options) {
+			if (!options.requests || !options.requests.length) { return false; }
+			var request_index = 0;
+		
+			var get_next = function(request) {
+					pm.data.api({
+						endpoint: request.endpoint,
+						callback: function() {
+							request.callback.apply(this, arguments);
+
+							request_index ++;
+							if (options.requests[request_index]) {
+								get_next(options.requests[request_index]);
+							} else {
+								if (options.final_callback) {
+									options.final_callback.apply(this, []);
+								}
+							}
+						}
+					});
+			}
+			
+			get_next(options.requests[request_index]);
+		},
+
+		/**
 		 * Convenience wrapper to get the parent objects of an application or version when
 		 * showing a detail view in the interface (e.g. for menus and breadcrumbs).
 		 *

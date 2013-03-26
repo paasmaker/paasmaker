@@ -76,6 +76,8 @@ pm.upload = (function() {
 		},
 
 		switchTo: function() {
+			pm.leftmenu.redrawContainers();
+			
 			var url_match, form_fetch_url, suffix;
 			var parent_search = {}, menu_highlight = {};
 			url_match = document.location.pathname.match(/\/workspace\/(\d+)\/applications\/new/);
@@ -93,19 +95,8 @@ pm.upload = (function() {
 				suffix = "New Version";
 			}
 
-			if ($('#left_menu_wrapper').length && $('#main_right_view').length) {
-				$('#main_right_view').empty();
-			} else {
-				$('#main').empty();
-				$('#main').append(
-					$("<div id=\"left_menu_wrapper\">"),
-					$("<div id=\"main_right_view\" class=\"with-application-list\">")
-				);
-				//pm.history.loadingOverlay("#main_right_view");
-			}
-
 			parent_search.callback = function(parents) {
-				pm.workspace.updateAppMenu(parents.workspace.id, menu_highlight);
+				pm.leftmenu.updateAppMenu(parents.workspace.id, menu_highlight);
 				pm.application.updateBreadcrumbs({
 					workspace: parents.workspace,
 					application: parents.application,

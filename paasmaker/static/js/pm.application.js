@@ -125,23 +125,13 @@ pm.application = (function() {
 		},
 
 		switchTo: function() {
+			pm.leftmenu.redrawContainers();
 			var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
-
-			if ($('#left_menu_wrapper a').length && $('#main_right_view').length) {
-				$('#main_right_view').empty();
-			} else {
-				$('#main').empty();
-				$('#main').append(
-					$("<div id=\"left_menu_wrapper\">"),
-					$("<div id=\"main_right_view\" class=\"with-application-list\">")
-				);
-				pm.history.loadingOverlay("#main_right_view");
-			}
 
 			pm.data.get_app_parents({
 				application_id: url_match[1],
 				callback: function(parents) {
-					pm.workspace.updateAppMenu(parents.workspace.id, { application: url_match[1] });
+					pm.leftmenu.updateAppMenu(parents.workspace.id, { application: url_match[1] });
 					pm.application.updateBreadcrumbs({
 						workspace: parents.workspace,
 						application: parents.application,
