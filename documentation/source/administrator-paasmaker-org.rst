@@ -869,4 +869,41 @@ Please keep that in mind when updating nodes.
 Bundling into an AMI
 --------------------
 
-TODO: Write this section.
+To speed up adding new nodes, you'll probably want to build an AMI that you can fire up
+quickly to bring online new capacity. Below is a process used to create and bring those
+AMI's online - it's not as streamlined as it could be.
+
+First, fire up a new EC2 instance with the base operating system you're after. Prepare
+the machine as you would for your environment.
+
+Then install Paasmaker as normal on the node, using the same installation configuration
+file as you used previously.
+
+Test that the installation works by starting up Paasmaker and checking that it joins the
+cluster. However, it will then have a record in the Pacemaker database. Also, it will store
+the UUID it was assigned locally, which can't be reused in your other images. You can delete
+the node record from the Pacemaker database once you've shut down the node.
+
+So, once you've tested that it can connect to the cluster, you can reset the node:
+
+.. code-block:: bash
+
+	$ sudo /etc/init.d/paasmaker stop
+	$ killall redis-server
+	$ killall nginx
+	$ rm -rf paasmaker/scratch
+
+And then `bundle the AMI as you normally would
+<http://docs.aws.amazon.com/AWSEC2/latest/UserGuide/creating-snapshot-s3-linux.html>`_.
+
+The production configs install an init.d script, so Paasmaker will start on boot. The
+first time it starts, it will register with the master and then become available to the
+cluster.
+
+After the node comes online, depending on your environment and how you manage the AMI
+images, you might want to check:
+
+* That the version of Paasmaker is up to date.
+* That the installation of Paasmaker is correct (re-run the installer to install missing
+  bits if the version of Paasmaker changed).
+* That the operating system is patched to the latest packages.
