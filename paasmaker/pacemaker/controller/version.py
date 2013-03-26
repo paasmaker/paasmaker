@@ -30,12 +30,26 @@ class VersionRootController(BaseController):
 		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=version.application.workspace)
 		return version
 
+	def _get_instance_type(self, instance_type_id):
+		instance_type = self.session.query(
+			paasmaker.model.ApplicationInstanceType
+		).get(int(instance_type_id))
+
+		if not instance_type:
+			raise tornado.web.HTTPError(404, "No such instance type.")
+		if instance_type.deleted:
+			raise tornado.web.HTTPError(404, "Deleted instance type.")
+
+		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=instance_type.application_version.application.workspace)
+
+		return instance_type
+
 class VersionController(VersionRootController):
 
 	def get(self, version_id):
 		version = self._get_version(version_id)
 		self.add_data_template('configuration', self.configuration)
-		
+
 		# TODO: for some reason the assignment name 'version' doesn't work here
 		self.add_data('version_to_view', version)
 
@@ -243,4 +257,61 @@ class VersionDeleteController(VersionRootController):
 	def get_routes(configuration):
 		routes = []
 		routes.append((r"/version/(\d+)/delete", VersionDeleteController, configuration))
+		return routes
+
+class VersionInstanceTypeUpdateQuantitySchema(colander.MappingSchema):
+	quantity = colander.SchemaNode(colander.Integer(),
+		title="Quantity",
+		description="The quantity of instances of the type that you want.",
+		validator=colander.Range(min=1))
+
+class VersionInstanceTypeChangeCountController(VersionRootController):
+
+	def post(self, instance_type_id):
+		instance_type = self._get_instance_type(instance_type_id)
+
+		# Check permissions.
+		# You need APPLICATION_CREATE, because you can adjust the instance
+		# count also by updating the manifest file.
+		self.require_permission(
+			constants.PERMISSION.APPLICATION_CREATE,
+			workspace=instance_type.application_version.application.workspace
+		)
+
+		# Validate date.
+		valid_data = self.validate_data(VersionInstanceTypeUpdateQuantitySchema())
+		if not valid_data:
+			# TODO: This is a catch for HTML requests.
+			# Supply back a much nicer error, and probably refill forms and stuff.
+			raise tornado.web.HTTPError(400, "Invalid parameters")
+
+		# Actually update the count.
+		instance_type.quantity = int(self.params['quantity'])
+		self.session.add(instance_type)
+		self.session.commit()
+
+		# TODO: Unit test.
+		def job_started():
+			# Redirect to clear the post.
+			self._redirect_job(self.get_data('job_id'), '/version/%d' % instance_type.application_version.id)
+
+		def startup_job_ready(job_id):
+			self.add_data('job_id', job_id)
+			self.configuration.job_manager.allow_execution(job_id, callback=job_started)
+
+		# Launch off a job to start the instance.
+		# This will add new instances if you increased it.
+		# If you decreased it, the health manager will kick in and
+		# reduce the number of instances for us.
+		paasmaker.common.job.coordinate.startup.StartupRootJob.setup_version(
+			self.configuration,
+			instance_type.application_version,
+			startup_job_ready,
+			self._database_session_error
+		)
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/instancetype/(\d+)/quantity", VersionInstanceTypeChangeCountController, configuration))
 		return routes

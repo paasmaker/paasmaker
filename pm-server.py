@@ -160,6 +160,7 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.version.VersionShutdownController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.version.VersionDeRegisterController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.version.VersionDeleteController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.version.VersionInstanceTypeChangeCountController.get_routes(route_extras))
 
 	routes.extend(paasmaker.pacemaker.controller.node.NodeRegisterController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.node.NodeListController.get_routes(route_extras))
