@@ -1,6 +1,6 @@
 <h1>Workspace: {{ workspace.name }}</h1>
 <div class="btn-toolbar">
-		{{#ifPermission 'WORKSPACE_EDIT'}}
+		{{#ifPermission 'WORKSPACE_EDIT' workspace.id}}
 			<div class="btn-group btn-group-header">
 				<a class="btn" href="/workspace/{{ workspace.id }}"><i class="icon-edit"></i> Edit Workspace</a>
 			</div>

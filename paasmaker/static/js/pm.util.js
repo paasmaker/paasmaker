@@ -48,14 +48,14 @@ pm.util = (function(){
 	 * for a friendly "time ago" string, format for a traditional month-name string,
 	 * and calendar for a variable "Yesterday at 6:45 PM" string.
 	 */
-	module.formatDate = function(date_string) {	
+	module.formatDate = function(date_string) {
 		var retval = {};
-		
+
 		var date = module.parseDate(date_string);
 		retval.format = date.format(module.date_formats.word);
 		retval.calendar = date.calendar();
 		retval.fromNow = date.fromNow();
-		
+
 		return retval;
 	}
 
@@ -102,11 +102,25 @@ pm.util = (function(){
  */
 
 /**
+ * Handlebars block helper to display part of a template if the logged-in user
+ * has the permission given in the first argument.
  * {{#ifPermission 'FOO'}}{{/ifPermission}}
- * TODO: this does not support permissions specific to workspaces
+ *
+ * For testing permissions on a particular workspace, pass the workspace ID
+ * as a second argument (separated by spaces).
+ * {{#ifPermission 'WORKSPACE_FOO' 25 }}{{/ifPermission}}
  */
-Handlebars.registerHelper('ifPermission', function(conditional, options) {
-	if (pm.util.hasPermission(conditional)) {
+Handlebars.registerHelper('ifPermission', function() {
+	var permission = arguments[0];
+	var workspace_id, options;
+	if (typeof arguments[1] === 'number') {
+		workspace_id = arguments[1];
+		options = arguments[2];
+	} else {
+		options = arguments[1];
+	}
+
+	if (pm.util.hasPermission(permission, workspace_id)) {
 		return options.fn(this);
 	} else {
 		return options.inverse(this);

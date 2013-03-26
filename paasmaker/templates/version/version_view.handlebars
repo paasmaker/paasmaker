@@ -20,7 +20,7 @@
 		<a class="btn" href="/job/list/version/{{version.id}}">All Jobs</a>
 		<a class="btn" href="/job/list/version/{{version.id}}?sub=cron">Crons</a>
 	</div>
-	{{#ifPermission 'APPLICATION_VIEW_MANIFEST'}}
+	{{#ifPermission 'APPLICATION_VIEW_MANIFEST' workspace_id}}
 		<div class="btn-group btn-group-header">
 			<a class="btn" data-toggle="modal" data-target="#app_manifest_modal">View Manifest</a>
 		</div>

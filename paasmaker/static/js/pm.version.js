@@ -71,18 +71,6 @@ pm.version = (function() {
 				pm.history.loadingOverlay("#main_right_view");
 			}
 
-			pm.data.get_app_parents({
-				version_id: url_match[1],
-				callback: function(parents) {
-					pm.workspace.updateAppMenu(parents.workspace.id, { version: url_match[1] });
-					pm.application.updateBreadcrumbs({
-						workspace: parents.workspace,
-						application: parents.application,
-						version: parents.version
-					});
-				}
-			});
-
 			pm.data.api({
 				endpoint: 'version/' + url_match[1],	// or just document.location?
 				callback: function(version_data) {
@@ -94,44 +82,58 @@ pm.version = (function() {
 					version_data.version.health_string = pm.application.getHealthString(version_data.version);
 					version_data.version.buttons_to_show = pm.application.getButtonMap(version_data.version);
 
-					// render main template body (but with empty tables)
-					$('#main_right_view').html(pm.handlebars.version_view(version_data));
+					pm.data.get_app_parents({
+						version_id: url_match[1],
+						callback: function(parents) {
 
-					// TODO: permissions are also checked in template, but without workspace ID
-					// if (pm.util.hasPermission('APPLICATION_VIEW_MANIFEST', workspace_id)) {
-					$('#app_manifest_modal').on('show', function() {
-						pm.data.template_from_api({
-							endpoint: 'version/' + url_match[1] + '/manifest',
-							template: pm.handlebars.version_manifest,
-							element: '#app_manifest_modal .modal-body'
-						});
-					});
+							// render main template body (but with empty tables); this needs to be done after
+							// get_app_parents returns because permission checking needs the workspace ID
+							version_data.workspace_id = parents.workspace.id;
+							$('#main_right_view').html(pm.handlebars.version_view(version_data));
 
-					pm.data.api({
-						endpoint: 'version/' + url_match[1] + '/instances',
-						callback: function(instance_data) {
-							for (var type_name in instance_data.instances) {
-								var this_view = instance_data.instances[type_name];
-
-								this_view.instances = pm.version.processInstanceData(this_view.instances);
-								this_view.version_is_current = version_data.version.is_current;
-								this_view.frontend_domain_postfix = version_data.frontend_domain_postfix;
-
-								$('#main_right_view').append(pm.handlebars.version_instance_types(this_view));
-							}
-
-							// after rendering instances, set up expandable UUIDs, add event
-							// handlers for viewing logs, and fetch node names from the API
-							pm.widgets.uuid.update();
-							$('.instance-log-container').each(function(i, element) {
-									new pm.logs.instance(streamSocket, $(element).attr('data-instance'));
+							// once the main template is rendered, fill in breadcrumbs and redraw the app menu
+							pm.workspace.updateAppMenu(parents.workspace.id, { version: url_match[1] });
+							pm.application.updateBreadcrumbs({
+								workspace: parents.workspace,
+								application: parents.application,
+								version: parents.version
 							});
-							pm.version.updateNodeNames();
+
+							$('#app_manifest_modal').on('show', function() {
+								pm.data.template_from_api({
+									endpoint: 'version/' + url_match[1] + '/manifest',
+									template: pm.handlebars.version_manifest,
+									element: '#app_manifest_modal .modal-body'
+								});
+							});
+
+							pm.data.api({
+								endpoint: 'version/' + url_match[1] + '/instances',
+								callback: function(instance_data) {
+									for (var type_name in instance_data.instances) {
+										var this_view = instance_data.instances[type_name];
+
+										this_view.instances = pm.version.processInstanceData(this_view.instances);
+										this_view.version_is_current = version_data.version.is_current;
+										this_view.frontend_domain_postfix = version_data.frontend_domain_postfix;
+
+										$('#main_right_view').append(pm.handlebars.version_instance_types(this_view));
+									}
+
+									// after rendering instances, set up expandable UUIDs, add event
+									// handlers for viewing logs, and fetch node names from the API
+									pm.widgets.uuid.update();
+									$('.instance-log-container').each(function(i, element) {
+											new pm.logs.instance(streamSocket, $(element).attr('data-instance'));
+									});
+									pm.version.updateNodeNames();
+								}
+							});
+
+							$('.loading-overlay').remove();
+							pm.stats.routerstats.redraw();
 						}
 					});
-
-					$('.loading-overlay').remove();
-					pm.stats.routerstats.redraw();
 				}
 			});
 		}
