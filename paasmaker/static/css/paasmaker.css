@@ -270,7 +270,7 @@ h1 code.uuid-shrink { vertical-align: middle; font-size: 24px; }
 
 /* File upload widget */
 .file-uploader-widget { width: 420px; text-align: right; margin: 10px 0 30px 0; }
-.file-uploader-widget div.drop, .file-uploader-widget div.status { display: inline-block; width: 170px; text-align: left; margin-right: 30px; }
+.file-uploader-widget div.drop, .file-uploader-widget div.status { display: inline-block; width: 168px; text-align: left; margin-right: 30px; }
 
 .file-uploader-widget div.status { font-style: italic; }
 .file-uploader-widget progress { width: 220px; }
