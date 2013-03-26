@@ -57,6 +57,8 @@ class WorkspaceEditController(BaseController):
 		return workspace
 
 	def get(self, workspace_id=None):
+		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=workspace)
+
 		workspace = self._get_workspace(workspace_id)
 		if not workspace:
 			workspace = self._default_workspace()
@@ -67,11 +69,10 @@ class WorkspaceEditController(BaseController):
 		# /workspace/1?format=json is the API call for details about the workspace
 		# The former requires WORKSPACE_EDIT and the latter only needs WORKSPACE_VIEW.
 		# TODO: the former should probably be /workspace/1/edit
-		if not self.has_permission(constants.PERMISSION.WORKSPACE_EDIT):
-			self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=workspace)
-			self.render("api/apionly.html")
-		else:
+		if self.has_permission(constants.PERMISSION.WORKSPACE_EDIT):
 			self.render("workspace/edit.html")
+		else:
+			self.render("api/apionly.html")
 
 	def post(self, workspace_id=None):
 		workspace = self._get_workspace(workspace_id)
