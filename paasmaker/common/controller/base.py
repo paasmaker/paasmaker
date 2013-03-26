@@ -125,8 +125,6 @@ class BaseController(tornado.web.RequestHandler):
 		self.add_data_template('is_heart', self.configuration.is_heart())
 		self.add_data_template('format_form_error', self.format_form_error)
 		self.add_data_template('nice_state', self.nice_state)
-		if self.configuration.is_pacemaker():
-			self.add_data_template('frontend_domain_postfix', self.configuration.get_flat('pacemaker.frontend_domain_postfix'))
 
 		# Add a header that is our node's UUID.
 		uuid = self.configuration.get_node_uuid()
@@ -371,6 +369,18 @@ class BaseController(tornado.web.RequestHandler):
 		else:
 			self.render("api/apionly.html")
 
+	def client_side_render(self):
+		"""
+		Handler for pages that are generated on the client side rather than on the server side.
+		Loads an empty main.html, with an extra script block that fires off the code in
+		pm.history.js to perform necessary ajax requests, etc.
+		"""
+		if self.format == 'html':
+			self.add_data('js_commands', 'pm.history.onpopstate({ state: { handle_in_js: true } });')
+			self.render("layout/main.html")
+		else:
+			self.render('')
+
 	def get_current_user(self):
 		"""
 		Get the currently logged in user. Only tests for HTTP cookies
@@ -456,6 +466,7 @@ class BaseController(tornado.web.RequestHandler):
 		"""
 		Require the given permission to continue. Stops the request
 		with a 403 if the user is not granted the given permission.
+		Permissions should be checked before any calls to add_data().
 
 		:arg str permission: The permission to check for.
 		:arg Workspace workspace: The optional workspace to limit the
@@ -586,6 +597,37 @@ class BaseController(tornado.web.RequestHandler):
 			raise ValueError("Invalid format '%s' supplied." % format)
 		self.format = format
 
+	def _get_handlebar_templates(self):
+		"""
+		Generate JavaScript literal strings for all of the .handlebars files in the
+		templates directory. This is a helper for development, because there's no easy
+		way to load a Handlebars template in a file from the browser.
+
+		In each template, quotes and backslashes are escaped, newlines are stripped,
+		leading/trailing space is stripped, and multiple spaces are condensed.
+
+		TODO: run this only in --debug=1, and/or implement Handlebars pre-compilation,
+		and don't use this if that is enabled.
+		"""
+		self.template_string = "pm.handlebars = {}\n"
+
+		def walk_dir(args, dirname, files):
+			for file in files:
+				if file.endswith('.handlebars'):
+					name = file.replace('.handlebars', '')
+
+					template = open(os.path.join(dirname, file), 'r').read()
+					template = template.replace("\\", "\\\\") \
+											.replace("\"", "\\\"") \
+											.replace("\n", " ") \
+											.replace("\r", " ") \
+											.strip()
+					template = ' '.join(template.split())
+					self.template_string += "pm.handlebars." + name + " = Handlebars.compile(\"" + template + "\");\n"
+
+		os.path.walk('paasmaker/templates/', walk_dir, None)
+		return self.template_string
+
 	def render(self, template, **kwargs):
 		"""
 		Render the response to the client, and finish the request.
@@ -612,12 +654,48 @@ class BaseController(tornado.web.RequestHandler):
 			variables.update(self.root_data)
 			variables['errors'] = self.errors
 			variables['warnings'] = self.warnings
+			variables['handlebars_templates'] = self._get_handlebar_templates()
 			variables.update(self.template)
 			variables.update(kwargs)
 			variables['PERMISSION'] = constants.PERMISSION
 			if 'current_user' in variables and variables['current_user'] is not None:
 				variables['user_permissions'] = self.PERMISSIONS_CACHE[str(variables['current_user'].id)]
 			super(BaseController, self).render(template, **variables)
+
+	def action_success(self, job_id=None, redirect_to=None):
+		"""
+		Run after a POST action (e.g. starting an ApplicationVersion)
+		to convey success to the browser-side code.
+
+		In JSON mode, returns an object in the normal format (and including
+		job_id if provided), but also with success: true.
+		In HTML mode, redirects the user to the URL given in redirect_to
+		(or to the detail view of job_id), in emulation of old behaviour.
+		"""
+		if job_id is not None:
+			if redirect_to is not None:
+				redirect_to = ("/job/detail/%s?ret=%s" % (
+						job_id,
+						tornado.escape.url_escape(redirect_to)
+					)
+				)
+			else:
+				redirect_to = ("/job/detail/%s" % job_id)
+
+		if self.format == 'json':
+			variables = {}
+			if job_id is not None:
+				variables['job_id'] = job_id
+			variables['data'] = self.data
+			variables['success'] = True
+			variables['errors'] = self.errors
+			variables['warnings'] = self.warnings
+			self.set_header('Content-Type', 'application/json')
+			self.write(json.dumps(variables, cls=paasmaker.util.jsonencoder.JsonEncoder))
+			self.finish()
+		elif self.format == 'html':
+			if redirect_to is not None:
+				self.redirect(redirect_to)
 
 	def write_error(self, status_code, **kwargs):
 		"""

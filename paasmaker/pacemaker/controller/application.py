@@ -91,8 +91,7 @@ class ApplicationListController(ApplicationRootController):
 		self._paginate('applications', applications)
 		self.add_data_template('paasmaker', paasmaker)
 
-		self.add_data('page', 'applicationlist')
-		self.render("layout/app_nav.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):
@@ -172,7 +171,16 @@ class ApplicationNewController(ApplicationRootController):
 			result_list.append(result)
 
 		self.add_data('scms', result_list)
-		self.render("application/new.html")
+
+		# Special case for this controller: because SCM plugins generate their own form and return an
+		# HTML string, this controller supports a ?raw=true suffix on the URL to return the contents
+		# of the template rendered without any chrome from main.html. This can then be injected into
+		# the page by JavaScript. Without the suffix, treat as a normal client_side_render().
+		# TODO: a better method for SCM plugins to define their inputs
+		if self.get_argument('raw', '') == 'true':
+			self.render("application/new.html")
+		else:
+			self.client_side_render()
 
 	def post(self, input_id):
 		if self.request.uri.startswith('/application'):
@@ -212,9 +220,9 @@ class ApplicationNewController(ApplicationRootController):
 
 		def job_started():
 			if application:
-				self._redirect_job(self.get_data('job_id'), '/application/%d' % application.id)
+				self.action_success(self.get_data('job_id'), '/application/%d' % application.id)
 			else:
-				self._redirect_job(self.get_data('job_id'), '/workspace/%d/applications' % workspace.id)
+				self.action_success(self.get_data('job_id'), '/workspace/%d/applications' % workspace.id)
 
 		def application_job_ready(job_id):
 			self.add_data('job_id', job_id)
@@ -281,7 +289,7 @@ class ApplicationController(ApplicationRootController):
 		self.add_data('current_version', current_version)
 		self.add_data('page', 'application')
 
-		self.render("layout/app_nav.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):
@@ -319,8 +327,7 @@ class ApplicationSetCurrentController(ApplicationRootController):
 
 		# TODO: Unit test.
 		def job_started():
-			# Redirect to clear the post.
-			self._redirect_job(self.get_data('job_id'), '/application/%d' % application.id)
+			self.action_success(self.get_data('job_id'), "/application/%d" % application.id)
 
 		def current_job_ready(job_id):
 			self.add_data('job_id', job_id)

@@ -2,62 +2,149 @@
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 if (!pm.jobs) { pm.jobs = {}; }
 
-pm.jobs.display = function(container, streamSocket)
-{
+pm.jobs.summary = (function() {
+	return {
+		renderSummaryTree: function(job_id, tree_item) {
+			var el = $('li[rel=' + job_id + ']');
+			if (el.length) {
+				$('a.title', el).text(tree_item.title);
+				$('span.state', el).attr('data-state', tree_item.state);
+				pm.jobs.display.prototype.setStateClass($('span.state', el), tree_item.state)
+				pm.jobs.display.prototype.setStateIcon($('span.state', el), tree_item.state)
+			}
+		},
+
+		show: function(container, job_ids) {
+			pm.data.subscribe(
+				'job.status',
+				function(job_id, status) {
+					console.log(job_id, status);
+					var el = $('li[rel=' + job_id + '] span.state');
+					if (el.length) {
+						el.attr('data-state', status.state);	// TODO: use .data() instead?
+						pm.jobs.display.prototype.setStateClass(el, status.state)
+						pm.jobs.display.prototype.setStateIcon(el, status.state)
+					}
+				}
+			);
+
+			pm.data.subscribe(
+				'job.tree',
+				function(job_id, tree) {
+					//if(job_ids.indexOf(job_id) !== -1) {
+						pm.jobs.summary.renderSummaryTree(job_id, tree);
+					//}
+				}
+			);
+
+			if (job_ids.length == 0) {
+				container.append("<li>No recent jobs to show</li>");
+			}
+
+			job_ids.forEach(function(job_id) {
+				var details = $('<li>');
+				details.append($('<span class="state"></span>'));
+				details.append($('<a href="/job/detail/' + job_id + '" class="title"></a>'));
+				details.addClass('details');
+				details.attr('rel', job_id);	// TODO: use .data() instead?
+				container.append(details);
+
+				pm.data.emit('job.subscribe', job_id);
+			});
+		}
+
+	};
+}());
+
+pm.jobs.version_action = (function() {
+	return {
+		switchTo: function(state) {
+			// This code is only called from existing version views (not from pm.history),
+			// so setting up the wrappers isn't currently necessary
+			// if ($('#left_menu_wrapper a').length && $('#main_right_view').length) {
+			// 	$('#main_right_view').empty();
+			// } else {
+			// 	$('#main').empty();
+			// 	$('#main').append(
+			// 		$("<div id=\"left_menu_wrapper\">"),
+			// 		$("<div id=\"main_right_view\" class=\"with-application-list\">")
+			// 	);
+			// 	pm.history.loadingOverlay("#main_right_view");
+			// }
+
+			var job_well = $("<div>");
+			job_well.addClass("job-root well well-small");
+			job_well.attr("data-job", state.job_id);
+
+			$('#main_right_view').empty()
+								 .append($('<ul class="breadcrumb">'))
+								 .append(job_well);
+
+			var parent_options = {
+				callback: function(parents) {
+					pm.application.updateBreadcrumbs({
+						workspace: parents.workspace,
+						application: parents.application,
+						version: parents.version,
+						suffix: "Job " + state.job_id
+					});
+				}
+			};
+			
+			if (state.version_id) { parent_options.version_id = state.version_id; }
+			if (state.application_id) { parent_options.application_id = state.application_id; }
+			if (state.workspace_id) { parent_options.workspace_id = state.workspace_id; }
+
+			pm.data.get_app_parents(parent_options);
+
+			new pm.jobs.display(job_well);
+		}
+	};
+}());
+
+pm.jobs.display = function(container) {
 	this.container = container;
-	this.streamSocket;
 	this.job_id = container.attr('data-job');
 	this.logSubscribed = {};
 
 	var _self = this;
 
 	// Subscribe to the events we want.
-	this.streamSocket = streamSocket;
-	this.streamSocket.on('job.tree',
-		function(job_id, tree)
-		{
-			if(_self.job_id == job_id)
-			{
+	pm.data.subscribe('job.tree',
+		function(job_id, tree) {
+			if(_self.job_id == job_id) {
 				_self.renderJobTree([tree], 0);
 			}
 		}
 	);
 
-	this.streamSocket.on('job.new',
-		function(data)
-		{
-			_self.newJob(data);
-		}
-	);
+	pm.data.subscribe('job.new', function(data) {
+		_self.newJob(data);
+	});
 
-	this.streamSocket.on('job.status',
-		function(job_id, status)
-		{
+	pm.data.subscribe('job.status',
+		function(job_id, status) {
 			_self.updateStatus(status);
 		}
 	);
 
-	this.streamSocket.on('log.lines',
-		function(job_id, lines, position)
-		{
-			if(_self.logSubscribed[job_id])
-			{
+	pm.data.subscribe('log.lines',
+		function(job_id, lines, position) {
+			if(_self.logSubscribed[job_id]) {
 				_self.handleNewLines(job_id, lines, position);
 			}
 		}
 	);
 
-	this.streamSocket.on('log.zerosize',
-		function(job_id)
-		{
-			if(_self.logSubscribed[job_id])
-			{
+	pm.data.subscribe('log.zerosize',
+		function(job_id) {
+			if(_self.logSubscribed[job_id]) {
 				_self.handleZeroSizeLog(job_id);
 			}
 		}
 	);
 
-	_self.streamSocket.emit('job.subscribe', _self.job_id);
+	pm.data.emit('job.subscribe', this.job_id);
 }
 
 pm.jobs.display.prototype.handleZeroSizeLog = function(job_id)
@@ -67,13 +154,27 @@ pm.jobs.display.prototype.handleZeroSizeLog = function(job_id)
 	container.addClass('no-data');
 }
 
+pm.jobs.display.prototype.isScrolledToBottom = function(el) {
+	var content_height = el[0].scrollHeight;
+	var current_view_bottom = el[0].scrollTop + el.innerHeight();
+	return (content_height == current_view_bottom);
+}
+
 pm.jobs.display.prototype.handleNewLines = function(job_id, lines, position)
 {
 	var container = $('.' + job_id + ' .log', this.container);
 	container.removeClass('no-data');
 	var formatted = this.formatLogLines(lines.join(''));
+
+	if (this.isScrolledToBottom(container)) { var reset_scroll = true; }
+
 	container.append(formatted);
 	container.attr('data-position', position);
+
+	if (reset_scroll) {
+		// TODO: test this across browsers
+		container[0].scrollTop = container[0].scrollHeight;
+	}
 }
 
 pm.jobs.display.prototype.renderJobTree = function(tree, level, container)
@@ -114,13 +215,13 @@ pm.jobs.display.prototype.createContainer = function(job_id, level, data)
 	var thisJobContainer = $('<div class="job-status level' + level + '"></div>');
 	thisJobContainer.attr('data-level', level);
 
-	var details = $('<div class="details clearfix"></div>');
+	var details = $('<div class="details"></div>');
 	details.addClass(job_id);
 	details.append($('<span class="state"></span>'));
 	details.append($('<span class="toolbox"></span>'));
 	details.append($('<span class="title"></span>'));
 	details.append($('<span class="summary"></span>'));
-	details.append($('<span class="time"></span>'));
+	// details.append($('<span class="time"></span>'));
 	details.append($('<pre class="log"></pre>'));
 	thisJobContainer.append(details);
 
@@ -128,7 +229,20 @@ pm.jobs.display.prototype.createContainer = function(job_id, level, data)
 	childrenContainer.addClass('children-' + job_id);
 	thisJobContainer.append(childrenContainer);
 
-	$('.title', thisJobContainer).text(data.title);
+	var title = data.title;
+	if (/[0-9T\-\:\.]{26}/.test(title)) {
+		// TODO: this is hackish, but for now the timestamp is embedded at the end of
+		// the title string for each job; parse it out and reformat using moment.js
+		var raw_date = title.substr(-26);
+		var moment = pm.util.formatDate(raw_date);
+
+		// remove old unformatted date, and "at" if present
+		title = title.substring(0, title.length - 26);
+		if (title.substr(-4) == " at ") { title = title.substring(0, title.length - 3); }
+		title += " <span title=\"" + raw_date + "\">" + moment.calendar + "</span>";
+	}
+	$('.title', thisJobContainer).html(title);
+
 	if( data.summary && data.state != 'SUCCESS' )
 	{
 		$('.summary', thisJobContainer).text('Summary: ' + data.summary);
@@ -258,9 +372,6 @@ pm.jobs.display.prototype.setStateIcon = function(element, state)
 	icon.addClass(BOOTSTRAP_ICON_MAP[state]);
 
 	element.html(icon);
-	var textual = $('<span></span>');
-	textual.text(state);
-	element.append(textual);
 }
 
 pm.jobs.display.prototype.updateStatus = function(status)
@@ -289,14 +400,14 @@ pm.jobs.display.prototype.toggleSubscribeLog = function(job_id, container)
 	if( this.logSubscribed[job_id] )
 	{
 		container.slideUp();
-		this.streamSocket.emit('log.unsubscribe', job_id);
+		pm.data.emit('log.unsubscribe', job_id);
 		this.logSubscribed[job_id] = false;
 	}
 	else
 	{
 		var position = container.attr('data-position');
 		this.logSubscribed[job_id] = true;
-		this.streamSocket.emit('log.subscribe', job_id, position);
+		pm.data.emit('log.subscribe', job_id, position);
 		container.slideDown();
 	}
 }

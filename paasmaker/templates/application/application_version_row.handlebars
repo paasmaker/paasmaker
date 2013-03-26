@@ -1,0 +1,38 @@
+<tr>
+	<td>
+		<a href="/version/{{ id }}">Version {{ version }}</a>
+		{{#if is_current}}<i class="icon-star" title="Version is current"></i>{{/if}}
+	</td>
+	<td>
+		{{display_state}}
+	</td>
+	<td>
+		{{{health_string}}}
+	</td>
+	<td class="version_instance_count" data-version-id="{{id}}">
+		<img src="/static/img/load-inline.gif" alt="">
+	</td>
+	<td>
+		<div class="table-button-box btn-group">
+			{{! TODO: generate these buttons in JS? }}
+			{{#if buttons_to_show.register}}
+				<a class="btn btn-mini btn-success job-action-button" data-version-id="{{id}}" href="/version/{{id}}/register">Register</a>
+			{{/if}}
+			{{#if buttons_to_show.start}}
+				<a class="btn btn-mini btn-success job-action-button" data-version-id="{{id}}" href="/version/{{id}}/start">Start</a>
+			{{/if}}
+			{{#if buttons_to_show.stop}}
+				<a class="btn btn-mini btn-danger job-action-button" data-version-id="{{id}}" href="/version/{{id}}/stop">Stop</a>
+			{{/if}}
+			{{#if buttons_to_show.deregister}}
+				<a class="btn btn-mini btn-warning job-action-button" data-version-id="{{id}}" href="/version/{{id}}/deregister">De Register</a>
+			{{/if}}
+			{{#if buttons_to_show.makecurrent}}
+				<a class="btn btn-mini btn-primary job-action-button" data-version-id="{{id}}" href="/version/{{id}}/setcurrent">Make Current</a>
+			{{/if}}
+			{{#if buttons_to_show.delete}}
+				<a class="btn btn-mini btn-danger job-action-button" data-version-id="{{id}}" href="/version/{{id}}/delete">Delete</a>
+			{{/if}}
+		</div>
+	</td>
+</tr>

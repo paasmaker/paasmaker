@@ -1,6 +1,6 @@
 /* Paasmaker CSS */
 
-/* Layout */
+/* Top left logo; TODO: check logo size/position */
 body .navbar .brand { padding: 5px 20px 3px; }
 
 /* Login page */
@@ -15,6 +15,24 @@ body .navbar .brand { padding: 5px 20px 3px; }
 .overview-block ul { list-style-type: none; margin-left: 0px; }
 td.overview-count { text-align: right; }
 .overview-more-link { margin-top: 1em; font-style: italic; }
+/* TODO: check this block is from merge conflict
+.overview_block { width: 30%; float: left; margin: 10px; }
+.router-stats-collection { clear: both; padding-top: 40px; }
+.overview_block table td { min-width: 5em; }
+td.overview_count { text-align: right; }
+.overview_more_link { margin-top: 1em; font-style: italic; }
+*/
+
+/* Ajax interface loader */
+.loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; text-align: center; background: white; opacity: 0; }
+.loading-overlay img { position: absolute; top: 50%; }
+
+/* Instance log / job log display */
+a.toggle { text-decoration: none; }
+
+/* UUID display for instances, nodes etc. */
+td.contains-uuid { width: 265px; }
+code.uuid-shrink { cursor: pointer; }
 
 /* COMMON CSS STYLES */
 ul.errors
@@ -58,11 +76,6 @@ textarea.example-configuration
 .job-status .state
 {
 	float: left;
-}
-
-.job-status .state span
-{
-	display: none;
 }
 
 .icon-loading
@@ -113,6 +126,10 @@ textarea.example-configuration
 {
 	height: auto;
 }
+
+/* Summary jobs view */
+.job-overview .details .title { margin-left: 5px; }
+.job-overview li { list-style-type: none; }
 
 /* INSTANCE LOGS */
 .instance-log-container pre
@@ -198,19 +215,72 @@ textarea.example-configuration
 	display: none;
 }
 
-/* Workspace view - big graph */
-
-.workspace-overview .router-stats { width: 820px; height: 400px; position: relative; float: none; }
-.workspace-overview .router-stats .secondary, .workspace-overview .router-stats .graph { display: block; }
-.workspace-overview .router-stats .btn-group, .workspace-overview .router-stats .complete-title { display: none; }
-.workspace-overview .router-stats .values { width: 200px; margin: 10px 5px; float: right; }
-.workspace-overview .router-stats .graph { position: absolute; top: 10px; left: 10px; width: 600px; height: 400px; }
-
 /* Workspace view - application list */
+#main_right_view { min-height: 400px; position: relative; }
 
-.application-list { float: left; width: 250px; border: 1px solid #e3e3e3; border-radius: 4px; }
+.workspace-overview .overview-graph { width: 360px; height: 260px; padding: 10px; margin: 10px; position: relative; display: inline-block; border: 1px solid #E3E3E3; border-radius: 3px; }
+.workspace-overview .overview-graph h3 { font-size: 13px; line-height: 15px; margin: 0; position: absolute; top: 10px; left: 0; width: 100%; text-align: center; }
+.workspace-overview .overview-graph .graph-container { width: 100%; height: 240px; margin-top: 20px; }
+
+/* Workspace view - job summary */
+.workspace-overview table.jobs { width: 790px; margin: 10px; }
+
+/* Left menu navigation: application (or node) list */
+
+#left_menu_wrapper { position: relative; }
+
+.application-list { position: absolute; top: 0; left: 0; width: 250px; border: 1px solid #e3e3e3; border-radius: 4px; }
 .application-list-name { display: block; font-size: larger; font-weight: bold; }
+
+.application-list-state { float: right; }
+.application-list .version { padding-left: 1.5em; }
+
+.with-application-list { margin-left: 270px; }
+
+/* Version view - instance types list */
+.instance-type-column { width: 45%; float: left; }
+
+/* Version view - instance logs */
+td.instance-log-button { width: 75px; }
+td.instance-log-button a i { vertical-align: text-bottom; }
+
+/* Node view - stats charts */
+.node-chart { display: inline-block; position: relative; width: 100px; height: 150px; margin-right: 15px; float: right; }
+.node-chart .chart, .node-chart .legend { position: absolute; left: 0; width:100px; }
+.node-chart .chart { top: 0; height:100px; }
+.node-chart .legend { top: 110px; height: 40px; }
+
+/* Node view - side menu (from old app_nav.html) */
 .application-list-details { display: block; font-size: smaller; color: #999999; }
 .active .application-list-details { color: #e5e5e5; }
 
-.with-application-list { margin-left: 270px; }
+/* Node view - instance list, runtime list */
+.node-table-header th { background: #F9F9F9; /* from Bootstrap .table-striped */ }
+
+/* Node view - list by type */
+.node-list-category { width: 32%; float: left; }
+
+/* Node view - jobs list */
+.all-jobs-button { float: right; }
+.all-jobs-button a { font-weight: normal; }
+table.jobs .job-overview { margin-bottom: 0; }
+
+/* Separate node jobs list page */
+h1 code.uuid-shrink { vertical-align: middle; font-size: 24px; }
+
+/* New application / new version page */
+.scm-container form label { width: 420px; line-height: 30px; height: 40px; }
+.scm-container form label input { float: right; vertical-align: middle; }
+
+.scm-form-submit { width: 420px; text-align: right; }
+
+.scm-container .tab-pane { position: relative; }
+.scm-list-container { position: absolute; top: 0; right: 0; }
+.scm-list-container h4 { margin: 0; font-size: inherit; font-weight: normal; font-style: italic; }
+
+/* File upload widget */
+.file-uploader-widget { width: 420px; text-align: right; margin: 10px 0 30px 0; }
+.file-uploader-widget div.drop, .file-uploader-widget div.status { display: inline-block; width: 168px; text-align: left; margin-right: 30px; }
+
+.file-uploader-widget div.status { font-style: italic; }
+.file-uploader-widget progress { width: 220px; }

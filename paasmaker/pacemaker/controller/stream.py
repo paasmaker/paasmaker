@@ -503,43 +503,56 @@ class StreamConnection(tornadio2.SocketConnection):
 	@tornadio2.event('router.stats.history')
 	def handle_history(self, name, input_id, metric, start, end=None):
 		"""
-		Event to fetch router history. Returns a set of points that
-		match the requested input.
+		Event to fetch router history.
+
+		:arg str metric: Either a string of one metric to fetch, or a list of metrics to
+		    fetch. If metric is a string, returns an array of stats items (where each item
+		    is a two-element array of unix timestamp and value). If metric is a list, the
+		    return value will be a dict of arrays of stats items, keyed by metric name.
 		"""
 		if end is None:
 			end = int(time.time())
-
 		# TODO: Limit start/end to prevent DoS style attacks.
 
 		def stats_ready(stats_output):
+			aggregated_history = {}
 
-			def got_history(history):
+			def failed_history(error, exception=None):
+				self.emit('router.stats.error', error)
+
+			def emit_history():
 				self.emit(
 					'router.stats.history',
 					name,
 					input_id,
 					start,
 					end,
-					history
+					aggregated_history
 				)
 
-				# end of got_history()
-
-			def failed_history(error, exception=None):
-				self.emit('router.stats.error', error)
+			def get_history_handler(current_metric, total_to_fetch):
+				def got_history(history):
+					aggregated_history[current_metric] = history
+					if len(aggregated_history) == total_to_fetch:
+						emit_history()
+				return got_history
 
 			def got_set(vtset):
-				stats_output.history(
-					'vt',
-					vtset,
-					metric,
-					got_history,
-					failed_history,
-					start,
-					end
-				)
+				if isinstance(metric, basestring):
+					metrics_to_query = [metric]
+				else:
+					metrics_to_query = metric
 
-				# end of got_set()
+				for current_metric in metrics_to_query:
+					stats_output.history(
+						'vt',
+						vtset,
+						current_metric,
+						get_history_handler(current_metric, len(metrics_to_query)),
+						failed_history,
+						start,
+						end
+					)
 
 			# Request some stats.
 			# TODO: Check permissions!

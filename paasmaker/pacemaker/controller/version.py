@@ -50,33 +50,11 @@ class VersionController(VersionRootController):
 		version = self._get_version(version_id)
 		self.add_data_template('configuration', self.configuration)
 
-		# TODO: for some reason the assignment name 'version' doesn't work here
-		self.add_data('version_to_view', version)
+		self.add_data('version', version)
 
-		# For the API, fetch a list of types as well.
-		types = {}
-		for instance_type in version.instance_types:
-			types[instance_type.name] = instance_type.flatten()
-			types[instance_type.name]['version_url'] = instance_type.version_hostname(self.configuration)
-		self.add_data('types', types)
+		self.add_data('frontend_domain_postfix', self.configuration.get_flat('pacemaker.frontend_domain_postfix'))
 
-		workspace = self.session.query(
-			paasmaker.model.Workspace
-		).get(version.application.workspace_id)
-		self.add_data('workspace', workspace)
-		self.add_data_template('paasmaker', paasmaker)
-
-		applications = self.session.query(
-			paasmaker.model.Application
-		).filter(
-			paasmaker.model.Application.workspace == workspace
-		).filter(
-			paasmaker.model.Application.deleted == None
-		)
-		self.add_data('applications', applications)
-		self.add_data('page', 'version')
-
-		self.render("layout/app_nav.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):
@@ -88,14 +66,14 @@ class VersionInstancesController(VersionRootController):
 
 	def get(self, version_id):
 		version = self._get_version(version_id)
-		self.add_data('version', version)
 
 		# For the API, fetch a list of types as well,
 		# and then instances per type for that.
 		instances = {}
 		for instance_type in version.instance_types:
 			data = {}
-			data['instance_type'] = instance_type
+			data['instance_type'] = instance_type.flatten()
+			data['instance_type']['version_url'] = instance_type.version_hostname(self.configuration)
 			data['instances'] = instance_type.instances
 			instances[instance_type.name] = data
 		self.add_data('instances', instances)
@@ -106,6 +84,23 @@ class VersionInstancesController(VersionRootController):
 	def get_routes(configuration):
 		routes = []
 		routes.append((r"/version/(\d+)/instances", VersionInstancesController, configuration))
+		return routes
+
+class VersionManifestController(VersionRootController):
+
+	def get(self, version_id):
+		version = self._get_version(version_id)
+		self.require_permission(constants.PERMISSION.APPLICATION_VIEW_MANIFEST, workspace=version.application.workspace)
+
+		self.add_data('version', version)
+		self.add_data('manifest', version.manifest)
+
+		self.render("api/apionly.html")
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/version/(\d+)/manifest", VersionManifestController, configuration))
 		return routes
 
 class VersionRegisterController(VersionRootController):
@@ -122,7 +117,7 @@ class VersionRegisterController(VersionRootController):
 		self.add_data('version', version)
 
 		def on_job_started():
-			self._redirect_job(self.get_data('job_id'), '/application/%d' % version.application.id)
+			self.action_success(self.get_data('job_id'), "/application/%d" % version.application.id)
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -152,7 +147,7 @@ class VersionStartupController(VersionRootController):
 			raise tornado.web.HTTPError(400, "Incorrect state.")
 
 		def on_job_started():
-			self._redirect_job(self.get_data('job_id'), '/application/%d' % version.application.id)
+			self.action_success(self.get_data('job_id'), "/application/%d" % version.application.id)
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -182,7 +177,7 @@ class VersionShutdownController(VersionRootController):
 			raise tornado.web.HTTPError(400, "Incorrect state.")
 
 		def on_job_started():
-			self._redirect_job(self.get_data('job_id'), '/application/%d' % version.application.id)
+			self.action_success(self.get_data('job_id'), "/application/%d" % version.application.id)
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -212,7 +207,7 @@ class VersionDeRegisterController(VersionRootController):
 			raise tornado.web.HTTPError(400, "Incorrect state.")
 
 		def on_job_started():
-			self._redirect_job(self.get_data('job_id'), '/application/%d' % version.application.id)
+			self.action_success(self.get_data('job_id'), "/application/%d" % version.application.id)
 
 		def on_root_added(job_id):
 			self.add_data('job_id', job_id)
@@ -251,7 +246,7 @@ class VersionDeleteController(VersionRootController):
 		self.session.add(version)
 		self.session.commit()
 
-		self.redirect("/application/%d" % version.application.id)
+		self.action_success("/application/%d" % version.application.id)
 
 	@staticmethod
 	def get_routes(configuration):

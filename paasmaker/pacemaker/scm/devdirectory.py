@@ -34,8 +34,10 @@ class DevDirectorySCM(BaseSCM):
 
 	def create_form(self, last_parameters):
 		template = """
-		<label for="parameters.location">Local Directory:</label>
-		<input type="text" name="parameters.location" value="%(location)s" required="required" />
+		<label>
+			Local Directory:
+			<input type="text" name="parameters.location" value="%(location)s" required="required">
+		</label>
 		"""
 
 		return template % {

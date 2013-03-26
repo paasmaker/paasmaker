@@ -8,50 +8,105 @@
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 
 pm.workspace = (function() {
-	var workspaceViewTemplate =
-		"<div id=\"applications\"><ul>"
-		+ "{{#each data.applications}}"
-			+ "<li><a href=\"/application/{{id}}\">{{name}} [{{health}}]</a></li>"
-		+ "{{/each}}"
-		+ "</ul></div>"
-		+ "<div id=\"workspace\">"
-			+ "<h1>{{data.workspace.name}}</h1>"
-			+ "<div>Last updated {{data.workspace.updated}}</div>"
-		+ "</div>";
-
-	var workspaceView = Handlebars.compile(workspaceViewTemplate);
 
 	return {
 
-		draw: function(workspace_id) {
+		updateAppMenu: function(new_workspace_id, highlight_key) {
+			// if (new_workspace_id == app_menu.current_workspace_id) {
+			// 	if ($('#left_menu_wrapper a').length) {
+			// 		// don't redraw if unnecessary, but TODO: handle edits, etc.
+			// 		// TODO: find a better detection method?
+			// 		return false;
+			// 	} else {
+			// 		// redraw, but a new ajax roundtrip shouldn't be needed
+			// 		pm.workspace.redrawAppMenu();
+			// 	}
+			// }
+			// app_menu.current_workspace_id = new_workspace_id
+
+			var bootstrap_health_classes = {
+				'OK': { badge: 'badge-success', icon: 'icon-ok' },
+				'WARNING': { badge: 'badge-warning', icon: 'icon-warning-sign' },
+				'ERROR': { badge: 'badge-important', icon: 'icon-ban-circle' }
+			};
+
 			pm.data.api({
-			    endpoint: "workspace/" + workspace_id + "/applications",
+				endpoint: "workspace/" + new_workspace_id + "/applications",
 				callback: function(data) {
-					var contents = { list: $("<ul>"), data: data };
+					if (highlight_key && highlight_key.newApplication) { data.new_application_active = true; }
+
+					processed_app_list = [];
 					data.applications.forEach(function(app) {
-						contents.list.append(
-							$("<li><a href=\"\">" + app.name + "</a></li>")
-						);
+						if (highlight_key && highlight_key.application && highlight_key.application == app.id) {
+							app.is_active = true;
+						}
+						app.health_class = bootstrap_health_classes[app.health];
+						processed_app_list.push(app);
 					});
-					$("#main").html(workspaceView(contents));
-					// app_list.on('click', function(e) { console.log(e.target); });
+					data.applications = processed_app_list;
+
+					pm.workspace.redrawAppMenu(data, highlight_key);
 				}
 			});
-
 		},
 
-		// event handler for changes in the workspace switcher
-		switchTo: function(e) {
-			var workspace_id = $(e.target).val();
+		redrawAppMenu: function(app_data, highlight_key) {
+			$('#left_menu_wrapper').html(pm.handlebars.app_menu(app_data));
+			$('#left_menu_wrapper li.application').each(function(i, el) {
+				var app_id = $(el).data('application-id');
+				pm.data.api({
+					endpoint: "application/" + app_id,
+					callback: function(data) {
+						if (data.current_version) {
+							processed_version_list = [];
+							data.versions.forEach(function(version) {
+								if (version.id == data.current_version.id) {
+									version.is_current = true;
+								}
+								if (highlight_key && highlight_key.version && highlight_key.version == version.id) {
+									version.is_active = true;
+								}
+								processed_version_list.push(version);
+							});
+							data.versions = processed_version_list;
+						}
+						$(el).after(pm.handlebars.app_menu_versions(data));
+					}
+				});
+			});
+		},
 
-			console.log("Switching to " + workspace_id);
+		switchTo: function() {
+			var url_match = document.location.pathname.match(/\/(\d+)\//);
 
-			if (workspace_id == "overview") {
-				pm.overview.init();
+			if ($('#left_menu_wrapper').length && $('#main_right_view').length) {
+				$('#main_right_view').empty();
 			} else {
-				// do stuff
-				pm.workspace.draw(workspace_id);
+				$('#main').empty();
+				$('#main').append(
+					$("<div id=\"left_menu_wrapper\">"),
+					$("<div id=\"main_right_view\" class=\"with-application-list\">")
+				);
+				pm.history.loadingOverlay("#main_right_view");
 			}
+
+			pm.workspace.updateAppMenu(url_match[1]);
+
+			pm.data.api({
+				endpoint: 'workspace/' + url_match[1],	// or just document.location?
+				callback: function(data) {
+					$('#main_right_view').html(pm.handlebars.workspace_main(data));
+					$('.loading-overlay').remove();
+					pm.stats.workspace.redraw();
+
+					pm.data.api({
+						endpoint: 'job/list/workspace/' + url_match[1],
+						callback: function(job_data) {
+							pm.jobs.summary.show($('.workspace-overview .job-overview'), job_data.jobs.slice(0,5));
+						}
+					});
+				}
+			});
 		}
 
 	};

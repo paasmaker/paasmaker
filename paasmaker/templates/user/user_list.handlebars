@@ -1,0 +1,42 @@
+<h1>User List</h1>
+
+<div class="btn-group btn-group-header">
+	{{#ifPermission 'USER_EDIT'}}
+		<a class="btn" href="/user/create"><i class="icon-plus"></i> Create User</a>
+	{{/ifPermission}}
+</div>
+
+<table class="table table-striped table-bordered">
+	<tr>
+		<th>Name</th>
+		<th>Authentication Method</th>
+		<th>Login</th>
+		<th>Created</th>
+		<th>Enabled</th>
+	</tr>
+	{{# each users }}
+		<tr>
+			<td>
+				{{#ifPermission 'USER_EDIT'}}<a href="/user/{{ id }}">{{/ifPermission}}
+					{{ name }}
+				{{#ifPermission 'USER_EDIT'}}</a>{{/ifPermission}}
+			</td>
+			<td>
+				{{ auth_source }}
+			</td>
+			<td>
+				{{ login }}
+			</td>
+			<td title="{{created_moment.format}}">
+				{{created_moment.calendar}}
+			</td>
+			<td>
+				{{# if enabled }}
+					Enabled
+				{{else}}
+					Disabled
+				{{/if}}
+			</td>
+		</tr>
+	{{/each}}
+</table>

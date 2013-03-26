@@ -330,7 +330,7 @@ class NodeListController(BaseController):
 
 		nodes = self.session.query(paasmaker.model.Node)
 		self._paginate('nodes', nodes)
-		self.render("node/list.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):
@@ -353,11 +353,10 @@ class NodeDetailController(NodeBaseController):
 
 	def get(self, node_id):
 		node = self._get_node(node_id)
-
 		self.add_data('node', node)
 		self.add_data_template('json', json)
 
-		self.render("node/detail.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):
@@ -384,6 +383,41 @@ class NodeDeleteController(NodeBaseController):
 	def get_routes(configuration):
 		routes = []
 		routes.append((r"/node/(\d+)/delete", NodeDeleteController, configuration))
+		return routes
+
+class NodeInstancesController(BaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def _get_node(self, node_id):
+		node = self.session.query(paasmaker.model.Node).get(int(node_id))
+		if not node:
+			raise tornado.web.HTTPError(404, "No such node.")
+		self.require_permission(constants.PERMISSION.NODE_DETAIL_VIEW)
+		return node
+
+	def get(self, node_id):
+		node = self._get_node(node_id)
+		instances = []
+
+		for instance in node.instances:
+			flat = instance.flatten()
+			app = {}
+			app['id'] = instance.application_instance_type.application_version.application.id
+			app['name'] = instance.application_instance_type.application_version.application.name
+			flat['application'] = app
+			ver = {}
+			ver['id'] = instance.application_instance_type.application_version.id
+			ver['version'] = instance.application_instance_type.application_version.version
+			flat['version'] = ver
+			instances.append(flat)
+
+		self.add_data('instances', instances)
+		self.render("api/apionly.html")
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/node/(\d+)/instances", NodeInstancesController, configuration))
 		return routes
 
 class NodeControllerTest(BaseControllerTest):

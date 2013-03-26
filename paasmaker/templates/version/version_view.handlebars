@@ -1,0 +1,78 @@
+<ul class="breadcrumb"></ul>
+
+<div class="router-stats well well-small" data-name="version" data-inputid="{{version.id}}">Loading...</div>
+
+<h1>
+	Version {{version.version}}
+	{{#if version.is_current}}
+		<a href="#" class="btn btn-success disabled">
+			<i class="icon-star icon-white"></i> Current
+		</a>
+	{{else}}
+		<a href="#" class="btn disabled">
+			<i class="icon-minus"></i> Not current
+		</a>
+	{{/if}}
+</h1>
+
+<div class="btn-toolbar">
+	<div class="btn-group btn-group-header">
+		<a class="btn" href="/job/list/version/{{version.id}}">All Jobs</a>
+		<a class="btn" href="/job/list/version/{{version.id}}?sub=cron">Crons</a>
+	</div>
+	{{#ifPermission 'APPLICATION_VIEW_MANIFEST' workspace_id}}
+		<div class="btn-group btn-group-header">
+			<a class="btn" data-toggle="modal" data-target="#app_manifest_modal">View Manifest</a>
+		</div>
+	{{/ifPermission}}
+	<div class="btn-group btn-group-header">
+		{{! TODO: this copied from application_version_row.handlebars }}
+		{{#if version.buttons_to_show.register}}
+			<a class="btn btn-success job-action-button" href="/version/{{version.id}}/register">Register</a>
+		{{/if}}
+		{{#if version.buttons_to_show.start}}
+			<a class="btn btn-success job-action-button" href="/version/{{version.id}}/start">Start</a>
+		{{/if}}
+		{{#if version.buttons_to_show.stop}}
+			<a class="btn btn-danger job-action-button" href="/version/{{version.id}}/stop">Stop</a>
+		{{/if}}
+		{{#if version.buttons_to_show.deregister}}
+			<a class="btn btn-warning job-action-button" href="/version/{{version.id}}/deregister">De Register</a>
+		{{/if}}
+		{{#if version.buttons_to_show.makecurrent}}
+			<a class="btn btn-primary job-action-button" href="/version/{{version.id}}/setcurrent">Make Current</a>
+		{{/if}}
+		{{#if version.buttons_to_show.delete}}
+			<a class="btn btn-danger job-action-button" href="/version/{{version.id}}/delete">Delete</a>
+		{{/if}}
+	</div>
+</div>
+
+<ul>
+	<li><b>State:</b> {{ version.state }}</li>
+	<li><b>Health:</b> {{version.health.overall}} {{{version.health_string}}}</li>
+	<li><b>SCM:</b> {{ version.scm_name }}</li>
+	{{#if version.scm_parameters.formatted_location}}
+		<li><b>Original source location:</b> {{version.scm_parameters.formatted_location}}</li>
+	{{else}}
+		{{#if version.scm_parameters.location}}
+			<li><b>Original source location:</b> {{version.scm_parameters.location}}</li>
+		{{/if}}
+	{{/if}}
+	{{#if version.using_dev_directory_plugin}}
+		<li><b>Package type:</b> {{ version.source_package_type }}</li>
+	{{/if}}
+</ul>
+
+<div id="app_manifest_modal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="Application Manifest" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3 id="myModalLabel">Application Manifest - Version {{version.version}}</h3>
+  </div>
+  <div class="modal-body">
+    <p>Loading ...</p>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Close</button>
+  </div>
+</div>

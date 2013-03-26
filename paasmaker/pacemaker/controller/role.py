@@ -52,9 +52,11 @@ class RoleListController(BaseController):
 		roles = self.session.query(
 			paasmaker.model.Role
 		)
+		
 		self._paginate('roles', roles)
+		# self.add_data('roles', roles)
 
-		self.render("role/list.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):
@@ -74,7 +76,7 @@ class RoleAllocationListController(BaseController):
 		)
 		self._paginate('allocations', allocations)
 
-		self.render("role/allocationlist.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):

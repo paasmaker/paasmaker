@@ -21,7 +21,7 @@ class ProfileController(BaseController):
 		# user can view their own API key. So not a security risk.
 		user = self.get_current_user()
 		self.add_data('apikey', user.apikey)
-		self.render("user/profile.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):

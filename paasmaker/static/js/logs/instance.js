@@ -10,7 +10,6 @@ pm.logs.instance = function(streamSocket, instance_id)
 
 	// Set up the container.
 	this.toggle = $('.toggle.' + instance_id);
-	this.toggle.html($('<i class="icon-list"></i>'));
 	this.container = $('.instance-log-container.' + instance_id);
 	this.pre = $('<pre></pre>');
 	this.container.hide();
@@ -69,12 +68,26 @@ pm.logs.instance.prototype.handleZeroSizeLog = function(job_id)
 	this.pre.addClass('no-data');
 }
 
+pm.logs.instance.prototype.isScrolledToBottom = function(el) {
+	var content_height = el[0].scrollHeight;
+	var current_view_bottom = el[0].scrollTop + el.innerHeight();
+	return (content_height == current_view_bottom);
+}
+
 pm.logs.instance.prototype.handleNewLines = function(job_id, lines, position)
 {
 	this.pre.removeClass('no-data');
 	var formatted = this.formatLogLines(lines.join(''));
+	
+	if (this.isScrolledToBottom(this.pre)) { var reset_scroll = true; }
+	
 	this.pre.append(formatted);
 	this.pre.attr('data-position', position);
+
+	if (reset_scroll) {
+		// TODO: test this across browsers
+		this.pre[0].scrollTop = this.pre[0].scrollHeight;
+	}
 }
 
 // TODO: This is duplicated code. Refactor this so it isn't.

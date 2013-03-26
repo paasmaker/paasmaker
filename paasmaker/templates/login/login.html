@@ -6,8 +6,8 @@
 
 		<div id="test-browser-features"></div>
 	</div>
-	
-	<div class="index_column">	
+
+	<div class="index_column">
 		<form method="POST">
 			<label for="username">Username:<label>
 			<input type="text" name="username" id="username" required="required" />
@@ -31,4 +31,16 @@
 			</ul>
 		{% end %}
 	</div>
+{% end %}
+
+{% block scripts %}
+<script type="text/javascript">
+	$(function() {
+		if ($('#username').val() == '') {
+			$('#username').focus();
+		} else {
+			$('#password').focus();
+		}
+	});
+</script>
 {% end %}
