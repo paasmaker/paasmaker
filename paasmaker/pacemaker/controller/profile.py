@@ -128,7 +128,7 @@ class ProfileControllerTest(BaseControllerTest):
 		return application
 
 	def test_profile(self):
-		request = self.fetch_with_user_auth('http://localhost:%d/profile')
+		request = self.fetch_with_user_auth('http://localhost:%d/profile?format=json')
 		response = self.wait()
 
 		self.failIf(response.error)
