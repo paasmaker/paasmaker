@@ -4,7 +4,7 @@ is_pacemaker: false
 
 master_node: production.paasmaker.net
 master_port: 42500
-node_token: 17470da9-8793-4462-8b08-8138ebf42213
+node_token: abcdef12-3456-7890-abcd-ef1234567890
 redis_mode: defer-to-master
 
 shutdown_daemons_on_exit: false
