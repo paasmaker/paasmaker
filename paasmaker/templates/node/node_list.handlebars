@@ -7,6 +7,10 @@
 	{{#each pacemakers}}
 		<tr>
 			<td>
+				{{#if can_delete}}{{#ifPermission 'SYSTEM_ADMINISTRATION'}}
+					<a class="btn btn-small btn-danger job-action-button node-delete-button" data-node-name="{{name}}" data-node-id="{{id}}">Delete</a>
+				{{/ifPermission}}{{/if}}
+
 				{{#ifPermission 'NODE_DETAIL_VIEW'}}<a href="/node/{{id}}">{{/ifPermission}}
 					<span style="font-weight:bold" title="UUID: {{uuid}}">{{name}}</span>
 				{{#ifPermission 'NODE_DETAIL_VIEW'}}</a>{{/ifPermission}}
@@ -24,6 +28,10 @@
 	{{#each hearts}}
 		<tr>
 			<td>
+				{{#if can_delete}}{{#ifPermission 'SYSTEM_ADMINISTRATION'}}
+					<a class="btn btn-small btn-danger job-action-button node-delete-button" data-node-name="{{name}}" data-node-id="{{id}}">Delete</a>
+				{{/ifPermission}}{{/if}}
+
 				{{#ifPermission 'NODE_DETAIL_VIEW'}}<a href="/node/{{id}}">{{/ifPermission}}
 					<span style="font-weight:bold" title="UUID: {{uuid}}">{{name}}</span>
 				{{#ifPermission 'NODE_DETAIL_VIEW'}}</a>{{/ifPermission}}
@@ -41,6 +49,10 @@
 	{{#each routers}}
 		<tr>
 			<td>
+				{{#if can_delete}}{{#ifPermission 'SYSTEM_ADMINISTRATION'}}
+					<a class="btn btn-small btn-danger job-action-button node-delete-button" data-node-name="{{name}}" data-node-id="{{id}}">Delete</a>
+				{{/ifPermission}}{{/if}}
+
 				{{#ifPermission 'NODE_DETAIL_VIEW'}}<a href="/node/{{id}}">{{/ifPermission}}
 					<span style="font-weight:bold" title="UUID: {{uuid}}">{{name}}</span>
 				{{#ifPermission 'NODE_DETAIL_VIEW'}}</a>{{/ifPermission}}

@@ -258,7 +258,8 @@ td.instance-log-button a i { vertical-align: text-bottom; }
 .node-table-header th { background: #F9F9F9; /* from Bootstrap .table-striped */ }
 
 /* Node view - list by type */
-.node-list-category { width: 32%; float: left; }
+.node-list-category { width: 32%; float: left; margin-right: 5px; }
+a.node-delete-button { float: right; margin: 5px 0; }
 
 /* Node view - jobs list */
 .all-jobs-button { float: right; }

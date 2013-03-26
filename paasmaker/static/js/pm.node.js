@@ -43,6 +43,17 @@ pm.node.list = (function() {
 			});
 		},
 
+		actionButton: function(e) {
+			var t = $(e.target);
+			if (t.hasClass('node-delete-button')) {
+				$('#node_delete_modal').remove();
+				$('#main_right_view').append(pm.handlebars.node_delete({
+					name: t.data('node-name'), id: t.data('node-id')
+				}));
+				$('#node_delete_modal').modal();
+			}
+		},
+
 		switchTo: function() {
 			pm.data.api({
 				endpoint: 'node/list',
