@@ -202,18 +202,16 @@ textarea.example-configuration
 	display: none;
 }
 
-/* Overview graphs - shared styles */
-.graph-container { width: 100%; height: 100%; }
-
 /* Workspace view - big graph */
 
 #main_right_view { min-height: 400px; position: relative; }
 
 .workspace-overview .overview-graph { width: 360px; height: 260px; padding: 10px; margin: 10px; position: relative; display: inline-block; border: 1px solid #E3E3E3; border-radius: 3px; }
-.workspace-overview .overview-graph h3 { font-size: 13px; line-height: 15px; margin: 0; position: absolute; top: 20px; left: 40px; }
+.workspace-overview .overview-graph h3 { font-size: 13px; line-height: 15px; margin: 0; position: absolute; top: 10px; left: 0; width: 100%; text-align: center; }
+.workspace-overview .overview-graph .graph-container { width: 100%; height: 240px; margin-top: 20px; }
 
 /* Workspace view - job summary */
-.workspace-overview .job-overview { width: 760px; height: 260px; padding: 10px; margin: 10px; display: inline-block; border: 1px solid #E3E3E3; border-radius: 3px; overflow: auto; }
+.workspace-overview table.jobs { width: 790px; margin: 10px; }
 
 /* Left menu navigation: application (or node) list */
 
@@ -253,7 +251,7 @@ td.instance-log-button a i { vertical-align: text-bottom; }
 /* Node view - jobs list */
 .all-jobs-button { float: right; }
 .all-jobs-button a { font-weight: normal; }
-table.node-jobs .job-overview { margin-bottom: 0; }
+table.jobs .job-overview { margin-bottom: 0; }
 
 /* Separate node jobs list page */
 h1 code.uuid-shrink { vertical-align: middle; font-size: 24px; }

@@ -465,6 +465,7 @@ class BaseController(tornado.web.RequestHandler):
 		"""
 		Require the given permission to continue. Stops the request
 		with a 403 if the user is not granted the given permission.
+		Permissions should be checked before any calls to add_data().
 
 		:arg str permission: The permission to check for.
 		:arg Workspace workspace: The optional workspace to limit the

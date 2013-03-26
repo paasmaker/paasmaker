@@ -102,7 +102,7 @@ pm.workspace = (function() {
 					pm.data.api({
 						endpoint: 'job/list/workspace/' + url_match[1],
 						callback: function(job_data) {
-							pm.jobs.summary.show($('.workspace-overview .job-overview'), job_data.jobs);
+							pm.jobs.summary.show($('.workspace-overview .job-overview'), job_data.jobs.slice(0,5));
 						}
 					});
 				}

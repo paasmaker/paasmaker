@@ -504,6 +504,7 @@ class StreamConnection(tornadio2.SocketConnection):
 		# TODO: Limit start/end to prevent DoS style attacks.
 
 		def stats_ready(stats_output):
+			aggregated_history = {}
 
 			def failed_history(error, exception=None):
 				self.emit('router.stats.error', error)
@@ -515,18 +516,14 @@ class StreamConnection(tornadio2.SocketConnection):
 					input_id,
 					start,
 					end,
-					self.aggregated_history
+					aggregated_history
 				)
 
 			def get_history_handler(current_metric, total_to_fetch):
 				def got_history(history):
-					if isinstance(metric, basestring):
-						self.aggregated_history = history
+					aggregated_history[current_metric] = history
+					if len(aggregated_history) == total_to_fetch:
 						emit_history()
-					else:
-						self.aggregated_history[current_metric] = history
-						if len(self.aggregated_history) == total_to_fetch:
-							emit_history()
 				return got_history
 
 			def got_set(vtset):
@@ -561,7 +558,6 @@ class StreamConnection(tornadio2.SocketConnection):
 			self.emit('error', 'This node is not a pacemaker.')
 			return
 
-		self.aggregated_history = {}
 		self.get_router_stats_handler(stats_ready)
 
 

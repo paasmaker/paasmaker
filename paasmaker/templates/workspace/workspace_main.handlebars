@@ -15,21 +15,36 @@
 </div>
 
 <div class="workspace-overview">
-	<!-- <div class="overview-graph" data-name="workspace" data-inputid="{{ workspace.id }}" data-metric="requests">
+	<div class="overview-graph" data-name="workspace" data-inputid="{{ workspace.id }}" data-metric="requests_by_code">
+		<h3>Requests by Response Code</h3>
+		<div class="graph-container"><br><br>Loading ...</div>
+	</div>
+	<!--<div class="overview-graph" data-name="workspace" data-inputid="{{ workspace.id }}" data-metric="requests">
 		<h3>Requests</h3>
 		<div class="graph-container"><br><br>Loading ...</div>
-	</div> -->
+	</div>-->
 	<div class="overview-graph" data-name="workspace" data-inputid="{{ workspace.id }}" data-metric="bytes">
-		<h3>Bytes transferred</h3>
+		<h3>Bytes Transferred</h3>
 		<div class="graph-container"><br><br>Loading ...</div>
 	</div>
-	<div class="overview-graph" data-name="workspace" data-inputid="{{ workspace.id }}" data-metric="time">
+	<!--<div class="overview-graph" data-name="workspace" data-inputid="{{ workspace.id }}" data-metric="time">
 		<h3>Request time</h3>
 		<div class="graph-container"><br><br>Loading ...</div>
-	</div>
-	<div class="job-overview"></div>
-	<!-- <div class="overview-graph" data-name="workspace" data-inputid="{{ workspace.id }}" data-metric="requests_by_code">
-		<h3>Response codes</h3>
-		<div class="graph-container"><br><br>Loading ...</div>
-	</div> -->
+	</div>-->
+
+	<table class="table table-bordered jobs">
+		<tr>
+			<th>
+				Jobs
+				<div class="all-jobs-button">
+					<a class="btn btn-mini" href="/job/list/workspace/{{workspace.id}}">View All</a>
+				</div>
+			</th>
+		</tr>
+		<tr>
+			<td>
+				<div class="well job-overview"></div>
+			</td>
+		</tr>
+	</table>
 </div>
