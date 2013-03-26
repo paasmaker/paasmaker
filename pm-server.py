@@ -164,6 +164,7 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.node.NodeRegisterController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.node.NodeListController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.node.NodeDetailController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.node.NodeDeleteController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.package.PackageSizeController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.package.PackageDownloadController.get_routes(route_extras))
 

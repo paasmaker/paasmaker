@@ -338,7 +338,7 @@ class NodeListController(BaseController):
 		routes.append((r"/node/list", NodeListController, configuration))
 		return routes
 
-class NodeDetailController(BaseController):
+class NodeBaseController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def _get_node(self, node_id):
@@ -347,6 +347,9 @@ class NodeDetailController(BaseController):
 			raise tornado.web.HTTPError(404, "No such node.")
 		self.require_permission(constants.PERMISSION.NODE_DETAIL_VIEW)
 		return node
+
+
+class NodeDetailController(NodeBaseController):
 
 	def get(self, node_id):
 		node = self._get_node(node_id)
@@ -360,6 +363,27 @@ class NodeDetailController(BaseController):
 	def get_routes(configuration):
 		routes = []
 		routes.append((r"/node/(\d+)", NodeDetailController, configuration))
+		return routes
+
+class NodeDeleteController(NodeBaseController):
+	def post(self, node_id):
+		node = self._get_node(node_id)
+		self.require_permission(constants.PERMISSION.SYSTEM_ADMINISTRATION)
+
+		if not node.can_delete:
+			raise tornado.web.HTTPError(400, "Cannot delete node that is active.")
+
+		self.session.delete(node)
+		self.session.commit()
+
+		self.add_data('success', True)
+
+		self.redirect('/node/list')
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/node/(\d+)/delete", NodeDeleteController, configuration))
 		return routes
 
 class NodeControllerTest(BaseControllerTest):
