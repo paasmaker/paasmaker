@@ -30,6 +30,62 @@ pm.widgets.uuid = {
 }
 
 
+/**
+ * Simple inline editor widget, for creating a quick-alter interface around display
+ * values (e.g. instance type quantity). The element with class="editable" must have
+ * data attributes for "editable-type", "value", and "endpoint", as well as a child
+ * link/button with class="editable-button".
+ * When the button is clicked, creates a Bootstrap popover with input field and submit
+ * button that will send an ajax POST (with serialised key-value pair) to the endpoint.
+ */
+pm.widgets.editable = (function(){
+	var templates = {
+		text_field_form: Handlebars.compile(
+			"<form action=\"{{endpoint}}\" method=\"post\""
+				+ " class=\"editable-field-form input-append\">"
+				+ "<input name=\"{{key}}\" type=\"text\" value=\"{{value}}\">"
+				+ "<button class=\"btn\">Save</button>"
+				+ "</form>")
+	};
+	
+	return {
+		definitions: {
+			"instance-type-quantity": {
+				key: "quantity",
+				title: "Number of instances to run",
+				content: templates.text_field_form
+			}
+		},
+
+		update: function() {
+			$('.editable').each(function(i, el) {
+				el = $(el);
+				if (el.data('editable-type') && el.data('value') && el.data('endpoint')
+						&& $('a.editable-button', el).length) {
+					
+					var definition = pm.widgets.editable.definitions[el.data('editable-type')];
+					el.popover({
+						html: true,
+						title: definition.title,
+						content: definition.content({
+							key: definition.key, value: el.data('value'), endpoint: el.data('endpoint')
+						})
+					});
+					
+					$('a.editable-button', el).on('click', pm.widgets.editable.clickHandler);
+				}
+			});
+		},
+
+		clickHandler: function(e) {
+			e.preventDefault();
+			var container = $(e.target).parents('.editable');
+			container.popover('toggle');
+		}
+	}
+}());
+
+
 pm.widgets.upload = function(container)
 {
 	this.container = container;

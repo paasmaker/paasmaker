@@ -1,7 +1,15 @@
 <hr><h2>Instance type: {{instance_type.name}}</h2>
 <ul class="instance-type-column">
 	<li>Runtime: {{instance_type.runtime_name}}</li>
-	<li>Quantity: {{instance_type.quantity}}</li>
+	<li>
+		Quantity:
+		<span class="editable" data-editable-type="instance-type-quantity" data-value="{{instance_type.quantity}}" data-endpoint="/instancetype/{{instance_type.id}}/quantity">
+			{{instance_type.quantity}}
+			{{#ifPermission 'APPLICATION_CREATE' workspace_id}}
+				<a class="btn btn-mini editable-button"><i class="icon-edit"></i></a>
+			{{/ifPermission}}
+		</span>
+	</li>
 	<li>
 		{{#if instance_type.exclusive}}
 			Exclusive

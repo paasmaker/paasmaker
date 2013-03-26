@@ -116,17 +116,21 @@ pm.version = (function() {
 										this_view.instances = pm.version.processInstanceData(this_view.instances);
 										this_view.version_is_current = version_data.version.is_current;
 										this_view.frontend_domain_postfix = version_data.frontend_domain_postfix;
+										this_view.workspace_id = parents.workspace.id;
 
 										$('#main_right_view').append(pm.handlebars.version_instance_types(this_view));
 									}
 
-									// after rendering instances, set up expandable UUIDs, add event
-									// handlers for viewing logs, and fetch node names from the API
+									// after rendering instances: 
+									// - set up expandable UUIDs and editable fields
+									// - fetch node names from the API
+									// - add event handlers for viewing instance logs
 									pm.widgets.uuid.update();
+									pm.widgets.editable.update();
+									pm.version.updateNodeNames();
 									$('.instance-log-container').each(function(i, element) {
 											new pm.logs.instance(streamSocket, $(element).attr('data-instance'));
 									});
-									pm.version.updateNodeNames();
 								}
 							});
 

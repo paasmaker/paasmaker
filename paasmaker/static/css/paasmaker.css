@@ -239,6 +239,11 @@ textarea.example-configuration
 
 /* Version view - instance types list */
 .instance-type-column { width: 45%; float: left; }
+.instance-type-column li { line-height: 24px; vertical-align: middle; }
+
+/* Version view - quantity editor */
+.instance-type-column .editable a i { vertical-align: -3px; /* TODO: compare Mac/Linux */ }
+.instance-type-column .editable input { width: 50px; }
 
 /* Version view - instance logs */
 td.instance-log-button { width: 75px; }
@@ -278,6 +283,10 @@ h1 code.uuid-shrink { vertical-align: middle; font-size: 24px; }
 .scm-container .tab-pane { position: relative; }
 .scm-list-container { position: absolute; top: 0; right: 0; }
 .scm-list-container h4 { margin: 0; font-size: inherit; font-weight: normal; font-style: italic; }
+
+/* Editable field widget */
+form.editable-field-form { display: inline-block; }
+form.editable-field-form input { width: 135px; }
 
 /* File upload widget */
 .file-uploader-widget { width: 420px; text-align: right; margin: 10px 0 30px 0; }
