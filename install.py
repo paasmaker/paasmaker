@@ -221,7 +221,7 @@ if context['runtime_rbenv_enable']:
 
 	# Install any ruby versions we've been asked to install.
 	if context['PLATFORM'] == install.constants.LINUX:
-		rbenv_locator = 'export PATH="%s/bin:$PATH"' % rbenv_path
+		rbenv_locator = 'export PATH="%s/bin:%s/shims:$PATH"' % (rbenv_path, rbenv_path)
 	else:
 		# For OSX, point the ruby binary at the correct location.
 		# TODO: Fix this.
@@ -252,7 +252,8 @@ if context['runtime_rbenv_enable']:
 		# This check runs every time you run the installer, to work
 		# around where the installer gets terminated sometimes at the
 		# end of the ruby compliation/installation.
-		rbenv_bundler = subprocess.check_output('%s; rbenv shell %s; gem list' % (rbenv_locator, version), shell=True)
+		install.helpers.generic_command_shell(context, '%s; rbenv rehash' % rbenv_locator)
+		rbenv_bundler = subprocess.check_output('%s; export RBENV_VERSION=%s; gem list' % (rbenv_locator, version), shell=True)
 		if not 'bundler ' in rbenv_bundler:
 			install.helpers.generic_command_shell(
 				context,
