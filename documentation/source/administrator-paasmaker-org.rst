@@ -855,6 +855,17 @@ as they come back online.
   just back up the contents of that directory, Paasmaker will be able to redeploy applications
   again quickly.
 
+Changing security credentials
+-----------------------------
+
+If you have an incident where you no longer trust the node token, you can easily change it.
+To change it, first update the node token on the Pacemaker node, and then go through each
+heart and update it and restart them.
+
+Whilst the node token doesn't match, heart nodes will be unable to report in. If a node doesn't
+report in for 90 seconds, it is assumed to be down and will have its instances replaced elsewhere.
+Please keep that in mind when updating nodes.
+
 Bundling into an AMI
 --------------------
 
