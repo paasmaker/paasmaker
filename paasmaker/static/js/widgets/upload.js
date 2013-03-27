@@ -18,7 +18,7 @@ pm.widgets.uuid = {
 			}
 		});
 	},
-	
+
 	clickHandler: function(e) {
 		el = $(e.target);
 		if (el.text().length > 8) {
@@ -47,7 +47,7 @@ pm.widgets.editable = (function(){
 				+ "<button class=\"btn\">Save</button>"
 				+ "</form>")
 	};
-	
+
 	return {
 		definitions: {
 			"instance-type-quantity": {
@@ -62,7 +62,7 @@ pm.widgets.editable = (function(){
 				el = $(el);
 				if (el.data('editable-type') && el.data('value') && el.data('endpoint')
 						&& $('a.editable-button', el).length) {
-					
+
 					var definition = pm.widgets.editable.definitions[el.data('editable-type')];
 					el.popover({
 						html: true,
@@ -71,7 +71,7 @@ pm.widgets.editable = (function(){
 							key: definition.key, value: el.data('value'), endpoint: el.data('endpoint')
 						})
 					});
-					
+
 					$('a.editable-button', el).on('click', pm.widgets.editable.clickHandler);
 				}
 			});
@@ -105,6 +105,7 @@ pm.widgets.upload = function(container)
 
 	this.resumable = new Resumable(
 		{
+			chunkSize: 1*512*1024,
 			target: '/files/upload',
 			fileParameterName: 'file.data'
 		}
@@ -117,7 +118,7 @@ pm.widgets.upload = function(container)
 	this.resumable.on('fileAdded', function(file){
 		_self.statusArea.html(file.fileName + ', ' + file.size + ' bytes');
 		_self.resumable.upload();
-		
+
 		// Hide the drop container when uploading starts
 		// TODO: this prevents retrying after failure
 		_self.dropContainer.hide();
