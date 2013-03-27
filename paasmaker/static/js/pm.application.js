@@ -76,10 +76,14 @@ pm.application.view = (function() {
 			pm.data.post({
 				endpoint: $(e.target).attr('href'),
 				callback: function(data) {
-					$('.loading-overlay').remove();
-					// pushState so the Back button works, but TODO: this should be in pm.history?
-					window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.job_id);
-					pm.jobs.single.switchTo({ job_id: data.job_id, version_id: $(e.target).data('version-id') });
+					if(data.job_id) {
+						$('.loading-overlay').remove();
+						// pushState so the Back button works, but TODO: this should be in pm.history?
+						window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.job_id);
+						pm.jobs.single.switchTo({ job_id: data.job_id, version_id: $(e.target).data('version-id') });
+					} else {
+						pm.application.view.switchTo();
+					}
 				}
 			});
 		},

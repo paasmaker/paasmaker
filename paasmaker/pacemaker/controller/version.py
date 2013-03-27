@@ -246,7 +246,7 @@ class VersionDeleteController(VersionRootController):
 		self.session.add(version)
 		self.session.commit()
 
-		self.action_success("/application/%d" % version.application.id)
+		self.action_success(None, "/application/%d" % version.application.id)
 
 	@staticmethod
 	def get_routes(configuration):

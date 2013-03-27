@@ -48,11 +48,16 @@ pm.version = (function() {
 			pm.data.post({
 				endpoint: $(e.target).attr('href'),
 				callback: function(data) {
-					$('.loading-overlay').remove();
-					// pushState so the Back button works, but TODO: this should be in pm.history?
-					var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
-					window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.job_id);
-					pm.jobs.single.switchTo({ job_id: data.job_id, version_id: url_match[1] });
+					if(data.job_id) {
+						$('.loading-overlay').remove();
+						// pushState so the Back button works, but TODO: this should be in pm.history?
+						var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
+						window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.job_id);
+						pm.jobs.single.switchTo({ job_id: data.job_id, version_id: url_match[1] });
+					} else {
+						window.history.pushState({ handle_in_js: true }, '', "/application/" + data.data.version.application_id);
+						pm.history.onpopstate({ state: { handle_in_js: true }});
+					}
 				}
 			});
 		},
