@@ -281,7 +281,7 @@ if __name__ == '__main__':
 				arguments = [
 					'coverage', 'run',
 					'-p',
-					'--omit', '*.generated.py',
+					'--omit=*.generated.py,thirdparty/*',
 					'--source', os.path.dirname(os.path.realpath(__file__)),
 					sys.argv[0], '-m', module, '-t', temporary_name,
 					'-l', args.loglevel
