@@ -1,3 +1,5 @@
+#!/bin/bash
+
 # Paasmaker: generate-html-coverage-app.sh
 #
 # Generates an app displaying test coverage results
