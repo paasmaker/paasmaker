@@ -26,19 +26,23 @@ pm.application.view = (function() {
 		getHealthString: function(version) {
 			var health_string = '';
 
-			if (version.health.overall && version.health.overall == 'OK') {
-				health_string += version.health.overall;
-			} else {
-				for (var instance_type in version.health.types) {
-					var h = version.health.types[instance_type];
-					if (h.state != 'OK') {
-						health_string += instance_type + ': ' + h.state;
-						if (h.message) {
-							health_string += ' - ' + h.message;
+			if (version.health) {
+				if (version.health.overall && version.health.overall == 'OK') {
+					health_string += version.health.overall;
+				} else {
+					for (var instance_type in version.health.types) {
+						var h = version.health.types[instance_type];
+						if (h.state != 'OK') {
+							health_string += instance_type + ': ' + h.state;
+							if (h.message) {
+								health_string += ' - ' + h.message;
+							}
+							health_string += '<br>';
 						}
-						health_string += '<br>';
 					}
 				}
+			} else {
+				health_string = "WARNING";
 			}
 
 			return health_string;
@@ -57,10 +61,11 @@ pm.application.view = (function() {
 				processed_versions.push(version);
 			};
 
-			if (versions.length) {
+			if (typeof versions.length == 'number' && versions.length > 0) {
 				versions.forEach(modifier);
 				return processed_versions;
-			} else {
+			}
+			if (typeof versions.length == 'undefined') {
 				modifier(versions);
 				return processed_versions[0];
 			}
