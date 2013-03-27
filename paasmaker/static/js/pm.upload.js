@@ -10,7 +10,7 @@ if (!window.pm) { var pm = {}; }	// TODO: module handling
 pm.upload = (function() {
 
 	return {
-	
+
 		// copy from script.js: if scm list plugins are enabled, load their output
 		loadRepositoryLists: function() {
 			$('.scm-list').each(
@@ -51,14 +51,14 @@ pm.upload = (function() {
 		actionButton: function(e) {
 			// this code mostly duplicated with pm.version.js
 			var parent_form = $(e.target).parents('form');
-		
+
 			pm.history.loadingOverlay("#main_right_view");
 			pm.data.post({
 				endpoint: document.location.pathname,
 				body_data: $(parent_form).serialize(),
 				callback: function(data) {
 					$('.loading-overlay').remove();
-					
+
 					// pushState so the Back button works, but TODO: this should be in pm.history?
 					var state = { job_id: data.job_id }, url_match;
 					url_match = document.location.pathname.match(/\/application\/(\d+)\/newversion/);
@@ -68,7 +68,7 @@ pm.upload = (function() {
 						url_match = document.location.pathname.match(/\/workspace\/(\d+)\/applications\/new/);
 						state.workspace_id = url_match[1];
 					}
-					
+
 					window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.job_id);
 					pm.jobs.single.switchTo(state);
 				}
@@ -77,7 +77,7 @@ pm.upload = (function() {
 
 		switchTo: function() {
 			pm.leftmenu.redrawContainers();
-			
+
 			var url_match, form_fetch_url, suffix;
 			var parent_search = {};
 			url_match = document.location.pathname.match(/\/workspace\/(\d+)\/applications\/new/);
@@ -110,7 +110,11 @@ pm.upload = (function() {
 				success: function(form_string) {
 					$('#main_right_view').html(form_string);
 
-					$('.scm-container li a:first').tab('show');
+					if ($('.scm-container li.active a').length) {
+						$('.scm-container li.active a').tab('show');
+					} else {
+						$('.scm-container li a:first').tab('show');
+					}
 					$('.scm-container li a').click(function(e) {
 						e.preventDefault();
 						$(e.target).tab('show');
