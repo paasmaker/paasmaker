@@ -40,7 +40,7 @@ pm.data = (function() {
 				var query_string = options.endpoint.split('?');
 				options.endpoint = query_string[0];
 
-				query_string.split('&').forEach(function(arg) {
+				query_string[1].split('&').forEach(function(arg) {
 					arg_parts = arg.split('=');
 					options.arguments[decodeURIComponent(arg_parts[0])] = decodeURIComponent(arg_parts[1]);
 				});
@@ -50,6 +50,7 @@ pm.data = (function() {
 			options.arguments.format = "json";
 			var arg_string = '';
 			for (var key in options.arguments) {
+				if (arg_string != '') { arg_string += '&'; }
 				arg_string += encodeURIComponent(key) + '=' + encodeURIComponent(options.arguments[key]);
 			}
 

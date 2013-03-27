@@ -52,7 +52,7 @@ pm.version = (function() {
 					// pushState so the Back button works, but TODO: this should be in pm.history?
 					var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
 					window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.job_id);
-					pm.jobs.version_action.switchTo({ job_id: data.job_id, version_id: url_match[1] });
+					pm.jobs.single.switchTo({ job_id: data.job_id, version_id: url_match[1] });
 				}
 			});
 		},
@@ -82,7 +82,7 @@ pm.version = (function() {
 							$('#main_right_view').html(pm.handlebars.version_view(version_data));
 
 							// once the main template is rendered, fill in breadcrumbs and redraw the app menu
-							pm.leftmenu.updateAppMenu(parents.workspace.id, { version: url_match[1] });
+							pm.leftmenu.updateAppMenu(parents.workspace.id, { version_id: url_match[1] });
 							pm.leftmenu.updateBreadcrumbs({
 								workspace: parents.workspace,
 								application: parents.application,

@@ -17,6 +17,39 @@ pm.node.list = (function() {
 	};
 
 	return {
+		updateBreadcrumbs: function(data) {
+			$('ul.breadcrumb').empty();
+
+			var list_li = $("<li>");
+			$('ul.breadcrumb').append(list_li);
+			if (data.node || data.suffix) {
+				var list_link = $("<a>", { "href": "/node/list" });
+				list_li.append(list_link);
+				list_link.text("Nodes");
+				list_li.append("<span class=\"divider\">&middot;</span>");
+			} else {
+				list_li.text("Nodes");
+			}
+			
+			if (data.node) {
+				var node_li = $("<li>");
+				$('ul.breadcrumb').append(node_li);
+				if (data.suffix) {
+					var node_link = $("<a>", { "href": "/node/" + data.node.id });
+					node_li.append(node_link);
+					node_link.text(data.node.name);
+					node_li.append("<span class=\"divider\">&middot;</span>");
+				} else {
+					node_li.text(data.node.name);
+				}
+			}
+			if (data.suffix) {
+				$('ul.breadcrumb').append(
+					$("<li>").text(data.suffix)
+				);
+			}
+		},
+
 		updateNodeMenu: function(highlight_node_id) {
 
 			pm.data.api({
@@ -58,16 +91,7 @@ pm.node.list = (function() {
 			pm.data.api({
 				endpoint: 'node/list',
 				callback: function(data) {
-					if ($('#left_menu_wrapper a').length && $('#main_right_view').length) {
-						$('#main_right_view').empty();
-					} else {
-						$('#main').empty();
-						$('#main').append(
-							$("<div id=\"left_menu_wrapper\">"),
-							$("<div id=\"main_right_view\" class=\"with-application-list\">")
-						);
-						pm.history.loadingOverlay("#main_right_view");
-					}
+					pm.leftmenu.redrawContainers();
 
 					var sorted_nodes = { pacemakers: [], hearts: [], routers: [] };
 					data.nodes.forEach(function(node) {
@@ -154,17 +178,7 @@ pm.node.detail = (function() {
 		switchTo: function() {
 			var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
 
-			if ($('#left_menu_wrapper a').length && $('#main_right_view').length) {
-				$('#main_right_view').empty();
-			} else {
-				$('#main').empty();
-				$('#main').append(
-					$("<div id=\"left_menu_wrapper\">"),
-					$("<div id=\"main_right_view\" class=\"with-application-list\">")
-				);
-				pm.history.loadingOverlay("#main_right_view");
-			}
-
+			pm.leftmenu.redrawContainers();
 			pm.node.list.updateNodeMenu(url_match[1]);
 
 			pm.data.api({
@@ -173,6 +187,7 @@ pm.node.detail = (function() {
 					var node = pm.node.detail.processNodeData(data.node);
 
 					$('#main_right_view').html(pm.handlebars.node_detail(node));
+					pm.node.list.updateBreadcrumbs(data);
 
 					pm.data.api({
 						endpoint: 'node/' + url_match[1] + '/instances',

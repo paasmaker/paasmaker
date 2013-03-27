@@ -2,6 +2,135 @@
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 if (!pm.jobs) { pm.jobs = {}; }
 
+pm.jobs.list = (function() {
+	return {
+		render: {
+			app_nav: function(data) {
+				pm.leftmenu.redrawContainers();
+
+				var parent_search = {};
+				parent_search[data.object_details[0] + "_id"] = data.object_details[1];
+				
+				parent_search.callback = function(parents) {
+						pm.leftmenu.updateAppMenu(parents.workspace.id, parent_search);
+						pm.leftmenu.updateBreadcrumbs({
+							workspace: parents.workspace,
+							application: parents.application,
+							version: parents.version,
+							suffix: data.breadcrumb_suffix
+						});
+					}
+				
+				pm.data.api({
+					endpoint: data.object_details.join('/'),
+					callback: function(object_data) {
+						if (object_data.workspace) {
+							data.title = "Jobs: " + object_data.workspace.name;
+						}
+						if (object_data.application) {
+							data.title = "Jobs: " + object_data.application.name;
+						}
+						if (object_data.version) {
+							data.title = "Jobs: Version " + object_data.version.version;
+						}
+					
+						pm.jobs.list.render.all(data);
+						pm.data.get_app_parents(parent_search);
+						$('.loading-overlay').remove();
+					}
+				});
+			},
+			
+			instancetype: function(data) {
+				// TODO: this isn't exposed anywhere in the interface
+				pm.jobs.list.render.all(data);
+			},
+			
+			node: function(data) {
+				pm.leftmenu.redrawContainers();
+				pm.node.list.updateNodeMenu(data.object_details[1]);
+
+				pm.data.api({
+					endpoint: 'node/' + data.object_details[1],
+					callback: function(node_data) {
+						data.title = "Node <code class=\"uuid-shrink\" title=\"" + node_data.node.uuid + "\"></code>";
+						pm.jobs.list.render.all(data);
+						
+						pm.widgets.uuid.update();
+						pm.node.list.updateBreadcrumbs(node_data);
+						$('.loading-overlay').remove();
+					}
+				});
+			},
+			
+			all: function(data) {
+				$(data.render_container).html(pm.handlebars.job_list(data));
+				
+				$('.job-root').each(function(i, el) {
+					new pm.jobs.display($(el));
+				});
+			}
+		},
+	
+		switchTo: function() {
+			var url_match = document.location.pathname.match(/^\/job\/list\/(.+)\/?$/);
+			var object_details = url_match[1].split('/');
+
+			pm.data.api({
+				endpoint: document.location.pathname + document.location.search,
+				callback: function(data) {
+					var draw_function;
+				
+					switch (object_details[0]) {
+						case "workspace":
+						case "application":
+						case "version":
+							data.show_breadcrumbs = true;
+							data.object_details = object_details;
+							if (document.location.search.indexOf('cron') !== -1) {
+								data.breadcrumb_suffix = "Cron Jobs";
+							} else {
+								data.breadcrumb_suffix = "All Jobs";
+							}
+							
+							data.render_container = '#main_right_view';
+							draw_function = pm.jobs.list.render.app_nav;
+							break;
+							
+						case "instancetype":
+							data.title = "Jobs for Instance Type";
+							data.render_container = '#main';
+							draw_function = pm.jobs.list.render.all;
+							break;
+						
+						case "node":
+							data.show_breadcrumbs = true;
+							data.object_details = object_details;
+							data.render_container = '#main_right_view';
+							draw_function = pm.jobs.list.render.node;
+							break;
+						
+						case "health":
+							data.title = "Health Checks";
+							data.render_container = '#main';
+							draw_function = pm.jobs.list.render.all;
+							break;
+							
+						case "periodic":
+							data.title = "Systemwide Periodic Tasks";
+							data.render_container = '#main';
+							draw_function = pm.jobs.list.render.all;
+							break;
+					}
+					
+					draw_function.apply(this, [data]);
+				}
+			});
+		}
+	};
+}());
+
+
 pm.jobs.summary = (function() {
 	return {
 		renderSummaryTree: function(job_id, tree_item) {
@@ -56,48 +185,45 @@ pm.jobs.summary = (function() {
 	};
 }());
 
-pm.jobs.version_action = (function() {
+pm.jobs.single = (function() {
 	return {
 		switchTo: function(state) {
-			// This code is only called from existing version views (not from pm.history),
-			// so setting up the wrappers isn't currently necessary
-			// if ($('#left_menu_wrapper a').length && $('#main_right_view').length) {
-			// 	$('#main_right_view').empty();
-			// } else {
-			// 	$('#main').empty();
-			// 	$('#main').append(
-			// 		$("<div id=\"left_menu_wrapper\">"),
-			// 		$("<div id=\"main_right_view\" class=\"with-application-list\">")
-			// 	);
-			// 	pm.history.loadingOverlay("#main_right_view");
-			// }
+			pm.leftmenu.redrawContainers();
+
+			if (state.job_id) {
+				var job_id = state.job_id;
+			} else {
+				// read job ID from the URL if it wasn't passed in
+				var url_match = document.location.pathname.match(/^\/job\/detail\/([0-9a-f\-]+)\/?$/);
+				var job_id = url_match[1];
+			}
 
 			var job_well = $("<div>");
 			job_well.addClass("job-root well well-small");
-			job_well.attr("data-job", state.job_id);
+			job_well.attr("data-job", job_id);
 
-			$('#main_right_view').empty()
-								 .append($('<ul class="breadcrumb">'))
-								 .append(job_well);
+			$('#main_right_view').append(job_well);
+			
+			if (state.version_id || state.application_id || state.workspace_id) {
+				// redraw breadcrumbs if we came from app navigation and had details passed in
+				$('#main_right_view').prepend($('<ul class="breadcrumb">'));
 
-			var parent_options = {
-				callback: function(parents) {
+				state.callback = function(parents) {
 					pm.leftmenu.updateBreadcrumbs({
 						workspace: parents.workspace,
 						application: parents.application,
 						version: parents.version,
-						suffix: "Job " + state.job_id
+						suffix: "Job " + job_id
 					});
-				}
-			};
-			
-			if (state.version_id) { parent_options.version_id = state.version_id; }
-			if (state.application_id) { parent_options.application_id = state.application_id; }
-			if (state.workspace_id) { parent_options.workspace_id = state.workspace_id; }
-
-			pm.data.get_app_parents(parent_options);
+				};
+				
+				pm.data.get_app_parents(state);
+			} else {
+				$('#main_right_view').prepend($('<h1>Job Detail</h1>'));
+			}
 
 			new pm.jobs.display(job_well);
+			$('.loading-overlay').remove();
 		}
 	};
 }());

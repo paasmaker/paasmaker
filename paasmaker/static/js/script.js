@@ -7,8 +7,7 @@ $(function() {
 	pm.history.init();
 });
 
-$(document).ready(
-	function()
+$(function()
 	{
 		var testBrowserFeatures = function(resultContainer) {
 			var tests = {
@@ -35,14 +34,6 @@ $(document).ready(
 
 		// set up the socket.io handler
 		pm.data.initSocket();
-
-		if( $('.job-root').length > 0 ) {
-			$('.job-root').each(
-				function(index, element) {
-					new pm.jobs.display($(element));
-				}
-			);
-		}
 
 		// search the page for .router-stats, and set up the stats widget in any that we find
 		// (no longer needed on ajax view pages like version list, but used on overview)

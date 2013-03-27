@@ -376,7 +376,7 @@ class BaseController(tornado.web.RequestHandler):
 		pm.history.js to perform necessary ajax requests, etc.
 		"""
 		if self.format == 'html':
-			self.add_data('js_commands', 'pm.history.onpopstate({ state: { handle_in_js: true } });')
+			self.add_data('js_commands', '$(function(){ pm.history.onpopstate({ state: { handle_in_js: true } }); });')
 			self.render("layout/main.html")
 		else:
 			self.render('')

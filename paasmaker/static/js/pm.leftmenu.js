@@ -87,7 +87,7 @@ pm.leftmenu = (function() {
 
 					processed_app_list = [];
 					data.applications.forEach(function(app) {
-						if (highlight_key && highlight_key.application && highlight_key.application == app.id) {
+						if (highlight_key && highlight_key.application_id && highlight_key.application_id == app.id) {
 							app.is_active = true;
 						}
 						app.health_class = bootstrap_health_classes[app.health];
@@ -114,7 +114,7 @@ pm.leftmenu = (function() {
 							if (data.current_version && version.id == data.current_version.id) {
 								version.is_current = true;
 							}
-							if (highlight_key && highlight_key.version && highlight_key.version == version.id) {
+							if (highlight_key && highlight_key.version_id && highlight_key.version_id == version.id) {
 								version.is_active = true;
 							}
 							processed_version_list.push(version);

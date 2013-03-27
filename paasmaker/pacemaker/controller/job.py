@@ -159,7 +159,7 @@ class JobListController(BaseController):
 		# TODO: Unit test.
 		def on_found_jobs(job_ids):
 			self.add_data('jobs', job_ids)
-			self.render("job/list.html")
+			self.client_side_render()
 
 		def on_found_tree(tree):
 			self.add_data('detail', tree)

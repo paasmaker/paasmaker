@@ -70,7 +70,7 @@ pm.upload = (function() {
 					}
 					
 					window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.job_id);
-					pm.jobs.version_action.switchTo(state);
+					pm.jobs.single.switchTo(state);
 				}
 			});
 		},
@@ -79,24 +79,23 @@ pm.upload = (function() {
 			pm.leftmenu.redrawContainers();
 			
 			var url_match, form_fetch_url, suffix;
-			var parent_search = {}, menu_highlight = {};
+			var parent_search = {};
 			url_match = document.location.pathname.match(/\/workspace\/(\d+)\/applications\/new/);
 			if (url_match) {
 				form_fetch_url = url_match[0];
 				parent_search.workspace_id = url_match[1];
-				menu_highlight.newApplication = true;
+				parent_search.newApplication = true;	// for highlighting in the app menu
 				suffix = "New Application";
 			} else {
 				url_match = document.location.pathname.match(/\/application\/(\d+)\/newversion/);
 				if (!url_match) { console.log("pm.upload controller called with invalid URL"); return false; }
 				form_fetch_url = url_match[0]
 				parent_search.application_id = url_match[1];
-				menu_highlight.application = url_match[1];
 				suffix = "New Version";
 			}
 
 			parent_search.callback = function(parents) {
-				pm.leftmenu.updateAppMenu(parents.workspace.id, menu_highlight);
+				pm.leftmenu.updateAppMenu(parents.workspace.id, parent_search);
 				pm.leftmenu.updateBreadcrumbs({
 					workspace: parents.workspace,
 					application: parents.application,

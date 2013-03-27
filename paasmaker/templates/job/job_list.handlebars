@@ -1,0 +1,15 @@
+{{#if show_breadcrumbs}}<ul class="breadcrumb"></ul>{{/if}}
+
+{{#if title}}<h1>{{{title}}}</h1>{{/if}}
+
+{{#each jobs}}
+	<div class="job-root well well-small" data-job="{{this}}">
+		Loading...
+	</div>
+{{/each}}
+
+{{#unless jobs.length}}
+	<div class="well">
+		No jobs to display.
+	</div>
+{{/unless}}

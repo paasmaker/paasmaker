@@ -18,6 +18,8 @@ pm.routingTable = [
 	[ /^\/role\/allocation\/list/, pm.admin.allocation_list ],
 	[ /^\/node\/list/, pm.node.list ],
 	[ /^\/node\/\d+\/?$/, pm.node.detail ],
+	[ /^\/job\/list\//, pm.jobs.list ],
+	[ /^\/job\/detail\//, pm.jobs.single ],
 	[ /^\/workspace\/\d+\/applications\/new\/?$/, pm.upload ],
 	[ /^\/application\/\d+\/newversion\/?$/, pm.upload ],
 	[ /^\/workspace\/create\/?$/, pm.workspace.edit ],

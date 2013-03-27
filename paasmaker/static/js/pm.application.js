@@ -74,7 +74,7 @@ pm.application.view = (function() {
 					$('.loading-overlay').remove();
 					// pushState so the Back button works, but TODO: this should be in pm.history?
 					window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.job_id);
-					pm.jobs.version_action.switchTo({ job_id: data.job_id, version_id: $(e.target).data('version-id') });
+					pm.jobs.single.switchTo({ job_id: data.job_id, version_id: $(e.target).data('version-id') });
 				}
 			});
 		},
@@ -109,7 +109,7 @@ pm.application.view = (function() {
 					pm.data.get_app_parents({
 						application_id: url_match[1],
 						callback: function(parents) {
-							pm.leftmenu.updateAppMenu(parents.workspace.id, { application: url_match[1] });
+							pm.leftmenu.updateAppMenu(parents.workspace.id, { application_id: url_match[1] });
 							pm.leftmenu.updateBreadcrumbs({
 								workspace: parents.workspace,
 								application: parents.application,
@@ -177,7 +177,7 @@ pm.application.services = (function() {
 							data.application = parents.application;
 							$('#main_right_view').html(pm.handlebars.application_services(data));
 						
-							pm.leftmenu.updateAppMenu(parents.workspace.id, { application: url_match[1] });
+							pm.leftmenu.updateAppMenu(parents.workspace.id, { application_id: url_match[1] });
 							pm.leftmenu.updateBreadcrumbs({
 								workspace: parents.workspace,
 								application: parents.application,

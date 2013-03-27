@@ -10,7 +10,6 @@ if (!pm.workspace) { pm.workspace = {}; }
 
 
 pm.workspace.view = (function() {
-
 	return {
 
 		switchTo: function() {
@@ -30,6 +29,16 @@ pm.workspace.view = (function() {
 						endpoint: 'job/list/workspace/' + url_match[1],
 						callback: function(job_data) {
 							pm.jobs.summary.show($('.workspace-overview .job-overview'), job_data.jobs.slice(0,5));
+							
+							$('.workspace-overview .job-overview').on('click', function(e) {
+								// when the user clicks on a job in the summary, provide extra data to the
+								// job detail controller so it can render breadcrumbs to get back here
+								e.preventDefault();
+								e.stopPropagation();
+								var state = { handle_in_js: true, workspace_id: url_match[1] };
+								window.history.pushState(state, '', $(e.target).attr('href'));
+								pm.jobs.single.switchTo(state);
+							});
 						}
 					});
 				}
