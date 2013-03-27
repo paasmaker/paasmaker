@@ -19,6 +19,7 @@ class TableDumpController(BaseController):
 		def on_dump_complete(table, serial, session):
 			self.add_data('table', table)
 			self.add_data('serial', serial)
+			self.add_data('frontend_domain_postfix', self.configuration.get_flat('pacemaker.frontend_domain_postfix'))
 			self.render("router/dump.html")
 			session.close()
 
