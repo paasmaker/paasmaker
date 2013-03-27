@@ -11,6 +11,13 @@ from paasmaker.common.core import constants
 
 import tornado
 
+# To set up your environment:
+# * Assuming you've used the example-paasmaker-hacking.yml installation file on your
+#   local machine.
+# $ nvm use v0.8.22
+# $ npm install handlebars -g
+# And you're good to go.
+
 class TemplatesController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
