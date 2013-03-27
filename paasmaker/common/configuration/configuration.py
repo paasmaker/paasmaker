@@ -724,7 +724,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		pacemaker = configuration.get_flat('pacemaker.enabled')
 
 	"""
-	def __init__(self, io_loop=None):
+	def __init__(self, io_loop=None, debug=False):
 		super(Configuration, self).__init__(ConfigurationSchema())
 		self.port_allocator = paasmaker.util.port.FreePortFinder()
 		self.plugins = paasmaker.util.PluginRegistry(self)
@@ -736,6 +736,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.node_logging_configured = False
 		self.database_sessions_checked_out = 0
 		self.database_sessions_checkout_pending = 0
+
+		# Debug flag handling.
+		self.debug = debug
+		if options.debug == 1:
+			self.debug = True
 
 	def uptime(self):
 		"""
@@ -1087,13 +1092,13 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			raise ImNotA("I'm not a pacemaker, so I have no database.")
 
 		debug_source_traceback = None
-		if options.debug == 1:
+		if self.debug:
 			debug_source_traceback = traceback.extract_stack()
 
 		def attach_tracker(session):
 			self.database_sessions_checkout_pending -= 1
 			self.database_sessions_checked_out += 1
-			if options.debug == 1:
+			if self.debug:
 				if not hasattr(self, '_session_close_tracker'):
 					self._session_close_tracker = {}
 
@@ -1151,7 +1156,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# Figure out which callback to go back through.
 		real_callback = attach_lightweight_counter
 
-		if options.debug == 1:
+		if self.debug:
 			real_callback = attach_tracker
 
 		logger.debug(
@@ -1357,7 +1362,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			settings['cookie_secret'] = self['node_token']
 		settings['template_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../templates')
 		settings['static_path'] = os.path.normpath(os.path.dirname(__file__) + '/../../static')
-		settings['debug'] = (options.debug == 1)
+		settings['debug'] = self.debug
 		settings['xheaders'] = True
 		if not settings['debug']:
 			# Turn on GZIP encoding, when not in debug mode.
