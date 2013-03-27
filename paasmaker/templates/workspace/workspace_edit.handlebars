@@ -1,0 +1,25 @@
+{{#if workspace.id}}
+	<ul class="breadcrumb"></ul>
+	<h1>Edit: {{workspace.name}}</h1>
+{{else}}
+	<h1>Create Workspace</h1>
+{{/if}}
+
+<!--<link href="/css/tag_editor.css" rel="stylesheet">
+<script src="/js/libs/jquery.jsoneditor.js"></script>-->
+
+<form method="POST" class="workspace-edit">
+	<label for="name">Name:</label>
+	<input name="name" id="workspace_name" type="text" value="{{workspace.name}}" />
+	<!-- {% raw format_form_error('name') %} -->
+
+	<label for="stub">Stub:</label>
+	<input name="stub" id="workspace_stub" type="text" value="{{workspace.stub}}" />
+	<!-- {% raw format_form_error('stub') %} -->
+
+	<input type="hidden" id="workspace_tags" name="serialised_tags" value="">
+	<div class="workspace-tag-editor pm-tag-editor well"></div>
+	<!-- {% raw format_form_error('tags') %} -->
+
+	<a class="btn btn-success job-action-button" href="#">Submit</a>
+</form>

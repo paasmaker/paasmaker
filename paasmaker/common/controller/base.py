@@ -687,7 +687,8 @@ class BaseController(tornado.web.RequestHandler):
 			if job_id is not None:
 				variables['job_id'] = job_id
 			variables['data'] = self.data
-			variables['success'] = True
+			if len(self.errors) == 0:
+				variables['success'] = True
 			variables['errors'] = self.errors
 			variables['warnings'] = self.warnings
 			self.set_header('Content-Type', 'application/json')

@@ -4,16 +4,14 @@
 
 .pm-tag-editor .property,
 .pm-tag-editor .value {
-  border: none;
   border-radius: 5px;
   padding: 3px;
   margin-right: 2px;
 }
 
 .pm-tag-editor .value {
-  background-color: #ECF3C3;
-  border: 1px solid #e0e0e0;
-  /*width: 600px;*/
+  background-color: #f0fcff;
+	border: solid 1px #999999; 
 }
 .pm-tag-editor .value-group {
 	background: none;
@@ -24,20 +22,15 @@
 }
 
 .pm-tag-editor .property {
-  background-color: #468847;
-  color: white;
+	border: solid 1px #999999;
   font-weight: bold;
 }
 .pm-tag-editor .group-header {
 	background: none !important; /* TODO: better solution */
+	border: none;
 	color: black;
 	display: inline-block;
 	min-width: 200px;
-}
-
-.pm-tag-editor .editing {
-  border: 1px solid gray;
-  outline: none;
 }
 
 .pm-tag-editor .item {
@@ -69,7 +62,6 @@
   background: url("data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAAXNSR0IArs4c6QAAAAZiS0dEAP8A/wD/oL2nkwAAAAlwSFlzAAALEwAACxMBAJqcGAAAAAd0SU1FB9sKBBAdNcQGwvUAAAGjSURBVDjLzZNNS1tREIafOfdGjcaA65hFKQUpWIWCLgwI3fQnFMGN0Z/QiqsWKVgKLrpx78pNoZv+BUU0WNRC/dgoTaFCMWnUNoZ7b6aLm5ycS+quix44cJiPd953Zg78N2fv9BwAVRVVNXdccWMBpP04PPvmnxwdfd7Z2hyxzpZXtVNocqpwkssPjx6XtoNisdgBOK/8WnxamHhrjEEAEUkwVFUUaDYjNj58XH88cn8OwHSqSbpe/22T3XTX1rhtUKtWLUtDIlAQEYwIURRZexgGGBEX2IryXb3S8uXyeQYzGYc/XN/cUC6XQTq9SQIQI4RhxPMXSzyZLtjmGYHS/iGzM89iQX8DUBQUUr7P6+VXrPb1MpjNAnBVq1G/bdCT6iEIAkeACxDno0Dl8pIwDDGeZwONSJynybH6XaNSpQl4nmcLiUCz5YttKl1TUNWrTDabAEmwU0VR+gcGSKfTla5NXH2/wYOh3MGn0u4jZzcss3afxsbGg+r3r4WF+YXdBMDW/hemxh/yZvnlPc/zU7ax7Qm1tPz8cVFeebdW/2ef8A+6rb2Fr7Cr4wAAAABJRU5ErkJggg==") no-repeat center center;
 }
 
-.pm-tag-editor .item.string > .property { background-color: #468847; }
-.pm-tag-editor .item.array > .property { background-color: #3a87ad; }
-.pm-tag-editor .item.object > .property { background-color: #f89406; }
-.pm-tag-editor .item.number > .property { background-color: #468847; }
+.pm-tag-editor .item.string > .property { background-color: #e0e0ff; }
+.pm-tag-editor .item.object > .property { background-color: #fff0da; }
+.pm-tag-editor .item.number > .property { background-color: #e0e0ff; }

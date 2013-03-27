@@ -67,10 +67,6 @@
             setObject(json_input);
         }
 
-        $('.property, .value', options.target_el).live('blur focus', function() {
-            $(this).toggleClass('editing');
-        });
-
         $.extend(this, {
             getObject: getObject,
             getJSON: getJSON,
@@ -189,7 +185,7 @@
         var json_at_path = def(current_object, path);
         while (typeof json_at_path[new_key] !== 'undefined') {
             suffix ++;
-            new_key = key_base + suffix;
+            new_key = key_base + ' ' + suffix;
         }
         var new_path = (path ? path + '.' : '') + new_key;
 

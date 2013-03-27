@@ -16,6 +16,10 @@
 			</li>
 			<li class="divider"></li>
 		{{/each}}
+		{{#unless applications.length}}
+			<li class="no-menu-items">No applications in this workspace</li>
+			<li class="divider"></li>
+		{{/unless}}
 		<li {{#if new_application_active}}class="active"{{/if}}><a href="/workspace/{{ workspace.id }}/applications/new">Create Application</a></li>
 	</ul>
 </div>

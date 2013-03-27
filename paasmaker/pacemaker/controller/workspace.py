@@ -70,7 +70,7 @@ class WorkspaceEditController(BaseController):
 		# The former requires WORKSPACE_EDIT and the latter only needs WORKSPACE_VIEW.
 		# TODO: the former should probably be /workspace/1/edit
 		if self.has_permission(constants.PERMISSION.WORKSPACE_EDIT):
-			self.render("workspace/edit.html")
+			self.client_side_render()
 		else:
 			self.render("api/apionly.html")
 
@@ -97,7 +97,8 @@ class WorkspaceEditController(BaseController):
 
 			self.add_data('workspace', workspace)
 
-			self.redirect('/workspace/' + str(workspace.id) + '/applications')
+			self.action_success(None, '/workspace/' + str(workspace.id) + '/applications')
+
 		else:
 			self.add_data('workspace', workspace)
 			self.render("workspace/edit.html")

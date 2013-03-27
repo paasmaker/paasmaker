@@ -121,33 +121,43 @@ pm.data = (function() {
 				arg_string += encodeURIComponent(key) + '=' + encodeURIComponent(options.arguments[key]);
 			}
 
-			$.post(
-				options.endpoint + '?' + arg_string,
-				options.body_data,
-				function(responseData) {
-					if (responseData.errors && responseData.errors.length > 0) {
-						console.log("API call to " + endpoint + " returned an error!");
-						console.log(responseData.errors);
-						if (options.errorCallback) {
-							options.errorCallback.apply(this, arguments);
-						}
+			var request_finished = function(responseData) {
+				if (responseData.setRequestHeader && responseData.responseText) {
+					// there was an error and the first argument is a jqXHR object;
+					// TODO: smarter detection of this, or a separate callback
+					responseData = JSON.parse(responseData.responseText);
+				}
+			
+				if (responseData.errors && responseData.errors.length > 0) {
+					console.log("API call to " + options.endpoint + " returned an error!");
+					console.log(responseData.errors);
+					if (options.errorCallback) {
+						options.errorCallback.apply(this, arguments);
 					}
-					if (responseData.warnings && responseData.warnings.length > 0) {
-						console.log("WARNING WARNING: API call to " + endpoint + " returned a warning!");
-						console.log(responseData.warnings);
-						if (options.warningCallback) {
-							options.warningCallback.apply(this, arguments);
-						}
+				}
+				if (responseData.warnings && responseData.warnings.length > 0) {
+					console.log("WARNING WARNING: API call to " + options.endpoint + " returned a warning!");
+					console.log(responseData.warnings);
+					if (options.warningCallback) {
+						options.warningCallback.apply(this, arguments);
 					}
+				}
 
-					if (responseData.success) {
-						var modified_args = arguments;
-						modified_args[0] = responseData;
-						options.callback.apply(this, modified_args);
-					}
-				},
-				"json"
-			);
+				if (responseData.success) {
+					var modified_args = arguments;
+					modified_args[0] = responseData;
+					options.callback.apply(this, modified_args);
+				}
+			}
+
+			$.ajax({
+				type: "POST",
+				url: options.endpoint + '?' + arg_string,
+				data: options.body_data,
+				error: request_finished,
+				success: request_finished,
+				dataType: "json"
+			});
 		},
 
 		/**
@@ -186,7 +196,13 @@ pm.data = (function() {
 		 * - final_callback optional callback to run after all requests have completed
 		 */
 		sequential_get: function(options) {
-			if (!options.requests || !options.requests.length) { return false; }
+			if (!options.requests || !options.requests.length) {
+				if (options.final_callback) {
+					options.final_callback.apply(this, []);
+				}
+				return false;
+			}
+			
 			var request_index = 0;
 		
 			var get_next = function(request) {

@@ -20,7 +20,9 @@ pm.routingTable = [
 	[ /^\/node\/\d+\/?$/, pm.node.detail ],
 	[ /^\/workspace\/\d+\/applications\/new\/?$/, pm.upload ],
 	[ /^\/application\/\d+\/newversion\/?$/, pm.upload ],
-	[ /^\/workspace\/\d+\/applications\/?$/, pm.workspace ],
+	[ /^\/workspace\/create\/?$/, pm.workspace.edit ],
+	[ /^\/workspace\/\d+\/?$/, pm.workspace.edit ],
+	[ /^\/workspace\/\d+\/applications\/?$/, pm.workspace.view ],
 	[ /^\/application\/\d+\/?$/, pm.application ],
 	[ /^\/version\/\d+\/?$/, pm.version ]
 ];

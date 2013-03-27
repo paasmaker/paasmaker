@@ -230,12 +230,17 @@ textarea.example-configuration
 #left_menu_wrapper { position: relative; }
 
 .application-list { position: absolute; top: 0; left: 0; width: 250px; border: 1px solid #e3e3e3; border-radius: 4px; }
+
 .application-list-name { display: block; font-size: larger; font-weight: bold; }
+.application-list li.no-menu-items { margin: 20px 0; line-height: 21px; font-size: smaller; font-style: italic; }
 
 .application-list-state { float: right; }
 .application-list .version { padding-left: 1.5em; }
 
 .with-application-list { margin-left: 270px; }
+
+/* Workspace edit page */
+.workspace-tag-editor { width: 480px; margin: 20px 0; }
 
 /* Version view - instance types list */
 .instance-type-column { width: 45%; float: left; }
