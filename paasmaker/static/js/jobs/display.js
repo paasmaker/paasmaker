@@ -218,6 +218,12 @@ pm.jobs.single = (function() {
 				};
 				
 				pm.data.get_app_parents(state);
+
+			} else if (state.node) {
+				// also redraw breadcrumbs if we came from a node details page
+				$('#main_right_view').prepend($('<ul class="breadcrumb">'));
+				pm.node.list.updateBreadcrumbs(state);
+
 			} else {
 				$('#main_right_view').prepend($('<h1>Job Detail</h1>'));
 			}

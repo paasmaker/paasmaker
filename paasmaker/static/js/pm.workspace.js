@@ -30,7 +30,7 @@ pm.workspace.view = (function() {
 						callback: function(job_data) {
 							pm.jobs.summary.show($('.workspace-overview .job-overview'), job_data.jobs.slice(0,5));
 							
-							$('.workspace-overview .job-overview').on('click', function(e) {
+							$('.workspace-overview .job-overview a').on('click', function(e) {
 								// when the user clicks on a job in the summary, provide extra data to the
 								// job detail controller so it can render breadcrumbs to get back here
 								e.preventDefault();

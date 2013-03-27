@@ -225,6 +225,16 @@ pm.node.detail = (function() {
 						endpoint: 'job/list/node/' + url_match[1],
 						callback: function(job_data) {
 							pm.jobs.summary.show($('div.job-overview'), job_data.jobs.slice(0,10));
+							
+							$('div.job-overview a').on('click', function(e) {
+								// when the user clicks on a job in the summary, provide extra data to the
+								// job detail controller so it can render breadcrumbs to get back here
+								e.preventDefault();
+								e.stopPropagation();
+								var state = { handle_in_js: true, node: data.node };
+								window.history.pushState(state, '', $(e.target).attr('href'));
+								pm.jobs.single.switchTo(state);
+							});
 						}
 					});
 
