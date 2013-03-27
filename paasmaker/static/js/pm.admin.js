@@ -15,7 +15,7 @@ pm.admin.profile = (function() {
 			pm.data.template_from_api({
 				endpoint: 'profile',
 				element: '#main',
-				template: pm.handlebars.user_profile
+				template: Handlebars.templates.user_profile
 			});
 		}
 	};
@@ -42,7 +42,7 @@ pm.admin.plugins = (function() {
 						}
 					}
 
-					$('#main').html(pm.handlebars.configuration_plugins({ plugins: valid_plugins }));
+					$('#main').html(Handlebars.templates.configuration_plugins({ plugins: valid_plugins }));
 				}
 			});
 		}
@@ -57,7 +57,7 @@ pm.admin.config_dump = (function() {
 				callback: function(data) {
 					var config_string = JSON.stringify(data.configuration, undefined, 4);
 
-					$('#main').html(pm.handlebars.configuration_dump({ configuration: config_string }));
+					$('#main').html(Handlebars.templates.configuration_dump({ configuration: config_string }));
 				}
 			});
 		}
@@ -75,8 +75,8 @@ pm.admin.user_list = (function() {
 						data.users[i].created_moment = pm.util.formatDate(data.users[i].created);
 						data.users[i].updated_moment = pm.util.formatDate(data.users[i].updated);
 					}
-				
-					$('#main').html(pm.handlebars.user_list(data));
+
+					$('#main').html(Handlebars.templates.user_list(data));
 				}
 			});
 		}
@@ -90,7 +90,7 @@ pm.admin.role_list = (function() {
 			pm.data.template_from_api({
 				endpoint: 'role/list',
 				element: '#main',
-				template: pm.handlebars.role_list
+				template: Handlebars.templates.role_list
 			});
 		}
 	};
@@ -102,7 +102,7 @@ pm.admin.allocation_list = (function() {
 			pm.data.template_from_api({
 				endpoint: 'role/allocation/list',
 				element: '#main',
-				template: pm.handlebars.role_allocation_list
+				template: Handlebars.templates.role_allocation_list
 			});
 		}
 	};

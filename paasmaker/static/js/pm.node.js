@@ -30,7 +30,7 @@ pm.node.list = (function() {
 			} else {
 				list_li.text("Nodes");
 			}
-			
+
 			if (data.node) {
 				var node_li = $("<li>");
 				$('ul.breadcrumb').append(node_li);
@@ -71,7 +71,7 @@ pm.node.list = (function() {
 					});
 					data.nodes = processed_node_list;
 
-					$('#left_menu_wrapper').html(pm.handlebars.node_menu(data));
+					$('#left_menu_wrapper').html(Handlebars.templates.node_menu(data));
 				}
 			});
 		},
@@ -80,7 +80,7 @@ pm.node.list = (function() {
 			var t = $(e.target);
 			if (t.hasClass('node-delete-button')) {
 				$('#node_delete_modal').remove();
-				$('#main_right_view').append(pm.handlebars.node_delete({
+				$('#main_right_view').append(Handlebars.templates.node_delete({
 					name: t.data('node-name'), id: t.data('node-id')
 				}));
 				$('#node_delete_modal').modal();
@@ -108,7 +108,7 @@ pm.node.list = (function() {
 						}
 					});
 
-					$('#main_right_view').html(pm.handlebars.node_list(sorted_nodes));
+					$('#main_right_view').html(Handlebars.templates.node_list(sorted_nodes));
 
 					pm.node.list.updateNodeMenu();
 					pm.widgets.uuid.update();
@@ -186,14 +186,14 @@ pm.node.detail = (function() {
 				callback: function(data) {
 					var node = pm.node.detail.processNodeData(data.node);
 
-					$('#main_right_view').html(pm.handlebars.node_detail(node));
+					$('#main_right_view').html(Handlebars.templates.node_detail(node));
 					pm.node.list.updateBreadcrumbs(data);
 
 					pm.data.api({
 						endpoint: 'node/' + url_match[1] + '/instances',
 						callback: function(instance_data) {
 							instance_data.instances.forEach(function(instance) {
-								$('table.node-instances').append(pm.handlebars.node_instance_row(instance));
+								$('table.node-instances').append(Handlebars.templates.node_instance_row(instance));
 							});
 
 							// after rendering instances, set up expandable UUIDs
@@ -225,7 +225,7 @@ pm.node.detail = (function() {
 						endpoint: 'job/list/node/' + url_match[1],
 						callback: function(job_data) {
 							pm.jobs.summary.show($('div.job-overview'), job_data.jobs.slice(0,10));
-							
+
 							$('div.job-overview a').on('click', function(e) {
 								// when the user clicks on a job in the summary, provide extra data to the
 								// job detail controller so it can render breadcrumbs to get back here

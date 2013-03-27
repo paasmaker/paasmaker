@@ -161,9 +161,16 @@
 		<script src="{{ static_url("js/pm.upload.js") }}"></script>
 		<script src="{{ static_url("js/pm.history.js") }}"></script>
 
+		{# Handlebars templates. Run in debug mode and view the page to recompile them all.
+			Check in any changes that it makes to pm.templates.js for production systems. #}
+		{% if debug %}
+			<script src="/development/templates.js"></script>
+		{% else %}
+			<script src="{{ static_url("js/pm.templates.js") }}"></script>
+		{% end %}
+
 		<script src="/my-permissions.js" type="text/javascript"></script>
 		<script type="text/javascript">
-			{% if "handlebars_templates" in globals() %}{% raw handlebars_templates %}{% end %}
 			{% if "js_commands" in globals() %}{% raw js_commands %}{% end %}
 		</script>
 		{% block scripts %}

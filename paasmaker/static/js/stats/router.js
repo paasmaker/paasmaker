@@ -476,8 +476,8 @@ pm.stats.routerstats = (function(){
 				]
 			}
 
-			primaryStats.html(pm.handlebars.router_stats_section(primaryStatsSet));
-			secondaryStats.html(pm.handlebars.router_stats_section(secondaryStatsSet));
+			primaryStats.html(Handlebars.templates.router_stats_section(primaryStatsSet));
+			secondaryStats.html(Handlebars.templates.router_stats_section(secondaryStatsSet));
 
 			buttonBox.show();	// in case no stats were available and we hid it
 

@@ -14,14 +14,14 @@ pm.workspace.view = (function() {
 
 		switchTo: function() {
 			pm.leftmenu.redrawContainers();
-			
+
 			var url_match = document.location.pathname.match(/\/(\d+)\//);
 			pm.leftmenu.updateAppMenu(url_match[1]);
-			
+
 			pm.data.api({
 				endpoint: 'workspace/' + url_match[1],	// or just document.location?
 				callback: function(data) {
-					$('#main_right_view').html(pm.handlebars.workspace_main(data));
+					$('#main_right_view').html(Handlebars.templates.workspace_main(data));
 					$('.loading-overlay').remove();
 					pm.stats.workspace.redraw();
 
@@ -29,7 +29,7 @@ pm.workspace.view = (function() {
 						endpoint: 'job/list/workspace/' + url_match[1],
 						callback: function(job_data) {
 							pm.jobs.summary.show($('.workspace-overview .job-overview'), job_data.jobs.slice(0,5));
-							
+
 							$('.workspace-overview .job-overview a').on('click', function(e) {
 								// when the user clicks on a job in the summary, provide extra data to the
 								// job detail controller so it can render breadcrumbs to get back here
@@ -55,14 +55,14 @@ pm.workspace.edit = (function() {
 	return {
 
 		drawForm: function(data) {
-			$('#main_right_view').html(pm.handlebars.workspace_edit(data));
-			
+			$('#main_right_view').html(Handlebars.templates.workspace_edit(data));
+
 			if (data.workspace.id !== null) {
 				pm.leftmenu.updateBreadcrumbs({
 					workspace: data.workspace, suffix: "Edit Workspace"
 				});
 			}
-			
+
 			if (data.workspace.id === null) {
 				// when creating a workspace (i.e. stub is empty), auto-generate stub from the name
 				pm.workspace.edit.nameChanged();
@@ -75,27 +75,27 @@ pm.workspace.edit = (function() {
 					}
 				});
 			}
-			
+
 			// TODO: a proper loader for the JS plugin and for the extra CSS file
 			$('head').append('<link rel="stylesheet" href="/static/css/tag_editor.css">');
 			pm.workspace.edit.jsonEditor(data.workspace.tags);
-			
+
 			$('.loading-overlay').remove();
 		},
 
 		newWorkspaceForm: function() {
 			form_submit_url = 'workspace/create';
-			
+
 			// when creating a new workspace, showing the menu of
 			// another makes no sense; TODO: maybe use a modal
 			$("#left_menu_wrapper").empty();
-			
+
 			pm.data.api({
 				endpoint: 'workspace/list',
 				callback: function(data) {
 					var new_name = "New Workspace";
 					var valid_name = false;
-					
+
 					while (!valid_name) {
 						for (var i = 0, workspace; workspace = data.workspaces[i]; i++) {
 							if (workspace.name == new_name) {
@@ -112,7 +112,7 @@ pm.workspace.edit = (function() {
 							}
 						}
 					}
-									
+
 					pm.workspace.edit.drawForm({
 						workspace: {
 							id: null,
@@ -146,7 +146,7 @@ pm.workspace.edit = (function() {
 		generateStub: function(name) {
 			return name.replace(/[^a-zA-Z0-9]/g, '');
 		},
-		
+
 		nameChanged: function() {
 			$('#workspace_stub').val(
 				pm.workspace.edit.generateStub($('#workspace_name').val())
@@ -156,7 +156,7 @@ pm.workspace.edit = (function() {
 		actionButton: function(e) {
 			pm.history.loadingOverlay("#main_right_view");
 			$("div.alert").remove();
-			
+
 			pm.data.post({
 				endpoint: form_submit_url,
 				body_data: $('form.workspace-edit').serialize(),
@@ -177,18 +177,18 @@ pm.workspace.edit = (function() {
 
 		switchTo: function() {
 			pm.leftmenu.redrawContainers();
-			
+
 			var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
-			
+
 			if (url_match) {
 				pm.leftmenu.updateAppMenu(url_match[1]);
 				form_submit_url = 'workspace/' + url_match[1];
-				
+
 				pm.data.api({
 					endpoint: 'workspace/' + url_match[1],	// or just document.location?
 					callback: pm.workspace.edit.drawForm
 				});
-				
+
 			} else {
 				pm.workspace.edit.newWorkspaceForm();
 			}

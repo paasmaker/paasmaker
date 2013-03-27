@@ -10,7 +10,7 @@ pm.jobs.list = (function() {
 
 				var parent_search = {};
 				parent_search[data.object_details[0] + "_id"] = data.object_details[1];
-				
+
 				parent_search.callback = function(parents) {
 						pm.leftmenu.updateAppMenu(parents.workspace.id, parent_search);
 						pm.leftmenu.updateBreadcrumbs({
@@ -20,7 +20,7 @@ pm.jobs.list = (function() {
 							suffix: data.breadcrumb_suffix
 						});
 					}
-				
+
 				pm.data.api({
 					endpoint: data.object_details.join('/'),
 					callback: function(object_data) {
@@ -33,19 +33,19 @@ pm.jobs.list = (function() {
 						if (object_data.version) {
 							data.title = "Jobs: Version " + object_data.version.version;
 						}
-					
+
 						pm.jobs.list.render.all(data);
 						pm.data.get_app_parents(parent_search);
 						$('.loading-overlay').remove();
 					}
 				});
 			},
-			
+
 			instancetype: function(data) {
 				// TODO: this isn't exposed anywhere in the interface
 				pm.jobs.list.render.all(data);
 			},
-			
+
 			node: function(data) {
 				pm.leftmenu.redrawContainers();
 				pm.node.list.updateNodeMenu(data.object_details[1]);
@@ -55,23 +55,23 @@ pm.jobs.list = (function() {
 					callback: function(node_data) {
 						data.title = "Node <code class=\"uuid-shrink\" title=\"" + node_data.node.uuid + "\"></code>";
 						pm.jobs.list.render.all(data);
-						
+
 						pm.widgets.uuid.update();
 						pm.node.list.updateBreadcrumbs(node_data);
 						$('.loading-overlay').remove();
 					}
 				});
 			},
-			
+
 			all: function(data) {
-				$(data.render_container).html(pm.handlebars.job_list(data));
-				
+				$(data.render_container).html(Handlebars.templates.job_list(data));
+
 				$('.job-root').each(function(i, el) {
 					new pm.jobs.display($(el));
 				});
 			}
 		},
-	
+
 		switchTo: function() {
 			var url_match = document.location.pathname.match(/^\/job\/list\/(.+)\/?$/);
 			var object_details = url_match[1].split('/');
@@ -80,7 +80,7 @@ pm.jobs.list = (function() {
 				endpoint: document.location.pathname + document.location.search,
 				callback: function(data) {
 					var draw_function;
-				
+
 					switch (object_details[0]) {
 						case "workspace":
 						case "application":
@@ -92,37 +92,37 @@ pm.jobs.list = (function() {
 							} else {
 								data.breadcrumb_suffix = "All Jobs";
 							}
-							
+
 							data.render_container = '#main_right_view';
 							draw_function = pm.jobs.list.render.app_nav;
 							break;
-							
+
 						case "instancetype":
 							data.title = "Jobs for Instance Type";
 							data.render_container = '#main';
 							draw_function = pm.jobs.list.render.all;
 							break;
-						
+
 						case "node":
 							data.show_breadcrumbs = true;
 							data.object_details = object_details;
 							data.render_container = '#main_right_view';
 							draw_function = pm.jobs.list.render.node;
 							break;
-						
+
 						case "health":
 							data.title = "Health Checks";
 							data.render_container = '#main';
 							draw_function = pm.jobs.list.render.all;
 							break;
-							
+
 						case "periodic":
 							data.title = "Systemwide Periodic Tasks";
 							data.render_container = '#main';
 							draw_function = pm.jobs.list.render.all;
 							break;
 					}
-					
+
 					draw_function.apply(this, [data]);
 				}
 			});
@@ -203,7 +203,7 @@ pm.jobs.single = (function() {
 			job_well.attr("data-job", job_id);
 
 			$('#main_right_view').append(job_well);
-			
+
 			if (state.version_id || state.application_id || state.workspace_id) {
 				// redraw breadcrumbs if we came from app navigation and had details passed in
 				$('#main_right_view').prepend($('<ul class="breadcrumb">'));
@@ -216,7 +216,7 @@ pm.jobs.single = (function() {
 						suffix: "Job " + job_id
 					});
 				};
-				
+
 				pm.data.get_app_parents(state);
 
 			} else if (state.node) {

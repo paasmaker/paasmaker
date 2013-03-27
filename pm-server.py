@@ -131,6 +131,9 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.newinterface.NewInterfaceQUnitTestController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.tools.ToolsController.get_routes(route_extras))
 
+	if configuration.debug:
+		routes.extend(paasmaker.pacemaker.controller.templates.TemplatesController.get_routes(route_extras))
+
 	routes.extend(paasmaker.pacemaker.controller.role.RoleEditController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.role.RoleListController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.role.RoleAllocationListController.get_routes(route_extras))

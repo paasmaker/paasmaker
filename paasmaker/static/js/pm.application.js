@@ -103,7 +103,7 @@ pm.application.view = (function() {
 					}
 
 					// render main template body (but with empty tables)
-					$('#main_right_view').html(pm.handlebars.application_versions(data));
+					$('#main_right_view').html(Handlebars.templates.application_versions(data));
 
 					// re-render menu and breadcrumbs
 					pm.data.get_app_parents({
@@ -121,10 +121,10 @@ pm.application.view = (function() {
 					// add rows for each version from separate template file;
 					// then fire off a separate API request to get instance counts
 					if (data.current_version) {
-						$('table.current_version').append(pm.handlebars.application_version_row(data.current_version));
+						$('table.current_version').append(Handlebars.templates.application_version_row(data.current_version));
 					}
 					data.versions.forEach(function(version) {
-						$('table.all_versions').append(pm.handlebars.application_version_row(version));
+						$('table.all_versions').append(Handlebars.templates.application_version_row(version));
 
 						pm.data.api({
 							endpoint: 'version/' + version.id + '/instances',
@@ -170,20 +170,20 @@ pm.application.services = (function() {
 							data.services[i].credentials_text = JSON.stringify(data.services[i].credentials, undefined, 4);
 						}
 					}
-				
+
 					pm.data.get_app_parents({
 						application_id: url_match[1],
 						callback: function(parents) {
 							data.application = parents.application;
-							$('#main_right_view').html(pm.handlebars.application_services(data));
-						
+							$('#main_right_view').html(Handlebars.templates.application_services(data));
+
 							pm.leftmenu.updateAppMenu(parents.workspace.id, { application_id: url_match[1] });
 							pm.leftmenu.updateBreadcrumbs({
 								workspace: parents.workspace,
 								application: parents.application,
 								suffix: "Services"
 							});
-							
+
 							$('.loading-overlay').remove();
 						}
 					});

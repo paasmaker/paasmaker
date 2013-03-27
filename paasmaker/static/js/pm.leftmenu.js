@@ -78,7 +78,7 @@ pm.leftmenu = (function() {
 			$('.loading-overlay').remove();
 			pm.history.loadingOverlay("#main_right_view");
 		},
-		
+
 		updateAppMenu: function(new_workspace_id, highlight_key) {
 			pm.data.api({
 				endpoint: "workspace/" + new_workspace_id + "/applications",
@@ -101,9 +101,9 @@ pm.leftmenu = (function() {
 		},
 
 		redrawAppMenu: function(app_data, highlight_key) {
-			var new_menu = $(pm.handlebars.app_menu(app_data));
+			var new_menu = $(Handlebars.templates.app_menu(app_data));
 			var version_requests = [];
-			
+
 			$('li.application', new_menu).each(function(i, el) {
 				var app_id = $(el).data('application-id');
 				version_requests.push({
@@ -120,11 +120,11 @@ pm.leftmenu = (function() {
 							processed_version_list.push(version);
 						});
 						data.versions = processed_version_list;
-						$(el).after(pm.handlebars.app_menu_versions(data));
+						$(el).after(Handlebars.templates.app_menu_versions(data));
 					}
 				});
 			});
-			
+
 			pm.data.sequential_get({
 				requests: version_requests,
 				final_callback: function() {

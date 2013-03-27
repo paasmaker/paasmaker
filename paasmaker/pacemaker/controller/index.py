@@ -18,7 +18,6 @@ class IndexController(BaseController):
 		else:
 			self.render("index-notpacemaker.html")
 
-	@tornado.gen.engine
 	def show_overview(self):
 		# self.require_permission(constants.PERMISSION.SYSTEM_OVERVIEW)
 
@@ -63,4 +62,3 @@ class IndexController(BaseController):
 		routes = []
 		routes.append((r"/", IndexController, configuration))
 		return routes
-

@@ -79,7 +79,7 @@ pm.version = (function() {
 							// render main template body (but with empty tables); this needs to be done after
 							// get_app_parents returns because permission checking needs the workspace ID
 							version_data.workspace_id = parents.workspace.id;
-							$('#main_right_view').html(pm.handlebars.version_view(version_data));
+							$('#main_right_view').html(Handlebars.templates.version_view(version_data));
 
 							// once the main template is rendered, fill in breadcrumbs and redraw the app menu
 							pm.leftmenu.updateAppMenu(parents.workspace.id, { version_id: url_match[1] });
@@ -92,7 +92,7 @@ pm.version = (function() {
 							$('#app_manifest_modal').on('show', function() {
 								pm.data.template_from_api({
 									endpoint: 'version/' + url_match[1] + '/manifest',
-									template: pm.handlebars.version_manifest,
+									template: Handlebars.templates.version_manifest,
 									element: '#app_manifest_modal .modal-body'
 								});
 							});
@@ -108,10 +108,10 @@ pm.version = (function() {
 										this_view.frontend_domain_postfix = version_data.frontend_domain_postfix;
 										this_view.workspace_id = parents.workspace.id;
 
-										$('#main_right_view').append(pm.handlebars.version_instance_types(this_view));
+										$('#main_right_view').append(Handlebars.templates.version_instance_types(this_view));
 									}
 
-									// after rendering instances: 
+									// after rendering instances:
 									// - set up expandable UUIDs and editable fields
 									// - fetch node names from the API
 									// - add event handlers for viewing instance logs

@@ -18,3 +18,4 @@ from package import PackageDownloadController, PackageSizeController
 from scmlist import ScmListController
 from configuration import ConfigurationDumpController, PluginInformationController
 import stream
+import templates
