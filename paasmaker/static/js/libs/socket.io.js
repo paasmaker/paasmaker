@@ -2452,7 +2452,14 @@ var io = ('undefined' === typeof module ? {} : module.exports);
     this.socket.onError(e);
 
     // Hack to force failover to XHR instantly.
-    this.socket.handleReconnectionFunction();
+    var _self = this;
+    setTimeout(
+      function() {
+        _self.socket.handleReconnectionFunction();
+      },
+      10
+    );
+
   };
 
   /**
