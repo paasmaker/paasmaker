@@ -91,7 +91,6 @@ pm.stats.routergraph = (function(){
 		var graph = {};
 		var plot;
 		var timeout;
-		var dataset = {};
 		var graphOptions = module.types[metric_type];
 
 		// Resolve the container.
@@ -102,12 +101,28 @@ pm.stats.routergraph = (function(){
 			'router.stats.history',
 			function(serverStatCategory, serverInputId, start, end, returned_data) {
 				if(serverStatCategory == statCategory && serverInputId == statInputId) {
-					graph.newData(start, end, returned_data);
+					// graph.newData(start, end, returned_data);
 
 					// TODO: this seems to trigger a bug where more than one request is
 					// sent for each response that comes back, causing exponentially crazy
 					// messages back and forth. For now, setInterval is a workaround.
 					// timeout = setTimeout(function() { graph.requestUpdate() }, 2000);
+
+					var processed_data = {};
+
+					for (var metric in returned_data) {
+						if (module.types[metric_type].socket_request.indexOf(metric) === -1) {
+							// we did not request this metric (but might get it because the subscribe call
+							// responds to all router.stats websocket calls, not just the ones we started)
+							return false;
+						}
+					}
+
+					for (var metric in returned_data) {
+						processed_data[metric] = graph.processTimeSeries(start, end, returned_data[metric]);
+					}
+
+					graph.showGraph(processed_data);
 				}
 			}
 		);
@@ -115,48 +130,52 @@ pm.stats.routergraph = (function(){
 		// Set up the Flot object.
 		plot = $.plot(container, [], module.types[metric_type].flot_options);
 
-		graph.newData = function(request_start_time, request_end_time, graphPoints) {
-			for (var metric in graphPoints) {
-				if (module.types[metric_type].socket_request.indexOf(metric) === -1) {
-					// we did not request this metric (but might get it because the subscribe call
-					// responds to all router.stats websocket calls, not just the ones we started)
-					continue;
-				}
-
-				var old_points_to_remove = 0;
-
-				if (!dataset[metric]) {
-					// without existing data, just use the timestamps requested from the server
-					var start_time = request_start_time;
-					dataset[metric] = [];
-
-				} else {
-
-					var last_existing_point = dataset[metric][ dataset[metric].length-1 ];
-					if (graphPoints[metric].length && last_existing_point[0] / 1000 >= graphPoints[metric][0][0]) {
-						// if the last old point and first new point overlap, prefer the new value
-						// TODO: test if this check is needed
-						dataset[metric].pop();
-						old_points_to_remove --;
-						last_existing_point = dataset[metric][ dataset[metric].length-1 ];
-					}
-
-					// start processing new points one second after our old points
-					var start_time = last_existing_point[0] / 1000 + 1;
-
-				}
-
-				var processed_new_points = graph.processTimeSeries(start_time, request_end_time, graphPoints[metric]);
-
-				old_points_to_remove += processed_new_points.length;
-
-				// add the new points and remove an equal number from the beginning
-				dataset[metric].splice(0, old_points_to_remove);
-				dataset[metric] = dataset[metric].concat(processed_new_points);
-			}
-
-			graph.showGraph();
-		};
+		// This code assumed that each new batch of data wouldn't overlap with already-received data,
+		// but since the switch to a setInterval that is no longer guaranteed. For now, we'll just
+		// request a whole graph's worth of data (sixty seconds) from the server at a time, but
+		// incremental loading will probably be needed in future.
+		// graph.newData = function(request_start_time, request_end_time, graphPoints) {
+		// 	for (var metric in graphPoints) {
+		// 		if (module.types[metric_type].socket_request.indexOf(metric) === -1) {
+		// 			// we did not request this metric (but might get it because the subscribe call
+		// 			// responds to all router.stats websocket calls, not just the ones we started)
+		// 			continue;
+		// 		}
+		//
+		// 		var old_points_to_remove = 0;
+		//
+		// 		if (!dataset[metric]) {
+		// 			// without existing data, just use the timestamps requested from the server
+		// 			var start_time = request_start_time;
+		// 			dataset[metric] = [];
+		//
+		// 		} else {
+		//
+		// 			var last_existing_point = dataset[metric][ dataset[metric].length-1 ];
+		// 			if (graphPoints[metric].length && last_existing_point[0] / 1000 >= graphPoints[metric][0][0]) {
+		// 				// if the last old point and first new point overlap, prefer the new value
+		// 				// TODO: test if this check is needed
+		// 				dataset[metric].pop();
+		// 				old_points_to_remove --;
+		// 				last_existing_point = dataset[metric][ dataset[metric].length-1 ];
+		// 			}
+		//
+		// 			// start processing new points one second after our old points
+		// 			var start_time = last_existing_point[0] / 1000 + 1;
+		//
+		// 		}
+		//
+		// 		var processed_new_points = graph.processTimeSeries(start_time, request_end_time, graphPoints[metric]);
+		//
+		// 		old_points_to_remove += processed_new_points.length;
+		//
+		// 		// add the new points and remove an equal number from the beginning
+		// 		dataset[metric].splice(0, old_points_to_remove);
+		// 		dataset[metric] = dataset[metric].concat(processed_new_points);
+		// 	}
+		//
+		// 	graph.showGraph();
+		// };
 
 		graph.processTimeSeries = function(start, end, graphPoints) {
 			// The python code doesn't return zero values, so walk over graphPoints
@@ -179,14 +198,14 @@ pm.stats.routergraph = (function(){
 
 			if (graphPoints[points_index]) {
 				// move the last element of graphPoints if we missed it; TODO: test if this is needed
-				// console.log(graphPoints.length, points_index);
+				console.log(graphPoints.length, points_index);
 				processed_points.push([ graphPoints[points_index][0] * 1000, graphPoints[points_index][1] ]);
 			}
 
 			return processed_points;
 		}
 
-		graph.formatDatasetForFlot = function() {
+		graph.formatDatasetForFlot = function(dataset) {
 			var flot_friendly_data = [];
 
 			for (var metric in dataset) {
@@ -206,8 +225,8 @@ pm.stats.routergraph = (function(){
 			return flot_friendly_data;
 		}
 
-		graph.showGraph = function() {
-			plot.setData( graph.formatDatasetForFlot() );
+		graph.showGraph = function(dataset) {
+			plot.setData( graph.formatDatasetForFlot(dataset) );
 			plot.setupGrid();
 			plot.draw();
 		}
@@ -235,13 +254,14 @@ pm.stats.routergraph = (function(){
 		};
 
 		graph.requestUpdate = function() {
-			// Request an update from the server.
+			// Request the last 60 seconds of stats from the server.
+			var now = new Date();
 			pm.data.emit(
 				'router.stats.history',
 				statCategory,
 				statInputId,
 				module.types[metric_type].socket_request,
-				graph.getLastTimestamp()
+				(now.getTime() / 1000) - 60
 			);
 		};
 
