@@ -42,6 +42,8 @@ http {
 	access_log %(log_path)s/access.log.paasmaker paasmaker;
 	access_log %(log_path)s/access.log combined;
 
+	client_max_body_size 10M;
+
 	%(temp_paths)s
 
 	server {
