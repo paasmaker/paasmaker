@@ -19,7 +19,7 @@ pm.application.view = (function() {
 				stop: (version.state == 'RUNNING'),
 				deregister: (version.state == 'READY'),
 				makecurrent: (version.state == 'RUNNING' && !version.is_current),
-				delete: (version.state == 'PREPARED' && !version.is_current)
+				delete: ((version.state == 'PREPARED' || version.state == 'NEW') && !version.is_current)
 			};
 		},
 
