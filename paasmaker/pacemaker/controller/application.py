@@ -386,14 +386,18 @@ class ApplicationServiceListController(ApplicationRootController):
 		application = self._get_application(application_id)
 		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=application.workspace)
 
-		self._paginate('services', application.services)
-		self.add_data('application', application)
-		self.add_data_template('json', json)
+		self.add_data('services', application.services)
+		# self.add_data('application', application)
+		# self.add_data_template('json', json)
+
+		# TODO: we only need version ID and name here, and the API would probably be cleaner
+		# if it was just a list of IDs. Maybe write an alternative to add_extra_data_fields?
+		self.add_extra_data_fields(paasmaker.model.Service, 'application_versions')
 
 		if self.has_permission(constants.PERMISSION.APPLICATION_SERVICE_DETAIL, workspace=application.workspace):
 			self.add_extra_data_fields(paasmaker.model.Service, 'credentials')
 
-		self.render("application/services.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):

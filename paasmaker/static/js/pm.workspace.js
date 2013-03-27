@@ -49,7 +49,7 @@ pm.workspace.edit = (function() {
 			$('#main_right_view').html(pm.handlebars.workspace_edit(data));
 			
 			if (data.workspace.id !== null) {
-				pm.application.updateBreadcrumbs({
+				pm.leftmenu.updateBreadcrumbs({
 					workspace: data.workspace, suffix: "Edit Workspace"
 				});
 			}

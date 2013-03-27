@@ -23,7 +23,8 @@ pm.routingTable = [
 	[ /^\/workspace\/create\/?$/, pm.workspace.edit ],
 	[ /^\/workspace\/\d+\/?$/, pm.workspace.edit ],
 	[ /^\/workspace\/\d+\/applications\/?$/, pm.workspace.view ],
-	[ /^\/application\/\d+\/?$/, pm.application ],
+	[ /^\/application\/\d+\/services\/?$/, pm.application.services ],
+	[ /^\/application\/\d+\/?$/, pm.application.view ],
 	[ /^\/version\/\d+\/?$/, pm.version ]
 ];
 

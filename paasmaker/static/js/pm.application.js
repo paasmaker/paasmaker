@@ -6,56 +6,11 @@
  */
 
 if (!window.pm) { var pm = {}; }	// TODO: module handling
+if (!pm.application) { pm.application = {}; }
 
-pm.application = (function() {
+pm.application.view = (function() {
 
 	return {
-
-		updateBreadcrumbs: function(data) {
-			$('ul.breadcrumb').empty();
-
-			if (data.workspace) {
-				var ws_li = $("<li>");
-				$('ul.breadcrumb').append(ws_li);
-				if (data.application || data.version || data.suffix) {
-					var ws_link = $("<a>", { "href": "/workspace/" + data.workspace.id + "/applications" });
-					ws_li.append(ws_link);
-					ws_link.text(data.workspace.name);
-					ws_li.append("<span class=\"divider\">&middot;</span>");
-				} else {
-					ws_li.text(data.workspace.name);
-				}
-			}
-			if (data.application) {
-				var app_li = $("<li>");
-				$('ul.breadcrumb').append(app_li);
-				if (data.version || data.suffix) {
-					var app_link = $("<a>", { "href": "/application/" + data.application.id });
-					app_li.append(app_link);
-					app_link.text(data.application.name);
-					app_li.append("<span class=\"divider\">&middot;</span>");
-				} else {
-					app_li.text(data.application.name);
-				}
-			}
-			if (data.version) {
-				var ver_li = $("<li>");
-				$('ul.breadcrumb').append(ver_li);
-				if (data.suffix) {
-					var ver_link = $("<a>", { "href": "/version/" + data.version.id });
-					ver_li.append(ver_link);
-					ver_link.text("Version " + data.version.version);
-					ver_li.append("<span class=\"divider\">&middot;</span>");
-				} else {
-					ver_li.text("Version " + data.version.version);
-				}
-			}
-			if (data.suffix) {
-				$('ul.breadcrumb').append(
-					$("<li>").text(data.suffix)
-				);
-			}
-		},
 
 		getButtonMap: function(version) {
 			return {
@@ -93,8 +48,8 @@ pm.application = (function() {
 			var processed_versions = [];
 
 			var modifier = function(version) {
-				version.health_string = pm.application.getHealthString(version);
-				version.buttons_to_show = pm.application.getButtonMap(version);
+				version.health_string = pm.application.view.getHealthString(version);
+				version.buttons_to_show = pm.application.view.getButtonMap(version);
 
 				// replicate the behaviour of nice_state(); TODO: icons etc?
 				version.display_state = version.state[0] + version.state.substr(1).toLowerCase();
@@ -128,18 +83,6 @@ pm.application = (function() {
 			pm.leftmenu.redrawContainers();
 			var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
 
-			pm.data.get_app_parents({
-				application_id: url_match[1],
-				callback: function(parents) {
-					pm.leftmenu.updateAppMenu(parents.workspace.id, { application: url_match[1] });
-					pm.application.updateBreadcrumbs({
-						workspace: parents.workspace,
-						application: parents.application,
-						version: parents.version
-					});
-				}
-			});
-
 			pm.data.api({
 				endpoint: 'application/' + url_match[1],	// or just document.location?
 				callback: function(data) {
@@ -154,13 +97,26 @@ pm.application = (function() {
 						}
 					}
 
-					data.versions = pm.application.processVersionData(data.versions, data);
+					data.versions = pm.application.view.processVersionData(data.versions, data);
 					if (data.current_version) {
-						data.current_version = pm.application.processVersionData(data.current_version, data);
+						data.current_version = pm.application.view.processVersionData(data.current_version, data);
 					}
 
 					// render main template body (but with empty tables)
 					$('#main_right_view').html(pm.handlebars.application_versions(data));
+
+					// re-render menu and breadcrumbs
+					pm.data.get_app_parents({
+						application_id: url_match[1],
+						callback: function(parents) {
+							pm.leftmenu.updateAppMenu(parents.workspace.id, { application: url_match[1] });
+							pm.leftmenu.updateBreadcrumbs({
+								workspace: parents.workspace,
+								application: parents.application,
+								version: parents.version
+							});
+						}
+					});
 
 					// add rows for each version from separate template file;
 					// then fire off a separate API request to get instance counts
@@ -190,6 +146,47 @@ pm.application = (function() {
 
 					$('.loading-overlay').remove();
 					pm.stats.routerstats.redraw();
+				}
+			});
+		}
+
+	};
+}());
+
+
+pm.application.services = (function() {
+
+	return {
+
+		switchTo: function() {
+			pm.leftmenu.redrawContainers();
+			var url_match = document.location.pathname.match(/\/(\d+)\/services\/?$/);
+
+			pm.data.api({
+				endpoint: 'application/' + url_match[1] + '/services',	// or just document.location?
+				callback: function(data) {
+					for (var i = 0; i < data.services.length; i++) {
+						if (data.services[i].credentials) {
+							data.services[i].credentials_text = JSON.stringify(data.services[i].credentials, undefined, 4);
+						}
+					}
+				
+					pm.data.get_app_parents({
+						application_id: url_match[1],
+						callback: function(parents) {
+							data.application = parents.application;
+							$('#main_right_view').html(pm.handlebars.application_services(data));
+						
+							pm.leftmenu.updateAppMenu(parents.workspace.id, { application: url_match[1] });
+							pm.leftmenu.updateBreadcrumbs({
+								workspace: parents.workspace,
+								application: parents.application,
+								suffix: "Services"
+							});
+							
+							$('.loading-overlay').remove();
+						}
+					});
 				}
 			});
 		}

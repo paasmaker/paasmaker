@@ -69,8 +69,8 @@ pm.version = (function() {
 						version_data.version.using_dev_directory_plugin = true;
 					}
 
-					version_data.version.health_string = pm.application.getHealthString(version_data.version);
-					version_data.version.buttons_to_show = pm.application.getButtonMap(version_data.version);
+					version_data.version.health_string = pm.application.view.getHealthString(version_data.version);
+					version_data.version.buttons_to_show = pm.application.view.getButtonMap(version_data.version);
 
 					pm.data.get_app_parents({
 						version_id: url_match[1],
@@ -83,7 +83,7 @@ pm.version = (function() {
 
 							// once the main template is rendered, fill in breadcrumbs and redraw the app menu
 							pm.leftmenu.updateAppMenu(parents.workspace.id, { version: url_match[1] });
-							pm.application.updateBreadcrumbs({
+							pm.leftmenu.updateBreadcrumbs({
 								workspace: parents.workspace,
 								application: parents.application,
 								version: parents.version

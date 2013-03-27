@@ -97,7 +97,7 @@ pm.upload = (function() {
 
 			parent_search.callback = function(parents) {
 				pm.leftmenu.updateAppMenu(parents.workspace.id, menu_highlight);
-				pm.application.updateBreadcrumbs({
+				pm.leftmenu.updateBreadcrumbs({
 					workspace: parents.workspace,
 					application: parents.application,
 					suffix: suffix

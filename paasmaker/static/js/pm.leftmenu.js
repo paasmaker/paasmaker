@@ -16,6 +16,52 @@ pm.leftmenu = (function() {
 
 	return {
 
+		updateBreadcrumbs: function(data) {
+			$('ul.breadcrumb').empty();
+
+			if (data.workspace) {
+				var ws_li = $("<li>");
+				$('ul.breadcrumb').append(ws_li);
+				if (data.application || data.version || data.suffix) {
+					var ws_link = $("<a>", { "href": "/workspace/" + data.workspace.id + "/applications" });
+					ws_li.append(ws_link);
+					ws_link.text(data.workspace.name);
+					ws_li.append("<span class=\"divider\">&middot;</span>");
+				} else {
+					ws_li.text(data.workspace.name);
+				}
+			}
+			if (data.application) {
+				var app_li = $("<li>");
+				$('ul.breadcrumb').append(app_li);
+				if (data.version || data.suffix) {
+					var app_link = $("<a>", { "href": "/application/" + data.application.id });
+					app_li.append(app_link);
+					app_link.text(data.application.name);
+					app_li.append("<span class=\"divider\">&middot;</span>");
+				} else {
+					app_li.text(data.application.name);
+				}
+			}
+			if (data.version) {
+				var ver_li = $("<li>");
+				$('ul.breadcrumb').append(ver_li);
+				if (data.suffix) {
+					var ver_link = $("<a>", { "href": "/version/" + data.version.id });
+					ver_li.append(ver_link);
+					ver_link.text("Version " + data.version.version);
+					ver_li.append("<span class=\"divider\">&middot;</span>");
+				} else {
+					ver_li.text("Version " + data.version.version);
+				}
+			}
+			if (data.suffix) {
+				$('ul.breadcrumb').append(
+					$("<li>").text(data.suffix)
+				);
+			}
+		},
+
 		redrawContainers: function() {
 			var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
 

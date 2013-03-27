@@ -1,0 +1,38 @@
+<ul class="breadcrumb"></ul>
+
+<h1>Services: {{ application.name }}</h1>
+
+<table class="table table-striped table-bordered">
+	<tr>
+		<th>Name</th>
+		<th>Provider</th>
+		<th>Credentials</th>
+		<th>Used By</th>
+		<th>State</th>
+	</tr>
+	{{#each services}}
+		<tr>
+			<td>
+				{{ name }}
+			</td>
+			<td>
+				{{ provider }}
+			</td>
+			<td>
+				{{#if credentials_text}}
+					<pre>{{ credentials_text }}</pre>
+				{{/if}}
+			</td>
+			<td>
+				<ul>
+					{{#each application_versions}}
+						<li><a href="/version/{{id}}">Version {{version}}</a></li>
+					{{/each}}
+				</ul>
+			</td>
+			<td>
+				<span class="service-{{state}}">{{ state }}</span>
+			</td>
+		</tr>
+	{{/each}}
+</table>

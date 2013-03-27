@@ -82,7 +82,7 @@ pm.jobs.version_action = (function() {
 
 			var parent_options = {
 				callback: function(parents) {
-					pm.application.updateBreadcrumbs({
+					pm.leftmenu.updateBreadcrumbs({
 						workspace: parents.workspace,
 						application: parents.application,
 						version: parents.version,
