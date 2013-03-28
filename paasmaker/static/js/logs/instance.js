@@ -1,3 +1,8 @@
+/* Paasmaker - Platform as a Service
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 if (!window.pm) { var pm = {}; }	// TODO: module handling
 if (!pm.logs) { pm.logs = {}; }
@@ -78,9 +83,9 @@ pm.logs.instance.prototype.handleNewLines = function(job_id, lines, position)
 {
 	this.pre.removeClass('no-data');
 	var formatted = this.formatLogLines(lines.join(''));
-	
+
 	if (this.isScrolledToBottom(this.pre)) { var reset_scroll = true; }
-	
+
 	this.pre.append(formatted);
 	this.pre.attr('data-position', position);
 

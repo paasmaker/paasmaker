@@ -1,3 +1,11 @@
+#
+# Paasmaker - Platform as a Service
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
 import unittest
 import uuid
 import logging
@@ -147,10 +155,10 @@ class UserListController(BaseController):
 	def get(self):
 		self.require_permission(constants.PERMISSION.USER_LIST)
 		users = self.session.query(paasmaker.model.User)
-		
+
 		self._paginate('users', users)
 		# self.add_data('users', users)
-		
+
 		self.client_side_render()
 
 	@staticmethod

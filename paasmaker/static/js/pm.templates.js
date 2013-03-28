@@ -863,7 +863,7 @@ function program4(depth0,data) {
   return buffer;
   }
 
-  buffer += "<ul class=\"breadcrumb\"></ul>\n\n<h1>Services: "
+  buffer += "\n<ul class=\"breadcrumb\"></ul>\n\n<h1>Services: "
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.name)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "</h1>\n\n<table class=\"table table-striped table-bordered\">\n	<tr>\n		<th>Name</th>\n		<th>Provider</th>\n		<th>Credentials</th>\n		<th>Used By</th>\n		<th>State</th>\n	</tr>\n	";
   stack2 = helpers.each.call(depth0, depth0.services, {hash:{},inverse:self.noop,fn:self.program(1, program1, data),data:data});

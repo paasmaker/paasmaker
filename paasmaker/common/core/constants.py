@@ -1,3 +1,11 @@
+#
+# Paasmaker - Platform as a Service
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
 # From http://stackoverflow.com/questions/36932/whats-the-best-way-to-implement-an-enum-in-python
 # (Plus some tweaks)
 # Why do this at all? Originally they were just strings and arrays of strings, and I used them

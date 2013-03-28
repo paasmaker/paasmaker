@@ -1,4 +1,8 @@
-/* Paasmaker CSS */
+/* Paasmaker - Platform as a Service
+ *
+ * This Source Code Form is subject to the terms of the Mozilla Public
+ * License, v. 2.0. If a copy of the MPL was not distributed with this
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
 
 /* Top left logo; TODO: check logo size/position */
 body .navbar .brand { padding: 5px 20px 3px; }

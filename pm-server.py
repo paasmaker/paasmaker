@@ -1,12 +1,17 @@
 #!/usr/bin/env python
 
+#
+# Paasmaker - Platform as a Service
+#
+# This Source Code Form is subject to the terms of the Mozilla Public
+# License, v. 2.0. If a copy of the MPL was not distributed with this
+# file, You can obtain one at http://mozilla.org/MPL/2.0/.
+#
+
 # Python imports.
 import os
 import sys
 import platform
-
-# TODO: What happens to this virtualenv activation when Torndao's
-# autoreload kicks in?
 
 # Check our current directory. Many things expect to be in the path
 # of the server file, so switch directory if we need to.
