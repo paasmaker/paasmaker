@@ -299,10 +299,12 @@ if context['runtime_nvm_enable']:
 			)
 		# TODO: Hack to install handlebars so that the --debug=1 mode works.
 		if version == 'v0.8.22':
-			install.helpers.generic_command_shell(
-				context,
-				'. %s; nvm use v0.8.22; npm install handlebars -g' % nvm_script
-			)
+			npm_list = subprocess.check_output('. %s; nvm use v0.8.22; npm list -g' % nvm_script, shell=True)
+			if ' handlebars@' not in npm_list:
+				install.helpers.generic_command_shell(
+					context,
+					'. %s; nvm use v0.8.22; npm install handlebars -g' % nvm_script
+				)
 
 
 # PHP / Static runtime.
