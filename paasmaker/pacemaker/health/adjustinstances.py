@@ -69,17 +69,19 @@ class AdjustInstancesHealthCheck(BaseHealthCheck):
 		if self.whole_start_version:
 			# Need to kick off a start action for an entire
 			# version. Do that now, and then move on.
+			def done_executable():
+				self._get_next_version()
+
 			def submitted(job_id):
 				self.whole_start_version = None
 				self.start_actions += 1
-				self._get_next_version()
+				self.configuration.job_manager.allow_execution(job_id, done_executable)
 
 			paasmaker.common.job.coordinate.startup.StartupRootJob.setup_version(
 				self.configuration,
 				self.whole_start_version,
 				submitted,
-				self.error_callback,
-				parent=self.parent_job_id
+				self.error_callback
 			)
 		else:
 			try:
@@ -160,20 +162,21 @@ class AdjustInstancesHealthCheck(BaseHealthCheck):
 			# Now extract the worst instances to stop.
 			instances = instances[adjustment_quantity:]
 
-			self.stop_actions += 1
-			self.stopped_instances += len(instances)
+			def done_executable():
+				self.configuration.io_loop.add_callback(self._get_next_instance_type)
+
+			def submitted(job_id):
+				self.logger.info("Added corrective job, root %s", job_id)
+				self.stop_actions += 1
+				self.stopped_instances += len(instances)
+				self.configuration.job_manager.allow_execution(job_id, done_executable)
 
 			paasmaker.common.job.coordinate.shutdown.ShutdownRootJob.setup_instances(
 				self.configuration,
 				instances,
-				self._instance_type_job_submitted,
-				self.error_callback,
-				parent=self.parent_job_id
+				submitted,
+				self.error_callback
 			)
-
-	def _instance_type_job_submitted(self, job_id):
-		self.logger.info("Added corrective job, root %s", job_id)
-		self.configuration.io_loop.add_callback(self._get_next_instance_type)
 
 	def _finish(self):
 		# Make this job tree executable.
