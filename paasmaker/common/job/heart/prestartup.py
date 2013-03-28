@@ -1,4 +1,6 @@
 
+import os
+
 import paasmaker
 from ..base import BaseJob
 from paasmaker.util.plugin import MODE
@@ -25,6 +27,11 @@ class PreInstanceStartupJob(BaseJob):
 		self.instance_id = self.parameters['instance_id']
 		self.instance_path = self.configuration.get_instance_path(self.instance_id)
 		self.instance_data = self.configuration.instances.get_instance(self.instance_id)
+
+		if not os.path.exists(self.instance_path):
+			# Oops. Something is out of sync.
+			self.failed("Instance path no longer exists.")
+			return
 
 		self.startup_commands = list(self.instance_data['instance_type']['startup'])
 		# Reverse them - we don't execute in reverse order,
