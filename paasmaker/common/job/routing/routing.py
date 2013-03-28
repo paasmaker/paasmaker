@@ -48,11 +48,13 @@ class RoutingUpdateJob(BaseJob):
 
 			if not self.instance:
 				self.session.close()
+				self.logger.error("Unable to find database record matching this instance.")
 				self.failed("Unable to find database record matching this instance.")
 				return
 
 			if not self.instance.port:
 				self.session.close()
+				self.logger.info("No port recorded - not inserting into routing table.")
 				self.success({}, "No port recorded - not inserting into routing table.")
 				return
 
