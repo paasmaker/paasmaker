@@ -161,8 +161,13 @@ class RedisJobBackend(JobBackend):
 			# It's a subscribed count. Ignore.
 			return
 
-		# TODO: Handle parse failures and other related issues.
-		parsed = json.loads(str(message.body))
+		try:
+			parsed = json.loads(str(message.body))
+		except ValueError, ex:
+			logger.warning("Malformed message received via pub/sub from the jobs Redis:")
+			logger.warning(str(message.body))
+			logger.warning(str(ex))
+			return
 
 		if parsed['source'] == self.configuration.get_node_uuid():
 			# It's a message from us. drop it.
