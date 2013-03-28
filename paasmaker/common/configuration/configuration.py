@@ -1740,7 +1740,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			instance_id
 		)
 
-		if not os.path.exists(path):
+		# The islink check is for development directory instances.
+		# Because if they point to an invalid location, os.path.exists() returns False,
+		# which makes it try to create the directory, which fails because it's a symlink.
+		if not os.path.islink(path) and not os.path.exists(path):
 			os.makedirs(path)
 
 		return path
