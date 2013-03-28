@@ -815,6 +815,11 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			# TODO: improve this detection and use.
 			self['my_route'] = socket.getfqdn()
 
+			if '.in-addr.arpa' in self['my_route']:
+				# Sometimes on OSX this gives the wrong address; and gives you
+				# a reverse resolve. Use localhost instead.
+				self['my_route'] = 'localhost'
+
 		# Update the flat representation again before proceeding.
 		self.update_flat()
 
