@@ -19,7 +19,7 @@ class DevDirectoryUnpacker(BaseUnpacker):
 		if not os.path.exists(real_package_path):
 			error_message = "Development path %s does not exist." % real_package_path
 			self.logger.error(error_message)
-			error_callback(error_callback)
+			error_callback(error_message)
 			return
 
 		# The goal here is to symlink package_path to target_path.
