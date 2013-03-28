@@ -863,7 +863,7 @@ function program4(depth0,data) {
   return buffer;
   }
 
-  buffer += "\n<ul class=\"breadcrumb\"></ul>\n\n<h1>Services: "
+  buffer += "<ul class=\"breadcrumb\"></ul>\n\n<h1>Services: "
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.name)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "</h1>\n\n<table class=\"table table-striped table-bordered\">\n	<tr>\n		<th>Name</th>\n		<th>Provider</th>\n		<th>Credentials</th>\n		<th>Used By</th>\n		<th>State</th>\n	</tr>\n	";
   stack2 = helpers.each.call(depth0, depth0.services, {hash:{},inverse:self.noop,fn:self.program(1, program1, data),data:data});
@@ -1404,7 +1404,7 @@ function program4(depth0,data) {
   return buffer;
   }
 
-  buffer += "<h1>Active Plugins</h1>\n\n	<table class=\"table table-striped table-bordered\">\n		<tr>\n			<th>Plugin</th>\n			<th>Symbolic Name</th>\n			<th>Configuration</th>\n			<th>Available Modes</th>\n		</tr>\n		\n		";
+  buffer += "<h1>Active Plugins</h1>\n\n	<table class=\"table table-striped table-bordered\">\n		<tr>\n			<th>Plugin</th>\n			<th>Symbolic Name</th>\n			<th>Configuration</th>\n			<th>Available Modes</th>\n		</tr>\n\n		";
   stack1 = helpers.each.call(depth0, depth0.plugins, {hash:{},inverse:self.noop,fn:self.program(1, program1, data),data:data});
   if(stack1 || stack1 === 0) { buffer += stack1; }
   buffer += "\n	</table>\n\n";
@@ -1487,7 +1487,7 @@ function program3(depth0,data) {
 templates['router_stats_section'] = template(function (Handlebars,depth0,helpers,partials,data) {
   this.compilerInfo = [2,'>= 1.0.0-rc.3'];
 helpers = helpers || Handlebars.helpers; data = data || {};
-  var stack1, functionType="function", escapeExpression=this.escapeExpression, self=this;
+  var buffer = "", stack1, functionType="function", escapeExpression=this.escapeExpression, self=this;
 
 function program1(depth0,data) {
   
@@ -1532,8 +1532,8 @@ function program4(depth0,data) {
   }
 
   stack1 = helpers.each.call(depth0, depth0.statset, {hash:{},inverse:self.noop,fn:self.program(1, program1, data),data:data});
-  if(stack1 || stack1 === 0) { return stack1; }
-  else { return ''; }
+  if(stack1 || stack1 === 0) { buffer += stack1; }
+  return buffer;
   });
 })();(function() {
   var template = Handlebars.template, templates = Handlebars.templates = Handlebars.templates || {};
