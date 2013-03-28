@@ -128,9 +128,11 @@ class ApplicationNewController(ApplicationRootController):
 				paasmaker.model.ApplicationVersion.version.desc()
 			).first()
 
-			self.add_data('last_version', last_version)
-			last_version_params = last_version.scm_parameters
-			last_scm_name = last_version.scm_name
+			# Make sure there was a last version.
+			if last_version:
+				self.add_data('last_version', last_version)
+				last_version_params = last_version.scm_parameters
+				last_scm_name = last_version.scm_name
 		else:
 			application = None
 			workspace = self._get_workspace(input_id)
