@@ -46,6 +46,16 @@ class RoutingUpdateJob(BaseJob):
 				paasmaker.model.ApplicationInstance
 			).get(self.instance_id)
 
+			if not self.instance:
+				self.session.close()
+				self.failed("Unable to find database record matching this instance.")
+				return
+
+			if not self.instance.port:
+				self.session.close()
+				self.success({}, "No port recorded - not inserting into routing table.")
+				return
+
 			if self.instance.application_instance_type.standalone:
 				self.session.close()
 				self.success({}, "Standalone instance - no routing required.")
