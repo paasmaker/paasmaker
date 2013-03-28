@@ -111,8 +111,7 @@ class NodeRegisterController(BaseController):
 			# Attempt to connect to the node...
 			request = paasmaker.common.api.information.InformationAPIRequest(self.configuration)
 			request.set_target(self.node)
-			# TODO: Make the timeout configurable.
-			request.send(self._finished_connectivity, connect_timeout=1.0)
+			request.send(self._finished_connectivity, connect_timeout=self.configuration.get_flat('pacemaker.node_connectivity_check_timeout'))
 		else:
 			self.add_data('node', self.node.flatten())
 			self._finished_response()

@@ -261,6 +261,14 @@ class PacemakerSchema(StrictAboutExtraKeysColanderMappingSchema):
 		default="",
 		missing="")
 
+	node_connectivity_check_timeout = colander.SchemaNode(
+		colander.Float(),
+		title="Node Connectivity Check timeout",
+		description="The timeout when hitting the /info endpoint on a remote node before accepting it's registration.",
+		default=1.0,
+		missing=1.0
+	)
+
 	@staticmethod
 	def default():
 		return {'enabled': False, 'scmlisters': [], 'health': HealthCombinedSchema.default()}
