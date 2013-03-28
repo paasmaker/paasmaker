@@ -301,7 +301,7 @@ class ShellRuntimeTest(BaseRuntimeTest):
 			'paasmaker.runtime.shell',
 			paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
 			{
-				'launch_command': 'python standalone.py',
+				'launch_command': 'stdbuf -o0 python standalone.py',
 				'standalone_wait': 1
 			}
 		)
@@ -341,11 +341,8 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		#print open(log_path, 'r').read()
 
 		# And see if it's really working.
-		# TODO: This doesn't work - in the command
-		# supervisor there are too many processes trying
-		# to write to the same log file, which is causing issues.
-		#log_contents = open(log_path, 'r').read()
-		#self.assertIn("Starting standalone instance.", log_contents)
+		log_contents = open(log_path, 'r').read()
+		self.assertIn("Starting standalone instance.", log_contents)
 
 		# Stop the instance.
 		runtime.stop(
