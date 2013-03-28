@@ -18,6 +18,7 @@ from paasmaker.common.core import constants
 import colander
 import tornado
 import tornado.testing
+import sqlalchemy.exc
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -95,30 +96,26 @@ class WorkspaceEditController(BaseController):
 		workspace.tags = self.params['tags']
 		workspace.stub = self.params['stub']
 
-		if not workspace_id:
-			# Check that stub is unique.
-			other_workspace = self.session.query(
-				paasmaker.model.Workspace
-			).filter(
-				paasmaker.model.Workspace.stub == workspace.stub
-			).first()
-
-			if other_workspace:
-				self.add_error("An existing workspace with that stub already exists.")
-				valid_data = False
-
 		if len(self.params['serialised_tags']) > 0:
 			workspace.tags = json.loads(self.params['serialised_tags'])
 
 		if valid_data:
 			self.session.add(workspace)
-			self.session.commit()
-			self.session.refresh(workspace)
+			try:
+				self.session.commit()
+				self.session.refresh(workspace)
+			except sqlalchemy.exc.IntegrityError, ex:
+				self.session.rollback()
+				if 'stub' in str(ex):
+					valid_data = False
+					self.add_error('The workspace stub is not unique.')
+				else:
+					raise ex
 
+		if valid_data:
 			self.add_data('workspace', workspace)
 
 			self.action_success(None, '/workspace/' + str(workspace.id) + '/applications')
-
 		else:
 			self.add_data('workspace', workspace)
 			self.render("workspace/edit.html")
@@ -183,7 +180,7 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 
 		self.failIf(response.success)
 		self.assertTrue(len(response.errors) > 0, "There were not errors.")
-		self.assertIn('An existing workspace with that stub already exists.', response.errors[0], "Wrong error message.")
+		self.assertIn('The workspace stub is not unique.', response.errors[0], "Wrong error message.")
 
 	def test_create_fail(self):
 		# Send through some bogus data.
@@ -231,6 +228,35 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		session = self.wait()
 		workspace = session.query(paasmaker.model.Workspace).get(workspace_id)
 		self.assertEquals(workspace.name, 'Test Altered workspace', 'Name was not updated.')
+
+		# Create a second workspace.
+		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
+		request.set_workspace_name('Test workspace 2')
+		request.set_workspace_stub('test2')
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+
+		workspace_two_id = response.data['workspace']['id']
+
+		# Try to edit the second workspace to have the same stub as the first.
+		request = paasmaker.common.api.workspace.WorkspaceEditAPIRequest(self.configuration)
+		request.set_superkey_auth()
+		# This loads the workspace data from the server.
+		request.load(workspace_two_id, self.stop, self.stop)
+		load_response = self.wait()
+
+		# Now attempt to change the workspace.
+		request.set_workspace_stub('test')
+
+		# Send it along!
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(response.success)
+		self.assertIn('The workspace stub is not unique.', response.errors[0], "Wrong error message.")
 
 	def test_edit_fail(self):
 		# Create the workspace.
