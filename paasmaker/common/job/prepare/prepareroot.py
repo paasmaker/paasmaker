@@ -54,7 +54,8 @@ class ApplicationPrepareRootJob(BaseJob):
 			{},
 			"Prepare source for %s" % name,
 			context=context,
-			tags=tags
+			tags=tags,
+			abort_handler=True
 		)
 
 		manifestreader = tree.add_child()
@@ -143,7 +144,22 @@ class ApplicationPrepareRootJob(BaseJob):
 
 		self.configuration.get_database_session(got_session, self._failure_callback)
 
-	# TODO: Can't place versions into ERROR state when they can't be prepared. Fix this!
+	def abort_handler(self, context):
+		# If the tree failed after it created the database records, delete
+		# those database records.
+		if 'application_version_id' in context:
+			def got_session(session):
+				version = session.query(
+					paasmaker.model.ApplicationVersion
+				).get(context['application_version_id'])
+
+				session.delete(version)
+				session.commit()
+				session.close()
+
+				# And end control. No callbacks needed.
+
+			self.configuration.get_database_session(got_session, self._failure_callback)
 
 class PrepareJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
