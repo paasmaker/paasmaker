@@ -13,6 +13,8 @@ var streamSocket;
 
 pm.data = (function() {
 
+	var screenTimeouts = [];
+
 	return {
 
 		/**
@@ -128,7 +130,7 @@ pm.data = (function() {
 					// TODO: smarter detection of this, or a separate callback
 					responseData = JSON.parse(responseData.responseText);
 				}
-			
+
 				if (responseData.errors && responseData.errors.length > 0) {
 					console.log("API call to " + options.endpoint + " returned an error!");
 					console.log(responseData.errors);
@@ -203,9 +205,9 @@ pm.data = (function() {
 				}
 				return false;
 			}
-			
+
 			var request_index = 0;
-		
+
 			var get_next = function(request) {
 					pm.data.api({
 						endpoint: request.endpoint,
@@ -223,7 +225,7 @@ pm.data = (function() {
 						}
 					});
 			}
-			
+
 			get_next(options.requests[request_index]);
 		},
 
@@ -286,10 +288,19 @@ pm.data = (function() {
 			return streamSocket;
 		},
 
+		registerScreenTimeout: function(timeout) {
+			screenTimeouts.push(timeout);
+		},
+
 		removeListeners: function() {
 			if (pm.data.getSocket()) {
 				pm.data.getSocket().removeAllListeners();
 			}
+			// Cancel all screen timeouts.
+			for(var i = 0; i < screenTimeouts.length; i++) {
+				clearTimeout(screenTimeouts[i]);
+			}
+			screenTimeouts = [];
 		},
 
 		emit: function() {

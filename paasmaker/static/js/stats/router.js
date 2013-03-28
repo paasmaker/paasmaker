@@ -272,6 +272,7 @@ pm.stats.routergraph = (function(){
 		// Request the first update, and every second thereafter.
 		graph.requestUpdate();
 		timeout = setInterval(graph.requestUpdate, 1000);
+		pm.data.registerScreenTimeout(timeout);
 
 		return graph;
 	}
@@ -484,9 +485,14 @@ pm.stats.routerstats = (function(){
 			lastNumbers = update;
 		}
 
+		stats.stopUpdating = function() {
+			clearInterval(timeout);
+		};
+
 		// Request the first update.
 		stats.requestUpdate();
-		setInterval(stats.requestUpdate, 1000);
+		timeout = setInterval(stats.requestUpdate, 1000);
+		pm.data.registerScreenTimeout(timeout);
 
 		return stats;
 	}
