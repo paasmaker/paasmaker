@@ -16,7 +16,7 @@ To enable the plugin:
 .. code-block:: yaml
 
 	plugins:
-	- class: paasmaker.heart.runtime.PHPRuntime
+	- class: paasmaker.heart.runtime.php.PHPRuntime
 	  name: paasmaker.runtime.php
 	  title: PHP Runtime
 

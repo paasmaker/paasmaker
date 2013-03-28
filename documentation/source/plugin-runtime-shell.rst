@@ -11,7 +11,7 @@ To enable the plugin:
 .. code-block:: yaml
 
 	plugins:
-	- class: paasmaker.heart.runtime.ShellRuntime
+	- class: paasmaker.heart.runtime.shell.ShellRuntime
 	  name: paasmaker.runtime.shell
 	  title: Shell Runtime
 

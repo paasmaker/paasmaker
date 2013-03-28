@@ -15,7 +15,7 @@ To enable the plugin:
 .. code-block:: yaml
 
 	plugins:
-	- class: paasmaker.heart.runtime.StaticRuntime
+	- class: paasmaker.heart.runtime.static.StaticRuntime
 	  name: paasmaker.runtime.static
 	  title: Static File Runtime
 
