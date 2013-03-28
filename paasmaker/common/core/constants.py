@@ -24,7 +24,6 @@ class Enum(set):
 	"""
 	def __getattr__(self, name):
 		if name == 'ALL':
-			# TODO: Optimise...
 			return list(self)
 		if name in self:
 			return name
