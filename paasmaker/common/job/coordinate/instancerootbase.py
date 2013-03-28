@@ -56,8 +56,6 @@ class InstanceRootBase(BaseJob):
 		"""
 		def got_session(session):
 			for key, value in context.iteritems():
-				# TODO: This is a very poor method of figuring out if the
-				# key is an instance ID.
 				# TODO: Optimise this somewhat. Should be possible with a single update.
 				if key.startswith('state-'):
 					instance_id = key[6:]

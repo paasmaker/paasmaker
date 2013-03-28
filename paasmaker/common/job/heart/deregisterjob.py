@@ -35,7 +35,19 @@ class DeRegisterInstanceJob(BaseJob):
 
 		self.instance_id = self.parameters['instance_id']
 
-		# TODO: Check state of the instance.
+		try:
+			instance_data = self.configuration.instances.get_instance(self.instance_id)
+		except KeyError, ex:
+			error_message = "No such instance %s on this node." % self.instance_id
+			self.logger.error(error_message)
+			self.failed(error_message)
+			return
+
+		if instance_data['instance']['state'] in [constants.INSTANCE.RUNNING, constants.INSTANCE.STARTING]:
+			error_message = "Refusing to de-register an instance in the state %s" % instance_data['instance']['state']
+			self.logger.error(error_message)
+			self.failed(error_message)
+			return
 
 		# Remove it from the instance manager. This is done regardless of success of
 		# removing the files.
