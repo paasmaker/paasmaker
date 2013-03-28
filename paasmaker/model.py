@@ -31,8 +31,6 @@ logger.addHandler(logging.NullHandler())
 
 Base = declarative_base()
 
-# TODO: Revisit this: DateTime handling: insert UTC timestamps.
-
 # Helper function to return the time in UTC.
 def now():
 	return datetime.datetime.utcnow()
