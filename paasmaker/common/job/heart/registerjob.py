@@ -143,7 +143,7 @@ class RegisterInstanceJob(BaseJob):
 			self.configuration.instances.save()
 			self.success(self.output_context, "Completed successfully.")
 
-		def unpack_failure(self, message, exception=None):
+		def unpack_failure(message, exception=None):
 			# Fail.
 			self.logger.error(message)
 			if exception:
