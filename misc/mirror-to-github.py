@@ -24,6 +24,31 @@ REPOS = [
 		'source': 'git@bitbucket.org:paasmaker/paasmaker-interface-ruby.git',
 		'target': 'git@github.com:paasmaker/paasmaker-interface-ruby.git'
 	},
+	{
+		'symbolic': 'paasmaker',
+		'source': 'git@bitbucket.org:paasmaker/paasmaker.git',
+		'target': 'git@github.com:paasmaker/paasmaker.git'
+	},
+	{
+		'symbolic': 'sample-python-simple',
+		'source': 'git@bitbucket.org:paasmaker/sample-python-simple.git',
+		'target': 'git@github.com:paasmaker/sample-python-simple.git'
+	},
+	{
+		'symbolic': 'sample-php-simple',
+		'source': 'git@bitbucket.org:paasmaker/sample-php-simple.git',
+		'target': 'git@github.com:paasmaker/sample-php-simple.git'
+	},
+	{
+		'symbolic': 'sample-ruby-simple',
+		'source': 'git@bitbucket.org:paasmaker/sample-ruby-simple.git',
+		'target': 'git@github.com:paasmaker/sample-ruby-simple.git'
+	},
+	{
+		'symbolic': 'sample-node-simple',
+		'source': 'git@bitbucket.org:paasmaker/sample-node-simple.git',
+		'target': 'git@github.com:paasmaker/sample-node-simple.git'
+	},
 ]
 
 def run_helper(command, cwd=None):
