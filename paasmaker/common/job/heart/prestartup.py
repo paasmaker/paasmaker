@@ -30,6 +30,7 @@ class PreInstanceStartupJob(BaseJob):
 
 		if not os.path.exists(self.instance_path):
 			# Oops. Something is out of sync.
+			self.logger.error("Instance path no longer exists.")
 			self.failed("Instance path no longer exists.")
 			return
 
