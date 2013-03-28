@@ -6,19 +6,19 @@ plugins:
 
   # HEART PLUGINS - JOBS
   - name: paasmaker.job.heart.registerinstance
-    class: paasmaker.common.job.heart.RegisterInstanceJob
+    class: paasmaker.common.job.heart.registerjob.RegisterInstanceJob
     title: Instance Registration Job
   - name: paasmaker.job.heart.startup
-    class: paasmaker.common.job.heart.InstanceStartupJob
+    class: paasmaker.common.job.heart.startup.InstanceStartupJob
     title: Instance Startup Job
   - name: paasmaker.job.heart.prestartup
-    class: paasmaker.common.job.heart.PreInstanceStartupJob
+    class: paasmaker.common.job.heart.prestartup.PreInstanceStartupJob
     title: Pre Instance Startup Job
   - name: paasmaker.job.heart.shutdown
-    class: paasmaker.common.job.heart.InstanceShutdownJob
+    class: paasmaker.common.job.heart.shutdown.InstanceShutdownJob
     title: Instance Shutdown Job
   - name: paasmaker.job.heart.deregisterinstance
-    class: paasmaker.common.job.heart.DeRegisterInstanceJob
+    class: paasmaker.common.job.heart.deregisterjob.DeRegisterInstanceJob
     title: De Register Instance Job
 
   # HEART PLUGINS - STARTUP
@@ -28,31 +28,31 @@ plugins:
 
   # PACEMAKER PLUGINS - PREPARE JOBS
   - name: paasmaker.job.prepare.root
-    class: paasmaker.common.job.prepare.ApplicationPrepareRootJob
+    class: paasmaker.common.job.prepare.prepareroot.ApplicationPrepareRootJob
     title: Application Prepare Root Job
 
   - name: paasmaker.job.prepare.manifestreader
-    class: paasmaker.common.job.prepare.ManifestReaderJob
+    class: paasmaker.common.job.prepare.manifestreader.ManifestReaderJob
     title: Manifest Reader Job
 
   - name: paasmaker.job.prepare.scm
-    class: paasmaker.common.job.prepare.SourceSCMJob
+    class: paasmaker.common.job.prepare.sourcescm.SourceSCMJob
     title: Source SCM Job
 
   - name: paasmaker.job.prepare.service
-    class: paasmaker.common.job.prepare.ServiceJob
+    class: paasmaker.common.job.prepare.service.ServiceJob
     title: Service Management Job
 
   - name: paasmaker.job.prepare.servicecontainer
-    class: paasmaker.common.job.prepare.ServiceContainerJob
+    class: paasmaker.common.job.prepare.service.ServiceContainerJob
     title: Service Container Job
 
   - name: paasmaker.job.prepare.packer
-    class: paasmaker.common.job.prepare.SourcePackerJob
+    class: paasmaker.common.job.prepare.packer.SourcePackerJob
     title: Source Packer Job
 
   - name: paasmaker.job.prepare.preparer
-    class: paasmaker.common.job.prepare.SourcePreparerJob
+    class: paasmaker.common.job.prepare.sourceprepare.SourcePreparerJob
     title: Source Preparer Job
 
   # PACEMAKER PLUGINS - OTHER JOBS
@@ -66,47 +66,47 @@ plugins:
 
   # COORDINATION JOBS
   - name: paasmaker.job.coordinate.selectlocations
-    class: paasmaker.common.job.coordinate.SelectLocationsJob
+    class: paasmaker.common.job.coordinate.selectlocations.SelectLocationsJob
     title: Select Locations Job
 
   - name: paasmaker.job.coordinate.registerroot
-    class: paasmaker.common.job.coordinate.RegisterRootJob
+    class: paasmaker.common.job.coordinate.register.RegisterRootJob
     title: Register Root Job
 
   - name: paasmaker.job.coordinate.registerrequest
-    class: paasmaker.common.job.coordinate.RegisterRequestJob
+    class: paasmaker.common.job.coordinate.register.RegisterRequestJob
     title: Register Request Job
 
   - name: paasmaker.job.coordinate.storeport
-    class: paasmaker.common.job.coordinate.StorePortJob
+    class: paasmaker.common.job.coordinate.storeport.StorePortJob
     title: Store Port Job
 
   - name: paasmaker.job.coordinate.startuproot
-    class: paasmaker.common.job.coordinate.StartupRootJob
+    class: paasmaker.common.job.coordinate.startup.StartupRootJob
     title: Startup Root Job
 
   - name: paasmaker.job.coordinate.startuprequest
-    class: paasmaker.common.job.coordinate.StartupRequestJob
+    class: paasmaker.common.job.coordinate.startup.StartupRequestJob
     title: Startup Root Job
 
   - name: paasmaker.job.coordinate.shutdownroot
-    class: paasmaker.common.job.coordinate.ShutdownRootJob
+    class: paasmaker.common.job.coordinate.shutdown.ShutdownRootJob
     title: Shutdown Root Job
 
   - name: paasmaker.job.coordinate.shutdownrequest
-    class: paasmaker.common.job.coordinate.ShutdownRequestJob
+    class: paasmaker.common.job.coordinate.shutdown.ShutdownRequestJob
     title: Shutdown Request Job
 
   - name: paasmaker.job.coordinate.deregisterroot
-    class: paasmaker.common.job.coordinate.DeRegisterRootJob
+    class: paasmaker.common.job.coordinate.deregister.DeRegisterRootJob
     title: De Register Root Job
 
   - name: paasmaker.job.coordinate.deregisterrequest
-    class: paasmaker.common.job.coordinate.DeRegisterRequestJob
+    class: paasmaker.common.job.coordinate.deregister.DeRegisterRequestJob
     title: De Register Request Job
 
   - name: paasmaker.job.coordinate.currentrequest
-    class: paasmaker.common.job.coordinate.CurrentVersionRequestJob
+    class: paasmaker.common.job.coordinate.current.CurrentVersionRequestJob
     title: Update Current Version Request Job
 
   # CRON JOB PLUGIN
@@ -116,7 +116,7 @@ plugins:
 
   # ROUTING
   - name: paasmaker.job.routing.update
-    class: paasmaker.common.job.routing.RoutingUpdateJob
+    class: paasmaker.common.job.routing.routing.RoutingUpdateJob
     title: Routing Update Job
 
   # PLACEMENT PLUGINS

@@ -468,7 +468,7 @@ if context['runtime_rbenv_enable']:
 		configuration['plugins'],
 		{
 			'name': 'paasmaker.runtime.ruby.rbenv',
-			'class': 'paasmaker.heart.runtime.RbenvRuntime',
+			'class': 'paasmaker.heart.runtime.rbenv.RbenvRuntime',
 			'title': 'Ruby (rbenv) Runtime',
 			'parameters': {
 				'rbenv_path': rbenv_path
@@ -481,7 +481,7 @@ if context['runtime_nvm_enable']:
 		configuration['plugins'],
 		{
 			'name': 'paasmaker.runtime.node.nvm',
-			'class': 'paasmaker.heart.runtime.NvmRuntime',
+			'class': 'paasmaker.heart.runtime.nvm.NvmRuntime',
 			'title': 'Nodejs (nvm) Runtime',
 			'parameters': {
 				'nvm_path': nvm_path
@@ -494,7 +494,7 @@ if context['runtime_php_enable']:
 		configuration['plugins'],
 		{
 			'name': 'paasmaker.runtime.php',
-			'class': 'paasmaker.heart.runtime.PHPRuntime',
+			'class': 'paasmaker.heart.runtime.php.PHPRuntime',
 			'title': 'PHP Runtime',
 			'parameters': {
 				'managed': True,
@@ -509,7 +509,7 @@ if context['runtime_php_enable']:
 		configuration['plugins'],
 		{
 			'name': 'paasmaker.runtime.static',
-			'class': 'paasmaker.heart.runtime.StaticRuntime',
+			'class': 'paasmaker.heart.runtime.static.StaticRuntime',
 			'title': 'Static Files Runtime',
 			'parameters': {
 				'managed': True,
@@ -523,7 +523,7 @@ if context['runtime_shell_enable']:
 		configuration['plugins'],
 		{
 			'name': 'paasmaker.runtime.shell',
-			'class': 'paasmaker.heart.runtime.ShellRuntime',
+			'class': 'paasmaker.heart.runtime.shell.ShellRuntime',
 			'title': 'Shell Runtime'
 		}
 	)
