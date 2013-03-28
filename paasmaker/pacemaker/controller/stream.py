@@ -389,10 +389,10 @@ class StreamConnection(tornadio2.SocketConnection):
 		"""
 		Helper function to send the local log from the given
 		position onwards.
+
+		:arg str job_id: The job ID.
+		:arg int last_position: The position to stream from.
 		"""
-		# TODO: If the log is huge, we won't want to stream the whole
-		# thing, just the end of it. So only send back the last part of it,
-		# regardless of where we requested the file from.
 		log_file = self.configuration.get_job_log_path(job_id, create_if_missing=False)
 		if os.path.getsize(log_file) == 0:
 			# Report the zero size.
