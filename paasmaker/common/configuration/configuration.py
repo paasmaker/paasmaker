@@ -1273,7 +1273,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			# Callback to handle when it's up and running.
 			def on_redis_started(message):
 				# Mark it as started.
-				# TODO: Detect and handle where it didn't start.
 				meta['state'] = 'STARTED'
 
 				# Play back all our callbacks.
@@ -1281,7 +1280,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					self._connect_redis(queued[0], queued[1], queued[2])
 
 				# Is this a router table, that's a slave of another?
-				# TODO: None of this is currently tested.
 				if name == 'table':
 					# TODO: Ensure this retries if it fails on first startup.
 					if self.get_flat('redis.slaveof.enabled'):
