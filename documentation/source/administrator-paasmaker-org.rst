@@ -639,14 +639,14 @@ a series of XHR long poll requests to get realtime updates).
 Deploying your first application
 --------------------------------
 
-As a test, you can deploy the example paasmaker-tornado-advanced application
+As a test, you can deploy the example ``sample-python-simple`` application
 to make sure that the system is working correctly. To do this, you can create
 a new application in the control panel, pointing it to the git URL for that
 application:
 
 .. code-block:: bash
 
-	git@bitbucket.org:paasmaker/paasmaker-python-simple.git
+	git@bitbucket.org:paasmaker/sample-python-simple.git
 
 Once you've created the application, you should be able to start it and then
 visit it via the URLs provided by the control panel. When you're done, you

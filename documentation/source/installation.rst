@@ -160,6 +160,13 @@ and password ``paasmaker``.
 If this is your first time with Paasmaker, move on to the :doc:`getting started guide
 <user-gettingstarted>`.
 
+Or, for instant gratification, use the Git SCM to deploy from the following
+repository:
+
+.. code-block:: none
+
+	git@bitbucket.org:paasmaker/sample-python-simple.git
+
 .. WARNING::
 	In the supplied configuration, when you stop Paasmaker, it will stop all
 	managed services, applications, and the router. To start them up again,
