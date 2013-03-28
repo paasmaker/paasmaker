@@ -133,6 +133,11 @@ system packages.
 Alternately, you can copy that configuration file, and alter it to match
 what you would like, and then run the installation script against that file.
 
+.. note::
+	Did the installer fail? It still has some rough edges, and we're working
+	to improve it. It's safe to re-run until it completes successfully and will
+	only make the changes it hasn't already made.
+
 Once it's installed, you can start it up with the following command:
 
 .. code-block:: bash
