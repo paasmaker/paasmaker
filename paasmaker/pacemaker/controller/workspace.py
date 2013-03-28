@@ -95,6 +95,18 @@ class WorkspaceEditController(BaseController):
 		workspace.tags = self.params['tags']
 		workspace.stub = self.params['stub']
 
+		if not workspace_id:
+			# Check that stub is unique.
+			other_workspace = self.session.query(
+				paasmaker.model.Workspace
+			).filter(
+				paasmaker.model.Workspace.stub == workspace.stub
+			).first()
+
+			if other_workspace:
+				self.add_error("An existing workspace with that stub already exists.")
+				valid_data = False
+
 		if len(self.params['serialised_tags']) > 0:
 			workspace.tags = json.loads(self.params['serialised_tags'])
 
@@ -160,6 +172,18 @@ class WorkspaceEditControllerTest(BaseControllerTest):
 		self.assertTrue(response.data.has_key('workspace'), "Missing workspace object in return data.")
 		self.assertTrue(response.data['workspace'].has_key('id'), "Missing ID in return data.")
 		self.assertTrue(response.data['workspace'].has_key('name'), "Missing name in return data.")
+
+		# Try to create again with a duplicate stub.
+		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
+		request.set_workspace_name('Test workspace')
+		request.set_workspace_stub('test')
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(response.success)
+		self.assertTrue(len(response.errors) > 0, "There were not errors.")
+		self.assertIn('An existing workspace with that stub already exists.', response.errors[0], "Wrong error message.")
 
 	def test_create_fail(self):
 		# Send through some bogus data.
