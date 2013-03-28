@@ -246,34 +246,26 @@ class JobManager(object):
 			return
 		self.in_startup[job_id] = True
 
-		# TODO: When using the command line API, this doesn't catch the
-		# SQLAlchemy IntegrityError if you upload a second application
-		# with the same name. Works fine via the HTML interface though.
-		# This will be a sublety with Stack Context, and we should find it.
-		@tornado.stack_context.contextlib.contextmanager
-		def handle_exception_job():
-			try:
-				yield
-			except Exception, ex:
-				# TODO: Workaround: It's possible that the abort_job() hasn't been implemented,
-				# which causes a nice little loop here. But if something else raises this, then
-				# the job tree will just hang...
-				if isinstance(ex, NotImplementedError):
-					logger.critical("abort_job() is not implemented for this job.")
-					logger.critical("Exception:", exc_info=ex)
-				else:
-					# Log what happened.
-					logging.error("Job %s failed with exception:", job_id, exc_info=True)
-					job_logger = self.configuration.get_job_logger(job_id)
-					job_logger.error("Job failed with exception:", exc_info=True)
-					# Abort the job with an error.
-					self.completed(job_id, constants.JOB.FAILED, None, "Exception thrown: " + str(ex))
-
 		def on_context(context):
 			def on_running(result):
 				# Finally kick it off...
 				logger.debug("Finally kicking off job %s", job_id)
-				self.runners[job_id].start_job(context)
+
+				# Closure job to keep the job_id.
+				# This function handles an exception when a job raises an exception.
+				def handle_exception_job(exc_type, ex, traceback):
+					# Log what happened.
+					logging.error("Job %s failed with exception:", job_id, exc_info=True)
+					job_logger = self.configuration.get_job_logger(job_id)
+					job_logger.error("Job %s failed with exception:", job_id, exc_info=True)
+					# Abort the job with an error.
+					self.completed(job_id, constants.JOB.FAILED, None, "Exception thrown: " + str(ex))
+
+					# Absorb the exception.
+					return True
+
+				with tornado.stack_context.ExceptionStackContext(handle_exception_job):
+					self.runners[job_id].start_job(context)
 
 			# Now that we have the context, we can start the job off.
 			# Mark it as running and then get started.
@@ -302,8 +294,7 @@ class JobManager(object):
 
 		# Kick off the request to get the job data.
 		logger.debug("Fetching job data for %s to start it.", job_id)
-		with tornado.stack_context.StackContext(handle_exception_job):
-			self.backend.get_job(job_id, on_job_metadata)
+		self.backend.get_job(job_id, on_job_metadata)
 
 	def evaluate(self):
 		"""
@@ -705,6 +696,10 @@ class TestFailJobRunner(BaseJob):
 	def abort_job(self):
 		self.aborted("Aborted.")
 
+class TestFailJobRunnerNoAbortHandler(BaseJob):
+	def start_job(self, context):
+		self.failed("Failed to run.")
+
 class TestAbortJobRunner(BaseJob):
 	def start_job(self, context):
 		# Do nothing - we're running now.
@@ -771,6 +766,12 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 			'paasmaker.common.job.manager.manager.TestFailJobRunner',
 			{},
 			'Test Fail Job'
+		)
+		self.configuration.plugins.register(
+			'paasmaker.job.failure.noabort',
+			'paasmaker.common.job.manager.manager.TestFailJobRunnerNoAbortHandler',
+			{},
+			'Test Fail Job with no Abort Handler'
 		)
 		self.configuration.plugins.register(
 			'paasmaker.job.aborted',
@@ -861,6 +862,19 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def test_manager_failed_job_simple(self):
 		# Set up a simple failed job.
 		self.manager.add_job('paasmaker.job.failure', {}, "Example job.", self.stop)
+		job_id = self.wait()
+
+		self.manager.allow_execution(job_id, callback=self.stop)
+		self.wait()
+
+		self.short_wait_hack()
+
+		result = self.get_state(job_id)
+		self.assertEquals(result, constants.JOB.FAILED, 'Test job was not a failure.')
+
+	def test_manager_failed_job_no_abort_handler(self):
+		# Set up a simple failed job.
+		self.manager.add_job('paasmaker.job.failure.noabort', {}, "Example job.", self.stop)
 		job_id = self.wait()
 
 		self.manager.allow_execution(job_id, callback=self.stop)
@@ -1007,6 +1021,8 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		result = self.get_state(job_id)
 		self.assertEquals(result, constants.JOB.FAILED, 'Test job did not fail.')
+
+		job_path = self.configuration.get_job_log_path(job_id)
 
 	def test_manager_syntax_error_start(self):
 		# Set up a simple exception job.
