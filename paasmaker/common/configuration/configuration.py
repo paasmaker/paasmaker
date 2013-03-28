@@ -908,6 +908,14 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			if not self.plugins.exists(periodic['plugin'], paasmaker.util.plugin.MODE.PERIODIC):
 				raise InvalidConfigurationParameterException("Periodic plugin %s doesn't exist." % periodic['plugin'])
 
+		# Make sure at least one stats plugin is registered.
+		if self.plugins.plugins_for(paasmaker.util.plugin.MODE.NODE_STATS) == 0:
+			raise InvalidConfigurationParameterException("No NODE_STATS plugins are registered. Paasmaker can't calculate node scores without that.")
+
+		# Make sure at least one score plugin is registered.
+		if self.plugins.plugins_for(paasmaker.util.plugin.MODE.NODE_SCORE) == 0:
+			raise InvalidConfigurationParameterException("No NODE_SCORE plugins are registered. Paasmaker can't calculate node scores without that.")
+
 		self.update_flat()
 
 	def is_pacemaker(self):
@@ -1037,7 +1045,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		plugins to generate the stats. Once complete, it will call
 		the callback with the generated stats.
 		"""
-		# TODO: In post_load(), make sure there is at least one stats plugin.
 		stats = {}
 
 		stats_plugins = self.plugins.plugins_for(
@@ -1076,7 +1083,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 		:arg dict stats: The node's stats.
 		"""
-		# TODO: In post_load(), make sure there is at least one score plugin.
 		scores = []
 		score_plugins = self.plugins.plugins_for(
 			paasmaker.util.plugin.MODE.NODE_SCORE
@@ -1090,8 +1096,9 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 
 		if len(scores) == 0:
 			# No score plugins.
-			# TODO: Fix this.
-			scores.append(0.25)
+			# Should not be possible, as it's checked on startup.
+			# Give the node a high score, as it's misconfigured.
+			scores.append(1.0)
 
 		return max(scores)
 
