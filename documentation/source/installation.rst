@@ -165,13 +165,6 @@ and password ``paasmaker``.
 If this is your first time with Paasmaker, move on to the :doc:`getting started guide
 <user-gettingstarted>`.
 
-Or, for instant gratification, use the Git SCM to deploy from the following
-repository:
-
-.. code-block:: none
-
-	git@bitbucket.org:paasmaker/sample-python-simple.git
-
 .. WARNING::
 	In the supplied configuration, when you stop Paasmaker, it will stop all
 	managed services, applications, and the router. To start them up again,
@@ -180,6 +173,25 @@ repository:
 
 	In production, Paasmaker does not shut things down to prevent any traffic loss
 	during Paasmaker restarts.
+
+Instant gratification
+---------------------
+
+For instant gratification, you can deploy from the following repositories to
+get a sample application:
+
+* Python: ``git@bitbucket.org:paasmaker/sample-python-simple.git``
+* PHP: ``git@bitbucket.org:paasmaker/sample-php-simple.git``
+* Node.js: ``git@bitbucket.org:paasmaker/sample-node-simple.git``
+* Ruby: ``git@bitbucket.org:paasmaker/sample-ruby-simple.git`` (you need to install
+  the Ruby runtime to get this one to work).
+
+These examples do rely on Paasmaker being installed with the default configuration
+in ``example-paasmaker-hacking.yml``.
+
+None of these sample applications use the Paasmaker interfaces. To see more
+information about using these languages on Paasmaker, see the :ref:`runtime integration
+documentation <user-languages-entry>`.
 
 Common Problems
 ---------------
