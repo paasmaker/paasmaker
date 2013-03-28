@@ -1,6 +1,0 @@
-{
-	"paasmaker": {},
-	"run_list": [
-		"recipe[paasmaker]"
-	]
-}
