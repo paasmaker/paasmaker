@@ -47,8 +47,7 @@ import logging
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO)
 
 # Setup pubsub exception handling.
-# TODO: Figure out what to really do with this...
-# But this at least prevents it from aborting other things.
+# Just log the exception, and continue on to the next handler.
 class PaasmakerPubSubExceptionHandler(IExcHandler):
 	def __call__(self, listenerID, topicObj):
 		logging.error("Exception in pub/sub handler:", exc_info=True)
@@ -552,7 +551,7 @@ def on_exit_prenotify_complete(message, exception=None):
 def report_shutdown():
 	# Report that we're shutting down.
 	# This also sends back all the instance statuses.
-	# If it fails, we exit anyway. TODO: Is this right?
+	# If it fails, we exit anyway.
 	logger.debug("Reporting shutdown with master...")
 	request = paasmaker.common.api.NodeShutdownAPIRequest(configuration)
 	request.send(on_told_master_shutdown)
