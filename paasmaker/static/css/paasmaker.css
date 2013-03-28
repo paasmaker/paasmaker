@@ -61,6 +61,9 @@ textarea.example-configuration
 	font-family: monospace;
 }
 
+/* Hack to make the breadcrumbs stop flickering/changing size during updates. */
+ul.breadcrumb { min-height: 20px; }
+
 /* PAGINATION */
 .pagination
 {
