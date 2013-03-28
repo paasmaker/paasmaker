@@ -113,7 +113,7 @@ First, clone the repository:
 
 .. code-block:: bash
 
-	$ git clone git@bitbucket.org:paasmaker/paasmaker.git
+	$ git clone https://bitbucket.org/paasmaker/paasmaker.git
 
 Now, in this example we're going to use the 'example-hacking' configuration,
 which is designed to set up the system as if you were going to modify the Paasmaker code.
@@ -180,10 +180,10 @@ Instant gratification
 For instant gratification, you can deploy from the following repositories to
 get a sample application:
 
-* Python: ``git@bitbucket.org:paasmaker/sample-python-simple.git``
-* PHP: ``git@bitbucket.org:paasmaker/sample-php-simple.git``
-* Node.js: ``git@bitbucket.org:paasmaker/sample-node-simple.git``
-* Ruby: ``git@bitbucket.org:paasmaker/sample-ruby-simple.git`` (you need to install
+* Python: ``https://bitbucket.org/paasmaker/sample-python-simple.git``
+* PHP: ``https://bitbucket.org/paasmaker/sample-php-simple.git``
+* Node.js: ``https://bitbucket.org/paasmaker/sample-node-simple.git``
+* Ruby: ``https://bitbucket.org/paasmaker/sample-ruby-simple.git`` (you need to install
   the Ruby runtime to get this one to work).
 
 These examples do rely on Paasmaker being installed with the default configuration
