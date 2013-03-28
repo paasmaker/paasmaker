@@ -89,20 +89,15 @@ plugins:
   - name: paasmaker.runtime.php
     class: paasmaker.heart.runtime.PHPRuntime
     title: PHP
-    parameters:
-      apache_config_dir: /tmp/foo
   - name: paasmaker.startup.shell
     class: paasmaker.pacemaker.prepare.shell.ShellPrepare
     title: Shell startup
   - name: paasmaker.runtime.shell
     class: paasmaker.heart.runtime.ShellRuntime
     title: Shell Runtime
-  #- name: paasmaker.runtime.ruby
-  #  class: paasmaker.heart.runtime.RubyRuntime
-  #  title: Ruby
-  #  parameters:
-  #    foo: bar
-  #    baz: bar
+  - name: paasmaker.scmlist.dummy
+    class: paasmaker.pacemaker.controller.scmlist.DummySCMList
+    title: Dummy SCM lister
 """
 
     pacemaker_config = """

@@ -874,10 +874,39 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		# so you can re-register the defaults with different options.
 		self.load_plugins(self.plugins, self['plugins'])
 
-		# TODO: validate the contents of scmlisters, that they all
-		# are relevant plugins.
-		# TODO: validate the health manager plugins exist.
-		# TODO: Validate that periodic plugins exist.
+		# Check SCM lister entries.
+		if self.is_pacemaker():
+			for meta in self['pacemaker']['scmlisters']:
+				if not self.plugins.exists(meta['for'], paasmaker.util.plugin.MODE.SCM_EXPORT):
+					raise InvalidConfigurationParameterException("SCM lister entry refers to SCM plugin %s that doesn't exist." % meta['for'])
+				for listplugin in meta['plugins']:
+					if not self.plugins.exists(listplugin, paasmaker.util.plugin.MODE.SCM_LIST):
+						raise InvalidConfigurationParameterException("SCM lister plugin %s doesn't exist (in list for SCM %s)." % (listplugin, meta['for']))
+
+		# Check that the health manager plugins exist.
+		# And also that their parameters validate.
+		if self.is_pacemaker():
+			for group in self['pacemaker']['health']['groups']:
+				for plugin in group['plugins']:
+					if not self.plugins.exists(plugin['plugin'], paasmaker.util.plugin.MODE.HEALTH_CHECK):
+						raise InvalidConfigurationParameterException("Health check plugin %s doesn't exist." % plugin['plugin'])
+
+					# Try to instantiate it with the parameters.
+					# This will raise an exception if it's wrong.
+					try:
+						instance = self.plugins.instantiate(
+							plugin['plugin'],
+							paasmaker.util.plugin.MODE.HEALTH_CHECK,
+							plugin['parameters']
+						)
+					except InvalidConfigurationFormatException, ex:
+						logger.error("Exception: ", exc_info=ex)
+						raise InvalidConfigurationParameterException("Error in health check plugin %s parameters. See above." % plugin['plugin'])
+
+		# Check that the periodic plugins exist.
+		for periodic in self['periodics']:
+			if not self.plugins.exists(periodic['plugin'], paasmaker.util.plugin.MODE.PERIODIC):
+				raise InvalidConfigurationParameterException("Periodic plugin %s doesn't exist." % periodic['plugin'])
 
 		self.update_flat()
 
