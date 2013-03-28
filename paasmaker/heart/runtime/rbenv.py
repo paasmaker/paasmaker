@@ -159,12 +159,18 @@ class RbenvRuntime(BaseRuntime):
 				error_callback(error_message)
 				return
 
-			# TODO: Check if we're adding it again and don't do that.
-			environment['PATH'] = "%s:%s:%s" % (
-				os.path.join(self._get_rbenv_root_path(), 'shims'),
-				os.path.join(self._get_rbenv_root_path(), 'bin'),
-				environment['PATH']
-			)
+			shims_path = os.path.join(self._get_rbenv_root_path(), 'shims')
+			bin_path = os.path.join(self._get_rbenv_root_path(), 'bin')
+			if shims_path not in environment['PATH']:
+				environment['PATH'] = "%s:%s" % (
+					shims_path,
+					environment['PATH']
+				)
+			if bin_path not in environment['PATH']:
+				environment['PATH'] = "%s:%s" % (
+					bin_path,
+					environment['PATH']
+				)
 
 			callback("Ready to run version %s." % real_version)
 

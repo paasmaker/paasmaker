@@ -181,11 +181,12 @@ class NvmRuntime(BaseRuntime):
 				error_callback(error_message)
 				return
 
-			# TODO: Check if we're adding it again and don't do that.
-			environment['PATH'] = "%s:%s" % (
-				os.path.join(self._get_nvm_root_path(), real_version, 'bin'),
-				environment['PATH']
-			)
+			nvm_path = os.path.join(self._get_nvm_root_path(), real_version, 'bin')
+			if nvm_path not in environment['PATH']:
+				environment['PATH'] = "%s:%s" % (
+					nvm_path,
+					environment['PATH']
+				)
 
 			callback("Ready to run version %s." % real_version)
 
