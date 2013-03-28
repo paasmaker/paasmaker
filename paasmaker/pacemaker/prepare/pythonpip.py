@@ -92,16 +92,12 @@ class PythonPipPrepare(BasePrepare):
 			# We need to download and cache the packages first.
 			# In theory, this should mean we can reinstall the same packages again
 			# later without touching the internet at all.
-			fp.write("pip install --download %s -r %s\n" % (download_cache_path, self.parameters['requirements_name']))
-
-			# Now that we've successfully downloaded it, record that we've downloaded
-			# this set of packages.
-			open(requirements_checkfile, 'w')  # This is equivalent to 'touch'.
+			fp.write("stdbuf -o0 pip install --download %s -r %s\n" % (download_cache_path, self.parameters['requirements_name']))
 		else:
 			self.logger.info("Previously seen requirements file - using existing cache only.")
 
 		# Now install packages from the cache.
-		fp.write("pip install --no-index --find-links=file://%s -r %s\n" % (download_cache_path, self.parameters['requirements_name']))
+		fp.write("stdbuf -o0 pip install --no-index --find-links=file://%s -r %s\n" % (download_cache_path, self.parameters['requirements_name']))
 
 		fp.close()
 
@@ -114,6 +110,11 @@ class PythonPipPrepare(BasePrepare):
 			os.unlink(self.tempnam)
 			#self.configuration.debug_cat_job_log(self.logger.job_id)
 			if code == 0:
+				# Now that we've successfully downloaded it, record that we've downloaded
+				# this set of packages.
+				open(requirements_checkfile, 'w')  # This is equivalent to 'touch'.
+
+				# Report success.
 				callback("Successfully prepared via pip.")
 			else:
 				error_callback("Unable to prepare via pip.")
