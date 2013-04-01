@@ -2,9 +2,8 @@
 Paasmaker
 =========
 
-Paasmaker is an Open Source Platform as a Service, designed to be
-easily extensible with Python plugins. It is designed to be highly
-visible, and easy to cluster.
+Paasmaker is an open source tool for creating Platform as a Service clusters,
+designed to be highly visible and easily extensible with Python plugins.
 
 .. toctree::
    :maxdepth: 2
@@ -12,17 +11,17 @@ visible, and easy to cluster.
    introduction
 
    installation
-
+   
+.. toctree::
+   :titlesonly:
+   :maxdepth: 4
+   
    user
+   
    administrator
+   
    developer
 
    glossary
-
-Indices and tables
-==================
-
+   
 * :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-

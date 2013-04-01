@@ -1,22 +1,81 @@
+/**********************
+ * docs.paasmaker.org *
+ **********************/
 
-/* Layout */
-footer { text-align: center;}
-body .navbar .brand { padding: 8px 20px 3px; }
+/*****
+* Main layout and typography
+*/
+ 
+body { margin: 20px 0 0 0; }
+
+.sidebar-nav, .navbar, footer,
+#paasmaker .toctree-wrapper > ul > li > a,
+h1, h2, h3, h4, h5, h6 {
+	font-family: Monda, "Helvetica Neue", Helvetica, Arial, sans-serif;
+}
+
 h1 { margin-top: 0px; }
 
-.related { display: none; }
-.sphinxsidebar { padding-left: 10px; padding-right: 10px; }
-.sphinxsidebarwrapper h3 { line-height: 1em; margin-top: 0px; }
+/*****
+ * Top navbar
+ */
+
+.navbar .brand { padding: 7px 20px 0; }
+.navbar form { margin: 5px 0 0 0; }
+.navbar form .input-append { margin: 0; }
+
+/*****
+ * Main table of contents page
+ */
+
+#paasmaker .toctree-wrapper > ul > li, #paasmaker ul.simple > li {
+	list-style: none;
+	margin-top: 20px;
+}
+
+#paasmaker .toctree-wrapper > ul > li > a, #paasmaker ul.simple > li > a {
+	display: inline-block;
+	padding: 3px 0;
+	font-size: 18px;
+}
+
+#paasmaker ul.simple > li > a > em { font-style: normal; }
+
+/*****
+ * Lists of classes
+ */
 
 span.viewcode-link { padding-left: 10px; }
 
 dl.class { border-bottom: 1px solid #eeeeee; }
 
+/*****
+ * Search results
+ */
+
 ul.search { margin-left: 0px; list-style-type: none; }
 ul.search li { border-bottom: 1px solid #eeeeee; padding-bottom: 2px; margin-bottom: 5px; }
 
-/* Show the header links when you hover on the headers.
-   Taken directly from Sphinx's styles. */
+/*****
+ * Page footer
+ */
+ 
+footer { text-align: center; font-size: smaller; color: #333; margin-top: 40px; padding: 40px 0; background: #cccccc; background-image: linear-gradient(bottom, #cccccc, #e0e0e0); background-image: -moz-linear-gradient(bottom, #cccccc, #e0e0e0); background-image: -webkit-linear-gradient(bottom, #cccccc, #e0e0e0); }
+
+footer .related { margin-bottom: 10px; }
+footer .related ul { margin: 0; }
+footer .related li { display: inline; list-style: none; margin: 0 10px; }
+
+/*****
+ * Glossary page
+ */
+ 
+dl.glossary dd { margin-bottom: 20px; }
+
+/*****
+ * Shows the anchor links when you hover on the headers; taken directly from Sphinx's styles.
+ */
+ 
 a.headerlink {
     visibility: hidden;
 }
@@ -31,7 +90,10 @@ dt:hover > a.headerlink {
     visibility: visible;
 }
 
-/* Borrowed from the Bootstrap styles. */
+/*****
+ * Styles borrowed from Bootstrap - admonition boxes
+ */
+
 .admonition {
   padding: 8px 35px 8px 14px;
   margin-bottom: 20px;
@@ -53,4 +115,50 @@ dt:hover > a.headerlink {
 .admonition.warning {
   background-color: #fcf8e3;
   border: 1px solid #fbeed5;
+}
+
+/*****
+ * Left navigation for child pages: localtoc.html doesn't use the right classes for
+ * Bootstrap nav lists, so we'll fake it (i.e. more styles borrowed from Bootstrap)
+ */
+
+.sidebar-nav {
+	padding: 3px 0;
+}
+
+.local-toc ul {
+	margin: 0;
+}
+
+.local-toc > ul > li {
+	padding: 3px 0;
+	margin: 9px 0 0 0;
+	list-style: none;
+}
+
+.local-toc > ul > li > a {
+	display: block;
+	font-size: 11px;
+	font-weight: bold;
+	color: #999;
+	text-transform: uppercase;
+	text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+}
+
+.local-toc ul ul li {
+	list-style: none;
+	margin: 0;
+	padding: 0;
+}
+
+.local-toc ul ul li a {
+	display: block;
+	padding: 3px 0;
+	text-shadow: 0 1px 0 rgba(255,255,255,0.5);
+}
+
+.local-toc ul ul li a:hover {
+	text-decoration: none;
+  color: #005580;
+  background-color: #eeeeee;
 }

@@ -24,63 +24,49 @@
 {%- endif %}
 
 {%- macro relbar() %}
-    <div class="related">
-      <h3>{{ _('Navigation') }}</h3>
-      <ul>
-        {%- for rellink in rellinks %}
-        <li class="right" {% if loop.first %}style="margin-right: 10px"{% endif %}>
-          <a href="{{ pathto(rellink[0]) }}" title="{{ rellink[1]|striptags|e }}"
-             {{ accesskey(rellink[2]) }}>{{ rellink[3] }}</a>
-          {%- if not loop.first %}{{ reldelim2 }}{% endif %}</li>
-        {%- endfor %}
-        {%- block rootrellink %}
-        <li><a href="{{ pathto(master_doc) }}">{{ shorttitle|e }}</a>{{ reldelim1 }}</li>
-        {%- endblock %}
-        {%- for parent in parents %}
-          <li><a href="{{ parent.link|e }}" {% if loop.last %}{{ accesskey("U") }}{% endif %}>{{ parent.title }}</a>{{ reldelim1 }}</li>
-        {%- endfor %}
-        {%- block relbaritems %} {% endblock %}
-      </ul>
-    </div>
+	<div class="related">
+		<!-- <ul class="nav nav-pills">
+			{%- for rellink in rellinks %}
+				<li>
+					<a href="{{ pathto(rellink[0]) }}" title="{{ rellink[1]|striptags|e }}" {{ accesskey(rellink[2]) }}>{{ rellink[3] }}</a>
+				</li>
+			{%- endfor %}
+		</ul> -->
+		<ul>
+			{%- block rootrellink %}
+			<li><a href="{{ pathto(master_doc) }}">{{ shorttitle|e }}</a></li>
+			{%- endblock %}
+			{%- for parent in parents %}
+				<li><a href="{{ parent.link|e }}" {% if loop.last %}{{ accesskey("U") }}{% endif %}>{{ parent.title }}</a></li>
+			{%- endfor %}
+			{%- block relbaritems %} {% endblock %}
+		</ul>
+	</div>
 {%- endmacro %}
 
 {%- macro sidebar() %}
-      {%- if render_sidebar %}
-      <div class="sphinxsidebar">
-        <div class="sphinxsidebarwrapper">
-          {%- block sidebarlogo %}
-          {%- if logo %}
-            <p class="logo"><a href="{{ pathto(master_doc) }}">
-              <img class="logo" src="{{ pathto('_static/' + logo, 1) }}" alt="Logo"/>
-            </a></p>
-          {%- endif %}
-          {%- endblock %}
-          {%- if sidebars != None %}
-            {#- new style sidebar: explicitly include/exclude templates #}
-            {%- for sidebartemplate in sidebars %}
-            {%- include sidebartemplate %}
-            {%- endfor %}
-          {%- else %}
-            {#- old style sidebars: using blocks -- should be deprecated #}
-            {%- block sidebartoc %}
-            {%- include "localtoc.html" %}
-            {%- endblock %}
-            {%- block sidebarrel %}
-            {%- include "relations.html" %}
-            {%- endblock %}
-            {%- block sidebarsourcelink %}
-            {%- include "sourcelink.html" %}
-            {%- endblock %}
-            {%- if customsidebar %}
-            {%- include customsidebar %}
-            {%- endif %}
-            {%- block sidebarsearch %}
-            {%- include "searchbox.html" %}
-            {%- endblock %}
-          {%- endif %}
-        </div>
-      </div>
-      {%- endif %}
+	{%- if render_sidebar %}
+		{%- if sidebars != None %}
+			{#- new style sidebar: explicitly include/exclude templates #}
+			{%- for sidebartemplate in sidebars %}
+			{%- include sidebartemplate %}
+			{%- endfor %}
+		{%- else %}
+			{#- old style sidebars: using blocks -- should be deprecated #}
+			{%- block sidebartoc %}
+			{%- include "localtoc.html" %}
+			{%- endblock %}
+			{%- block sidebarrel %}
+			{%- include "relations.html" %}
+			{%- endblock %}
+			{%- block sidebarsourcelink %}
+			{%- include "sourcelink.html" %}
+			{%- endblock %}
+			{%- if customsidebar %}
+			{%- include customsidebar %}
+			{%- endif %}
+		{%- endif %}
+	{%- endif %}
 {%- endmacro %}
 
 {%- macro script() %}
@@ -120,27 +106,10 @@
     {%- endif %}
 
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+   	<link href='http://fonts.googleapis.com/css?family=Monda:400,700' rel='stylesheet' type='text/css'>
     <link href="{{ pathto('_static/bootstrap.min.css', 1) }}" rel="stylesheet" media="screen">
     <link href="{{ pathto('_static/paasmaker.css', 1) }}" rel="stylesheet" media="screen">
-
-    <style type="text/css">
-          body {
-            padding-top: 60px;
-            padding-bottom: 40px;
-          }
-          .sidebar-nav {
-            padding: 9px 0;
-          }
-
-          @media (max-width: 980px) {
-            /* Enable use of floated navbar text */
-            .navbar-text.pull-right {
-              float: none;
-              padding-left: 5px;
-              padding-right: 5px;
-            }
-          }
-    </style>
     <link href="{{ pathto('_static/bootstrap-responsive.min.css', 1) }}" rel="stylesheet" media="screen">
 
     {%- if favicon %}
@@ -175,73 +144,112 @@
   </head>
   <body>
 {%- block header %}
-    <div class="navbar navbar-inverse navbar-fixed-top">
-      <div class="navbar-inner">
-        <div class="container-fluid">
-          <button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-            <span class="icon-bar"></span>
-          </button>
-          <a class="brand" href="{{ pathto(master_doc) }}"><img src="{{ pathto('_static/pm-dark-32.png', 1) }}" alt="Paasmaker" width="117" height="30" /></a>
-          <div class="nav-collapse collapse">
-            <ul class="nav">
-              <li><a href="{{ pathto(master_doc) }}">Home</a></li>
-              <li><a href="{{ pathto('user') }}">Users</a></li>
-              <li><a href="{{ pathto('administrator') }}">Administrators</a></li>
-              <li><a href="{{ pathto('developer') }}">Developers</a></li>
-            </ul>
-          </div><!--/.nav-collapse -->
-        </div>
-      </div>
-    </div>
-
     <script type="text/javascript" src="{{ pathto('_static/jquery.js', 1) }}"></script>
     <script type="text/javascript" src="{{ pathto('_static/underscore.js', 1) }}"></script>
     <script type="text/javascript" src="{{ pathto('_static/doctools.js', 1) }}"></script>
     <script type="text/javascript" src="{{ pathto('_static/bootstrap.js', 1) }}"></script>
 {% endblock %}
 
-{%- block relbar1 %}{{ relbar() }}{% endblock %}
-
 {%- block content %}
-    <div class="container-fluid">
-      <div class="row-fluid">
-        {%- if render_sidebar %}
-        <div class="span3">
-          <div class="well sidebar-nav">
-            {%- block sidebar1 %} {# possible location for sidebar #} {% endblock %}
-            {%- block sidebar2 %}{{ sidebar() }}{% endblock %}
-          </div><!--/.well -->
-        </div><!--/span-->
-        {%- endif %}
+	<div class="container-fluid">
+		<div class="navbar">
+			<div class="navbar-inner">
+				<button type="button" class="btn btn-navbar" data-toggle="collapse" data-target=".nav-collapse">
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+					<span class="icon-bar"></span>
+				</button>
+				<a class="brand" href="{{ pathto(master_doc) }}">
+					<!-- <img src="{{ pathto('_static/book5.jpg', 1) }}" alt=""> -->
+					<img src="{{ pathto('_static/pm-dark-32.png', 1) }}" alt="Paasmaker">
+					Documentation
+				</a>
+				<div class="nav-collapse collapse">
+					<ul class="nav">
+						{% set active = [] %}
+						{% for parent in parents %}
+							{% if parent.link == pathto('user') %}
+								{% if active.append('user') %}{% endif %}
+							{% endif %}
+							{% if parent.link == pathto('administrator') %}
+								{% if active.append('administrator') %}{% endif %}
+							{% endif %}
+							{% if parent.link == pathto('developer') %}
+								{% if active.append('developer') %}{% endif %}
+							{% endif %}
+						{% endfor %}
+						{% if pagename == 'user' %}{% if active.append('user') %}{% endif %}{% endif %}
+						{% if pagename == 'administrator' %}{% if active.append('administrator') %}{% endif %}{% endif %}
+						{% if pagename == 'developer' %}{% if active.append('developer') %}{% endif %}{% endif %}
+						<li {% if active|length == 0 %}class="active"{% endif %}>
+							<a href="{{ pathto(master_doc) }}">Contents</a>
+						</li>
+						<li {% if 'user' in active %}class="active"{% endif %}>
+							<a href="{{ pathto('user') }}" >Users</a>
+						</li>
+						<li {% if 'administrator' in active %}class="active"{% endif %}>
+							<a href="{{ pathto('administrator') }}">Administrators</a>
+						</li>
+						<li {% if 'developer' in active %}class="active"{% endif %}>
+							<a href="{{ pathto('developer') }}">Developers</a>
+						</li>
+					</ul>
+					{%- block sidebarsearch %}
+						{%- include "searchbox.html" %}
+					{%- endblock %}
+				</div><!--/.nav-collapse -->
+			</div>
+		</div>
+	
+		<div class="row-fluid">
+			<div class="span3">
+				{%- if render_sidebar and pagename != 'index' %}
+					<div class="well sidebar-nav">
+						<ul class="nav nav-list">
+							{%- if parents|length > 0 %}
+								{%- if parents|length == 1 %}
+									<li class="nav-header">{{ _('Parent topic') }}</li>
+								{%- else %}
+									<li class="nav-header">{{ _('Parent topics') }}</li>
+								{%- endif %}
+								{%- for parent in parents %}
+									<li><a href="{{ parent.link|e }}" {% if loop.last %}{{ accesskey("U") }}{% endif %}>
+										{{ parent.title }}
+									</a></li>
+								{%- endfor %}
+								<li class="divider"></li>
+							{%- endif %}
+							{%- block sidebar2 %}{{ sidebar() }}{% endblock %}
+						</ul>
+					</div><!--/.well -->
+				{%- endif %}
+			</div><!--/.span3-->
 
-        <div class="span9">
-
-          <div class="document">
-        {%- block document %}
-            <div class="documentwrapper">
-            {%- if render_sidebar %}
-              <div class="bodywrapper">
-            {%- endif %}
-                <div class="body">
-                  {% block body %} {% endblock %}
-                </div>
-            {%- if render_sidebar %}
-              </div>
-            {%- endif %}
-            </div>
-        {%- endblock %}
-          </div>
-        </div><!--/span-->
-      </div><!--/row-->
+			<div class="span9">
+				<div class="document">
+					{%- block document %}
+						<div class="documentwrapper">
+							{%- if render_sidebar %}
+								<div class="bodywrapper">
+									{%- endif %}
+										<div class="body">
+											{% block body %} {% endblock %}
+										</div>
+									{%- if render_sidebar %}
+								</div>
+							{%- endif %}
+						</div>
+					{%- endblock %}
+				</div>
+			</div><!--/.span9-->
+		</div><!--/row-fluid-->
+	</div>
 {%- endblock %}
 
-{%- block relbar2 %}{{ relbar() }}{% endblock %}
-
 {%- block footer %}
-    <hr>
     <footer>
+		{%- block relbar2 %}{{ relbar() }}{% endblock %}
+		
     {%- if show_copyright %}
       {%- if hasdoc('copyright') %}
         {% trans path=pathto('copyright'), copyright=copyright|e %}&copy; <a href="{{ path }}">Copyright</a> {{ copyright }}.{% endtrans %}
