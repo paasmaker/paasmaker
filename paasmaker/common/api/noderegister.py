@@ -204,12 +204,22 @@ class NodeUpdatePeriodicManager(object):
 			logger.error("Unable to register with the master node.")
 			for error in response.errors:
 				logger.error(error)
+
+			# TODO: This relies on an internal variable, but saves us having
+			# to recreate the periodic.
 			logger.info("Waiting for 5 seconds and then we'll try again.")
-			self.configuration.io_loop.add_timeout(time.time() + 5, self.trigger)
+			self.periodic.callback_time = 5000
+			self.periodic.stop()
+			self.periodic.start()
 
 			pub.sendMessage('node.registrationerror')
 		else:
 			logger.info("Successfully registered or updated with master.")
+
+			# Reset the callback time.
+			self.periodic.callback_time = self.configuration.get_flat('node_report_interval')
+			self.periodic.stop()
+			self.periodic.start()
 
 			if self.firstregister:
 				self.firstregister = False
