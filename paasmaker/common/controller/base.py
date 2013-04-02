@@ -888,7 +888,8 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase, TestHelpers):
 		self.configuration.setup_job_watcher()
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(BaseControllerTest, self).tearDown()
 
 	def get_http_port(self):

@@ -144,12 +144,14 @@ LoadModule php5_module /usr/libexec/apache2/libphp5.so
 </IfModule>
 """
 
-	def configure(self, working_dir, port):
+	def configure(self, working_dir, port, callback, error_callback):
 		"""
 		Configure this instance.
 
 		:arg str working_dir: The working directory.
 		:arg int port: The port to listen on.
+		:arg callable callback: The callback to call when done.
+		:arg callable error_callback: The callback to call on error.
 		"""
 		self.parameters['working_dir'] = working_dir
 		self.parameters['port'] = port
@@ -166,6 +168,8 @@ LoadModule php5_module /usr/libexec/apache2/libphp5.so
 		self.parameters['config_file_dir'] = config_file_dir
 
 		self.save_parameters()
+
+		callback("Configured Apache.")
 
 	def get_pid_path(self):
 		return os.path.join(self.parameters['working_dir'], 'apache2.pid')
@@ -209,72 +213,100 @@ LoadModule php5_module /usr/libexec/apache2/libphp5.so
 		fp.write(configuration)
 		fp.close()
 
-		# Fire up the server.
-		# For debugging, you might like to comment out the stderr redirection.
-		logging.info("Starting up apache2 server on port %d." % self.parameters['port'])
-		binary = self._get_binary_path()
-		# TODO: The output isn't captured here, because otherwise
-		# debugging is too hard. Fix this in the future - the CalledProcessError
-		# doesn't have an output attribute that we can read, even if we switch
-		# check_call() for check_output() (as per the documentation).
-		subprocess.check_call(
-			[
-				binary,
-				'-f',
-				configfile,
-				'-k',
-				'start'
-			]
-		)
+		def process_forked(code):
+			if code == 0:
+				# Wait for the port to come into use.
+				logging.info("Apache2 started, waiting for listening state.")
+				self._wait_until_port_inuse(
+					self.parameters['port'],
+					callback,
+					error_callback
+				)
+			else:
+				error_message = "Unable to start Apache2 - exited with error code %d." % code
+				error_message += "\nOutput:\n" + self._fetch_output()
+				logging.error(error_message)
+				error_callback(error_message)
 
-		# Wait for the port to come into use.
-		self.configuration.port_allocator.wait_until_port_used(
-			self.configuration.io_loop,
-			self.parameters['port'],
-			5,
-			callback,
-			error_callback
-		)
+		# Fire up the server.
+		logging.info("Starting up Apache2 server on port %d." % self.parameters['port'])
+		try:
+			binary = self._get_binary_path()
+			paasmaker.util.popen.Popen(
+				[
+					binary,
+					'-f',
+					configfile,
+					'-k',
+					'start'
+				],
+				redirect_stderr=True,
+				on_stdout=self._fetchable_output,
+				on_exit=process_forked,
+				io_loop=self.configuration.io_loop
+			)
+		except OSError, ex:
+			logging.error(ex)
+			error_callback(str(ex), exception=ex)
 
 	def is_running(self, keyword=None):
 		binary = self._get_binary_path()
 		binary = os.path.basename(binary)
 		return super(ApacheDaemon, self).is_running(binary)
 
-	def destroy(self):
+	def destroy(self, callback, error_callback):
 		"""
 		Destroy this instance of apache2, removing all generated data.
 		"""
-		self.stop()
-		shutil.rmtree(self.parameters['working_dir'])
+		def stopped(message):
+			# Delete all the files.
+			shutil.rmtree(self.parameters['working_dir'])
+			callback(message)
+
+		self.stop(stopped, error_callback)
 
 	def get_config_dir(self):
 		return self.parameters['config_file_dir']
 
-	def graceful(self):
+	def graceful(self, callback, error_callback):
 		"""
 		Perform a graceful restart of this Apache instance.
 
-		This works by calling the 'graceful' command. It will
-		return basically immediately on success, or raise an
-		exception on failure.
+		This works by calling the 'graceful' command.
 		"""
 		# Perform a graceful restart of the server.
-		# TODO: Make this call Async.
 		configfile = self.get_configuration_path(self.parameters['working_dir'])
 		binary = self._get_binary_path()
-		output = subprocess.check_output(
-			[
-				binary,
-				'-f',
-				configfile,
-				'-k',
-				'graceful'
-			],
-			stderr=subprocess.STDOUT
-		)
 
-		return output
+		def graceful_applied(code):
+			if code == 0:
+				callback("Successfully gracefulled.")
+			else:
+				error_message = "Unable to graceful Apache - exited with error code %d." % code
+				error_message += "Output:\n" + self._fetch_output()
+				logging.error(error_message)
+				error_callback(error_message)
+
+		try:
+			paasmaker.util.popen.Popen(
+				[
+					binary,
+					'-f',
+					configfile,
+					'-k',
+					'graceful'
+				],
+				redirect_stderr=True,
+				on_stdout=self._fetchable_output,
+				on_exit=graceful_applied,
+				io_loop=self.configuration.io_loop
+			)
+		except OSError, ex:
+			logging.error(ex)
+			error_callback(str(ex), exception=ex)
+
+	def get_error_log(self):
+		return open(os.path.join(self.parameters['working_dir'], 'error.log'), 'r').read()
 
 class ApacheDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
@@ -283,8 +315,10 @@ class ApacheDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 	def tearDown(self):
 		if hasattr(self, 'server'):
-			self.server.destroy()
-		self.configuration.cleanup()
+			self.server.destroy(self.stop, self.stop)
+			self.wait()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(ApacheDaemonTest, self).tearDown()
 		pass
 
@@ -293,8 +327,11 @@ class ApacheDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 		port = self.configuration.get_free_port()
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('apache2'),
-			port
+			port,
+			self.stop,
+			self.stop
 		)
+		self.wait()
 		self.server.start(self.stop, self.stop)
 		result = self.wait()
 
@@ -311,7 +348,8 @@ class ApacheDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.server.is_running()
 
-		self.server.stop()
+		self.server.stop(self.stop, self.stop)
+		self.wait()
 
 		# Give it a little time to stop.
 		time.sleep(0.1)
@@ -326,8 +364,8 @@ class ApacheDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertTrue(self.server.is_running())
 
 		# Graceful the server.
-		self.server.graceful()
-		time.sleep(0.1)
+		self.server.graceful(self.stop, self.stop)
+		self.wait()
 
 		# Make sure it's still listening.
 		request = tornado.httpclient.HTTPRequest('http://localhost:%d/foo' % port)

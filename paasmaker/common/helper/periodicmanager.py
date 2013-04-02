@@ -236,7 +236,8 @@ class PeriodicManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.job_statuses[message.job_id] = message
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(PeriodicManagerTest, self).tearDown()
 
 	def _wait_until_state(self, job_id, state):

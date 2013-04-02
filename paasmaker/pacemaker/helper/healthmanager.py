@@ -320,7 +320,8 @@ class HealthMangerTest(tornado.testing.AsyncTestCase, paasmaker.common.testhelpe
 		self.job_statuses[message.job_id] = message
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(HealthMangerTest, self).tearDown()
 
 	def _set_health_config(self, plugins):

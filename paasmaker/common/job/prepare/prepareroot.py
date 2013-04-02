@@ -170,7 +170,8 @@ class PrepareJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.wait()
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(PrepareJobTest, self).tearDown()
 
 	def on_job_status(self, message):

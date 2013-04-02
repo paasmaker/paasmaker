@@ -16,6 +16,7 @@ import paasmaker
 
 import momoko
 import colander
+import psycopg2
 
 class ManagedPostgresServiceConfigurationSchema(colander.MappingSchema):
 	port = colander.SchemaNode(colander.Integer(),
@@ -92,12 +93,41 @@ class ManagedPostgresService(PostgresService):
 		# See if our managed postgres exists, and is running.
 		postgres_path = self._postgres_path()
 		manager = paasmaker.util.postgresdaemon.PostgresDaemon(self.configuration)
+
+		def on_configured(message):
+			def on_delay():
+				super(ManagedPostgresService, self).create(name, callback, error_callback)
+
+			def on_running(message):
+				# Success!
+				# Ask our superclass to create the credentials for us.
+				self.logger.info("Successfully started. Generating credentials.")
+
+				self.options['hostname'] = '127.0.0.1' #self.configuration.get_flat('my_route')
+				self.options['username'] = 'postgres'
+				self.options['password'] = self.options['root_password']
+
+				# Wait a little bit for Postgres to settle down.
+				self.configuration.io_loop.add_timeout(time.time() + 0.5, on_delay)
+
+			def on_startup_failure(message, exception=None):
+				self.logger.error(message)
+				if exception:
+					self.logger.error("Exception:", exc_info=exception)
+
+				error_callback(message, exception)
+
+			manager.start_if_not_running(on_running, on_startup_failure)
+
+			# end of on_configured()
+
 		try:
 			manager.load_parameters(postgres_path)
 
 			port = manager.get_port()
 
 			self.logger.info("Using existing instance on port %d.", port)
+			on_configured("Configured")
 
 		except paasmaker.util.ManagedDaemonError, ex:
 			port = self.options['port']
@@ -110,32 +140,10 @@ class ManagedPostgresService(PostgresService):
 				self.options['binary_path'],
 				port,
 				self.options['host'],
+				on_configured,
+				error_callback,
 				self.options['root_password']
 			)
-
-		def on_delay():
-			super(ManagedPostgresService, self).create(name, callback, error_callback)
-
-		def on_running(message):
-			# Success!
-			# Ask our superclass to create the credentials for us.
-			self.logger.info("Successfully started. Generating credentials.")
-
-			self.options['hostname'] = '127.0.0.1' #self.configuration.get_flat('my_route')
-			self.options['username'] = 'postgres'
-			self.options['password'] = self.options['root_password']
-
-			# Wait a little bit for Postgres to settle down.
-			self.configuration.io_loop.add_timeout(time.time() + 0.5, on_delay)
-
-		def on_startup_failure(message, exception=None):
-			self.logger.error(message)
-			if exception:
-				self.logger.error("Exception:", exc_info=exception)
-
-			error_callback(message, exception)
-
-		manager.start_if_not_running(on_running, on_startup_failure)
 
 	def update(self, name, existing_credentials, callback, error_callback):
 		super(ManagedPostgresService, self).update(name, existing_credentials, callback, error_callback)
@@ -177,8 +185,11 @@ class ManagedPostgresService(PostgresService):
 				manager.load_parameters(postgres_path)
 				self.logger.info("Found managed postgres at path %s - shutting down", postgres_path)
 
+				def on_success(message):
+					callback("Shut down Postgres instance.")
+
 				# Shut it down.
-				manager.stop()
+				manager.stop(on_success, error_callback)
 
 				# Move onto the next one.
 				callback("Shut down Postgres instance.")
@@ -269,6 +280,11 @@ class ManagedPostgresServiceTest(PostgresServiceTest):
 		)
 
 		service.remove('test', self.credentials, self.success_remove_callback, self.failure_callback)
-		self.wait()
+		try:
+			self.wait()
+		except psycopg2.OperationalError, ex:
+			# Ignore this exception - it's an async handler
+			# trying to reconnect to the now-stopped Postgres server.
+			pass
 
 		self.assertTrue(self.success, "Deleting managed postgres service didn't succeed.")

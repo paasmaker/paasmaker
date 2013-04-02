@@ -425,11 +425,6 @@ class ApplicationControllerTest(BaseControllerTest):
 		self.manager.prepare(self.stop, self.stop)
 		self.wait()
 
-	# Handled by BaseControllerTest
-	# def tearDown(self):
-	# 	self.configuration.cleanup()
-	# 	super(ApplicationControllerTest, self).tearDown()
-
 	def get_app(self):
 		self.late_init_configuration(self.io_loop)
 		routes = ApplicationDeleteController.get_routes({'configuration': self.configuration})

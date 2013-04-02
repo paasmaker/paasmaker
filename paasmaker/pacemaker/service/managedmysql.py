@@ -68,12 +68,41 @@ class ManagedMySQLService(MySQLService):
 		# See if our managed mysql exists, and is running.
 		mysql_path = self._mysql_path()
 		manager = paasmaker.util.mysqldaemon.MySQLDaemon(self.configuration)
+
+		def on_configured(message):
+			def on_delay():
+				super(ManagedMySQLService, self).create(name, callback, error_callback)
+
+			def on_running(message):
+				# Success!
+				# Ask our superclass to create the credentials for us.
+				self.logger.info("Successfully started. Generating credentials.")
+
+				self.options['hostname'] = '127.0.0.1' #self.configuration.get_flat('my_route')
+				self.options['username'] = 'root'
+				self.options['password'] = self.options['root_password']
+
+				# Wait a little bit for MySQL to settle down.
+				self.configuration.io_loop.add_timeout(time.time() + 0.5, on_delay)
+
+			def on_startup_failure(message, exception=None):
+				self.logger.error(message)
+				if exception:
+					self.logger.error("Exception:", exc_info=exception)
+
+				error_callback(message, exception)
+
+			manager.start_if_not_running(on_running, on_startup_failure)
+			# end of on_configured()
+
 		try:
 			manager.load_parameters(mysql_path)
 
 			port = manager.get_port()
 
 			self.logger.info("Using existing instance on port %d.", port)
+
+			on_configured('Configured')
 
 		except paasmaker.util.ManagedDaemonError, ex:
 			port = self.options['port']
@@ -85,32 +114,10 @@ class ManagedMySQLService(MySQLService):
 				mysql_path,
 				port,
 				self.options['host'],
+				on_configured,
+				error_callback,
 				self.options['root_password']
 			)
-
-		def on_delay():
-			super(ManagedMySQLService, self).create(name, callback, error_callback)
-
-		def on_running(message):
-			# Success!
-			# Ask our superclass to create the credentials for us.
-			self.logger.info("Successfully started. Generating credentials.")
-
-			self.options['hostname'] = '127.0.0.1' #self.configuration.get_flat('my_route')
-			self.options['username'] = 'root'
-			self.options['password'] = self.options['root_password']
-
-			# Wait a little bit for MySQL to settle down.
-			self.configuration.io_loop.add_timeout(time.time() + 0.5, on_delay)
-
-		def on_startup_failure(message, exception=None):
-			self.logger.error(message)
-			if exception:
-				self.logger.error("Exception:", exc_info=exception)
-
-			error_callback(message, exception)
-
-		manager.start_if_not_running(on_running, on_startup_failure)
 
 	def update(self, name, existing_credentials, callback, error_callback):
 		super(ManagedMySQLService, self).update(name, existing_credentials, callback, error_callback)
@@ -152,11 +159,11 @@ class ManagedMySQLService(MySQLService):
 				manager.load_parameters(mysql_path)
 				self.logger.info("Found managed mysql at path %s - shutting down", mysql_path)
 
-				# Shut it down.
-				manager.stop()
+				def on_success(message):
+					callback("Shut down MySQL instance.")
 
-				# Move onto the next one.
-				callback("Shut down MySQL instance.")
+				# Shut it down.
+				manager.stop(on_success, error_callback)
 
 			except paasmaker.util.ManagedDaemonError, ex:
 				# No such mysql instance yet. Not a problem;
@@ -193,7 +200,7 @@ class ManagedMySQLServiceTest(MySQLServiceTest):
 		)
 
 		service.create('test', self.success_callback, self.failure_callback)
-		self.wait()
+		self.wait(timeout=10)
 
 		# The port should now be used.
 		self.assertTrue(self.success, "Creating managed MySQL service didn't succeed.")
@@ -213,6 +220,8 @@ class ManagedMySQLServiceTest(MySQLServiceTest):
 
 		for row in results:
 			self.assertEqual(row['id'], 1, "Row value not as expected.")
+
+		connection.close()
 
 		# Instantiate the plugin in delete mode and delete the databases associated with it.
 		port_copy = service.options['port']

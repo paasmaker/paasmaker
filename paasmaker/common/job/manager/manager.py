@@ -1,4 +1,4 @@
-#
+	#
 # Paasmaker - Platform as a Service
 #
 # This Source Code Form is subject to the terms of the Mozilla Public
@@ -824,7 +824,8 @@ class JobManagerTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.wait()
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(JobManagerTest, self).tearDown()
 
 	def on_job_status(self, message):

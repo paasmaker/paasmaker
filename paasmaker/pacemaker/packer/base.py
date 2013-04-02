@@ -100,7 +100,8 @@ class BasePackerTest(tornado.testing.AsyncTestCase):
 		self.message = None
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(BasePackerTest, self).tearDown()
 
 	def success_callback(self, pack_type, pack_file, checksum, message):

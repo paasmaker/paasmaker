@@ -117,7 +117,8 @@ class TemporaryRabbitMQTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.server.start()
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(TemporaryRabbitMQTest, self).tearDown()
 		self.server.stop()
 

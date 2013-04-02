@@ -65,13 +65,15 @@ logfile %(working_dir)s/redis.log
 appendonly no
 """
 
-	def configure(self, working_dir, port, bind_host, password=None):
+	def configure(self, working_dir, port, bind_host, callback, error_callback, password=None):
 		"""
 		Configure this Redis instance.
 
 		:arg str working_dir: The working directory to store files.
 		:arg int port: The TCP port to listen on.
 		:arg str bind_host: The IP address to bind to.
+		:arg callable callback: The callback to call once done.
+		:arg callable error_callback: The error callback to call in case of error.
 		:arg str|None password: If supplied, clients will require
 			this password to connect to the daemon.
 		"""
@@ -87,6 +89,8 @@ appendonly no
 			os.makedirs(working_dir)
 
 		self.save_parameters()
+
+		callback("Successfully configured Redis.")
 
 	def get_pid_path(self):
 		return os.path.join(self.parameters['working_dir'], 'redis.pid')
@@ -109,23 +113,37 @@ appendonly no
 		fp.write(redisconfig)
 		fp.close()
 
+		def process_forked(code):
+			if code == 0:
+				# Wait for the port to come into use.
+				logging.info("Redis started, waiting for listening state.")
+				self._wait_until_port_inuse(
+					self.parameters['port'],
+					callback,
+					error_callback
+				)
+			else:
+				error_message = "Unable to start Redis - exited with error code %d." % code
+				error_message += "Output:\n" + self._fetch_output()
+				logging.error(error_message)
+				error_callback(error_message)
+
 		# Fire up the server.
 		logging.info("Starting up redis server on port %d." % self.parameters['port'])
-		subprocess.check_call(
-			[
-				self.configuration.get_flat('redis_binary'),
-				self.get_configuration_path(self.parameters['working_dir'])
-			]
-		)
-
-		# Wait for the port to come into use.
-		self.configuration.port_allocator.wait_until_port_used(
-			self.configuration.io_loop,
-			self.parameters['port'],
-			5,
-			callback,
-			error_callback
-		)
+		try:
+			paasmaker.util.popen.Popen(
+				[
+					self.configuration.get_flat('redis_binary'),
+					self.get_configuration_path(self.parameters['working_dir'])
+				],
+				redirect_stderr=True,
+				on_stdout=self._fetchable_output,
+				on_exit=process_forked,
+				io_loop=self.configuration.io_loop
+			)
+		except OSError, ex:
+			logging.error(ex)
+			error_callback(str(ex), exception=ex)
 
 	def get_client(self):
 		"""
@@ -151,7 +169,7 @@ appendonly no
 	def is_running(self, keyword=None):
 		return super(RedisDaemon, self).is_running('redis-server')
 
-	def stop(self, sig=signal.SIGTERM):
+	def stop(self, callback, error_callback, sig=signal.SIGTERM):
 		"""
 		Stop this instance of the redis server, allowing for it to be restarted later.
 		"""
@@ -159,15 +177,19 @@ appendonly no
 			self.client.disconnect()
 			self.client = None
 
-		super(RedisDaemon, self).stop(sig)
+		super(RedisDaemon, self).stop(callback, error_callback, sig)
 
-	def destroy(self):
+	def destroy(self, callback, error_callback):
 		"""
 		Destroy this instance of redis, removing all assigned data.
 		"""
+		def stopped(message):
+			# Delete all the files.
+			shutil.rmtree(self.parameters['working_dir'])
+			callback(message)
+
 		# Hard shutdown - we're about to delete the data anyway.
-		self.stop(signal.SIGKILL)
-		shutil.rmtree(self.parameters['working_dir'])
+		self.stop(stopped, error_callback, signal.SIGKILL)
 
 class RedisDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
@@ -176,8 +198,13 @@ class RedisDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 	def tearDown(self):
 		if hasattr(self, 'server'):
-			self.server.destroy()
-		self.configuration.cleanup()
+			self.server.destroy(self.stop, self.stop)
+
+		# Wait for destruction.
+		self.wait()
+
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(RedisDaemonTest, self).tearDown()
 
 	def callback(self, channel, method, header, body):
@@ -191,8 +218,14 @@ class RedisDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('redis'),
 			self.configuration.get_free_port(),
-			'127.0.0.1'
+			'127.0.0.1',
+			self.stop,
+			self.stop
 		)
+		result = self.wait()
+
+		self.assertIn("Success", result, "Did not configure correctly.")
+
 		self.server.start(self.stop, self.stop)
 		result = self.wait()
 
@@ -208,4 +241,13 @@ class RedisDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.assertEquals('foo', result, "Result was not as expected.")
 
-		# TODO: Test stopping and resuming the service.
+		# Stop it and restart it.
+		self.server.stop(self.stop, self.stop)
+		result = self.wait()
+
+		self.assertIn("finished", result, "Wrong return message.")
+
+		self.server.start(self.stop, self.stop)
+
+		result = self.wait()
+		self.assertIn("In appropriate state", result, "Failed to start Redis server.")

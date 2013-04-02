@@ -132,9 +132,24 @@ Listen %(port)d
 			# plugin.
 			directory = self._get_managed_path()
 
+			def on_configured(message):
+				def on_apache_started(message):
+					# Let the caller know we're ready.
+					callback(message)
+
+				def on_apache_failed(message, exception=None):
+					error_callback(message, exception)
+
+				try:
+					self.apache_server.start_if_not_running(on_apache_started, on_apache_failed)
+				except subprocess.CalledProcessError, ex:
+					error_callback("Failed to start apache server.", exception=ex)
+				# end of on_configured()
+
 			# Set the config path.
 			try:
 				self.apache_server.load_parameters(directory)
+				on_configured("Configured")
 			except paasmaker.util.ManagedDaemonError, ex:
 				# Doesn't yet exist. Create it.
 				# TODO: This assigns a port from the instance pool... we probably then
@@ -142,26 +157,19 @@ Listen %(port)d
 				port = self.configuration.get_free_port()
 				self.apache_server.configure(
 					directory,
-					port
+					port,
+					on_configured,
+					error_callback
 				)
 
-			def on_apache_started(message):
-				# Let the caller know we're ready.
-				callback(message)
-
-			def on_apache_failed(message, exception=None):
-				error_callback(message, exception)
-
-			try:
-				self.apache_server.start_if_not_running(on_apache_started, on_apache_failed)
-			except subprocess.CalledProcessError, ex:
-				error_callback("Failed to start apache server.", exception=ex)
 		else:
 			callback("No action to take.")
 
-	def _shutdown_managed(self):
+	def _shutdown_managed(self, callback, error_callback):
 		if hasattr(self, 'apache_server'):
-			self.apache_server.stop()
+			self.apache_server.stop(callback, error_callback)
+		else:
+			callback("Nothing to shut down.")
 
 	def _config_location(self, instance_id):
 		path = self.options['config_dir']
@@ -211,9 +219,25 @@ Listen %(port)d
 			self._configuration_for_instance(instance_id)
 			config_location = self._config_location(instance_id)
 
+			def abort_startup(message, exception=None):
+				# Something went wrong. Remove our configuration file,
+				# and raise an error.
+				os.unlink(config_location)
+				error_callback("Failed to start up - port %d wasn't listening inside the timeout." % instance['instance']['port'])
+
+			def on_graceful(message):
+				# Wait for it to start listening.
+				self.configuration.port_allocator.wait_until_port_used(
+					self.configuration.io_loop,
+					instance['instance']['port'],
+					2.0, # Should not need more than 2 seconds. TODO: Tweak.
+					callback, # On success, proceed to success.
+					abort_startup
+				)
+
 			# Now, graceful the apache system.
 			if self._is_managed():
-				output = self.apache_server.graceful()
+				self.apache_server.graceful(on_graceful, abort_startup)
 			else:
 				# Run the graceful command supplied.
 				# TODO: Make this async.
@@ -222,26 +246,12 @@ Listen %(port)d
 					stderr=subprocess.STDOUT
 				)
 
-			if "error" in output:
-				# It failed.
-				os.unlink(config_location)
-				error_callback("Failed to start up: " + output)
-				return
-
-			def abort_startup(message, exception=None):
-				# Something went wrong. Remove our configuration file,
-				# and raise an error.
-				os.unlink(config_location)
-				error_callback("Failed to start up - port %d wasn't listening inside the timeout." % instance['instance']['port'])
-
-			# Wait for it to start listening.
-			self.configuration.port_allocator.wait_until_port_used(
-				self.configuration.io_loop,
-				instance['instance']['port'],
-				2.0, # Should not need more than 2 seconds. TODO: Tweak.
-				callback, # On success, proceed to success.
-				abort_startup
-			)
+				if "error" in output:
+					# It failed.
+					os.unlink(config_location)
+					error_callback("Failed to start up: " + output)
+				else:
+					on_graceful("Gracefulled")
 
 		if self._is_managed():
 			self._get_managed_instance(managed_server_up, error_callback)
@@ -256,9 +266,20 @@ Listen %(port)d
 			config_location = self._config_location(instance_id)
 			os.unlink(config_location)
 
+			def on_graceful(message):
+				# Wait for it to stop listening.
+				instance = self.configuration.instances.get_instance(instance_id)
+				self.configuration.port_allocator.wait_until_port_free(
+					self.configuration.io_loop,
+					instance['instance']['port'],
+					2.0, # Should not need more than 2 seconds. TODO: Tweak.
+					callback, # On success, proceed to success.
+					error_callback
+				)
+
 			# Now, graceful the apache system.
 			if self._is_managed():
-				self.apache_server.graceful()
+				self.apache_server.graceful(on_graceful, error_callback)
 			else:
 				# Run the graceful command supplied.
 				# TODO: Make this async.
@@ -266,15 +287,7 @@ Listen %(port)d
 					shlex.split(str(self.options['graceful_command']))
 				)
 
-			# Wait for it to stop listening.
-			instance = self.configuration.instances.get_instance(instance_id)
-			self.configuration.port_allocator.wait_until_port_free(
-				self.configuration.io_loop,
-				instance['instance']['port'],
-				2.0, # Should not need more than 2 seconds. TODO: Tweak.
-				callback, # On success, proceed to success.
-				error_callback # Or error...
-			)
+				on_graceful("Graceful complete.")
 
 		if self._is_managed():
 			self._get_managed_instance(managed_server_up, error_callback)
@@ -314,10 +327,13 @@ Listen %(port)d
 		# do that.
 		config_count = len(glob.glob("%s/*.conf" % self.options['config_dir']))
 		if self._is_managed() and self.options['shutdown'] and config_count > 0:
+			def on_stopped(message):
+				callback("Stopped managed apache.")
+
 			def got_managed(message):
 				# Stop running the server.
-				self.apache_server.stop()
-				callback("Stopped managed apache.")
+				self.apache_server.stop(on_stopped, error_callback)
+
 			self._get_managed_instance(got_managed, error_callback)
 		else:
 			callback("No managed apache to stop, or not required to shutdown.")
@@ -339,13 +355,10 @@ class PHPRuntimeTest(BaseRuntimeTest):
 
 	def tearDown(self):
 		# Hack to kill any managed Apache instance.
-		instance = self.configuration.plugins.instantiate(
-			'paasmaker.runtime.php',
-			paasmaker.util.plugin.MODE.RUNTIME_VERSIONS
-		)
-		instance._get_managed_instance(self.stop, self.failure_callback)
-		self.wait()
-		instance._shutdown_managed()
+		if hasattr(self, 'server'):
+			if self.server.is_running():
+				self.server.destroy(self.stop, self.stop)
+				self.wait()
 
 		super(PHPRuntimeTest, self).tearDown()
 
@@ -417,6 +430,9 @@ class PHPRuntimeTest(BaseRuntimeTest):
 		self.wait()
 		self.assertTrue(self.success, "Failed to start instance.")
 
+		# Store the managed instance for later.
+		self.server = runtime.apache_server
+
 		# It should be running if we ask.
 		runtime.status(
 			instance_id,
@@ -476,6 +492,7 @@ class PHPRuntimeTest(BaseRuntimeTest):
 			self.success_callback,
 			self.failure_callback
 		)
+		self.wait()
 
 		runtime.status(
 			instance_id,
@@ -484,8 +501,6 @@ class PHPRuntimeTest(BaseRuntimeTest):
 		)
 		self.wait()
 		self.assertTrue(self.success, "Managed apache did not restart - application not running.")
-
-		self.short_wait_hack(length=1)
 
 		# Stop the instance.
 		runtime.stop(

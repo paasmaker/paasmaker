@@ -44,7 +44,7 @@ class NginxDaemon(ManagedDaemon):
 	start it's own managed routing servers.
 	"""
 
-	def configure(self, working_dir, port_to_monitor, config_file_string):
+	def configure(self, working_dir, port_to_monitor, config_file_string, callback, error_callback):
 		"""
 		Configure this instance.
 
@@ -57,6 +57,8 @@ class NginxDaemon(ManagedDaemon):
 		self.parameters['config_file_string'] = config_file_string
 
 		self.save_parameters()
+
+		callback("Configured.")
 
 	def get_pid_path(self):
 		return os.path.join(self.parameters['working_dir'], 'nginx.pid')
@@ -72,39 +74,53 @@ class NginxDaemon(ManagedDaemon):
 		fp.write(self.parameters['config_file_string'])
 		fp.close()
 
+		def process_forked(code):
+			if code == 0:
+				# Wait for the port to come into use.
+				logging.info("NGINX started, waiting for listening state.")
+				self._wait_until_port_inuse(
+					self.parameters['port'],
+					callback,
+					error_callback
+				)
+			else:
+				error_message = "Unable to start NGINX - exited with error code %d." % code
+				error_message += "Output:\n" + self._fetch_output()
+				logging.error(error_message)
+				error_callback(error_message)
+
 		# Fire up the server.
 		logging.info("Starting up nginx server on port %d." % self.parameters['port'])
-
 		try:
-			foo = subprocess.check_call(
+			paasmaker.util.popen.Popen(
 				[
 					self.configuration.get_flat('nginx_binary'),
 					'-c',
 					self.get_configuration_path(self.parameters['working_dir'])
 				],
-				stderr=subprocess.PIPE
+				redirect_stderr=True,
+				on_stdout=self._fetchable_output,
+				on_exit=process_forked,
+				io_loop=self.configuration.io_loop
 			)
-		except subprocess.CalledProcessError, ex:
-			raise NginxDaemonError(ex.cmd, ex.returncode, ex.message, ex.output)
-
-		# Wait for the port to come into use.
-		self.configuration.port_allocator.wait_until_port_used(
-			self.configuration.io_loop,
-			self.parameters['port'],
-			5,
-			callback,
-			error_callback
-		)
+		except OSError, ex:
+			logging.error(ex)
+			error_callback(str(ex), exception=ex)
 
 	def is_running(self, keyword=None):
 		return super(NginxDaemon, self).is_running('nginx')
 
-	def destroy(self):
+	def destroy(self, callback, error_callback):
 		"""
 		Destroy this instance of nginx, removing all assigned data.
 		"""
-		self.stop()
-		shutil.rmtree(self.parameters['working_dir'])
+		def stopped(message):
+			# Delete all the files.
+			shutil.rmtree(self.parameters['working_dir'])
+			callback(message)
+
+		# Hard shutdown - we're about to delete the data anyway.
+		self.stop(stopped, error_callback, signal.SIGKILL)
 
 class NginxDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
@@ -133,8 +149,10 @@ http {
 """
 	def tearDown(self):
 		if hasattr(self, 'server'):
-			self.server.destroy()
-		self.configuration.cleanup()
+			self.server.destroy(self.stop, self.stop)
+			self.wait()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(NginxDaemonTest, self).tearDown()
 
 	def test_basic(self):
@@ -153,8 +171,11 @@ http {
 		self.server.configure(
 			parameters['working_dir'],
 			parameters['port'],
-			self.test_config_file % parameters
+			self.test_config_file % parameters,
+			self.stop,
+			self.stop
 		)
+		self.wait()
 		self.server.start(self.stop, self.stop)
 		result = self.wait()
 
@@ -178,10 +199,9 @@ http {
 		self.assertEquals(response.code, 200, "Got unexpected response code %d" % response.code)
 		self.assertEquals(test_string, response.body, "Index page didn't contain the contents we expected: %s" % response.body)
 
-		self.server.stop()
+		self.server.stop(self.stop, self.stop)
+		self.wait()
 
-		# Give it a little time to stop.
-		time.sleep(0.1)
 		self.assertFalse(self.server.is_running())
 
 		# Start it again.

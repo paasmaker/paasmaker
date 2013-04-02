@@ -62,7 +62,8 @@ class BasePrepareTest(tornado.testing.AsyncTestCase):
 
 	def tearDown(self):
 		shutil.rmtree(self.tempdir)
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(BasePrepareTest, self).tearDown()
 
 	def success_callback(self, message):

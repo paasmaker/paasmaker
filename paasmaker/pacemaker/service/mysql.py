@@ -82,6 +82,8 @@ class ThreadedMySQLDatabaseCreator(paasmaker.util.threadcallback.ThreadCallback)
 			password
 		)
 
+		connection.close()
+
 		self._callback("Completed successfully.")
 
 class ThreadedMySQLDatabaseDeletor(paasmaker.util.threadcallback.ThreadCallback):
@@ -97,6 +99,8 @@ class ThreadedMySQLDatabaseDeletor(paasmaker.util.threadcallback.ThreadCallback)
 		# however, they may not be. Fix this.
 		connection.execute("DROP DATABASE %s" % existing_credentials['database'])
 		connection.execute("DROP USER %s" % existing_credentials['username'])
+
+		connection.close()
 
 		self._callback("Completed successfully.")
 
@@ -158,8 +162,11 @@ class MySQLServiceTest(BaseServiceTest):
 			self.configuration.get_scratch_path_exists('mysql'),
 			self.configuration.get_free_port(),
 			'127.0.0.1',
+			self.stop,
+			self.stop,
 			password="test"
 		)
+		result = self.wait()
 		self.server.start(self.stop, self.stop)
 		result = self.wait()
 
@@ -177,7 +184,8 @@ class MySQLServiceTest(BaseServiceTest):
 
 	def tearDown(self):
 		if hasattr(self, 'server'):
-			self.server.destroy()
+			self.server.destroy(self.stop, self.stop)
+			self.wait()
 
 		super(MySQLServiceTest, self).tearDown()
 
@@ -213,6 +221,8 @@ class MySQLServiceTest(BaseServiceTest):
 
 		for row in results:
 			self.assertEqual(row['id'], 1, "Row value not as expected.")
+
+		connection.close()
 
 		# Now remove the database.
 		service.remove('testlongname', credentials, self.success_remove_callback, self.failure_callback)

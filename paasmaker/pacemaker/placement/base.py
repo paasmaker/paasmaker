@@ -92,7 +92,8 @@ class BasePlacementTest(tornado.testing.AsyncTestCase):
 		self.message = None
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(BasePlacementTest, self).tearDown()
 
 	def success_callback(self, nodes, message):

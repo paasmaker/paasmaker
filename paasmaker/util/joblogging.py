@@ -323,7 +323,8 @@ class JobLoggingTest(tornado.testing.AsyncTestCase):
 		self.handler = self.logger.handlers[0]
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(JobLoggingTest, self).tearDown()
 
 	def test_log_jobs(self):

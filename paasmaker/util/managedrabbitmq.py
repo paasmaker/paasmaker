@@ -176,7 +176,8 @@ class ManagedRabbitMQTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def tearDown(self):
 		if hasattr(self, 'server'):
 			self.server.destroy()
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(ManagedRabbitMQTest, self).tearDown()
 
 	def callback(self, channel, method, header, body):

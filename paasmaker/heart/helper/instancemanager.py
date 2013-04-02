@@ -15,6 +15,8 @@ import uuid
 import paasmaker
 from paasmaker.common.core import constants
 
+import tornado.testing
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -477,13 +479,14 @@ class InstanceManager(object):
 
 		next_instance()
 
-class InstanceManagerTest(unittest.TestCase):
+class InstanceManagerTest(tornado.testing.AsyncTestCase):
 	def setUp(self):
 		super(InstanceManagerTest, self).setUp()
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['heart'])
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(InstanceManagerTest, self).tearDown()
 
 	def test_simple(self):

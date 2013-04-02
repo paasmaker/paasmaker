@@ -317,7 +317,8 @@ class RoutingTableJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.configuration.set_node_uuid(str(uuid.uuid4()))
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(RoutingTableJobTest, self).tearDown()
 
 	def create_sample_applications(self, session, runtime_name, runtime_parameters, runtime_version):

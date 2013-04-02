@@ -199,7 +199,8 @@ class ApplicationDeleteJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(ApplicationDeleteJobTest, self).tearDown()
 
 	def on_job_status(self, message):

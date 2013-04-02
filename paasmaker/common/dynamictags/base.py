@@ -59,5 +59,6 @@ class BaseDynamicTagsTest(tornado.testing.AsyncTestCase):
 		self.configuration = paasmaker.common.configuration.ConfigurationStub(0, ['pacemaker'], io_loop=self.io_loop)
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(BaseDynamicTagsTest, self).tearDown()

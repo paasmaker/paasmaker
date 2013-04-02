@@ -66,11 +66,11 @@ test_sets = {
 	paasmaker.util.processcheck: ['normal', 'util', 'process'],
 	#paasmaker.util.managedrabbitmq: ['slow', 'util', 'messaging', 'managedservice', 'rabbitmq'],
 	paasmaker.util.redisdaemon: ['util', 'redis', 'managedservice'],
-	paasmaker.util.postgresdaemon: ['slow', 'util', 'postgres', 'managedservice'],
-	paasmaker.util.mongodaemon: ['util', 'mongodb', 'managedservice'],
-	paasmaker.util.mysqldaemon: ['slow', 'util', 'mysql', 'managedservice'],
-	paasmaker.util.nginxdaemon: ['slow', 'util', 'nginx', 'managedservice'],
-	paasmaker.util.apachedaemon: ['slow', 'util', 'apache', 'managedservice'],
+	paasmaker.util.postgresdaemon: ['slow', 'util', 'postgres', 'managedservice', 'postgresdaemon'],
+	paasmaker.util.mongodaemon: ['util', 'mongodb', 'managedservice', 'mongodaemon'],
+	paasmaker.util.mysqldaemon: ['slow', 'util', 'mysql', 'managedservice', 'mysqldaemon'],
+	paasmaker.util.nginxdaemon: ['slow', 'util', 'nginx', 'managedservice', 'nginxdaemon'],
+	paasmaker.util.apachedaemon: ['slow', 'util', 'apache', 'managedservice', 'apachedaemon'],
 	paasmaker.util.asyncdns: ['normal', 'util', 'network'],
 	paasmaker.util.flattenizr: ['normal', 'util', 'data'],
 	paasmaker.util.threadcallback: ['normal', 'util', 'thread'],
@@ -164,7 +164,7 @@ test_sets = {
 
 	paasmaker.pacemaker.placement.default: ['normal', 'application', 'placement'],
 
-	paasmaker.heart.helper.instancemanager: ['normal', 'application', 'heart']
+	paasmaker.heart.helper.instancemanager: ['normal', 'application', 'heart', 'instancemanager']
 }
 
 ########################################

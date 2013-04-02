@@ -43,7 +43,7 @@ class PostgresDaemon(ManagedDaemon):
 	def _eat_output(self):
 		return open("%s/%s" % (self.parameters['working_dir'], str(uuid.uuid4())), 'w')
 
-	def configure(self, working_dir, postgres_binaries_path, port, bind_host, password=None):
+	def configure(self, working_dir, postgres_binaries_path, port, bind_host, callback, error_callback, password=None):
 		"""
 		Configure this instance.
 
@@ -51,6 +51,8 @@ class PostgresDaemon(ManagedDaemon):
 		:arg str postgres_binaries_path: The path to the binaries for Postgres.
 		:arg int port: The port to listen on.
 		:arg str bind_host: The address to bind to.
+		:arg callable callback: The callback to call once done.
+		:arg callable error_callback: The error callback on error.
 		:arg str|None password: An optional password for the
 			postgres user.
 		"""
@@ -76,18 +78,25 @@ class PostgresDaemon(ManagedDaemon):
 			open(pwfile, 'w').write(password)
 			command_line += ' --auth=md5 --pwfile=' + pwfile
 
-		command_line += " > /tmp/initdb.log 2>&1"
+		def installed_db(code):
+			if code == 0:
+				# Success!
+				self._fetch_output()
+				self.save_parameters()
 
-		# Go ahead and create it.
-		subprocess.check_call(
+				callback("Successfully created Postgres database.")
+			else:
+				# Failed. Send back stdout/stderr.
+				raw_output = self._fetch_output()
+				error_callback("Failed to create Postgres database:\n" + raw_output)
+
+		paasmaker.util.popen.Popen(
 			command_line,
-			shell=True
+			on_stdout=self._fetchable_output,
+			redirect_stderr=True,
+			on_exit=installed_db,
+			io_loop=self.configuration.io_loop,
 		)
-
-		if pwfile:
-			os.unlink(pwfile)
-
-		self.save_parameters()
 
 	def start(self, callback, error_callback):
 		"""
@@ -105,23 +114,27 @@ class PostgresDaemon(ManagedDaemon):
 			self.parameters['working_dir']
 		)
 
-		subprocess.check_call(
+		paasmaker.util.popen.Popen(
 			command_line,
-			shell=True,
-			stdout=self._eat_output(),
-			stderr=self._eat_output()
+			on_stdout=self._fetchable_output,
+			redirect_stderr=True,
+			io_loop=self.configuration.io_loop
 		)
 
-		# Wait for the port to come into use.
-		self.configuration.port_allocator.wait_until_port_used(
-			self.configuration.io_loop,
+		def timeout(message):
+			# Fetch the output and call the error callback.
+			raw_output = self._fetch_output()
+			error_callback("Failed to start:\n" + raw_output)
+
+		logging.info("MySQL started, waiting for listening state.")
+		self._wait_until_port_inuse(
 			self.parameters['port'],
-			5,
 			callback,
-			error_callback
+			timeout
 		)
 
 	def is_running(self, keyword=None):
+		# TODO: This isn't async, but none of the rest is Async. Fix this.
 		command_line = [
 			os.path.join(self.parameters['postgres_binaries_path'], 'pg_ctl'),
 			'status',
@@ -135,7 +148,7 @@ class PostgresDaemon(ManagedDaemon):
 		)
 		return code == 0
 
-	def stop(self, sig=signal.SIGTERM):
+	def stop(self, callback, error_callback, sig=signal.SIGTERM):
 		"""
 		Stop this instance of the Postgres server, allowing for it to be restarted later.
 		"""
@@ -145,22 +158,36 @@ class PostgresDaemon(ManagedDaemon):
 			'-D',
 			self.parameters['working_dir']
 		]
-		try:
-			output = subprocess.check_output(command_line)
-			# From the output, fetch the PID.
-			pid = int(re.search('(\d+)', output).group(1))
-			os.kill(pid, sig)
-		except subprocess.CalledProcessError, ex:
-			# It's not running. Do nothing.
-			pass
 
-	def destroy(self):
+		def found_pid(code):
+			if code == 0:
+				output = self._fetch_output()
+				pid = int(re.search('(\d+)', output).group(1))
+				os.kill(pid, sig)
+
+				# Wait for the process to finish.
+				self._wait_until_stopped(callback, error_callback)
+			else:
+				callback("Not running, no action taken.")
+
+		paasmaker.util.popen.Popen(
+			command_line,
+			on_stdout=self._fetchable_output,
+			redirect_stderr=True,
+			on_exit=found_pid,
+			io_loop=self.configuration.io_loop,
+		)
+
+	def destroy(self, callback, error_callback):
 		"""
 		Destroy this instance of Postgres, removing all assigned data.
 		"""
 		# Hard shutdown - we're about to delete the data anyway.
-		self.stop(signal.SIGKILL)
-		shutil.rmtree(self.parameters['working_dir'])
+		def stopped(message):
+			shutil.rmtree(self.parameters['working_dir'])
+			callback("Removed Postgres instance.")
+
+		self.stop(stopped, error_callback, signal.SIGKILL)
 
 class PostgresDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def _postgres_path(self):
@@ -177,8 +204,10 @@ class PostgresDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 	def tearDown(self):
 		if hasattr(self, 'server'):
-			self.server.destroy()
-		self.configuration.cleanup()
+			self.server.destroy(self.stop, self.stop)
+			self.wait()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(PostgresDaemonTest, self).tearDown()
 
 	def test_basic(self):
@@ -187,8 +216,12 @@ class PostgresDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 			self.configuration.get_scratch_path_exists('postgres'),
 			self._postgres_path(),
 			self.configuration.get_free_port(),
-			'127.0.0.1' # TODO: This doesn't work yet.
+			'127.0.0.1', # TODO: This doesn't work yet.
+			self.stop,
+			self.stop
 		)
+		result = self.wait()
+		self.assertIn("Successfully", result, "Wrong message.")
 		self.server.start(self.stop, self.stop)
 		result = self.wait()
 
@@ -196,10 +229,9 @@ class PostgresDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.assertTrue(self.server.is_running())
 
-		self.server.stop()
+		self.server.stop(self.stop, self.stop)
+		result = self.wait()
 
-		# Give it a little time to stop.
-		time.sleep(0.5)
 		self.assertFalse(self.server.is_running())
 
 		# Start it again.

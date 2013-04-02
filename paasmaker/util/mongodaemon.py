@@ -49,7 +49,7 @@ nojournal = true
 smallfiles = true
 """
 
-	def configure(self, working_dir, binary_path, port, bind_host, password=None):
+	def configure(self, working_dir, binary_path, port, bind_host, callback, error_callback, password=None):
 		"""
 		Configure this mongoDB instance.
 
@@ -78,6 +78,8 @@ smallfiles = true
 
 		self.save_parameters()
 
+		callback("Configured successfully.")
+
 	def get_pid_path(self):
 		return os.path.join(self.parameters['working_dir'], 'mongodb.pid')
 
@@ -92,23 +94,37 @@ smallfiles = true
 		fp.write(mongoconfig)
 		fp.close()
 
+		def process_forked(code):
+			if code == 0:
+				# Wait for the port to come into use.
+				logging.info("mongoDB started, waiting for listening state.")
+				self._wait_until_port_inuse(
+					self.parameters['port'],
+					callback,
+					error_callback
+				)
+			else:
+				error_message = "Unable to start mongoDB - exited with error code %d." % code
+				error_message += "Output:\n" + self._fetch_output()
+				logging.error(error_message)
+				error_callback(error_message)
+
 		# Fire up the server.
 		logging.info("Starting up mongoDB server on port %d." % self.parameters['port'])
-		subprocess.check_call(
-			[
-				self.parameters['binary_path'], '--config',
-				self.get_configuration_path(self.parameters['working_dir'])
-			]
-		)
-
-		# Wait for the port to come into use.
-		self.configuration.port_allocator.wait_until_port_used(
-			self.configuration.io_loop,
-			self.parameters['port'],
-			5,
-			callback,
-			error_callback
-		)
+		try:
+			paasmaker.util.popen.Popen(
+				[
+					self.parameters['binary_path'], '--config',
+					self.get_configuration_path(self.parameters['working_dir'])
+				],
+				redirect_stderr=True,
+				on_stdout=self._fetchable_output,
+				on_exit=process_forked,
+				io_loop=self.configuration.io_loop
+			)
+		except OSError, ex:
+			logging.error(ex)
+			error_callback(str(ex), exception=ex)
 
 	def get_client(self):
 		"""
@@ -133,7 +149,7 @@ smallfiles = true
 	def is_running(self, keyword=None):
 		return super(MongoDaemon, self).is_running('mongod')
 
-	def stop(self, sig=signal.SIGTERM):
+	def stop(self, callback, error_callback, sig=signal.SIGTERM):
 		"""
 		Stop this instance of the mongoDB server, allowing for it to be restarted later.
 		"""
@@ -141,15 +157,19 @@ smallfiles = true
 			self.client.disconnect()
 			self.client = None
 
-		super(MongoDaemon, self).stop(sig)
+		super(MongoDaemon, self).stop(callback, error_callback, sig)
 
-	def destroy(self):
+	def destroy(self, callback, error_callback):
 		"""
 		Destroy this instance of mongoDB, removing all assigned data.
 		"""
+		def stopped(message):
+			# Delete all the files.
+			shutil.rmtree(self.parameters['working_dir'])
+			callback(message)
+
 		# Hard shutdown - we're about to delete the data anyway.
-		self.stop(signal.SIGKILL)
-		shutil.rmtree(self.parameters['working_dir'])
+		self.stop(stopped, error_callback, signal.SIGKILL)
 
 class MongoDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
@@ -159,8 +179,10 @@ class MongoDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 	def tearDown(self):
 		if hasattr(self, 'server'):
-			self.server.destroy()
-		self.configuration.cleanup()
+			self.server.destroy(self.stop, self.stop)
+			self.wait()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(MongoDaemonTest, self).tearDown()
 
 	def callback(self, channel, method, header, body):
@@ -179,7 +201,9 @@ class MongoDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 		host = '127.0.0.1'
 
 		self.server = MongoDaemon(self.configuration)
-		self.server.configure(working_dir, self.mongodb_binary, port, host)
+		self.server.configure(working_dir, self.mongodb_binary, port, host, self.stop, self.stop)
+		result = self.wait()
+		self.assertIn("success", result, "Not configured.")
 		self.server.start(self.stop, self.stop)
 		result = self.wait()
 
@@ -193,3 +217,14 @@ class MongoDaemonTest(tornado.testing.AsyncTestCase, TestHelpers):
 		client = MongoClient(host, port)
 		info = client.server_info()
 		self.assertEquals(info['ok'], 1.0, "mongoDB server_info() does not report that it's OK!")
+
+		# Stop it and restart it.
+		self.server.stop(self.stop, self.stop)
+		result = self.wait()
+
+		self.assertIn("finished", result, "Wrong return message.")
+
+		self.server.start(self.stop, self.stop)
+
+		result = self.wait()
+		self.assertIn("In appropriate state", result, "Failed to start mongoDB server.")

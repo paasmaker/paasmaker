@@ -158,8 +158,11 @@ class PostgresServiceTest(BaseServiceTest):
 			self._postgres_path(),
 			self.configuration.get_free_port(),
 			'127.0.0.1',
+			self.stop,
+			self.stop,
 			password="test"
 		)
+		self.wait()
 		self.server.start(self.stop, self.stop)
 		result = self.wait()
 
@@ -182,7 +185,13 @@ class PostgresServiceTest(BaseServiceTest):
 
 	def tearDown(self):
 		if hasattr(self, 'server'):
-			self.server.destroy()
+			self.server.destroy(self.stop, self.stop)
+			try:
+				self.wait()
+			except psycopg2.OperationalError, ex:
+				# Ignore this exception - it's an async handler
+				# trying to reconnect to the now-stopped Postgres server.
+				pass
 
 		super(PostgresServiceTest, self).tearDown()
 
@@ -195,7 +204,12 @@ class PostgresServiceTest(BaseServiceTest):
 
 		service.create('test', self.success_callback, self.failure_callback)
 
-		self.wait()
+		try:
+			self.wait()
+		except psycopg2.OperationalError, ex:
+			# Ignore this exception - it's an async handler
+			# trying to reconnect to the now-stopped Postgres server.
+			pass
 
 		#print str(self.credentials)
 		self.assertTrue(self.success, "Service creation was not successful.")

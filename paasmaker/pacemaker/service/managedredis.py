@@ -74,6 +74,31 @@ class ManagedRedisService(BaseService):
 		)
 
 		manager = paasmaker.util.redisdaemon.RedisDaemon(self.configuration)
+
+		def on_configured(message):
+			def on_running(message):
+				# Success! Emit the credentials.
+				self.logger.info("Successfully started. Returning the credentials.")
+				credentials = {}
+				credentials['name'] = instance_name
+				credentials['protocol'] = 'redis'
+				credentials['hostname'] = self.configuration.get_flat('my_route')
+				credentials['port'] = port
+				if password:
+					credentials['password'] = password
+				callback(credentials, "Successfully created redis instance.")
+
+			def on_startup_failure(message, exception=None):
+				self.logger.error(message)
+				if exception:
+					self.logger.error("Exception:", exc_info=exception)
+
+				error_callback(message, exception)
+
+			manager.start_if_not_running(on_running, on_startup_failure)
+
+			# end of on_configured()
+
 		try:
 			# TODO: This shouldn't exist yet, because we're creating it...
 			# Decide how to handle this case.
@@ -82,6 +107,9 @@ class ManagedRedisService(BaseService):
 			port = manager.get_port()
 
 			self.logger.info("Using existing instance on port %d.", port)
+
+			# Jump to the configured instance.
+			on_configured()
 
 		except paasmaker.util.ManagedDaemonError, ex:
 			portfinder = paasmaker.util.port.FreePortFinder()
@@ -97,29 +125,10 @@ class ManagedRedisService(BaseService):
 				instance_path,
 				port,
 				'0.0.0.0',
+				on_configured,
+				error_callback,
 				password
 			)
-
-		def on_running(message):
-			# Success! Emit the credentials.
-			self.logger.info("Successfully started. Returning the credentials.")
-			credentials = {}
-			credentials['name'] = instance_name
-			credentials['protocol'] = 'redis'
-			credentials['hostname'] = self.configuration.get_flat('my_route')
-			credentials['port'] = port
-			if password:
-				credentials['password'] = password
-			callback(credentials, "Successfully created redis instance.")
-
-		def on_startup_failure(message, exception=None):
-			self.logger.error(message)
-			if exception:
-				self.logger.error("Exception:", exc_info=exception)
-
-			error_callback(message, exception)
-
-		manager.start_if_not_running(on_running, on_startup_failure)
 
 	def update(self, name, existing_credentials, callback, error_callback):
 		# No action to take here.
@@ -134,14 +143,22 @@ class ManagedRedisService(BaseService):
 
 		manager = paasmaker.util.redisdaemon.RedisDaemon(self.configuration)
 		try:
+			def destroy_success(message):
+				self.logger.info("Complete.")
+				callback("Destroyed instance %s." % instance_name)
+
+			def destroy_error(message, exception=None):
+				self.logger.error("Failed to destroy instance.")
+				self.logger.error(message)
+				if exception:
+					self.logger.error("Exception:", exc_info=exception)
+				error_callback("Failed to destroy instance %s." % instance_name)
+
 			manager.load_parameters(instance_path)
 
 			# Destroy the instance.
 			self.logger.info("Destroying instance...")
-			manager.destroy()
-			self.logger.info("Complete.")
-
-			callback("Destroyed instance %s." % instance_name)
+			manager.destroy(destroy_success, destroy_error)
 
 		except paasmaker.util.ManagedDaemonError, ex:
 			self.logger.info("No such instance %s. Task complete." % instance_name)
@@ -201,14 +218,12 @@ class ManagedRedisService(BaseService):
 						self.logger.info("Found managed redis at path %s - shutting down", instance_path)
 
 						# Shut it down.
-						manager.stop()
-
-						# Move onto the next one.
-						process_path("Completed.")
+						manager.stop(process_path, error_callback)
 
 					except paasmaker.util.ManagedDaemonError, ex:
 						# Just move on to the next one.
 						self.logger.error("Path %s doesn't have a managed redis instance - skipping.")
+						process_path('')
 
 				except IndexError, ex:
 					# That's it, that was the last one.

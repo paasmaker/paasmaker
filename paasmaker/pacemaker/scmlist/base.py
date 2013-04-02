@@ -71,7 +71,8 @@ class BaseSCMListTest(tornado.testing.AsyncTestCase):
 		self.message = None
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(BaseSCMListTest, self).tearDown()
 
 	def success_callback(self, repos, message):

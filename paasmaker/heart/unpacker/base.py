@@ -59,7 +59,8 @@ class BaseUnpackerTest(tornado.testing.AsyncTestCase, paasmaker.common.testhelpe
 		self.exception = None
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(BaseUnpackerTest, self).tearDown()
 
 	def success_callback(self, message):

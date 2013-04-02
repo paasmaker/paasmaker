@@ -1327,19 +1327,29 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 				meta['state'] = 'STARTING'
 				meta['queue'].append((credentials, callback, error_callback))
 
+				def redis_configured(message):
+					logger.debug("Starting redis for %s", name)
+					meta['manager'].start_if_not_running(on_redis_started, on_redis_startup_failure)
+
 				directory = self.get_scratch_path_exists(
 					'redis', name
 				)
 				meta['manager'] = paasmaker.util.redisdaemon.RedisDaemon(self)
 				try:
 					meta['manager'].load_parameters(directory)
+
+					redis_configured("Configured")
 				except paasmaker.util.ManagedDaemonError, ex:
 					# Doesn't yet exist. Create it.
 					logger.debug("Creating redis for %s", name)
-					meta['manager'].configure(directory, credentials['port'], credentials['host'], credentials['password'])
-
-				logger.debug("Starting redis for %s", name)
-				meta['manager'].start_if_not_running(on_redis_started, on_redis_startup_failure)
+					meta['manager'].configure(
+						directory,
+						credentials['port'],
+						credentials['host'],
+						redis_configured,
+						error_callback,
+						password=credentials['password']
+					)
 
 			elif meta['state'] == 'STARTING':
 				# Queue up our callbacks.
@@ -1382,7 +1392,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		"""
 		self._get_redis('jobs', self['redis']['jobs'], callback, error_callback)
 
-	def shutdown_managed_redis(self):
+	def shutdown_managed_redis(self, callback, error_callback):
 		"""
 		Shutdown any managed redis instances for which we've been
 		configured to shutdown on exit.
@@ -1391,13 +1401,28 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		to shutdown on exit.
 		"""
 		if hasattr(self, 'redis_meta'):
-			for key, meta in self.redis_meta.iteritems():
-				if meta['state'] == 'STARTED' and meta['shutdown']:
-					logger.info("Shutting down managed redis, because requested to do so.")
-					meta['manager'].stop()
-					# Wait until it stops.
-					while meta['manager'].is_running():
-						time.sleep(0.1)
+			iterator = self.redis_meta.iteritems()
+
+			def next_item(message=''):
+				try:
+					iterator_meta = iterator.next()
+					key = iterator_meta[0]
+					meta = iterator_meta[1]
+
+					if meta['state'] == 'STARTED' and meta['shutdown']:
+						logger.info("Shutting down managed redis, because requested to do so.")
+						meta['manager'].stop(next_item, error_callback)
+					else:
+						# Jump to the next item.
+						next_item()
+
+				except StopIteration, ex:
+					# No more to process.
+					callback("Shut down all redis instances.")
+
+			next_item()
+		else:
+			callback("No managed Redis instances to shutdown.")
 
 	def get_tornado_configuration(self):
 		"""

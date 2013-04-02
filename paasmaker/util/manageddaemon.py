@@ -11,6 +11,8 @@ import signal
 import shutil
 import json
 import logging
+import time
+import tempfile
 
 from processcheck import ProcessCheck
 
@@ -134,14 +136,14 @@ class ManagedDaemon(object):
 			logging.debug("Managed daemon already running.")
 			callback("Already running.")
 
-	def destroy(self):
+	def destroy(self, callback):
 		"""
 		Destroy this managed instance. Typically used for unit tests
 		to be able to remove all temporary files.
 		"""
 		raise NotImplementedError("You must implement destroy()")
 
-	def stop(self, sig=signal.SIGTERM):
+	def stop(self, callback, error_callback, sig=signal.SIGTERM):
 		"""
 		Stop this instance of the daemon, allowing for it to be restarted later.
 
@@ -150,3 +152,119 @@ class ManagedDaemon(object):
 		pid = self.get_pid()
 		if pid:
 			os.kill(pid, sig)
+
+		# Wait for the process to finish.
+		self._wait_until_stopped(callback, error_callback)
+
+	def _wait_until_port_inuse(self, port, callback, error_callback, timeout=5):
+		"""
+		Helper function to wait until a port is in use.
+
+		:arg int port: The port to wait for.
+		:arg callable callback: The callback to call when in use.
+		:arg callable error_callback: The error callback to call on timeout.
+		:arg int timeout: The number of seconds to wait.
+		"""
+		self.configuration.port_allocator.wait_until_port_used(
+			self.configuration.io_loop,
+			port,
+			timeout,
+			callback,
+			error_callback
+		)
+
+	def _wait_until_port_free(self, port, callback, error_callback, timeout=5):
+		"""
+		Helper function to wait until a port is free.
+
+		:arg int port: The port to wait for.
+		:arg callable callback: The callback to call when free.
+		:arg callable error_callback: The error callback to call on timeout.
+		:arg int timeout: The number of seconds to wait.
+		"""
+		self.configuration.port_allocator.wait_until_port_free(
+			self.configuration.io_loop,
+			port,
+			timeout,
+			callback,
+			error_callback
+		)
+
+	def _wait_until_stopped(self, callback, error_callback, timeout=5):
+		"""
+		Helper function to wait until a process is stopped.
+
+		:arg str callback: The callback to call.
+		:arg str error_callback: The error callback to call.
+		:arg int timeout: The number of seconds to wait.
+		"""
+		max_time = time.time() + timeout
+
+		def check():
+			if max_time < time.time():
+				# Too long.
+				error_callback("Timed out waiting for process to exit.")
+			elif self.is_running():
+				# Wait a bit longer.
+				self.configuration.io_loop.add_timeout(time.time() + 0.2, check)
+			else:
+				# It's finished.
+				callback("Process has finished.")
+
+		check()
+
+	def _fetchable_output(self, data):
+		"""
+		Helper function to store subprocess output, to fetch back later
+		and use in error reports.
+
+		This is to workaround a few issues with Popen() and redirecting
+		stdout/stderr directly to files.
+
+		Here is how to use it:
+
+		.. code-block:: python
+
+			def exit_function(code):
+				if code == 0:
+					callback("Success")
+				else:
+					error_callback("Error starting: " + self._fetch_output())
+
+			paasmaker.util.popen.Popen(
+				command_line,
+				on_stdout=self._fetchable_output,
+				redirect_stderr=True,
+				on_exit=exit_function,
+				io_loop=self.configuration.io_loop
+			)
+		"""
+		if hasattr(self, 'fetchable_output_log'):
+			self.fetchable_output_log_fp.write(data)
+		else:
+			self.fetchable_output_log = tempfile.mkstemp()[1]
+			self.fetchable_output_log_fp = open(self.fetchable_output_log, 'w')
+			self.fetchable_output_log_fp.write(data)
+
+	def _fetch_output(self):
+		"""
+		Helper function to fetch process output. See _fetchable_output() for
+		a description.
+		"""
+		if hasattr(self, 'fetchable_output_log'):
+			self.fetchable_output_log_fp = open(self.fetchable_output_log, 'r')
+			contents = self.fetchable_output_log_fp.read()
+			self.fetchable_output_log_fp.close()
+			os.unlink(self.fetchable_output_log)
+			del self.fetchable_output_log
+			del self.fetchable_output_log_fp
+			return contents
+		else:
+			return ''
+
+	def __del__(self):
+		# Clean up any output log, if present.
+		if hasattr(self, 'fetchable_output_log'):
+			self.fetchable_output_log_fp.close()
+			if os.path.exists(self.fetchable_output_log):
+				os.unlink(self.fetchable_output_log)

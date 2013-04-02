@@ -173,6 +173,21 @@ http {
 			self.configuration, managed_params=parameters
 		)
 
+		def on_configured(message):
+			def on_nginx_started(message):
+				# Set the stats log path manually.
+				self.configuration['router']['stats_log'] = os.path.join(working_dir, 'access.log.paasmaker')
+				self.configuration.update_flat()
+
+				# And let the caller know we're ready.
+				callback(message)
+
+			def on_nginx_failed(message):
+				error_message = "Unable to start managed NGINX router component: %s" % message
+				error_callback(error_message)
+
+			daemon.start_if_not_running(on_nginx_started, on_nginx_failed)
+
 		try:
 			daemon.load_parameters(working_dir)
 		except paasmaker.util.ManagedDaemonError, ex:
@@ -180,27 +195,15 @@ http {
 			daemon.configure(
 				working_dir,
 				parameters['port_direct'],
-				self.generated_config['configuration']
+				self.generated_config['configuration'],
+				on_configured,
+				error_callback
 			)
-
-		def on_nginx_started(message):
-			# Set the stats log path manually.
-			self.configuration['router']['stats_log'] = os.path.join(working_dir, 'access.log.paasmaker')
-			self.configuration.update_flat()
-
-			# And let the caller know we're ready.
-			callback(message)
-
-		def on_nginx_failed(message):
-			error_message = "Unable to start managed NGINX router component: %s" % message
-			error_callback(error_message)
-
-		daemon.start_if_not_running(on_nginx_started, on_nginx_failed)
 
 	def get_configuration(self):
 		return self.generated_config
 
-	def shutdown(self):
+	def shutdown(self, callback, error_callback):
 		"""
 		If configured, shutdown an associated managed NGINX instance
 		on exit. TODO: take callbacks
@@ -209,13 +212,18 @@ http {
 			daemon = paasmaker.util.nginxdaemon.NginxDaemon(self.configuration)
 			working_dir = self.configuration.get_scratch_path_exists('nginx')
 
+			def on_stopped(message):
+				callback("Stopped router.")
+
 			try:
 				daemon.load_parameters(working_dir)
 				if daemon.is_running():
-					daemon.stop()
+					daemon.stop(on_stopped, error_callback)
 			except paasmaker.util.ManagedDaemonError, ex:
 				# No daemon is running, so nothing to do
-				pass
+				callback("No daemon running, nothing to do.")
+		else:
+			callback("No managed daemon to act on.")
 
 	def get_nginx_config(self, configuration, managed_params):
 		"""
@@ -325,7 +333,8 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 	def tearDown(self):
 		# Kill off the nginx instance.
-		self.router.shutdown()
+		self.router.shutdown(self.stop, self.stop)
+		self.wait()
 
 		super(RouterTest, self).tearDown()
 

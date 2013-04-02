@@ -157,7 +157,8 @@ class DevDatabasePluginTest(tornado.testing.AsyncTestCase):
 		)
 
 	def tearDown(self):
-		self.configuration.cleanup()
+		self.configuration.cleanup(self.stop, self.stop)
+		self.wait()
 		super(DevDatabasePluginTest, self).tearDown()
 
 	def test_simple(self):

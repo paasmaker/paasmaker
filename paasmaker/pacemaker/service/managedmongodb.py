@@ -63,6 +63,29 @@ class ManagedMongoService(BaseService):
 		)
 
 		manager = paasmaker.util.mongodaemon.MongoDaemon(self.configuration)
+
+		def on_configured(message):
+			def on_running(message):
+				# Success! Emit the credentials.
+				self.logger.info("Successfully started. Returning the credentials.")
+				credentials = {}
+				credentials['name'] = instance_name
+				credentials['protocol'] = 'mongodb'
+				credentials['hostname'] = self.configuration.get_flat('my_route')
+				credentials['port'] = port
+				callback(credentials, "Successfully created mongoDB instance.")
+
+			def on_startup_failure(message, exception=None):
+				self.logger.error(message)
+				if exception:
+					self.logger.error("Exception:", exc_info=exception)
+
+				error_callback(message, exception)
+
+			manager.start_if_not_running(on_running, on_startup_failure)
+
+			# end of on_configured()
+
 		try:
 			# TODO: This shouldn't exist yet, because we're creating it...
 			# Decide how to handle this case.
@@ -87,27 +110,10 @@ class ManagedMongoService(BaseService):
 				self.options['binary'],
 				port,
 				'0.0.0.0',
+				on_configured,
+				error_callback,
 				None
 			)
-
-		def on_running(message):
-			# Success! Emit the credentials.
-			self.logger.info("Successfully started. Returning the credentials.")
-			credentials = {}
-			credentials['name'] = instance_name
-			credentials['protocol'] = 'mongodb'
-			credentials['hostname'] = self.configuration.get_flat('my_route')
-			credentials['port'] = port
-			callback(credentials, "Successfully created mongoDB instance.")
-
-		def on_startup_failure(message, exception=None):
-			self.logger.error(message)
-			if exception:
-				self.logger.error("Exception:", exc_info=exception)
-
-			error_callback(message, exception)
-
-		manager.start_if_not_running(on_running, on_startup_failure)
 
 	def update(self, name, existing_credentials, callback, error_callback):
 		# No action to take here.
@@ -124,11 +130,22 @@ class ManagedMongoService(BaseService):
 		try:
 			manager.load_parameters(instance_path)
 
-			self.logger.info("Destroying mongoDB instance %s ..." % instance_name)
-			manager.destroy()
-			self.logger.info("Complete.")
+			def destroy_success(message):
+				self.logger.info("Complete.")
+				callback("Destroyed instance %s." % instance_name)
 
-			callback("Destroyed instance %s." % instance_name)
+			def destroy_error(message, exception=None):
+				self.logger.error("Failed to destroy instance.")
+				self.logger.error(message)
+				if exception:
+					self.logger.error("Exception:", exc_info=exception)
+				error_callback("Failed to destroy instance %s." % instance_name)
+
+			manager.load_parameters(instance_path)
+
+			# Destroy the instance.
+			self.logger.info("Destroying mongoDB instance %s ..." % instance_name)
+			manager.destroy(destroy_success, destroy_error)
 
 		except paasmaker.util.ManagedDaemonError, ex:
 			self.logger.info("No such instance %s. Task complete." % instance_name)
@@ -188,7 +205,7 @@ class ManagedMongoService(BaseService):
 						self.logger.info("Found managed mongoDB at path %s - shutting down", instance_path)
 
 						# Shut it down.
-						manager.stop()
+						manager.stop(process_path, error_callback)
 
 						# Move onto the next one.
 						process_path("Completed.")
@@ -196,6 +213,7 @@ class ManagedMongoService(BaseService):
 					except paasmaker.util.ManagedDaemonError, ex:
 						# Just move on to the next one.
 						self.logger.error("Path %s doesn't have a managed mongoDB instance - skipping.")
+						process_path('')
 
 				except IndexError, ex:
 					# That's it, that was the last one.
@@ -268,9 +286,6 @@ class ManagedMongoServiceTest(BaseServiceTest):
 		# Now start it back up again.
 		service.startup_async_prelisten(self.stop, self.stop)
 		self.wait()
-
-		# Give it a little bit longer to start up.
-		self.short_wait_hack(length=0.5)
 
 		# Try to connect again and re-fetch the value we set.
 		new_client = pymongo.MongoClient(

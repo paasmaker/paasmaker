@@ -187,7 +187,7 @@ router:
         if 'pacemaker' in modules:
             self.setup_database()
 
-    def cleanup(self):
+    def cleanup(self, callback, error_callback):
         """
         Clean up anything set up during this unit tests. This means
         stopping any redis servers that were started, and deleting
@@ -197,16 +197,13 @@ router:
         # This doesn't stop all leaks, but certainly helps.
         pub.unsubAll()
 
-        # Shut down any services we used.
-        if hasattr(self, 'redis_meta'):
-            for key, meta in self.redis_meta.iteritems():
-                if meta['state'] == 'STARTED' or meta['state'] == 'STARTING':
-                    logger.debug("Killing off test redis instance for %s" % key)
-                    meta['manager'].destroy()
+        def finished_shutdown(message):
+          # Remove files that we created.
+          shutil.rmtree(self.params['scratch_dir'])
+          os.unlink(self.configname)
+          callback("Completed cleanup.")
 
-        # Remove files that we created.
-        shutil.rmtree(self.params['scratch_dir'])
-        os.unlink(self.configname)
+        self.shutdown_managed_redis(finished_shutdown, error_callback)
 
     def get_tornado_configuration(self):
         """
