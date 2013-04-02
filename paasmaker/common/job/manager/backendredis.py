@@ -156,6 +156,14 @@ class RedisJobBackend(JobBackend):
 		else:
 			logger.debug("Job manager is still connected.")
 
+	def shutdown(self, callback, error_callback):
+		if hasattr(self, 'redis') and self.redis is not None and self.redis.connection.connected():
+			self.redis.connection.disconnect()
+		if hasattr(self, 'pubsub_client') and self.pubsub_client is not None and self.pubsub_client.connection.connected():
+			self.pubsub_client.connection.disconnect()
+
+		callback("Disconnected.")
+
 	def _on_job_status_message(self, message):
 		if isinstance(message.body, int):
 			# It's a subscribed count. Ignore.

@@ -23,6 +23,12 @@ class JobBackend(object):
 		"""
 		raise NotImplementedError("You must implement setup().")
 
+	def shutdown(self, callback, error_callback):
+		"""
+		Shutdown anything you need to do on exit.
+		"""
+		raise NotImplementedError("You must implement shutdown().")
+
 	def ensure_connected(self):
 		"""
 		Ensure that your backend is connected to the appropriate services.

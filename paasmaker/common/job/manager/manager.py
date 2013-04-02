@@ -82,6 +82,15 @@ class JobManager(object):
 		self.backend.setup(abort_existing_jobs, error_callback)
 		self.watchdog = JobManagerBackendWatchdog(self.configuration, self.backend)
 
+	def shutdown(self, callback, error_callback):
+		"""
+		Shutdown the backend.
+		"""
+		if hasattr(self, 'watchdog'):
+			self.watchdog.disable()
+
+		self.backend.shutdown(callback, error_callback)
+
 	def set_context(self, job_id, context, callback):
 		"""
 		Set the initial context for a job. If called after the job has

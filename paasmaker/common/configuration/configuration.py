@@ -1401,8 +1401,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		to shutdown on exit.
 		"""
 		if hasattr(self, 'redis_meta'):
-			self.job_manager.watchdog.disable()
-
 			iterator = self.redis_meta.iteritems()
 
 			def next_item(message=''):
@@ -1422,7 +1420,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					# No more to process.
 					callback("Shut down all redis instances.")
 
-			next_item()
+			self.job_manager.shutdown(next_item, error_callback)
 		else:
 			callback("No managed Redis instances to shutdown.")
 
