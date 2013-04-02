@@ -323,6 +323,10 @@ if context['runtime_php_enable']:
 	if len(context['runtime_php_extra_packages']) > 0:
 		install.helpers.install_packages(context, context['runtime_php_extra_packages'])
 
+	if context['PLATFORM'] == install.constants.LINUX:
+		for module in context['runtime_php_apache_modules']:
+			install.helpers.generic_command(context, ['sudo', 'a2enmod', module])
+
 	if context['runtime_php_disable_system_apache']:
 		install.helpers.disable_service(context, 'apache2')
 

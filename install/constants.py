@@ -160,6 +160,7 @@ DEFAULT_INSTALLER_CONFIGURATION = {
 	'runtime_shell_enable': True,
 
 	'runtime_php_enable': False,
+	'runtime_php_apache_modules': ['rewrite'],
 	'runtime_php_extra_packages': [],
 	'runtime_php_disable_system_apache': False,
 

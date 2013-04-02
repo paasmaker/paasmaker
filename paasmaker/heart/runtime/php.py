@@ -80,6 +80,9 @@ Listen %(port)d
 	ErrorLog %(error_log)s
 
 	DirectoryIndex index.php index.html index.htm
+	<Directory %(document_root)s>
+		AllowOverride all
+	</Directory>
 
 	%(environment)s
 </VirtualHost>
