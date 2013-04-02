@@ -600,17 +600,27 @@ def on_exit_postnotify_complete(message, exception=None):
 
 	if on_exit_plugins_postnotify.required <= 0:
 		# We're done. Really shutdown now.
-		on_actual_exit()
+		# Now stop any managed daemons.
+		nginx = paasmaker.router.router.NginxRouter(configuration)
+		nginx.shutdown(nginx_shutdown, nginx_shutdown)
 	else:
 		logger.info("%d postnotify plugins still waiting to run." % on_exit_plugins_postnotify.required)
 
+def nginx_shutdown(message, exception=None):
+	logger.info(message)
+	if exception:
+		logger.error("Exception:", exc_info=exception)
+
+	configuration.shutdown_managed_redis(redis_shutdown, redis_shutdown)
+
+def redis_shutdown(message, exception=None):
+	logger.info(message)
+	if exception:
+		logger.error("Exception:", exc_info=exception)
+
+	on_actual_exit()
+
 def on_actual_exit():
-	# Now stop any managed daemons.
-	nginx = paasmaker.router.router.NginxRouter(configuration)
-	nginx.shutdown()
-
-	configuration.shutdown_managed_redis()
-
 	# And really, really exit.
 	logging.info("Exiting.")
 	if os.path.exists(pid_path):

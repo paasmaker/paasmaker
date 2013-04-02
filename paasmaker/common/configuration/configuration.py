@@ -1401,6 +1401,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		to shutdown on exit.
 		"""
 		if hasattr(self, 'redis_meta'):
+			self.job_manager.watchdog.disable()
+
 			iterator = self.redis_meta.iteritems()
 
 			def next_item(message=''):

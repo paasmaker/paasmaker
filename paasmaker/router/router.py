@@ -190,6 +190,9 @@ http {
 
 		try:
 			daemon.load_parameters(working_dir)
+
+			on_configured('Configured')
+
 		except paasmaker.util.ManagedDaemonError, ex:
 			# Doesn't yet exist. Create it.
 			daemon.configure(
