@@ -95,7 +95,14 @@ Listen %(port)d
 				bits = version.split(".")
 				major_version = ".".join(bits[0:2])
 
-				callback([major_version, version])
+				version_list = [major_version, version]
+				if major_version >= '5.3':
+					# TODO: this is a workaround for the fact that we don't have more advanced version
+					# matching than simple string equality (e.g. no way to say "v3 or higher")
+					# Since PHP's main problem is the 5.2/5.3 split, here's a temporary hack.
+					version_list.append('5.3+')
+
+				callback(version_list)
 			else:
 				# No versions available.
 				callback([])
@@ -348,12 +355,18 @@ class PHPRuntimeTest(BaseRuntimeTest):
 		instance.get_versions(self.stop)
 		versions = self.wait()
 
-		comparison = subprocess.check_output(['php', '-v'])
-		self.assertEquals(len(versions), 2, "Should have returned two values.")
+		self.assertEquals(len(versions), 3, "Should have returned three values.")
+		self.assertIn("5.3+", versions, "Didn't return version '5.3+' (or you have an old PHP).")
 		self.assertEquals(versions[0], versions[1][0:len(versions[0])], "First version should have been substring of later version.")
+
+		comparison = subprocess.check_output(['php', '-v'])
 		for version in versions:
-			self.assertIn(".", version, "Version is not properly qualified.")
-			self.assertIn(version, comparison, "Missing version in output.")
+			if version == '5.3+':
+				match = re.match(r'PHP ([\d.]+)', comparison)
+				self.assertTrue((match.group(1) >= "5.3"), "Your PHP version is not greater than 5.3, but '5.3+; was returned.")
+			else:
+				self.assertIn(".", version, "Version is not properly qualified.")
+				self.assertIn(version, comparison, "Missing version in output.")
 
 	def test_startup(self):
 		# Put together the barest of possible information to start up the system.
