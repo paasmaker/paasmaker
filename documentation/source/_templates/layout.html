@@ -109,8 +109,8 @@
 
    	<link href='http://fonts.googleapis.com/css?family=Monda:400,700' rel='stylesheet' type='text/css'>
     <link href="{{ pathto('_static/bootstrap.min.css', 1) }}" rel="stylesheet" media="screen">
-    <link href="{{ pathto('_static/paasmaker.css', 1) }}" rel="stylesheet" media="screen">
     <link href="{{ pathto('_static/bootstrap-responsive.min.css', 1) }}" rel="stylesheet" media="screen">
+    <link href="{{ pathto('_static/paasmaker.css', 1) }}" rel="stylesheet" media="screen">
 
     {%- if favicon %}
     <link rel="shortcut icon" href="{{ pathto('_static/' + favicon, 1) }}"/>
@@ -160,9 +160,8 @@
 					<span class="icon-bar"></span>
 				</button>
 				<a class="brand" href="{{ pathto(master_doc) }}">
-					<!-- <img src="{{ pathto('_static/book5.jpg', 1) }}" alt=""> -->
-					<img src="{{ pathto('_static/pm-dark-32.png', 1) }}" alt="Paasmaker">
-					Documentation
+					<img src="{{ pathto('_static/pm-light-32.png', 1) }}" alt="Paasmaker">
+					<span class="brand-text">Documentation</span>
 				</a>
 				<div class="nav-collapse collapse">
 					<ul class="nav">
@@ -261,7 +260,7 @@
       {% trans last_updated=last_updated|e %}Last updated on {{ last_updated }}.{% endtrans %}
     {%- endif %}
     {%- if show_sphinx %}
-      {% trans sphinx_version=sphinx_version|e %}Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> {{ sphinx_version }}.{% endtrans %}
+      {% trans sphinx_version=sphinx_version|e %}Created&nbsp;using&nbsp;<a href="http://sphinx.pocoo.org/">Sphinx</a>&nbsp;{{ sphinx_version }}.{% endtrans %}
     {%- endif %}
     </footer>
 {%- endblock %}
