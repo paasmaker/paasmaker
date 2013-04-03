@@ -15,15 +15,19 @@ pm.application.view = (function() {
 
 	return {
 
-		getButtonMap: function(version) {
-			return {
-				register: (version.state == 'PREPARED'),
-				start: (version.state == 'READY' || version.state == 'PREPARED'),
-				stop: (version.state == 'RUNNING'),
-				deregister: (version.state == 'READY'),
-				makecurrent: (version.state == 'RUNNING' && !version.is_current),
-				delete: ((version.state == 'PREPARED' || version.state == 'NEW') && !version.is_current)
-			};
+		getButtonMap: function(version, workspace_id) {
+			if(pm.util.hasPermission('APPLICATION_DEPLOY', workspace_id)) {
+				return {
+					register: (version.state == 'PREPARED'),
+					start: (version.state == 'READY' || version.state == 'PREPARED'),
+					stop: (version.state == 'RUNNING'),
+					deregister: (version.state == 'READY'),
+					makecurrent: (version.state == 'RUNNING' && !version.is_current),
+					delete: ((version.state == 'PREPARED' || version.state == 'NEW') && !version.is_current)
+				};
+			} else {
+				return {};
+			}
 		},
 
 		getHealthString: function(version) {
@@ -51,12 +55,12 @@ pm.application.view = (function() {
 			return health_string;
 		},
 
-		processVersionData: function(versions, data) {
+		processVersionData: function(versions, data, workspace_id) {
 			var processed_versions = [];
 
 			var modifier = function(version) {
 				version.health_string = pm.application.view.getHealthString(version);
-				version.buttons_to_show = pm.application.view.getButtonMap(version);
+				version.buttons_to_show = pm.application.view.getButtonMap(version, workspace_id);
 
 				// replicate the behaviour of nice_state(); TODO: icons etc?
 				version.display_state = version.state[0] + version.state.substr(1).toLowerCase();
@@ -109,9 +113,9 @@ pm.application.view = (function() {
 						}
 					}
 
-					data.versions = pm.application.view.processVersionData(data.versions, data);
+					data.versions = pm.application.view.processVersionData(data.versions, data, data.application.workspace_id);
 					if (data.current_version) {
-						data.current_version = pm.application.view.processVersionData(data.current_version, data);
+						data.current_version = pm.application.view.processVersionData(data.current_version, data, data.application.workspace_id);
 					}
 
 					// render main template body (but with empty tables)

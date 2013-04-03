@@ -839,9 +839,7 @@ class BaseController(tornado.web.RequestHandler):
 		# Check to see if we have global workspace list permissions.
 		if not self.has_permission(constants.PERMISSION.WORKSPACE_LIST):
 			# Nope, you have a limited selection. So limit the query to those.
-			workspaces = self.session.query(
-				paasmaker.model.Workspace
-			).filter(
+			workspaces = workspaces.filter(
 				paasmaker.model.Workspace.id.in_(
 					paasmaker.model.WorkspaceUserRoleFlat.list_of_workspaces_for_user(
 						self.session,

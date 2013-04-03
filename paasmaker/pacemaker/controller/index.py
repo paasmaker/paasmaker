@@ -18,10 +18,13 @@ class IndexController(BaseController):
 
 	def get(self):
 		if self.configuration.is_pacemaker():
-			if self.user and self.has_permission(constants.PERMISSION.SYSTEM_OVERVIEW):
-				self.show_overview()
+			if self.get_current_user():
+				if self.has_permission(constants.PERMISSION.SYSTEM_OVERVIEW):
+					self.show_overview()
+				else:
+					self.render("overview-blank.html")
 			else:
-				self.redirect('/login')
+				self.redirect("/login")
 		else:
 			self.render("index-notpacemaker.html")
 

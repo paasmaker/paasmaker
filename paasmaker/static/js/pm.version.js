@@ -77,9 +77,6 @@ pm.version = (function() {
 						version_data.version.using_dev_directory_plugin = true;
 					}
 
-					version_data.version.health_string = pm.application.view.getHealthString(version_data.version);
-					version_data.version.buttons_to_show = pm.application.view.getButtonMap(version_data.version);
-
 					pm.data.get_app_parents({
 						version_id: url_match[1],
 						callback: function(parents) {
@@ -87,6 +84,10 @@ pm.version = (function() {
 							// render main template body (but with empty tables); this needs to be done after
 							// get_app_parents returns because permission checking needs the workspace ID
 							version_data.workspace_id = parents.workspace.id;
+
+							version_data.version.health_string = pm.application.view.getHealthString(version_data.version);
+							version_data.version.buttons_to_show = pm.application.view.getButtonMap(version_data.version, parents.workspace.id);
+
 							$('#main_right_view').html(Handlebars.templates.version_view(version_data));
 
 							// once the main template is rendered, fill in breadcrumbs and redraw the app menu
