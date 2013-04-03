@@ -18,6 +18,7 @@ from paasmaker.common.core import constants
 import colander
 import tornado
 import tornado.testing
+import sqlalchemy
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -132,11 +133,22 @@ class UserEditController(BaseController):
 				user.password = self.params['password']
 
 			self.session.add(user)
-			self.session.commit()
-			self.session.refresh(user)
+			try:
+				self.session.commit()
+				self.session.refresh(user)
+			except sqlalchemy.exc.IntegrityError, ex:
+				self.session.rollback()
+				if 'email is not' in str(ex):
+					valid_data = False
+					self.add_error('The email address is not unique.')
+				elif 'login is not' in str(ex):
+					valid_data = False
+					self.add_error('The login name is not unique.')
+				else:
+					raise ex
 
+		if valid_data:
 			self.add_data('user', user)
-
 			self.redirect('/user/list')
 		else:
 			self.add_data('user', user)
