@@ -269,3 +269,27 @@ and any applications will be <application>.10.0.0.1.xip.io.
 .. note::
 	We don't have an arrangement with the xip.io guys, and they provide an amazing
 	free service! We hope to be able to provide our own service in the future for testing.
+
+Updating to the latest version
+------------------------------
+
+At this early stage, we are not marking or distributing specific versions. We hope to
+nail this down very soon, and provide proper versions and release notes to allow you to
+easily go between versions.
+
+For the moment, you can update your local copy by pulling the latest changes from git,
+and re-running the installer:
+
+.. code-block:: bash
+
+	$ git pull --rebase
+	$ ./install.py install/configs/example-paasmaker-hacking.yml
+
+There are a few other issues you may run into when working this way:
+
+* Database updates. We will publish Alembic migrations and update the documentation here
+  on how to run through these when the first one appears.
+* Permissions. When you create a role with all permissions, it's only all permissions
+  at the time. As we add permissions, you'll need to update existing roles to add those
+  permissions if you need them. (You'll know if you have this issue if buttons disappear
+  when you pull).
