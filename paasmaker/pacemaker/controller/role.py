@@ -18,6 +18,7 @@ from paasmaker.common.core import constants
 
 import tornado
 import tornado.testing
+import sqlalchemy
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -144,9 +145,19 @@ class RoleEditController(BaseController):
 
 		if valid_data:
 			self.session.add(role)
-			paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(self.session)
-			self.session.refresh(role)
+			try:
+				paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(self.session)
+				self.session.refresh(role)
+			except sqlalchemy.exc.IntegrityError, ex:
+				self.session.rollback()
+				self.reload_current_user()
+				if 'name is not' in str(ex):
+					valid_data = False
+					self.add_error('The role name is not unique.')
+				else:
+					raise ex
 
+		if valid_data:
 			self.add_data('role', role)
 
 			self.redirect('/role/list')
