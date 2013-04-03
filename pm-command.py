@@ -129,12 +129,25 @@ class RootAction(object):
 		self.prettyprint(job_data)
 
 		if job_data['job_id'] == self.job_id and job_data['state'] in constants.JOB_FINISHED_STATES:
-			if job_data['state'] == constants.JOB.SUCCESS:
-				logging.info("Completed successfully.")
-				self.exit(0)
-			else:
-				logging.error("Failed to complete job.")
-				self.exit(1)
+			self._exit_on_job_state(job_data['state'])
+
+	def _on_job_tree(self, job_id, tree):
+		# See if the job tree has already finished.
+		# If so, print it, and exit appropriately.
+		if tree['state'] in constants.JOB_FINISHED_STATES:
+			self.prettyprint(tree)
+			self._exit_on_job_state(tree['state'])
+		else:
+			# Nothing to do - keep reading status updates until completion.
+			pass
+
+	def _exit_on_job_state(self, state):
+		if state == constants.JOB.SUCCESS:
+			logging.info("Completed successfully.")
+			self.exit(0)
+		else:
+			logging.error("Failed to complete job.")
+			self.exit(1)
 
 	def _sink_event(self, *args):
 		pass
@@ -149,7 +162,7 @@ class RootAction(object):
 		self.point_and_auth(self.args, self.client)
 		self.client.set_error_callback(on_error)
 		self.client.set_status_callback(self._on_job_status)
-		self.client.set_tree_callback(self._sink_event)
+		self.client.set_tree_callback(self._on_job_tree)
 		self.client.set_new_callback(self._sink_event)
 		self.client.set_subscribed_callback(self._sink_event)
 		self.client.subscribe(job_id)
@@ -665,6 +678,17 @@ class JobAbortAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class JobFollowAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("job_id", help="Job ID to follow")
+
+	def describe(self):
+		return "Follows a job. Exits when the root job reaches a completed status. Exits with 0 on success, or 1 on failure."
+
+	def process(self, args):
+		self.args = args
+		self._follow_job(args.job_id)
+
 class LogStreamAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("job_id", help="Job ID to stream")
@@ -749,6 +773,7 @@ ACTION_MAP = {
 	'version-setcurrent': VersionSetCurrentAction(),
 	'version-delete': VersionDeleteAction(),
 	'job-abort': JobAbortAction(),
+	'job-follow': JobFollowAction(),
 	'log-stream': LogStreamAction(),
 	'help': HelpAction()
 }
