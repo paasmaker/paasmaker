@@ -118,7 +118,9 @@ class RoleEditController(BaseController):
 		if not role:
 			role = self._default_role()
 		self.add_data('role', role)
-		self.add_data_template('available_permissions', constants.PERMISSION.ALL)
+		available_permissions = constants.PERMISSION.ALL
+		available_permissions.sort()
+		self.add_data_template('available_permissions', available_permissions)
 
 		self.render("role/edit.html")
 
