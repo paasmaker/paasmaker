@@ -34,6 +34,7 @@ class TemplatesController(BaseController):
 
 		templates_path = os.path.normpath(os.path.dirname(__file__) + '/../../templates/')
 		all_templates = glob.glob(os.path.join(templates_path, '*', '*.handlebars'))
+		all_templates.sort()
 
 		something_recompiled = False
 		for source_path in all_templates:
