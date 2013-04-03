@@ -149,7 +149,14 @@ class RootAction(object):
 			self.exit(1)
 
 	def _on_job_status(self, job_id, job_data):
-		self.prettyprint(job_data)
+		if self.args.format == 'json' or self.args.format == 'yaml':
+			self.prettyprint(job_data)
+		else:
+			# Format nicely.
+			if 'summary' in job_data:
+				print "Job '%s' (%s) reached status %s (%s)." % (job_data['title'], job_id, job_data['state'], job_data['summary'])
+			else:
+				print "Job '%s' (%s) reached status %s." % (job_data['title'], job_id, job_data['state'])
 
 		if job_data['job_id'] == self.job_id and job_data['state'] in constants.JOB_FINISHED_STATES:
 			self._exit_on_job_state(job_data['state'])
