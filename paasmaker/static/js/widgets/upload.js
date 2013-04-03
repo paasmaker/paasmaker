@@ -91,9 +91,14 @@ pm.widgets.editable = (function(){
 }());
 
 
-pm.widgets.upload = function(container)
+pm.widgets.upload = function(container, workspace_id)
 {
 	this.container = container;
+
+	if (!pm.util.hasPermission('FILE_UPLOAD', workspace_id)) {
+		this.container.append("<p>Sorry, you need the FILE_UPLOAD permission to upload here.</p>");
+		return undefined;
+	}
 
 	this.upButton = $('<a class="btn" href="#"><i class="icon-upload"></i> Upload File</a>');
 	this.dropContainer = $('<div class="drop"></div>');
@@ -151,5 +156,16 @@ pm.widgets.upload = function(container)
 	});
 	this.resumable.on('progress', function(file){
 		_self.progress.val(_self.resumable.progress() * 100);
+	});
+
+	// Make sure we don't keep retrying uploads
+	// after the user leaves the page.
+	pm.history.registerExitHandler({
+		scope: this,
+		fn: function() {
+			if (this.resumable.isUploading()) {
+				this.resumable.cancel();
+			}
+		}
 	});
 }

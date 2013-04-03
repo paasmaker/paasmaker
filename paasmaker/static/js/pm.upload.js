@@ -104,6 +104,10 @@ pm.upload = (function() {
 					application: parents.application,
 					suffix: suffix
 				});
+
+				$('.file-uploader-widget').each(function(i, element) {
+					new pm.widgets.upload($(element), parents.workspace.id);
+				});
 			};
 
 			$.ajax({
@@ -122,10 +126,6 @@ pm.upload = (function() {
 						e.preventDefault();
 						$(e.target).tab('show');
 					})
-
-					$('.file-uploader-widget').each(function(i, element) {
-						new pm.widgets.upload($(element));
-					});
 
 					pm.upload.loadRepositoryLists();
 					pm.data.get_app_parents(parent_search);

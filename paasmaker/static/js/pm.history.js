@@ -35,8 +35,13 @@ pm.routingTable = [
 
 pm.history = (function() {
 	var current_address;
+	var exit_handlers = [];
 
 	return {
+		/**
+		 * Tests pathname against the regexps in pm.routingTable,
+		 * and returns the controller object of the first match
+		 */
 		getRoute: function(pathname) {
 			for (var i=0, compare; compare = pm.routingTable[i]; i++) {
 				if (compare[0].test(pathname)) {
@@ -46,6 +51,9 @@ pm.history = (function() {
 			return false;
 		},
 
+		/**
+		 * Draw a loading spinner and translucent overlay on top of the element el.
+		 */
 		loadingOverlay: function(el) {
 			if (el) {
 				el = $(el);
@@ -56,6 +64,48 @@ pm.history = (function() {
 			var overlay = $("<div class=\"loading-overlay\"><img src=\"/static/img/spinner32.gif\" alt=\"\"></div>");
 			el.append(overlay);
 			overlay.animate({ opacity: 0.8 });
+		},
+
+		/**
+		 * Register the object in function_object as something to run when the user
+		 * navigates away from the current view. Use for clearing timeouts,
+		 * stopping auto-refresh widgets, cancelling uploads, etc.
+		 *
+		 * @param function_object object with properties:
+		 *  - fn: the function itself to run
+		 *  - scope: value of "this" when fn is called
+		 *  - arguments: array of arguments to pass
+		 *
+		 * (The argument can also just be the function if it
+		 *  takes no arguments and its scope is irrelevant.)
+		 */
+		registerExitHandler: function(function_object) {
+			var object_to_store = {};
+
+			if (typeof function_object == 'function') {
+				object_to_store.fn = function_object;
+			} else {
+				object_to_store = function_object;
+			}
+			if (!object_to_store.scope) {
+				object_to_store.scope = pm.history;
+			}
+			if (!object_to_store.arguments) {
+				object_to_store.arguments = [];
+			}
+
+			exit_handlers.push(object_to_store);
+		},
+
+		/**
+		 * Run any handlers registered with registerExitHandler
+		 * (i.e. the user is navigating away from the current view.)
+		 */
+		runExitHandlers: function() {
+			while (exit_handlers.length) {
+				var function_object = exit_handlers.pop();
+				function_object.fn.apply(function_object.scope, function_object.arguments);
+			}
 		},
 
 		/**
@@ -72,8 +122,12 @@ pm.history = (function() {
 				// if (address == current_address) { return false; }
 				current_address = address;
 
+				// TODO: update pages that need this with registerExitHandler
 				pm.data.removeListeners();
+
 				pm.history.loadingOverlay();
+				pm.history.runExitHandlers();
+
 				var module = pm.history.getRoute(address);
 				module.switchTo.apply(module, [e.state]);
 			}
