@@ -64,21 +64,29 @@ $(function()
 						thisLi.append($('<a href="/workspace/' + workspace.id + '/applications">' + workspace.name + '</a>'));
 						$('.nav .workspace-list').append(thisLi);
 					});
+
+					if (!data.workspaces.length) {
+						$('.nav .workspace-list').append("<li class=\"no-menu-items\">No workspaces available to view.</li>");
+					}
 				}
 			});
 		}
 		// Similarly, populate the nodes dropdown.
 		if ($('.nav .node-list').length) {
-			pm.data.api({
-				endpoint: 'node/list',
-				callback: function(data) {
-					data.nodes.forEach(function(node) {
-						var thisLi = $('<li>');
-						thisLi.append($('<a href="/node/' + node.id + '">' + node.name + '</a>'));
-						$('.nav .node-list').append(thisLi);
-					});
-				}
-			});
+			if (pm.util.hasPermission('NODE_DETAIL_VIEW')) {
+				pm.data.api({
+					endpoint: 'node/list',
+					callback: function(data) {
+						data.nodes.forEach(function(node) {
+							var thisLi = $('<li>');
+							thisLi.append($('<a href="/node/' + node.id + '">' + node.name + '</a>'));
+							$('.nav .node-list').append(thisLi);
+						});
+					}
+				});
+			} else {
+				$('.nav .node-list').append("<li class=\"no-menu-items\">You aren't able to view node details.</li>");
+			}
 		}
 
 	}

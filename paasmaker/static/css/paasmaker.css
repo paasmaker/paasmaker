@@ -38,6 +38,12 @@ a.toggle { text-decoration: none; }
 td.contains-uuid { width: 265px; }
 code.uuid-shrink { cursor: pointer; }
 
+/* Empty menu placeholders */
+
+li.no-menu-items { font-size: smaller; font-style: italic; }
+.application-list li.no-menu-items { margin: 20px 0; line-height: 21px; }
+.node-list li.no-menu-items, .workspace-list li.no-menu-items { margin: 10px 15px; }
+
 /* COMMON CSS STYLES */
 ul.errors
 {
@@ -239,7 +245,6 @@ ul.breadcrumb { min-height: 20px; }
 .application-list { position: absolute; top: 0; left: 0; width: 250px; border: 1px solid #e3e3e3; border-radius: 4px; }
 
 .application-list-name { display: block; font-size: larger; font-weight: bold; }
-.application-list li.no-menu-items { margin: 20px 0; line-height: 21px; font-size: smaller; font-style: italic; }
 
 .application-list-state { float: right; }
 .application-list .version { padding-left: 1.5em; }
