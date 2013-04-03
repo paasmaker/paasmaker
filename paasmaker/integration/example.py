@@ -14,7 +14,8 @@ class ExampleIntegrationTest(paasmaker.common.testhelpers.BaseMultipaasTest):
 		self.add_multipaas_node(pacemaker=True, heart=False, router=False)
 		self.add_multipaas_node(pacemaker=False, heart=True, router=False)
 		self.add_multipaas_node(pacemaker=False, heart=False, router=True)
-		self.start_multipaas()
+		self.start_multipaas(self.stop)
+		self.wait()
 
 		with paasmaker.common.testhelpers.MultipaasTestHandler(self):
 			#self.assertTrue(False, "Test error.")

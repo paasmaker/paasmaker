@@ -244,27 +244,110 @@ class BaseMultipaasTest(tornado.testing.AsyncTestCase, TestHelpers):
 	PASSWORD = 'multipaas'
 
 	def add_multipaas_node(self, **kwargs):
+		"""
+		Add a new node to this test cluster. Supply three keyword arguments,
+		pacemaker, router, and heart, which are bools that indicate what roles
+		this node has.
+		"""
 		if not hasattr(self, 'multipaas'):
 			self.multipaas = paasmaker.util.multipaas.MultiPaas()
 
 		self.multipaas.add_node(**kwargs)
 
-	def start_multipaas(self):
+	def start_multipaas(self, callback):
+		"""
+		Start the multipass running.
+		"""
 		# Start it running.
 		self.multipaas.start_nodes()
 
-		self.executor = self.multipaas.get_executor()
+		self.executor = self.multipaas.get_executor(self.io_loop)
+
+		role_result = {}
+		user_result = {}
 
 		# Create a user, role, workspace, and allocate that role.
-		user_result = self.executor.run(['user-create', self.USERNAME, 'multipaas@paasmaker.com', 'Multi Paas', self.PASSWORD])
-		role_result = self.executor.run(['role-create', 'Administrator', 'ALL'])
-		workspace_result = self.executor.run(['workspace-create', 'Test', 'test', '{}'])
+		def all_created(success, data, errors):
+			self.assertTrue(success, errors)
+			callback()
 
-		self.executor.run(['role-allocate', role_result['role']['id'], user_result['user']['id']])
+		def allocate_role(success, data, errors):
+			self.assertTrue(success, errors)
+			self.mp_workspace_id = data['workspace']['id']
+			self.executor.run(
+				[
+					'role-allocate',
+					role_result['role']['id'],
+					user_result['user']['id']
+				],
+				all_created,
+			)
 
-		self.mp_user_id = user_result['user']['id']
-		self.mp_role_ud = role_result['role']['id']
-		self.mp_workspace_id = workspace_result['workspace']['id']
+		def create_workspace(success, data, errors):
+			self.assertTrue(success, errors)
+			user_result.update(data)
+			self.mp_user_id = data['user']['id']
+			self.executor.run(
+				[
+					'workspace-create',
+					'Test',
+					'test',
+					'{}'
+				],
+				allocate_role
+			)
+
+		def create_user(success, data, errors):
+			self.assertTrue(success, errors)
+			role_result.update(data)
+			self.mp_role_id = data['role']['id']
+			self.executor.run(
+				[
+					'user-create',
+					self.USERNAME,
+					'multipaas@paasmaker.com',
+					'Multi Paas',
+					self.PASSWORD
+				],
+				create_workspace
+			)
+
+		self.executor.run(
+			[
+				'role-create',
+				'Administrator',
+				'ALL'
+			],
+			create_user
+		)
+
+	def execute(self, command, assert_success=True, timeout=5, wait=True):
+		"""
+		Execute a command against the cluster.
+
+		This is async, and calls self.stop() when
+		it's done, and sets self.success, self.data,
+		and self.errors.
+
+		:arg list command: The command to run.
+		:arg int timeout: The maximum time to wait.
+		"""
+		def cb(success, data, errors):
+			self.success = success
+			self.data = data
+			self.errors = errors
+
+			if assert_success:
+				# Make sure it succeeded, and print out
+				# the errors if not.
+				self.assertTrue(success, errors)
+
+			self.stop(timeout=timeout)
+
+		self.executor.run(command, cb)
+
+		if wait:
+			self.wait()
 
 	def tearDown(self):
 		if hasattr(self, 'multipaas'):
