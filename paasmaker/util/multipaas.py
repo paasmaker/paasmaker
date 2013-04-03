@@ -284,6 +284,7 @@ redis:
     shutdown: true
 
 plugins:
+  # SCMs
   - name: paasmaker.scm.zip
     class: paasmaker.pacemaker.scm.zip.ZipSCM
     title: Zip file SCM
@@ -294,13 +295,61 @@ plugins:
     class: paasmaker.pacemaker.scm.git.GitSCM
     title: Git SCM
 
+  # Runtimes
   - name: paasmaker.runtime.shell
     class: paasmaker.heart.runtime.ShellRuntime
     title: Shell Runtime
 
+  - class: paasmaker.heart.runtime.RbenvRuntime
+    name: paasmaker.runtime.ruby.rbenv
+    parameters:
+      rbenv_path: ~/.rbenv
+    title: Ruby (rbenv) Runtime
+
+  - class: paasmaker.heart.runtime.nvm.NvmRuntime
+    name: paasmaker.runtime.node.nvm
+    parameters:
+      nvm_path: ~/.nvm
+    title: Nodejs (nvm) Runtime
+
+  - class: paasmaker.heart.runtime.php.PHPRuntime
+    name: paasmaker.runtime.php
+    parameters:
+      managed: true
+      shutdown: true
+    title: PHP Runtime
+
+  - class: paasmaker.heart.runtime.static.StaticRuntime
+    name: paasmaker.runtime.static
+    parameters:
+      managed: true
+      shutdown: true
+    title: Static Files Runtime
+
+  # Services
   - name: paasmaker.service.parameters
     class: paasmaker.pacemaker.service.parameters.ParametersService
     title: Parameters Service
+
+  - class: paasmaker.pacemaker.service.managedpostgres.ManagedPostgresService
+    name: paasmaker.service.postgres
+    parameters:
+      root_password: paasmaker
+      shutdown: true
+    title: Managed Postgres Service
+
+  - class: paasmaker.pacemaker.service.managedmysql.ManagedMySQLService
+    name: paasmaker.service.mysql
+    parameters:
+      root_password: paasmaker
+      shutdown: true
+    title: Managed MySQL service
+
+  - class: paasmaker.pacemaker.service.managedredis.ManagedRedisService
+    name: paasmaker.service.managedredis
+    parameters:
+      shutdown: true
+    title: Managed Redis Service
 """
 
 	# TODO: The frontend_domain_postfix command below will fail
@@ -319,6 +368,7 @@ pacemaker:
 heart:
   enabled: true
   working_dir: %(heart_working_dir)s
+  shutdown_on_exit: true
 """
 
 	ROUTER = """
