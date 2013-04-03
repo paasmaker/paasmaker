@@ -36,6 +36,7 @@ from paasmaker.common.core import constants
 # External library imports.
 import tornado.ioloop
 import argparse
+import yaml
 
 # Logging setup.
 import logging
@@ -64,24 +65,34 @@ class RootAction(object):
 		# Define your options here.
 		pass
 
-	def process(self, args):
+	def process(self):
 		self.exit()
 
 	def describe(self):
-		raise NotImplementedError("Not implemented.")
+		return "No description supplied."
+
+	def format(self, data):
+		# The default format is to return in Yaml, it's
+		# moderately nice to look at.
+		return yaml.safe_dump(data, default_flow_style=False)
 
 	def prettyprint(self, data):
-		print json.dumps(data, indent=4, sort_keys=True)
+		if self.args.format == 'json':
+			print json.dumps(data, indent=4, sort_keys=True)
+		elif self.args.format == 'yaml':
+			print yaml.safe_dump(data, default_flow_style=False, explicit_start=True, explicit_end=True)
+		else:
+			print self.format(data)
 
 	def exit(self, code):
 		tornado.ioloop.IOLoop.instance().stop()
 		sys.exit(code)
 
-	def point_and_auth(self, args, apirequest):
-		host = "%s:%d" % (args.remote, args.port)
+	def point_and_auth(self, apirequest):
+		host = "%s:%d" % (self.args.remote, self.args.port)
 		apirequest.set_target(host)
-		apirequest.set_auth(args.key)
-		if args.ssl:
+		apirequest.set_auth(self.args.key)
+		if self.args.ssl:
 			apirequest.set_https()
 
 	def generic_request_failed(self, message, exception=None):
@@ -160,7 +171,7 @@ class RootAction(object):
 
 		# Follow the rabbit hole...
 		self.client = paasmaker.common.api.job.JobStreamAPIRequest(None)
-		self.point_and_auth(self.args, self.client)
+		self.point_and_auth(self.client)
 		self.client.set_error_callback(on_error)
 		self.client.set_status_callback(self._on_job_status)
 		self.client.set_tree_callback(self._on_job_tree)
@@ -185,11 +196,11 @@ class UserCreateAction(RootAction):
 	def describe(self):
 		return "Create a user."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.user.UserCreateAPIRequest(None)
-		request.set_user_params(args.name, args.login, args.email, True)
-		request.set_user_password(args.password)
-		self.point_and_auth(args, request)
+		request.set_user_params(self.args.name, self.args.login, self.args.email, True)
+		request.set_user_password(self.args.password)
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class UserEditAction(RootAction):
@@ -203,21 +214,21 @@ class UserEditAction(RootAction):
 	def describe(self):
 		return "Edit a user."
 
-	def process(self, args):
+	def process(self):
 		def user_loaded(roledata):
-			if args.name:
-				request.set_user_name(args.name)
-			if args.login:
-				request.set_user_login(args.login)
-			if args.email:
-				request.set_user_email(args.email)
-			if args.password:
-				request.set_user_password(args.password)
+			if self.args.name:
+				request.set_user_name(self.args.name)
+			if self.args.login:
+				request.set_user_login(self.args.login)
+			if self.args.email:
+				request.set_user_email(self.args.email)
+			if self.args.password:
+				request.set_user_password(self.args.password)
 			request.send(self.generic_api_response)
 
 		request = paasmaker.common.api.user.UserEditAPIRequest(None)
-		self.point_and_auth(args, request)
-		request.load(int(args.user_id), user_loaded, self.generic_request_failed)
+		self.point_and_auth(request)
+		request.load(int(self.args.user_id), user_loaded, self.generic_request_failed)
 
 class UserGetAction(RootAction):
 	def options(self, parser):
@@ -226,19 +237,19 @@ class UserGetAction(RootAction):
 	def describe(self):
 		return "Get a user record."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.user.UserGetAPIRequest(None)
-		request.set_user(int(args.user_id))
-		self.point_and_auth(args, request)
+		request.set_user(int(self.args.user_id))
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class UserListAction(RootAction):
 	def describe(self):
 		return "List users."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.user.UserListAPIRequest(None)
-		self.point_and_auth(args, request)
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class UserEnableAction(RootAction):
@@ -253,15 +264,15 @@ class UserEnableAction(RootAction):
 		else:
 			return "Disable a user."
 
-	def process(self, args):
+	def process(self):
 		def user_loaded(response):
 			self.generic_api_response_check_failed(response)
 			request.set_user_enabled(self.ENABLE)
 			request.send(self.generic_api_response)
 
 		request = paasmaker.common.api.user.UserEditAPIRequest(None)
-		self.point_and_auth(args, request)
-		request.load(int(args.user_id), user_loaded)
+		self.point_and_auth(request)
+		request.load(int(self.args.user_id), user_loaded)
 
 class UserDisableAction(UserEnableAction):
 	ENABLE = False
@@ -274,12 +285,12 @@ class RoleCreateAction(RootAction):
 	def describe(self):
 		return "Create a role."
 
-	def process(self, args):
-		permissions = args.permissions.replace(" ", "").split(",")
+	def process(self):
+		permissions = self.args.permissions.replace(" ", "").split(",")
 
 		request = paasmaker.common.api.role.RoleCreateAPIRequest(None)
-		request.set_role_params(args.name, permissions)
-		self.point_and_auth(args, request)
+		request.set_role_params(self.args.name, permissions)
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class RoleEditAction(RootAction):
@@ -291,18 +302,18 @@ class RoleEditAction(RootAction):
 	def describe(self):
 		return "Edit a role."
 
-	def process(self, args):
+	def process(self):
 		def role_loaded(roledata):
-			if args.name:
-				request.set_role_name(args.name)
-			if args.permissions:
-				permissions = args.permissions.replace(" ", "").split(",")
+			if self.args.name:
+				request.set_role_name(self.args.name)
+			if self.args.permissions:
+				permissions = self.args.permissions.replace(" ", "").split(",")
 				request.set_role_permissions(permissions)
 			request.send(self.generic_api_response)
 
 		request = paasmaker.common.api.role.RoleEditAPIRequest(None)
-		self.point_and_auth(args, request)
-		request.load(int(args.role_id), role_loaded, self.generic_request_failed)
+		self.point_and_auth(request)
+		request.load(int(self.args.role_id), role_loaded, self.generic_request_failed)
 
 class RoleGetAction(RootAction):
 	def options(self, parser):
@@ -311,28 +322,28 @@ class RoleGetAction(RootAction):
 	def describe(self):
 		return "Get a role record."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.role.RoleGetAPIRequest(None)
-		request.set_role(int(args.role_id))
-		self.point_and_auth(args, request)
+		request.set_role(int(self.args.role_id))
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class RoleListAction(RootAction):
 	def describe(self):
 		return "List roles."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.role.RoleListAPIRequest(None)
-		self.point_and_auth(args, request)
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class RoleAllocationListAction(RootAction):
 	def describe(self):
 		return "List role allocations."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.role.RoleAllocationListAPIRequest(None)
-		self.point_and_auth(args, request)
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class RoleAllocationAction(RootAction):
@@ -344,13 +355,13 @@ class RoleAllocationAction(RootAction):
 	def describe(self):
 		return "Allocate a role to a user and workspace."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.role.RoleAllocationAPIRequest(None)
 		workspace_id = None
-		if args.workspace_id:
-			workspace_id = int(args.workspace_id)
-		request.set_allocation_params(int(args.user_id), int(args.role_id), workspace_id)
-		self.point_and_auth(args, request)
+		if self.args.workspace_id:
+			workspace_id = int(self.args.workspace_id)
+		request.set_allocation_params(int(self.args.user_id), int(self.args.role_id), workspace_id)
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class RoleUnAllocateAction(RootAction):
@@ -360,10 +371,10 @@ class RoleUnAllocateAction(RootAction):
 	def describe(self):
 		return "Remove a role allocation."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.role.RoleUnAllocationAPIRequest(None)
-		request.set_role(int(args.allocation_id))
-		self.point_and_auth(args, request)
+		request.set_role(int(self.args.allocation_id))
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class WorkspaceCreateAction(RootAction):
@@ -375,14 +386,14 @@ class WorkspaceCreateAction(RootAction):
 	def describe(self):
 		return "Create a workspace."
 
-	def process(self, args):
-		tags = json.loads(args.tags)
+	def process(self):
+		tags = json.loads(self.args.tags)
 
 		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(None)
-		request.set_workspace_name(args.name)
-		request.set_workspace_stub(args.stub)
+		request.set_workspace_name(self.args.name)
+		request.set_workspace_stub(self.args.stub)
 		request.set_workspace_tags(tags)
-		self.point_and_auth(args, request)
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class WorkspaceEditAction(RootAction):
@@ -395,20 +406,20 @@ class WorkspaceEditAction(RootAction):
 	def describe(self):
 		return "Edit a workspace."
 
-	def process(self, args):
+	def process(self):
 		def workspace_loaded(roledata):
-			if args.name:
-				request.set_workspace_name(args.name)
-			if args.tags:
-				tags = json.loads(args.tags)
+			if self.args.name:
+				request.set_workspace_name(self.args.name)
+			if self.args.tags:
+				tags = json.loads(self.args.tags)
 				request.set_workspace_tags(tags)
-			if args.stub:
-				request.set_workspace_stub(args.stub)
+			if self.args.stub:
+				request.set_workspace_stub(self.args.stub)
 			request.send(self.generic_api_response)
 
 		request = paasmaker.common.api.workspace.WorkspaceEditAPIRequest(None)
-		self.point_and_auth(args, request)
-		request.load(int(args.workspace_id), workspace_loaded, self.generic_request_failed)
+		self.point_and_auth(request)
+		request.load(int(self.args.workspace_id), workspace_loaded, self.generic_request_failed)
 
 class WorkspaceGetAction(RootAction):
 	def options(self, parser):
@@ -417,19 +428,19 @@ class WorkspaceGetAction(RootAction):
 	def describe(self):
 		return "Get a workspace record."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.workspace.WorkspaceGetAPIRequest(None)
-		request.set_workspace(int(args.workspace_id))
-		self.point_and_auth(args, request)
+		request.set_workspace(int(self.args.workspace_id))
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class WorkspaceListAction(RootAction):
 	def describe(self):
 		return "List workspaces."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.workspace.WorkspaceListAPIRequest(None)
-		self.point_and_auth(args, request)
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class WorkspaceDeleteAction(RootAction):
@@ -439,19 +450,19 @@ class WorkspaceDeleteAction(RootAction):
 	def describe(self):
 		return "Delete a workspace."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.workspace.WorkspaceDeleteAPIRequest(None)
-		request.set_workspace(int(args.workspace_id))
-		self.point_and_auth(args, request)
+		request.set_workspace(int(self.args.workspace_id))
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class NodeListAction(RootAction):
 	def describe(self):
 		return "List nodes."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.nodelist.NodeListAPIRequest(None)
-		self.point_and_auth(args, request)
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class FileUploadAction(RootAction):
@@ -473,16 +484,16 @@ class FileUploadAction(RootAction):
 		self.prettyprint(message)
 		self.exit(1)
 
-	def process(self, args):
+	def process(self):
 		# TODO: This times out on large files, waiting for the server to assemble them.
-		if not args.apikey:
+		if not self.args.apikey:
 			logger.error("You must use an API key to authenticate to upload files.")
 			self.exit(1)
 		else:
 			request = paasmaker.common.api.upload.UploadFileAPIRequest(None)
-			self.point_and_auth(args, request)
+			self.point_and_auth(request)
 			request.send_file(
-				args.filename,
+				self.args.filename,
 				self._progress,
 				self._finished,
 				self._error
@@ -495,10 +506,10 @@ class ApplicationGetAction(RootAction):
 	def describe(self):
 		return "Get an application record."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.application.ApplicationGetAPIRequest(None)
-		request.set_application(int(args.application_id))
-		self.point_and_auth(args, request)
+		request.set_application(int(self.args.application_id))
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class ApplicationDeleteAction(RootAction):
@@ -509,12 +520,12 @@ class ApplicationDeleteAction(RootAction):
 	def describe(self):
 		return "Deletes an application (which must not have versions in ready or running state)"
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.application.ApplicationDeleteAPIRequest(None)
-		request.set_application(int(args.application_id))
-		self.point_and_auth(args, request)
+		request.set_application(int(self.args.application_id))
+		self.point_and_auth(request)
 		self.args = args
-		if args.follow:
+		if self.args.follow:
 			self._follow(request)
 		else:
 			request.send(self.generic_api_response)
@@ -526,10 +537,10 @@ class ApplicationListAction(RootAction):
 	def describe(self):
 		return "List applications in the given workspace."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.application.ApplicationListAPIRequest(None)
-		request.set_workspace(int(args.workspace_id))
-		self.point_and_auth(args, request)
+		request.set_workspace(int(self.args.workspace_id))
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class ApplicationVersionRootAction(RootAction):
@@ -540,17 +551,16 @@ class ApplicationVersionRootAction(RootAction):
 		parser.add_argument("--manifestpath", help="The path to the manifest file inside the SCM. Optional.", default=None)
 		parser.add_argument("--follow", default=False, help="Follow the progress of this job.", action="store_true")
 
-	def _set_common(self, request, args):
-		request.set_scm(args.scm)
-		if args.uploadedfile:
-			request.set_uploaded_file(args.uploadedfile)
-		if args.parameters:
-			params = json.loads(args.parameters)
+	def _set_common(self, request):
+		request.set_scm(self.args.scm)
+		if self.args.uploadedfile:
+			request.set_uploaded_file(self.args.uploadedfile)
+		if self.args.parameters:
+			params = json.loads(self.args.parameters)
 			request.set_parameters(params)
-		if args.manifestpath:
-			request.set_manifest_path(args.manifestpath)
-		self.point_and_auth(args, request)
-		self.args = args
+		if self.args.manifestpath:
+			request.set_manifest_path(self.args.manifestpath)
+		self.point_and_auth(request)
 
 class ApplicationNewAction(ApplicationVersionRootAction):
 	def options(self, parser):
@@ -560,11 +570,11 @@ class ApplicationNewAction(ApplicationVersionRootAction):
 	def describe(self):
 		return "Create a new application."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.application.ApplicationNewAPIRequest(None)
-		request.set_workspace(int(args.workspace_id))
-		self._set_common(request, args)
-		if args.follow:
+		request.set_workspace(int(self.args.workspace_id))
+		self._set_common(request)
+		if self.args.follow:
 			self._follow(request)
 		else:
 			request.send(self.generic_api_response)
@@ -577,11 +587,11 @@ class ApplicationNewVersionAction(ApplicationVersionRootAction):
 	def describe(self):
 		return "Create a new application version."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.application.ApplicationNewVersionAPIRequest(None)
-		request.set_application(int(args.application_id))
-		self._set_common(request, args)
-		if args.follow:
+		request.set_application(int(self.args.application_id))
+		self._set_common(request)
+		if self.args.follow:
 			self._follow(request)
 		else:
 			request.send(self.generic_api_response)
@@ -593,10 +603,10 @@ class VersionGetAction(RootAction):
 	def describe(self):
 		return "Get a version record."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.version.VersionGetAPIRequest(None)
-		request.set_version(int(args.version_id))
-		self.point_and_auth(args, request)
+		request.set_version(int(self.args.version_id))
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class VersionInstancesAction(RootAction):
@@ -606,10 +616,10 @@ class VersionInstancesAction(RootAction):
 	def describe(self):
 		return "Get a list of instances for the given version."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.version.VersionInstancesAPIRequest(None)
-		request.set_version(int(args.version_id))
-		self.point_and_auth(args, request)
+		request.set_version(int(self.args.version_id))
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class VersionRootAction(RootAction):
@@ -617,11 +627,10 @@ class VersionRootAction(RootAction):
 		parser.add_argument("version_id", help="Version ID to act upon.")
 		parser.add_argument("--follow", default=False, help="Follow the progress of this job.", action="store_true")
 
-	def _process(self, args, request):
-		request.set_version(int(args.version_id))
-		self.point_and_auth(args, request)
-		self.args = args
-		if args.follow:
+	def _process(self, request):
+		request.set_version(int(self.args.version_id))
+		self.point_and_auth(request)
+		if self.args.follow:
 			self._follow(request)
 		else:
 			request.send(self.generic_api_response)
@@ -630,41 +639,41 @@ class VersionRegisterAction(VersionRootAction):
 	def describe(self):
 		return "Register the given version."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.version.VersionRegisterAPIRequest(None)
-		self._process(args, request)
+		self._process(request)
 
 class VersionStartAction(VersionRootAction):
 	def describe(self):
 		return "Start the given version."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.version.VersionStartAPIRequest(None)
-		self._process(args, request)
+		self._process(request)
 
 class VersionStopAction(VersionRootAction):
 	def describe(self):
 		return "Stop the given version."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.version.VersionStopAPIRequest(None)
-		self._process(args, request)
+		self._process(request)
 
 class VersionDeRegisterAction(VersionRootAction):
 	def describe(self):
 		return "De register the given version."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.version.VersionDeRegisterAPIRequest(None)
-		self._process(args, request)
+		self._process(request)
 
 class VersionSetCurrentAction(VersionRootAction):
 	def describe(self):
 		return "Makes the selected version current."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.version.VersionSetCurrentAPIRequest(None)
-		self._process(args, request)
+		self._process(request)
 
 class VersionDeleteAction(RootAction):
 	def options(self, parser):
@@ -673,10 +682,10 @@ class VersionDeleteAction(RootAction):
 	def describe(self):
 		return "Delete the given version."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.version.VersionDeleteAPIRequest(None)
-		request.set_version(int(args.version_id))
-		self.point_and_auth(args, request)
+		request.set_version(int(self.args.version_id))
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class JobAbortAction(RootAction):
@@ -686,10 +695,10 @@ class JobAbortAction(RootAction):
 	def describe(self):
 		return "Abort a given job and it's related job tree."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.job.JobAbortAPIRequest(None)
-		request.set_job(args.job_id)
-		self.point_and_auth(args, request)
+		request.set_job(self.args.job_id)
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class JobFollowAction(RootAction):
@@ -699,17 +708,17 @@ class JobFollowAction(RootAction):
 	def describe(self):
 		return "Follows a job. Exits when the root job reaches a completed status. Exits with 0 on success, or 1 on failure."
 
-	def process(self, args):
+	def process(self):
 		self.args = args
-		self._follow_job(args.job_id)
+		self._follow_job(self.args.job_id)
 
 class RouterTableDumpAction(RootAction):
 	def describe(self):
 		return "Dump all the entries in the router table."
 
-	def process(self, args):
+	def process(self):
 		request = paasmaker.common.api.router.RouterTableDumpAPIRequest(None)
-		self.point_and_auth(args, request)
+		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
 class RouterStreamAction(RootAction):
@@ -720,14 +729,14 @@ class RouterStreamAction(RootAction):
 	def describe(self):
 		return "Streams router stats, once per second. For example, pass 'workspace 1' as the arguments to stream stats for the first workspace."
 
-	def process(self, args):
+	def process(self):
 		logger.info("** Press CTRL+C to cancel.")
 		request = paasmaker.common.api.router.RouterStreamAPIRequest(None)
 		request.set_error_callback(self._stream_error_callback)
-		self.point_and_auth(args, request)
+		self.point_and_auth(request)
 
 		def request_stats():
-			request.stats(args.name, args.input_id)
+			request.stats(self.args.name, self.args.input_id)
 
 		def on_stats(name, input_id, stats):
 			self.prettyprint(stats)
@@ -751,11 +760,11 @@ class LogStreamAction(RootAction):
 	def describe(self):
 		return "Stream the given job ID."
 
-	def process(self, args):
+	def process(self):
 		logger.info("** Press CTRL+C to cancel.")
 		request = paasmaker.common.api.log.LogStreamAPIRequest(None)
 		request.set_error_callback(self._stream_error_callback)
-		self.point_and_auth(args, request)
+		self.point_and_auth(request)
 
 		def on_message(job_id, lines, position):
 			print "".join(lines),
@@ -766,14 +775,14 @@ class LogStreamAction(RootAction):
 
 		request.set_lines_callback(on_message)
 		request.set_cantfind_callback(on_error)
-		request.subscribe(args.job_id, position=args.position)
+		request.subscribe(self.args.job_id, position=self.args.position)
 		request.connect()
 
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
 
-	def process(self, args):
+	def process(self):
 		help_keys = ACTION_MAP.keys()
 		help_keys.sort()
 		for key in help_keys:
@@ -832,7 +841,8 @@ ACTION_MAP = {
 	'log-stream': LogStreamAction(),
 	'router-table-dump': RouterTableDumpAction(),
 	'router-stream': RouterStreamAction(),
-	'help': HelpAction()
+	'help': HelpAction(),
+	'--help': HelpAction()
 }
 
 # If there is no action...
@@ -842,8 +852,8 @@ if not ACTION_MAP.has_key(action):
 
 # Shortcut to show help, and prevent an error when trying to parse
 # other required arguments.
-if action == 'help':
-	ACTION_MAP['help'].process({})
+if action == 'help' or action == '--help':
+	ACTION_MAP['help'].process()
 	sys.exit(0)
 
 # Set up our parser.
@@ -856,6 +866,7 @@ parser.add_argument("-p", "--port", type=int, default=42500, help="The pacemaker
 parser.add_argument("-k", "--key", help="Key to authenticate with. Either a user API key, or a super token.")
 parser.add_argument("--ssl", default=False, help="Use SSL to connect to the node.", action="store_true")
 parser.add_argument("--loglevel", default="INFO", help="Log level, one of DEBUG|INFO|WARNING|ERROR|CRITICAL.")
+parser.add_argument("--format", default="json", help="Output format, either 'json', 'yaml', or 'human'")
 
 # Now get our action to set up it's options.
 ACTION_MAP[action].options(parser)
@@ -879,7 +890,9 @@ if not args.key:
 def on_start():
 	# And wrap anything in a stack context to handle errors.
 	with tornado.stack_context.StackContext(die_on_error):
-		ACTION_MAP[action].process(args)
+		instance = ACTION_MAP[action]
+		instance.args = args
+		instance.process()
 
 # Commence the application.
 if __name__ == "__main__":
