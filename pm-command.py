@@ -11,6 +11,7 @@
 import sys
 import os
 import json
+import time
 
 # Check our current directory. Many things expect to be in the path
 # of the server file, so switch directory if we need to.
@@ -698,6 +699,37 @@ class RouterTableDumpAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class RouterStreamAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("name", help="Name of stats to stream, eg 'workspace'")
+		parser.add_argument("input_id", help="ID value of stats to stream, eg '1'")
+
+	def describe(self):
+		return "Streams router stats, once per second. For example, pass 'workspace 1' as the arguments to stream stats for the first workspace."
+
+	def process(self, args):
+		logger.info("** Press CTRL+C to cancel.")
+		request = paasmaker.common.api.router.RouterStreamAPIRequest(None)
+		request.set_error_callback(self._stream_error_callback)
+		self.point_and_auth(args, request)
+
+		def request_stats():
+			request.stats(args.name, args.input_id)
+
+		def on_stats(name, input_id, stats):
+			self.prettyprint(stats)
+			tornado.ioloop.IOLoop.instance().add_timeout(time.time() + 1, request_stats)
+
+		def on_error(message, exception=None, name=None, input_id=None):
+			logger.error(message)
+			self.exit(1)
+
+		request.set_update_callback(on_stats)
+		request.set_stats_error_callback(on_error)
+		request.connect()
+
+		request_stats()
+
 class LogStreamAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("job_id", help="Job ID to stream")
@@ -785,6 +817,7 @@ ACTION_MAP = {
 	'job-follow': JobFollowAction(),
 	'log-stream': LogStreamAction(),
 	'router-table-dump': RouterTableDumpAction(),
+	'router-stream': RouterStreamAction(),
 	'help': HelpAction()
 }
 
