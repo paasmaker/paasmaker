@@ -107,12 +107,6 @@ pm.stats.routergraph = (function(){
 			function(serverStatCategory, serverInputId, start, end, returned_data) {
 				if(serverStatCategory == statCategory && serverInputId == statInputId) {
 					// graph.newData(start, end, returned_data);
-
-					// TODO: this seems to trigger a bug where more than one request is
-					// sent for each response that comes back, causing exponentially crazy
-					// messages back and forth. For now, setInterval is a workaround.
-					// timeout = setTimeout(function() { graph.requestUpdate() }, 2000);
-
 					var processed_data = {};
 
 					for (var metric in returned_data) {
@@ -128,6 +122,7 @@ pm.stats.routergraph = (function(){
 					}
 
 					graph.showGraph(processed_data);
+					timeout = setTimeout(graph.requestUpdate, 1000);
 				}
 			}
 		);
@@ -271,12 +266,11 @@ pm.stats.routergraph = (function(){
 		};
 
 		graph.stopUpdating = function() {
-			clearInterval(timeout);
+			clearTimeout(timeout);
 		};
 
-		// Request the first update, and every second thereafter.
+		// Request the first update
 		graph.requestUpdate();
-		timeout = setInterval(graph.requestUpdate, 1000);
 		pm.data.registerScreenTimeout(timeout);
 
 		return graph;
