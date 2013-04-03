@@ -689,6 +689,15 @@ class JobFollowAction(RootAction):
 		self.args = args
 		self._follow_job(args.job_id)
 
+class RouterTableDumpAction(RootAction):
+	def describe(self):
+		return "Dump all the entries in the router table."
+
+	def process(self, args):
+		request = paasmaker.common.api.router.RouterTableDumpAPIRequest(None)
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
 class LogStreamAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("job_id", help="Job ID to stream")
@@ -775,6 +784,7 @@ ACTION_MAP = {
 	'job-abort': JobAbortAction(),
 	'job-follow': JobFollowAction(),
 	'log-stream': LogStreamAction(),
+	'router-table-dump': RouterTableDumpAction(),
 	'help': HelpAction()
 }
 

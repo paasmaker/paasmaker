@@ -78,3 +78,14 @@ class RouterStreamAPIRequest(StreamAPIRequest):
 
 		"""
 		self.on('router.stats.update', callback)
+
+class RouterTableDumpAPIRequest(APIRequest):
+	"""
+	Dump information on the router table.
+	"""
+	def __init__(self, *args, **kwargs):
+		super(RouterTableDumpAPIRequest, self).__init__(*args, **kwargs)
+		self.method = 'GET'
+
+	def get_endpoint(self):
+		return '/router/dump'

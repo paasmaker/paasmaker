@@ -130,6 +130,9 @@ Misc
 .. autoclass:: paasmaker.common.api.job.JobAbortAPIRequest
     :members:
 
+.. autoclass:: paasmaker.common.api.router.RouterTableDumpAPIRequest
+    :members:
+
 .. autoclass:: paasmaker.common.api.information.InformationAPIRequest
     :members:
 
