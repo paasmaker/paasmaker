@@ -605,7 +605,7 @@ for plugin in context['extra_plugins']:
 	enable_plugin(configuration['plugins'], plugin)
 
 # Write out the configuration file.
-serialized = yaml.dump(configuration, default_flow_style=False)
+serialized = yaml.safe_dump(configuration, default_flow_style=False)
 
 serialized = """# Generated configuration file for Paasmaker.
 # If you edit this file, the next time you run the install script,
