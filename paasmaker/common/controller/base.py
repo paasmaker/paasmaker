@@ -393,6 +393,15 @@ class BaseController(tornado.web.RequestHandler):
 		else:
 			self.render('')
 
+	def reload_current_user(self):
+		"""
+		Reload the current user from the database. Use this
+		if you rollback a session during the request, as the
+		user will no longer be bound to an open session.
+		"""
+		self.user = None
+		self.get_current_user()
+
 	def get_current_user(self):
 		"""
 		Get the currently logged in user. Only tests for HTTP cookies
