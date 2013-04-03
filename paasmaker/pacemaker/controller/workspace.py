@@ -43,9 +43,7 @@ class WorkspaceSchema(colander.MappingSchema):
 		missing="",
 		default="")
 
-class WorkspaceEditController(BaseController):
-	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
-
+class WorkspaceBaseController(BaseController):
 	def _get_workspace(self, workspace_id=None):
 		workspace = None
 		if workspace_id:
@@ -59,6 +57,9 @@ class WorkspaceEditController(BaseController):
 			self.add_data('workspace', workspace)
 
 		return workspace
+
+class WorkspaceEditController(WorkspaceBaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
 	def _default_workspace(self):
 		workspace = paasmaker.model.Workspace()
@@ -142,6 +143,33 @@ class WorkspaceListController(BaseController):
 	def get_routes(configuration):
 		routes = []
 		routes.append((r"/workspace/list", WorkspaceListController, configuration))
+		return routes
+
+class WorkspaceDeleteController(WorkspaceBaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def post(self, workspace_id=None):
+		workspace = self._get_workspace(workspace_id)
+		self.require_permission(constants.PERMISSION.WORKSPACE_DELETE, workspace=workspace)
+
+		if not workspace.can_delete:
+			raise tornado.web.HTTPError(400, "Can't delete this workspace, as it still has applications.")
+
+		# NOTE: When deleting, SQLAlchemy will cascade to remove any WorkspaceUserRole records
+		# that point to this workspace. However, the flat table will be out of date.
+		self.session.delete(workspace)
+		self.session.commit()
+
+		# Update the flat permissions table.
+		paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(self.session)
+
+		self.add_data('success', True)
+		self.redirect("/")
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/workspace/(\d+)/delete", WorkspaceDeleteController, configuration))
 		return routes
 
 class WorkspaceEditControllerTest(BaseControllerTest):

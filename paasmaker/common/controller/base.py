@@ -692,6 +692,7 @@ class BaseController(tornado.web.RequestHandler):
 		"""
 		# Reset the data queued up until now.
 		# Except for input_errors.
+		self.get_current_user()
 		if self.data.has_key('input_errors'):
 			self.data = {'input_errors': self.data['input_errors']}
 		else:

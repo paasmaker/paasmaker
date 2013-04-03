@@ -24,6 +24,11 @@ pm.workspace.view = (function() {
 			pm.data.api({
 				endpoint: 'workspace/' + url_match[1],	// or just document.location?
 				callback: function(data) {
+					if (!pm.util.hasPermission('WORKSPACE_DELETE', data.workspace.id)) {
+						// Force 'can't delete' if you don't have the permission.
+						data.workspace.can_delete = false;
+					}
+
 					$('#main_right_view').html(Handlebars.templates.workspace_main(data));
 					$('.loading-overlay').remove();
 					pm.stats.workspace.redraw();

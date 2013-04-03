@@ -133,6 +133,11 @@ WORKSPACE_EDIT
 	with this permission is bound to a specific workspace, then that workspace
 	can be edited, but the user can not create new workspaces.
 
+WORKSPACE_DELETE
+	With this permission, the user can delete a workspace. All applications
+	in that workspace need to be deleted first, before a workspace can be
+	deleted.
+
 APPLICATION_CREATE
 	With this permission, the user can create new applications, or deploy
 	new versions of existing applications.

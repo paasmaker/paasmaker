@@ -1449,6 +1449,12 @@ function program1(depth0,data) {
 
 function program3(depth0,data) {
   
+  
+  return "\n		<div class=\"btn-group btn-group-header\">\n			<a class=\"btn btn-danger\" data-toggle=\"modal\" data-target=\"#workspace_delete_modal\"><i class=\"icon-trash icon-white\"></i> Delete Workspace</a>\n		</div>\n	";
+  }
+
+function program5(depth0,data) {
+  
   var buffer = "", stack1;
   buffer += "\n		<div class=\"btn-group btn-group-header\">\n			<a class=\"btn\" href=\"/workspace/"
     + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
@@ -1463,14 +1469,21 @@ function program3(depth0,data) {
   stack2 = ((stack1 = helpers.ifPermission),stack1 ? stack1.call(depth0, "WORKSPACE_EDIT", ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id), options) : helperMissing.call(depth0, "ifPermission", "WORKSPACE_EDIT", ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id), options));
   if(stack2 || stack2 === 0) { buffer += stack2; }
   buffer += "\n	";
-  options = {hash:{},inverse:self.noop,fn:self.program(3, program3, data),data:data};
+  stack2 = helpers['if'].call(depth0, ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.can_delete), {hash:{},inverse:self.noop,fn:self.program(3, program3, data),data:data});
+  if(stack2 || stack2 === 0) { buffer += stack2; }
+  buffer += "\n	";
+  options = {hash:{},inverse:self.noop,fn:self.program(5, program5, data),data:data};
   stack2 = ((stack1 = helpers.ifPermission),stack1 ? stack1.call(depth0, "APPLICATION_CREATE", ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id), options) : helperMissing.call(depth0, "ifPermission", "APPLICATION_CREATE", ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id), options));
   if(stack2 || stack2 === 0) { buffer += stack2; }
   buffer += "\n	<div class=\"btn-group btn-group-header\">\n		<a class=\"btn\" href=\"/job/list/workspace/"
     + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "\">All Jobs</a>\n		<a class=\"btn\" href=\"/job/list/workspace/"
     + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "?sub=cron\">Cron Jobs</a>\n	</div>\n</div>\n\n<div class=\"workspace-overview\">\n	<div class=\"overview-graph\" data-name=\"workspace\" data-inputid=\""
+    + "?sub=cron\">Cron Jobs</a>\n	</div>\n</div>\n\n<div id=\"workspace_delete_modal\" class=\"modal hide fade\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"Delete Workspace\" aria-hidden=\"true\">\n  <div class=\"modal-header\">\n    <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-hidden=\"true\">×</button>\n    <h3>Delete Workspace</h3>\n  </div>\n  <div class=\"modal-body\">\n	<p>Are you sure you want to delete "
+    + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.name)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
+    + "?</p>\n	<p>This action cannot be undone.</p>\n  </div>\n  <div class=\"modal-footer\">\n    <button class=\"btn\" data-dismiss=\"modal\" aria-hidden=\"true\">Cancel</button>\n		<form method=\"POST\" action=\"/workspace/"
+    + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
+    + "/delete\" style=\"display: inline;\">\n			<input type=\"submit\" class=\"btn btn-primary btn-danger\" value=\"Delete Workspace\" />\n		</form>\n  </div>\n</div>\n\n<div class=\"workspace-overview\">\n	<div class=\"overview-graph\" data-name=\"workspace\" data-inputid=\""
     + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "\" data-metric=\"requests_by_code\">\n		<h3>Requests by Response Code</h3>\n		<div class=\"graph-container\"><br><br>Loading ...</div>\n	</div>\n	<!--<div class=\"overview-graph\" data-name=\"workspace\" data-inputid=\""
     + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))

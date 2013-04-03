@@ -11,6 +11,11 @@
 			<a class="btn" href="/workspace/{{ workspace.id }}"><i class="icon-edit"></i> Edit Workspace</a>
 		</div>
 	{{/ifPermission}}
+	{{#if workspace.can_delete}}
+		<div class="btn-group btn-group-header">
+			<a class="btn btn-danger" data-toggle="modal" data-target="#workspace_delete_modal"><i class="icon-trash icon-white"></i> Delete Workspace</a>
+		</div>
+	{{/if}}
 	{{#ifPermission 'APPLICATION_CREATE' workspace.id}}
 		<div class="btn-group btn-group-header">
 			<a class="btn" href="/workspace/{{ workspace.id }}/applications/new"><i class="icon-plus"></i> Create Application</a>
@@ -20,6 +25,23 @@
 		<a class="btn" href="/job/list/workspace/{{ workspace.id }}">All Jobs</a>
 		<a class="btn" href="/job/list/workspace/{{ workspace.id }}?sub=cron">Cron Jobs</a>
 	</div>
+</div>
+
+<div id="workspace_delete_modal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="Delete Workspace" aria-hidden="true">
+  <div class="modal-header">
+    <button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+    <h3>Delete Workspace</h3>
+  </div>
+  <div class="modal-body">
+	<p>Are you sure you want to delete {{ workspace.name }}?</p>
+	<p>This action cannot be undone.</p>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+		<form method="POST" action="/workspace/{{ workspace.id }}/delete" style="display: inline;">
+			<input type="submit" class="btn btn-primary btn-danger" value="Delete Workspace" />
+		</form>
+  </div>
 </div>
 
 <div class="workspace-overview">

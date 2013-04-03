@@ -102,15 +102,9 @@ pm.application.view = (function() {
 			pm.data.api({
 				endpoint: 'application/' + url_match[1],	// or just document.location?
 				callback: function(data) {
-					if (pm.util.hasPermission('APPLICATION_DELETE', data.application.workspace_id)) {
-						// check if this app can be deleted, i.e. no versions in READY or RUNNING states
-						data.application.can_delete = true;
-						for (var i=0, version; version = data.versions[i]; i++) {
-							if (version.state == 'READY' || version.state == 'RUNNING') {
-								data.application.can_delete = false;
-								break;
-							}
-						}
+					if (!pm.util.hasPermission('APPLICATION_DELETE', data.application.workspace_id)) {
+						// Force 'can't delete' if you don't have the permission.
+						data.application.can_delete = false;
 					}
 
 					data.versions = pm.application.view.processVersionData(data.versions, data, data.application.workspace_id);

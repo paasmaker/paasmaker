@@ -474,7 +474,7 @@ class Workspace(OrmBase, Base):
 		return "<Workspace('%s')>" % self.name
 
 	def flatten(self, field_list=None):
-		return super(Workspace, self).flatten(['name', 'stub', 'tags'])
+		return super(Workspace, self).flatten(['name', 'stub', 'tags', 'can_delete'])
 
 	@hybrid_property
 	def tags(self):
@@ -486,6 +486,13 @@ class Workspace(OrmBase, Base):
 	@tags.setter
 	def tags(self, val):
 		self._tags = json.dumps(val)
+
+	@property
+	def can_delete(self):
+		"""
+		Workspaces can only be deleted if they have no applications.
+		"""
+		return len(self.applications) == 0
 
 class WorkspaceUserRole(OrmBase, Base):
 	"""
@@ -500,7 +507,7 @@ class WorkspaceUserRole(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	# workspace_id can be null, meaning it's global.
 	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=True, index=True)
-	workspace = relationship("Workspace", backref=backref('users', order_by=id))
+	workspace = relationship("Workspace", backref=backref('users', order_by=id, cascade="all, delete"))
 	role_id = Column(Integer, ForeignKey('role.id'), index=True)
 	role = relationship("Role", backref=backref('workspaces', order_by=id))
 	user_id = Column(Integer, ForeignKey('user.id'), index=True)
@@ -529,7 +536,7 @@ class WorkspaceUserRoleFlat(OrmBase, Base):
 	id = Column(Integer, primary_key=True)
 	# workspace_id can be null, meaning it's global.
 	workspace_id = Column(Integer, ForeignKey('workspace.id'), nullable=True, index=True)
-	workspace = relationship("Workspace")
+	workspace = relationship("Workspace", backref=backref('flatcache', order_by=id, cascade="all, delete"))
 	role_id = Column(Integer, ForeignKey('role.id'), index=True)
 	role = relationship("Role")
 	user_id = Column(Integer, ForeignKey('user.id'), index=True)
@@ -753,7 +760,7 @@ class Application(OrmBase, Base):
 		return "<Application('%s')>" % self.name
 
 	def flatten(self, field_list=None):
-		return super(Application, self).flatten(['name', 'workspace_id', 'health'])
+		return super(Application, self).flatten(['name', 'workspace_id', 'health', 'can_delete'])
 
 	def flatten_for_heart(self):
 		"""
@@ -780,6 +787,7 @@ class Application(OrmBase, Base):
 			# It's warning, because no versions are current.
 			return constants.HEALTH.WARNING
 
+	@property
 	def can_delete(self):
 		"""
 		Find out if this app has any versions in the READY or RUNNING states.
