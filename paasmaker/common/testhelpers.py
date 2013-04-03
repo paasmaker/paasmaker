@@ -333,6 +333,11 @@ class BaseMultipaasTest(tornado.testing.AsyncTestCase, TestHelpers):
 		:arg int timeout: The maximum time to wait.
 		"""
 		def cb(success, data, errors):
+			logger.debug("Execution result for %s", str(command))
+			logger.debug("Success: %s", success)
+			logger.debug("Data: %s", data)
+			logger.debug("Errors: %s", errors)
+
 			self.success = success
 			self.data = data
 			self.errors = errors

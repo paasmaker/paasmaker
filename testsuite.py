@@ -168,7 +168,8 @@ test_sets = {
 	paasmaker.heart.helper.instancemanager: ['normal', 'application', 'heart', 'instancemanager'],
 
 	paasmaker.integration.example: ['integration', 'i-example'],
-	paasmaker.integration.workspace: ['integration', 'i-workspace']
+	paasmaker.integration.workspace: ['integration', 'i-workspace'],
+	paasmaker.integration.user: ['integration', 'i-user']
 }
 
 ########################################

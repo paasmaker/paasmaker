@@ -213,8 +213,12 @@ class Executor(object):
 		self.target = []
 		self.target.extend(['-r', target_host])
 		self.target.extend(['-p', str(target_port)])
-		self.auth = '--key=' + auth_value
+		self.target.extend(['--format', 'json'])
+		self.set_auth(auth_value)
 		self.io_loop = io_loop
+
+	def set_auth(self, auth_value):
+		self.auth = '--key=' + auth_value
 
 	def run(self, arguments, callback):
 		"""
@@ -268,7 +272,13 @@ class Executor(object):
 
 		def on_exit(code):
 			success = (code == 0)
-			data = json.loads(outputs['stdout'])
+			data = {}
+			try:
+				data = json.loads(outputs['stdout'])
+			except ValueError, ex:
+				# Failed to load the JSON.
+				success = False
+				outputs['stderr'] += "\nFailed to decode JSON:\n" + outputs['stdout']
 
 			callback(success, data, outputs['stderr'])
 
