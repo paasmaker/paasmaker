@@ -758,6 +758,12 @@ if not ACTION_MAP.has_key(action):
 	print "No such action %s. Try %s help" % (action, sys.argv[0])
 	sys.exit(1)
 
+# Shortcut to show help, and prevent an error when trying to parse
+# other required arguments.
+if action == 'help':
+	ACTION_MAP['help'].process({})
+	sys.exit(0)
+
 # Set up our parser.
 parser = argparse.ArgumentParser()
 parser.add_argument('action', help="The action to perform.")
