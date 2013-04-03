@@ -71,18 +71,26 @@ class RootAction(object):
 	def describe(self):
 		return "No description supplied."
 
-	def format(self, data):
+	def _format_human(self, data):
 		# The default format is to return in Yaml, it's
 		# moderately nice to look at.
-		return yaml.safe_dump(data, default_flow_style=False)
+		return self._format_yaml(data)
+
+	def _format_json(self, data):
+		return json.dumps(data, indent=4, sort_keys=True)
+
+	def _format_yaml(self, data):
+		return yaml.safe_dump(data, default_flow_style=False, explicit_start=True, explicit_end=True)
 
 	def prettyprint(self, data):
 		if self.args.format == 'json':
-			print json.dumps(data, indent=4, sort_keys=True)
+			print self._format_json(data)
 		elif self.args.format == 'yaml':
-			print yaml.safe_dump(data, default_flow_style=False, explicit_start=True, explicit_end=True)
+			print self._format_yaml(data)
 		else:
-			print self.format(data)
+			result = self._format_human(data)
+			if result:
+				print result
 
 	def exit(self, code):
 		tornado.ioloop.IOLoop.instance().stop()
@@ -115,7 +123,10 @@ class RootAction(object):
 			logging.error("Request failed.")
 			for error in response.errors:
 				logging.error(error)
-			# TODO: Print errors in JSON format.
+			if 'input_errors' in response.data:
+				for field, error in response.data['input_errors'].iteritems():
+					logging.error("- %s: %s", field, error)
+
 			self.prettyprint(response.data)
 			self.exit(1)
 
@@ -203,6 +214,10 @@ class UserCreateAction(RootAction):
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
+	def _format_human(self, data):
+		if 'user' in data and data['user']['id']:
+			return "Created new user ID %d, login %s." % (data['user']['id'], data['user']['login'])
+
 class UserEditAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("user_id", help="User ID to edit")
@@ -230,6 +245,10 @@ class UserEditAction(RootAction):
 		self.point_and_auth(request)
 		request.load(int(self.args.user_id), user_loaded, self.generic_request_failed)
 
+	def _format_human(self, data):
+		if 'user' in data and data['user']['id']:
+			return "Updated user ID %d, login %s." % (data['user']['id'], data['user']['login'])
+
 class UserGetAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("user_id", help="User ID to fetch")
@@ -243,6 +262,8 @@ class UserGetAction(RootAction):
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
+	# Formatting: use the YAML output which is the default.
+
 class UserListAction(RootAction):
 	def describe(self):
 		return "List users."
@@ -251,6 +272,15 @@ class UserListAction(RootAction):
 		request = paasmaker.common.api.user.UserListAPIRequest(None)
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
+
+	def _format_human(self, data):
+		if 'users' in data:
+			result = ""
+			result += "Found %d users.\n" % len(data['users'])
+			for user in data['users']:
+				result += self._format_yaml(user)
+
+			return result
 
 class UserEnableAction(RootAction):
 	ENABLE = True
@@ -265,14 +295,21 @@ class UserEnableAction(RootAction):
 			return "Disable a user."
 
 	def process(self):
+		request = paasmaker.common.api.user.UserEditAPIRequest(None)
+
 		def user_loaded(response):
-			self.generic_api_response_check_failed(response)
 			request.set_user_enabled(self.ENABLE)
 			request.send(self.generic_api_response)
 
-		request = paasmaker.common.api.user.UserEditAPIRequest(None)
 		self.point_and_auth(request)
-		request.load(int(self.args.user_id), user_loaded)
+		request.load(int(self.args.user_id), user_loaded, self.generic_request_failed)
+
+	def _format_human(self, data):
+		if 'user' in data and data['user']['id']:
+			if self.ENABLE:
+				return "User ID %d was enabled." % data['user']['id']
+			else:
+				return "User ID %d was disabled." % data['user']['id']
 
 class UserDisableAction(UserEnableAction):
 	ENABLE = False
@@ -292,6 +329,13 @@ class RoleCreateAction(RootAction):
 		request.set_role_params(self.args.name, permissions)
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
+
+	def _format_human(self, data):
+		if 'role' in data and data['role']['id']:
+			result = "Created new role ID %d, name '%s'." % (data['role']['id'], data['role']['name'])
+			result += "\nPermissions: %s" % data['role']['permissions']
+
+			return result
 
 class RoleEditAction(RootAction):
 	def options(self, parser):
@@ -315,6 +359,13 @@ class RoleEditAction(RootAction):
 		self.point_and_auth(request)
 		request.load(int(self.args.role_id), role_loaded, self.generic_request_failed)
 
+	def _format_human(self, data):
+		if 'role' in data and data['role']['id']:
+			result = "Edited role ID %d, name '%s'." % (data['role']['id'], data['role']['name'])
+			result += "\nPermissions: %s" % data['role']['permissions']
+
+			return result
+
 class RoleGetAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("role_id", help="Role ID to fetch")
@@ -337,6 +388,15 @@ class RoleListAction(RootAction):
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
+	def _format_human(self, data):
+		if 'roles' in data:
+			result = ""
+			result += "Found %d roles.\n" % len(data['roles'])
+			for role in data['roles']:
+				result += self._format_yaml(role)
+
+			return result
+
 class RoleAllocationListAction(RootAction):
 	def describe(self):
 		return "List role allocations."
@@ -345,6 +405,15 @@ class RoleAllocationListAction(RootAction):
 		request = paasmaker.common.api.role.RoleAllocationListAPIRequest(None)
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
+
+	def _format_human(self, data):
+		if 'allocations' in data:
+			result = ""
+			result += "Found %d allocations.\n" % len(data['allocations'])
+			for allocation in data['allocations']:
+				result += self._format_yaml(allocation)
+
+			return result
 
 class RoleAllocationAction(RootAction):
 	def options(self, parser):
@@ -364,6 +433,26 @@ class RoleAllocationAction(RootAction):
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
+	def _format_human(self, data):
+		if 'allocation' in data:
+			if data['allocation']['workspace']:
+				result = "Allocated role '%s' (ID %d) to user '%s' (ID %d), for workspace '%s' (ID %d)" % (
+					data['allocation']['role']['name'],
+					data['allocation']['role']['id'],
+					data['allocation']['user']['login'],
+					data['allocation']['user']['id'],
+					data['allocation']['workspace']['name'],
+					data['allocation']['workspace']['id']
+				)
+			else:
+				result = "Allocated role '%s' (ID %d) to user '%s' (ID %d), applied globally." % (
+					data['allocation']['role']['name'],
+					data['allocation']['role']['id'],
+					data['allocation']['user']['login'],
+					data['allocation']['user']['id']
+				)
+			return result
+
 class RoleUnAllocateAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("allocation_id", help="Allocation to remove.")
@@ -373,9 +462,13 @@ class RoleUnAllocateAction(RootAction):
 
 	def process(self):
 		request = paasmaker.common.api.role.RoleUnAllocationAPIRequest(None)
-		request.set_role(int(self.args.allocation_id))
+		request.set_allocation_id(int(self.args.allocation_id))
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
+
+	def _format_human(self, data):
+		if 'success' in data:
+			return "Unallocated role."
 
 class WorkspaceCreateAction(RootAction):
 	def options(self, parser):
@@ -395,6 +488,10 @@ class WorkspaceCreateAction(RootAction):
 		request.set_workspace_tags(tags)
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
+
+	def _format_human(self, data):
+		if 'workspace' in data:
+			return "Created workspace '%s' (ID %d)." % (data['workspace']['name'], data['workspace']['id'])
 
 class WorkspaceEditAction(RootAction):
 	def options(self, parser):
@@ -421,6 +518,10 @@ class WorkspaceEditAction(RootAction):
 		self.point_and_auth(request)
 		request.load(int(self.args.workspace_id), workspace_loaded, self.generic_request_failed)
 
+	def _format_human(self, data):
+		if 'workspace' in data:
+			return "Edited workspace '%s' (ID %d)." % (data['workspace']['name'], data['workspace']['id'])
+
 class WorkspaceGetAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("workspace_id", help="Workspace ID to fetch")
@@ -434,6 +535,8 @@ class WorkspaceGetAction(RootAction):
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
+	# Use the default yaml format.
+
 class WorkspaceListAction(RootAction):
 	def describe(self):
 		return "List workspaces."
@@ -442,6 +545,15 @@ class WorkspaceListAction(RootAction):
 		request = paasmaker.common.api.workspace.WorkspaceListAPIRequest(None)
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
+
+	def _format_human(self, data):
+		if 'workspaces' in data:
+			result = ""
+			result += "Found %d workspaces.\n" % len(data['workspaces'])
+			for workspace in data['workspaces']:
+				result += self._format_yaml(workspace)
+
+			return result
 
 class WorkspaceDeleteAction(RootAction):
 	def options(self, parser):
@@ -456,6 +568,10 @@ class WorkspaceDeleteAction(RootAction):
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
+	def _format_human(self, data):
+		if 'workspace' in data:
+			return "Deleted workspace '%s' (ID %d)." % (data['workspace']['name'], data['workspace']['id'])
+
 class NodeListAction(RootAction):
 	def describe(self):
 		return "List nodes."
@@ -464,6 +580,15 @@ class NodeListAction(RootAction):
 		request = paasmaker.common.api.nodelist.NodeListAPIRequest(None)
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
+
+	def _format_human(self, data):
+		if 'nodes' in data:
+			result = ""
+			result += "Found %d nodes.\n" % len(data['nodes'])
+			for node in data['nodes']:
+				result += self._format_yaml(node)
+
+			return result
 
 class FileUploadAction(RootAction):
 	def options(self, parser):
@@ -486,18 +611,18 @@ class FileUploadAction(RootAction):
 
 	def process(self):
 		# TODO: This times out on large files, waiting for the server to assemble them.
-		if not self.args.apikey:
-			logger.error("You must use an API key to authenticate to upload files.")
-			self.exit(1)
-		else:
-			request = paasmaker.common.api.upload.UploadFileAPIRequest(None)
-			self.point_and_auth(request)
-			request.send_file(
-				self.args.filename,
-				self._progress,
-				self._finished,
-				self._error
-			)
+		request = paasmaker.common.api.upload.UploadFileAPIRequest(None)
+		self.point_and_auth(request)
+		request.send_file(
+			self.args.filename,
+			self._progress,
+			self._finished,
+			self._error
+		)
+
+	def _format_human(self, data):
+		if 'identifier' in data:
+			return "Uploaded file, identifier: %s" % data['identifier']
 
 class ApplicationGetAction(RootAction):
 	def options(self, parser):
@@ -511,6 +636,10 @@ class ApplicationGetAction(RootAction):
 		request.set_application(int(self.args.application_id))
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
+
+	def _format_human(self, data):
+		if 'application' in data:
+			return self._format_yaml({'application': data['application']})
 
 class ApplicationDeleteAction(RootAction):
 	def options(self, parser):
@@ -530,6 +659,10 @@ class ApplicationDeleteAction(RootAction):
 		else:
 			request.send(self.generic_api_response)
 
+	def _format_human(self, data):
+		if 'job_id' in data:
+			return "Submitted delete job %s." % (data['job_id'])
+
 class ApplicationListAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("workspace_id", help="Workspace ID to list")
@@ -542,6 +675,15 @@ class ApplicationListAction(RootAction):
 		request.set_workspace(int(self.args.workspace_id))
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
+
+	def _format_human(self, data):
+		if 'applications' in data:
+			result = ""
+			result += "Found %d applications.\n" % len(data['applications'])
+			for application in data['applications']:
+				result += self._format_yaml(application)
+
+			return result
 
 class ApplicationVersionRootAction(RootAction):
 	def options(self, parser):
@@ -579,6 +721,10 @@ class ApplicationNewAction(ApplicationVersionRootAction):
 		else:
 			request.send(self.generic_api_response)
 
+	def _format_human(self, data):
+		if 'job_id' in data:
+			return "Submitted new application job %s." % (data['job_id'])
+
 class ApplicationNewVersionAction(ApplicationVersionRootAction):
 	def options(self, parser):
 		parser.add_argument("application_id", help="The application_id to create the new version for.")
@@ -596,6 +742,10 @@ class ApplicationNewVersionAction(ApplicationVersionRootAction):
 		else:
 			request.send(self.generic_api_response)
 
+	def _format_human(self, data):
+		if 'job_id' in data:
+			return "Submitted new application job %s." % (data['job_id'])
+
 class VersionGetAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("version_id", help="Version ID to fetch")
@@ -609,6 +759,8 @@ class VersionGetAction(RootAction):
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
+	# Use the default formatter.
+
 class VersionInstancesAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("version_id", help="Version ID to fetch")
@@ -621,6 +773,8 @@ class VersionInstancesAction(RootAction):
 		request.set_version(int(self.args.version_id))
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
+
+	# Use the default formatter.
 
 class VersionRootAction(RootAction):
 	def options(self, parser):
@@ -643,6 +797,10 @@ class VersionRegisterAction(VersionRootAction):
 		request = paasmaker.common.api.version.VersionRegisterAPIRequest(None)
 		self._process(request)
 
+	def _format_human(self, data):
+		if 'job_id' in data:
+			return "Submitted version registration job %s." % (data['job_id'])
+
 class VersionStartAction(VersionRootAction):
 	def describe(self):
 		return "Start the given version."
@@ -650,6 +808,10 @@ class VersionStartAction(VersionRootAction):
 	def process(self):
 		request = paasmaker.common.api.version.VersionStartAPIRequest(None)
 		self._process(request)
+
+	def _format_human(self, data):
+		if 'job_id' in data:
+			return "Submitted version startup job %s." % (data['job_id'])
 
 class VersionStopAction(VersionRootAction):
 	def describe(self):
@@ -659,6 +821,10 @@ class VersionStopAction(VersionRootAction):
 		request = paasmaker.common.api.version.VersionStopAPIRequest(None)
 		self._process(request)
 
+	def _format_human(self, data):
+		if 'job_id' in data:
+			return "Submitted version shutdown job %s." % (data['job_id'])
+
 class VersionDeRegisterAction(VersionRootAction):
 	def describe(self):
 		return "De register the given version."
@@ -667,6 +833,10 @@ class VersionDeRegisterAction(VersionRootAction):
 		request = paasmaker.common.api.version.VersionDeRegisterAPIRequest(None)
 		self._process(request)
 
+	def _format_human(self, data):
+		if 'job_id' in data:
+			return "Submitted version de-registration job %s." % (data['job_id'])
+
 class VersionSetCurrentAction(VersionRootAction):
 	def describe(self):
 		return "Makes the selected version current."
@@ -674,6 +844,10 @@ class VersionSetCurrentAction(VersionRootAction):
 	def process(self):
 		request = paasmaker.common.api.version.VersionSetCurrentAPIRequest(None)
 		self._process(request)
+
+	def _format_human(self, data):
+		if 'job_id' in data:
+			return "Submitted version make current job %s." % (data['job_id'])
 
 class VersionDeleteAction(RootAction):
 	def options(self, parser):
@@ -688,6 +862,10 @@ class VersionDeleteAction(RootAction):
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
 
+	def _format_human(self, data):
+		if 'version' in data:
+			return "Deleted version %d (ID %d)." % (data['version']['version'], data['version']['id'])
+
 class JobAbortAction(RootAction):
 	def options(self, parser):
 		parser.add_argument("job_id", help="Job ID to abort")
@@ -700,6 +878,10 @@ class JobAbortAction(RootAction):
 		request.set_job(self.args.job_id)
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
+
+	def _format_human(self, data):
+		if 'job_id' in data:
+			return "Aborted job %d" % data['job_id']
 
 class JobFollowAction(RootAction):
 	def options(self, parser):
@@ -720,6 +902,32 @@ class RouterTableDumpAction(RootAction):
 		request = paasmaker.common.api.router.RouterTableDumpAPIRequest(None)
 		self.point_and_auth(request)
 		request.send(self.generic_api_response)
+
+	def _format_human(self, data):
+		postfix = ""
+		result = ""
+		if 'frontend_domain_postfix' in data:
+			postfix = data['frontend_domain_postfix']
+		if 'serial' in data:
+			result += "Table serial number: %s\n" % data['serial']
+		if 'table' in data:
+			for entry in data['table']:
+				result += "For http://%s%s :\n" % (entry['hostname'], postfix)
+				result += " %d nodes\n" % len(entry['nodes'])
+				if len(entry['nodes']) > 0:
+					for node in entry['nodes']:
+						result += "   Node '%s' (%s, ID %d)\n" % (node['name'], node['uuid'], node['id'])
+
+				result += " %d instances\n" % len(entry['instances'])
+				if len(entry['instances']) > 0:
+					for instance in entry['instances']:
+						result += "   Instance %s, state %s, node %s.\n" % (instance['instance_id'], instance['state'], instance['node_id'])
+
+				result += " %d routes\n" % len(entry['routes'])
+				for route in entry['routes']:
+					result += "   Route: %s\n" % route
+
+		return result
 
 class RouterStreamAction(RootAction):
 	def options(self, parser):
@@ -866,7 +1074,7 @@ parser.add_argument("-p", "--port", type=int, default=42500, help="The pacemaker
 parser.add_argument("-k", "--key", help="Key to authenticate with. Either a user API key, or a super token.")
 parser.add_argument("--ssl", default=False, help="Use SSL to connect to the node.", action="store_true")
 parser.add_argument("--loglevel", default="INFO", help="Log level, one of DEBUG|INFO|WARNING|ERROR|CRITICAL.")
-parser.add_argument("--format", default="json", help="Output format, either 'json', 'yaml', or 'human'")
+parser.add_argument("--format", default="human", help="Output format, either 'json', 'yaml', or 'human'")
 
 # Now get our action to set up it's options.
 ACTION_MAP[action].options(parser)
