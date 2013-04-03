@@ -185,7 +185,7 @@ class MultiPaas(object):
 
 		return summary
 
-	def get_executor(self):
+	def get_executor(self, io_loop):
 		"""
 		Return a new Executor object pointing to this
 		Multipaas cluster. This can be used to execute
@@ -194,7 +194,8 @@ class MultiPaas(object):
 		return Executor(
 			'localhost',
 			self.cluster_params['master_port'],
-			self.cluster_params['super_token']
+			self.cluster_params['super_token'],
+			io_loop
 		)
 
 class Executor(object):
@@ -208,13 +209,14 @@ class Executor(object):
 	:arg str auth_value: The appropriate value for the
 		authentication method.
 	"""
-	def __init__(self, target_host, target_port, auth_value):
+	def __init__(self, target_host, target_port, auth_value, io_loop):
 		self.target = []
 		self.target.extend(['-r', target_host])
 		self.target.extend(['-p', str(target_port)])
 		self.auth = '--key=' + auth_value
+		self.io_loop = io_loop
 
-	def run(self, arguments):
+	def run(self, arguments, callback):
 		"""
 		Run the given command against the cluster.
 
@@ -227,10 +229,19 @@ class Executor(object):
 		using ``str()``.
 
 		The return value is a dict - the JSON decoded
-		output of the command. If the command fails,
-		it throws an exception.
+		output of the command.
+
+		The callback has this signature:
+
+		.. code-block:: python
+
+			def callback(success, json, errors):
+				# success is a bool
+				# json is a dict
+				# errors is a string - log output from stderr.
 
 		:arg list arguments: The argments to pm-command.
+		:arg callable callback: The callback when completed.
 		"""
 		command_line = []
 		# TODO: Figure out the correct path to this command.
@@ -244,8 +255,30 @@ class Executor(object):
 			if not isinstance(command_line[i], str):
 				command_line[i] = str(command_line[i])
 
-		result = subprocess.check_output(command_line)
-		return json.loads(result)
+		outputs = {
+			'stdout': '',
+			'stderr': ''
+		}
+
+		def on_stdout(data):
+			outputs['stdout'] += data
+
+		def on_stderr(data):
+			outputs['stderr'] += data
+
+		def on_exit(code):
+			success = (code == 0)
+			data = json.loads(outputs['stdout'])
+
+			callback(success, data, outputs['stderr'])
+
+		paasmaker.util.popen.Popen(
+			command_line,
+			on_stdout=on_stdout,
+			on_stderr=on_stderr,
+			on_exit=on_exit,
+			io_loop=self.io_loop
+		)
 
 class Paasmaker(object):
 	"""

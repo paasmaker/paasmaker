@@ -23,10 +23,10 @@ if not os.path.exists("thirdparty/python/bin/pip"):
 bootstrap_script = "thirdparty/python/bin/activate_this.py"
 execfile(bootstrap_script, dict(__file__=bootstrap_script))
 
-
 import paasmaker
 
 from paasmaker.thirdparty.safeclose import safeclose
+import tornado.ioloop
 
 # Logging setup.
 logging.basicConfig(format='%(asctime)s %(levelname)s %(message)s', level=logging.INFO, stream=sys.stderr)
@@ -41,52 +41,103 @@ def on_exit_request():
 	multipaas.stop_nodes()
 	multipaas.destroy()
 
-	# TODO: Cleanup orphan redis instances and nginx instances.
+	tornado.ioloop.IOLoop.instance().stop()
+	sys.exit(0)
 
-try:
-	with safeclose.section(on_exit_request):
-		# Add our nodes.
-		multipaas.add_node(pacemaker=True, heart=False, router=True)
-		multipaas.add_node(pacemaker=False, heart=True, router=True)
+def on_ioloop_started():
+	try:
+		with safeclose.section(on_exit_request):
+			# Add our nodes.
+			multipaas.add_node(pacemaker=True, heart=False, router=True)
+			multipaas.add_node(pacemaker=False, heart=True, router=True)
 
-		logging.info("Cluster root: %s", multipaas.cluster_root)
+			logging.info("Cluster root: %s", multipaas.cluster_root)
 
-		# Start it up.
-		multipaas.start_nodes()
+			# Start it up.
+			multipaas.start_nodes()
 
-		time.sleep(0.5)
+			time.sleep(0.5)
 
-		summary = multipaas.get_summary()
+			summary = multipaas.get_summary()
 
-		#print json.dumps(summary, indent=4, sort_keys=True)
+			executor = multipaas.get_executor(tornado.ioloop.IOLoop.instance())
 
-		executor = multipaas.get_executor()
+			role_result = {}
+			user_result = {}
 
-		# Set up initial state.
-		user_result = executor.run(['user-create', USERNAME, 'multipaas@paasmaker.com', 'Multi Paas', PASSWORD])
-		role_result = executor.run(['role-create', 'Administrator', 'ALL'])
-		workspace_result = executor.run(['workspace-create', 'Test', 'test', '{}'])
+			def check_success(success, errors):
+				if not success:
+					print "FAILED TO SET UP MULTIPAAS"
+					print errors
+					on_exit_request()
 
-		#print json.dumps(user_result, indent=4, sort_keys=True)
-		#print json.dumps(role_result, indent=4, sort_keys=True)
-		#print json.dumps(workspace_result, indent=4, sort_keys=True)
+			def all_created(success, data, errors):
+				check_success(success, errors)
+				print "Connect to the multipaas on:"
+				print "http://localhost:%d/" % summary['configuration']['master_port']
+				print "Using username and password: %s / %s" % (USERNAME, PASSWORD)
+				print "Routers:"
+				for node in summary['nodes']:
+					if node.has_key('nginx_port'):
+						print "Port %d" % node['nginx_port']
 
-		executor.run(['role-allocate', role_result['role']['id'], user_result['user']['id']])
+				close = raw_input("Press enter to close and destroy your cluster.")
 
-		print "Connect to the multipaas on:"
-		print "http://localhost:%d/" % summary['configuration']['master_port']
-		print "Using username and password: %s / %s" % (USERNAME, PASSWORD)
-		print "Routers:"
-		for node in summary['nodes']:
-			if node.has_key('nginx_port'):
-				print "Port %d" % node['nginx_port']
+				on_exit_request()
 
-		close = raw_input("Press enter to close and destroy your cluster.")
+			def allocate_role(success, data, errors):
+				check_success(success, errors)
+				executor.run(
+					[
+						'role-allocate',
+						role_result['role']['id'],
+						user_result['user']['id']
+					],
+					all_created,
+				)
 
-		on_exit_request()
-except Exception, ex:
-	logging.error("Programming error in the MultiPaas.")
-	logging.error("Exception:", exc_info=ex)
+			def create_workspace(success, data, errors):
+				check_success(success, errors)
+				user_result.update(data)
+				executor.run(
+					[
+						'workspace-create',
+						'Test',
+						'test',
+						'{}'
+					],
+					allocate_role
+				)
 
-	multipaas.stop_nodes()
-	multipaas.destroy()
+			def create_user(success, data, errors):
+				check_success(success, errors)
+				role_result.update(data)
+				executor.run(
+					[
+						'user-create',
+						USERNAME,
+						'multipaas@paasmaker.com',
+						'Multi Paas',
+						PASSWORD
+					],
+					create_workspace
+				)
+
+			executor.run(
+				[
+					'role-create',
+					'Administrator',
+					'ALL'
+				],
+				create_user
+			)
+
+	except Exception, ex:
+		logging.error("Programming error in the MultiPaas.")
+		logging.error("Exception:", exc_info=ex)
+
+		multipaas.stop_nodes()
+		multipaas.destroy()
+
+tornado.ioloop.IOLoop.instance().add_callback(on_ioloop_started)
+tornado.ioloop.IOLoop.instance().start()
