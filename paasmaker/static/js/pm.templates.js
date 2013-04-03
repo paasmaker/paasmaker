@@ -233,11 +233,20 @@ function program1(depth0,data) {
 
 function program3(depth0,data) {
   
+  var buffer = "", stack1;
+  buffer += "\n			<a class=\"btn\" href=\"/application/"
+    + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
+    + "/services\">Services</a>\n		";
+  return buffer;
+  }
+
+function program5(depth0,data) {
+  
   
   return "\n		<div class=\"btn-group btn-group-header\">\n			<a class=\"btn btn-danger\" data-toggle=\"modal\" data-target=\"#app_delete_modal\"><i class=\"icon-trash icon-white\"></i> Delete Application</a>\n		</div>\n	";
   }
 
-function program5(depth0,data) {
+function program7(depth0,data) {
   
   
   return "\n<table class=\"table table-striped table-bordered current_version\">\n		<tr>\n			<th>Current version</th>\n			<th>State</th>\n			<th>Health</th>\n			<th>Instances</th>\n			<th>Actions</th>\n		</tr>\n</table>\n";
@@ -253,19 +262,21 @@ function program5(depth0,data) {
   if(stack2 || stack2 === 0) { buffer += stack2; }
   buffer += "\n	<div class=\"btn-group btn-group-header\">\n		<a class=\"btn\" href=\"/job/list/application/"
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "\">All Jobs</a>\n		<a class=\"btn\" href=\"/application/"
-    + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "/services\">Services</a>\n		<a class=\"btn\" href=\"/job/list/application/"
+    + "\">All Jobs</a>\n		";
+  options = {hash:{},inverse:self.noop,fn:self.program(3, program3, data),data:data};
+  stack2 = ((stack1 = helpers.ifPermission),stack1 ? stack1.call(depth0, "SERVICE_VIEW", ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.workspace_id), options) : helperMissing.call(depth0, "ifPermission", "SERVICE_VIEW", ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.workspace_id), options));
+  if(stack2 || stack2 === 0) { buffer += stack2; }
+  buffer += "\n		<a class=\"btn\" href=\"/job/list/application/"
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "?sub=cron\">Crons</a>\n	</div>\n	";
-  stack2 = helpers['if'].call(depth0, ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.can_delete), {hash:{},inverse:self.noop,fn:self.program(3, program3, data),data:data});
+  stack2 = helpers['if'].call(depth0, ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.can_delete), {hash:{},inverse:self.noop,fn:self.program(5, program5, data),data:data});
   if(stack2 || stack2 === 0) { buffer += stack2; }
   buffer += "\n</div>\n\n<div id=\"app_delete_modal\" class=\"modal hide fade\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"Delete Application\" aria-hidden=\"true\">\n  <div class=\"modal-header\">\n    <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-hidden=\"true\">×</button>\n    <h3>Delete Application</h3>\n  </div>\n  <div class=\"modal-body\">\n	<p>Are you sure you want to delete "
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.name)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "?</p>\n	<p>This action cannot be undone.</p>\n  </div>\n  <div class=\"modal-footer\">\n    <button class=\"btn\" data-dismiss=\"modal\" aria-hidden=\"true\">Cancel</button>\n		<form method=\"POST\" action=\"/application/"
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "/delete\" style=\"display: inline;\">\n			<input type=\"submit\" class=\"btn btn-primary btn-danger\" value=\"Delete Application\" />\n		</form>\n  </div>\n</div>\n\n";
-  stack2 = helpers['if'].call(depth0, depth0.current_version, {hash:{},inverse:self.noop,fn:self.program(5, program5, data),data:data});
+  stack2 = helpers['if'].call(depth0, depth0.current_version, {hash:{},inverse:self.noop,fn:self.program(7, program7, data),data:data});
   if(stack2 || stack2 === 0) { buffer += stack2; }
   buffer += "\n\n<table class=\"table table-striped table-bordered all_versions\">\n	<tr>\n		<th>Number</th>\n		<th>State</th>\n		<th>Health</th>\n		<th>Instances</th>\n		<th>Actions</th>\n	</tr>\n</table>\n";
   return buffer;

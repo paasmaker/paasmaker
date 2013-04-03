@@ -18,7 +18,9 @@
 	{{/ifPermission}}
 	<div class="btn-group btn-group-header">
 		<a class="btn" href="/job/list/application/{{ application.id }}">All Jobs</a>
-		<a class="btn" href="/application/{{ application.id }}/services">Services</a>
+		{{#ifPermission 'SERVICE_VIEW' application.workspace_id}}
+			<a class="btn" href="/application/{{ application.id }}/services">Services</a>
+		{{/ifPermission}}
 		<a class="btn" href="/job/list/application/{{ application.id }}?sub=cron">Crons</a>
 	</div>
 	{{#if application.can_delete}}

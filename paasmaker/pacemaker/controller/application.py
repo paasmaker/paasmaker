@@ -394,9 +394,10 @@ class ApplicationServiceListController(ApplicationRootController):
 
 	def get(self, application_id):
 		application = self._get_application(application_id)
-		self.require_permission(constants.PERMISSION.WORKSPACE_VIEW, workspace=application.workspace)
+		self.require_permission(constants.PERMISSION.SERVICE_VIEW, workspace=application.workspace)
 
 		self.add_data('services', application.services)
+
 		# self.add_data('application', application)
 		# self.add_data_template('json', json)
 
@@ -404,7 +405,7 @@ class ApplicationServiceListController(ApplicationRootController):
 		# if it was just a list of IDs. Maybe write an alternative to add_extra_data_fields?
 		self.add_extra_data_fields(paasmaker.model.Service, 'application_versions')
 
-		if self.has_permission(constants.PERMISSION.APPLICATION_SERVICE_DETAIL, workspace=application.workspace):
+		if self.has_permission(constants.PERMISSION.SERVICE_CREDENTIAL_VIEW, workspace=application.workspace):
 			self.add_extra_data_fields(paasmaker.model.Service, 'credentials')
 
 		self.client_side_render()

@@ -292,7 +292,7 @@ for all objects of that type in this example, which is a snippet from :class:`Ap
 
 .. code-block:: python
 
-	if self.has_permission(constants.PERMISSION.APPLICATION_SERVICE_DETAIL, workspace=application.workspace):
+	if self.has_permission(constants.PERMISSION.SERVICE_CREDENTIAL_VIEW, workspace=application.workspace):
 		self.add_extra_data_fields(paasmaker.model.Service, 'credentials')
 
 ``credentials`` in this case is not automatically exposed as it may contain

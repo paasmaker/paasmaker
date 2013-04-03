@@ -149,11 +149,16 @@ APPLICATION_DEPLOY
 	With this permission, the user can start, stop, register, and deregister
 	instances.
 
-APPLICATION_SERVICE_DETAIL
-	With this permission, the user can view the full details for services
-	on applications. This will allow them to see the full credentials for
-	services, which may not be desirable.
-
 APPLICATION_VIEW_MANIFEST
 	Allows a user to view :doc:`manifest files <user-application-manifest>`
 	uploaded with each version of any application in the workspace.
+
+SERVICE_VIEW
+	Allows a user to view the services in a workspace. If the user can deploy
+	applications, this permission will not affect their applications' ability
+	to access services.
+
+SERVICE_CREDENTIAL_VIEW
+	Allows a user to view (through the web interface or API) the credentials
+	associated with services in the workspace. This includes usernames and
+	passwords for database connections, or other shared secrets in a service.
