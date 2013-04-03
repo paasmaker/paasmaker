@@ -138,6 +138,7 @@ class UserEditController(BaseController):
 				self.session.refresh(user)
 			except sqlalchemy.exc.IntegrityError, ex:
 				self.session.rollback()
+				self.reload_current_user()
 				if 'email is not' in str(ex):
 					valid_data = False
 					self.add_error('The email address is not unique.')

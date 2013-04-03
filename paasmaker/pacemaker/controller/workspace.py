@@ -107,6 +107,7 @@ class WorkspaceEditController(WorkspaceBaseController):
 				self.session.refresh(workspace)
 			except sqlalchemy.exc.IntegrityError, ex:
 				self.session.rollback()
+				self.reload_current_user()
 				if 'stub' in str(ex):
 					valid_data = False
 					self.add_error('The workspace stub is not unique.')
