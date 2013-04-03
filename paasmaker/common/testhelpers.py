@@ -9,8 +9,15 @@
 import time
 import os
 import uuid
+import logging
+import traceback
 
 import paasmaker
+
+import tornado.testing
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 class TestHelpers(object):
 	# A collection of functions that can be mixed into unit tests
@@ -205,3 +212,61 @@ class TestHelpers(object):
 		flat = instance.flatten_for_heart()
 
 		return flat
+
+class MultipaasTestHandler(object):
+	def __init__(self, testcase):
+		self.testcase = testcase
+
+	def __enter__(self):
+		pass
+
+	def __exit__(self, exc_type, exc_val, exc_tb):
+		if exc_type is not None and hasattr(self.testcase, 'multipaas'):
+			# An exception occurred.
+			# We don't interfere with it, but we do
+			# pause for a moment so that the user can
+			# interact with the MultiPaas and figure out the
+			# bug.
+			summary = self.testcase.multipaas.get_summary()
+			print
+			print "Something went wrong:"
+			print exc_val
+			traceback.print_tb(exc_tb)
+			print "Connect to the multipaas here to debug this:"
+			print "http://localhost:%d/" % summary['configuration']['master_port']
+			print "Using username and password: %s / %s" % (self.testcase.USERNAME, self.testcase.PASSWORD)
+			close = raw_input("Press enter to close and destroy this cluster and continue.")
+
+		# Don't return anything, we want the exception to bubble.
+
+class BaseMultipaasTest(tornado.testing.AsyncTestCase, TestHelpers):
+	USERNAME = 'multipaas'
+	PASSWORD = 'multipaas'
+
+	def add_multipaas_node(self, **kwargs):
+		if not hasattr(self, 'multipaas'):
+			self.multipaas = paasmaker.util.multipaas.MultiPaas()
+
+		self.multipaas.add_node(**kwargs)
+
+	def start_multipaas(self):
+		# Start it running.
+		self.multipaas.start_nodes()
+
+		self.executor = self.multipaas.get_executor()
+
+		# Create a user, role, workspace, and allocate that role.
+		user_result = self.executor.run(['user-create', self.USERNAME, 'multipaas@paasmaker.com', 'Multi Paas', self.PASSWORD])
+		role_result = self.executor.run(['role-create', 'Administrator', 'ALL'])
+		workspace_result = self.executor.run(['workspace-create', 'Test', 'test', '{}'])
+
+		self.executor.run(['role-allocate', role_result['role']['id'], user_result['user']['id']])
+
+		self.mp_user_id = user_result['user']['id']
+		self.mp_role_ud = role_result['role']['id']
+		self.mp_workspace_id = workspace_result['workspace']['id']
+
+	def tearDown(self):
+		if hasattr(self, 'multipaas'):
+			self.multipaas.stop_nodes()
+			self.multipaas.destroy()

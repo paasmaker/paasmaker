@@ -28,6 +28,7 @@ bootstrap_script = "thirdparty/python/bin/activate_this.py"
 execfile(bootstrap_script, dict(__file__=bootstrap_script))
 
 import paasmaker
+import paasmaker.integration
 
 import coverage
 import argparse
@@ -164,7 +165,9 @@ test_sets = {
 
 	paasmaker.pacemaker.placement.default: ['normal', 'application', 'placement'],
 
-	paasmaker.heart.helper.instancemanager: ['normal', 'application', 'heart', 'instancemanager']
+	paasmaker.heart.helper.instancemanager: ['normal', 'application', 'heart', 'instancemanager'],
+
+	paasmaker.integration.example: ['integration', 'example']
 }
 
 ########################################

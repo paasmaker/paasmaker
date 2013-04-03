@@ -90,7 +90,7 @@ class MultiPaas(object):
 		node_name = "node_%d_%s" % (len(self.nodes), unique)
 		node_port = self._free_port()
 		node_dir = os.path.join(self.cluster_root, node_name)
-		node_config = os.path.join(self.cluster_root, "%s.yml" % node_name)
+		node_config_path = os.path.join(self.cluster_root, "%s.yml" % node_name)
 		os.makedirs(node_dir)
 
 		# Only the first node is the master.
@@ -102,11 +102,15 @@ class MultiPaas(object):
 			node_dir,
 			node_name,
 			node_port,
+			node_config_path,
 			self.cluster_params,
 			is_master,
 			self.cluster_params['master_port']
 		)
-		node.write_configuration(self.cluster_params, node_config)
+
+		# We don't write the configuration yet - wait until
+		# all nodes are added, so we can figure out the correct
+		# router to use.
 
 		self.nodes.append(node)
 
@@ -117,6 +121,20 @@ class MultiPaas(object):
 		If a node fails to start before it forks, this will print
 		out the server log file, and then raise an exception.
 		"""
+
+		# Figure out the first node with a router, and use
+		# that ones direct port as the frontend domain postfix.
+		for node in self.nodes:
+			if node.router:
+				self.cluster_params['frontend_domain_postfix'] = ":%d" % node.params['nginx_port_direct']
+				# Stop now.
+				break
+
+		# Write out the config files.
+		for node in self.nodes:
+			node.write_configuration(self.cluster_params, node.node_config_path)
+
+		# And start them up.
 		for node in self.nodes:
 			try:
 				node.start()
@@ -294,7 +312,7 @@ pacemaker:
   allow_supertoken: true
   cluster_hostname: %(cluster_hostname)s
   dsn: "%(dsn)s"
-  frontend_domain_postfix: ":%(nginx_port_direct)d"
+  frontend_domain_postfix: "%(frontend_domain_postfix)s"
 """
 
 	HEART = """
@@ -354,6 +372,7 @@ router:
 			node_dir,
 			node_name,
 			node_port,
+			node_config_path,
 			cluster_parameters,
 			master=False,
 			master_port=None):
@@ -361,6 +380,7 @@ router:
 		self.params['scratch_dir'] = self._exists(node_dir, 'scratch')
 		self.params['pid_path'] = os.path.join(node_dir, 'node.pid')
 		self.params['node_name'] = node_name
+		self.node_config_path = node_config_path
 		if master:
 			self.params['node_port'] = master_port
 		else:
