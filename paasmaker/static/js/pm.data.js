@@ -19,6 +19,28 @@ pm.data = (function() {
 	var screenTimeouts = [];
 
 	return {
+		/**
+		 * Generic error handler for ajax requests sent via pm.data: try to parse the response
+		 * body and show a Bootstrap alert box at the top of the page with the errors array.
+		 * TODO: fails for non-JSON responses, and assumes only one .loading-overlay at a time
+		 *
+		 * @param options argument object from pm.data.api or pm.data.post
+		 */
+		xhrErrorHandler: function(options) {
+			return function(result) {
+				$('.loading-overlay').remove();
+				var responseData = JSON.parse(result.responseText);
+				if ($('#main_right_view').length) {
+					$('#main_right_view').prepend(Handlebars.templates.error_block(responseData));
+				} else {
+					$('#main').prepend(Handlebars.templates.error_block(responseData));
+				}
+
+				if (options.errorCallback) {
+					options.errorCallback.apply(this, arguments);
+				}
+			}
+		},
 
 		/**
 		 * Wrapper for GET calls to the pacemaker's JSON API:
@@ -59,19 +81,17 @@ pm.data = (function() {
 				arg_string += encodeURIComponent(key) + '=' + encodeURIComponent(options.arguments[key]);
 			}
 
-			$.getJSON(
-				options.endpoint + '?' + arg_string,
-				function(responseData) {
+			$.ajax({
+				dataType: "json",
+				url: options.endpoint + '?' + arg_string,
+				error: pm.data.xhrErrorHandler(options),
+				success: function(responseData) {
 					if (responseData.errors && responseData.errors.length > 0) {
-						console.log("API call to " + endpoint + " returned an error!");
-						console.log(responseData.errors);
 						if (options.errorCallback) {
 							options.errorCallback.apply(this, arguments);
 						}
 					}
 					if (responseData.warnings && responseData.warnings.length > 0) {
-						console.log("WARNING WARNING: API call to " + endpoint + " returned a warning!");
-						console.log(responseData.warnings);
 						if (options.warningCallback) {
 							options.warningCallback.apply(this, arguments);
 						}
@@ -83,7 +103,7 @@ pm.data = (function() {
 
 					options.callback.apply(this, modified_args);
 				}
-			);
+			});
 		},
 
 		/**
@@ -128,22 +148,12 @@ pm.data = (function() {
 			}
 
 			var request_finished = function(responseData) {
-				if (responseData.setRequestHeader && responseData.responseText) {
-					// there was an error and the first argument is a jqXHR object;
-					// TODO: smarter detection of this, or a separate callback
-					responseData = JSON.parse(responseData.responseText);
-				}
-
 				if (responseData.errors && responseData.errors.length > 0) {
-					console.log("API call to " + options.endpoint + " returned an error!");
-					console.log(responseData.errors);
 					if (options.errorCallback) {
 						options.errorCallback.apply(this, arguments);
 					}
 				}
 				if (responseData.warnings && responseData.warnings.length > 0) {
-					console.log("WARNING WARNING: API call to " + options.endpoint + " returned a warning!");
-					console.log(responseData.warnings);
 					if (options.warningCallback) {
 						options.warningCallback.apply(this, arguments);
 					}
@@ -160,7 +170,7 @@ pm.data = (function() {
 				type: "POST",
 				url: options.endpoint + '?' + arg_string,
 				data: options.body_data,
-				error: request_finished,
+				error: pm.data.xhrErrorHandler(options),
 				success: request_finished,
 				dataType: "json"
 			});

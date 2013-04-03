@@ -1,0 +1,13 @@
+<div class="alert alert-block alert-error">
+	<a href="#" class="close" data-dismiss="alert">&times;</a>
+	{{#if error_title}}
+		<h4>{{error_title}}</h4>
+	{{else}}
+		<h4>Couldn't complete this request</h4>
+	{{/if}}
+	<ul>
+		{{#each errors}}
+			<li>{{this}}</li>
+		{{/each}}
+	</ul>
+</div>
