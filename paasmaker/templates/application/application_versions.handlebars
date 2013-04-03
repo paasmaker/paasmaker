@@ -11,9 +11,11 @@
 <h1>Application: {{ application.name }}</h1>
 
 <div class="btn-toolbar">
-	<div class="btn-group btn-group-header">
-		<a class="btn" href="/application/{{ application.id }}/newversion"><i class="icon-plus"></i> Create new version</a>
-	</div>
+	{{#ifPermission 'APPLICATION_CREATE' application.workspace_id}}
+		<div class="btn-group btn-group-header">
+			<a class="btn" href="/application/{{ application.id }}/newversion"><i class="icon-plus"></i> Create new version</a>
+		</div>
+	{{/ifPermission}}
 	<div class="btn-group btn-group-header">
 		<a class="btn" href="/job/list/application/{{ application.id }}">All Jobs</a>
 		<a class="btn" href="/application/{{ application.id }}/services">Services</a>

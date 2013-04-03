@@ -615,15 +615,24 @@ function program24(depth0,data) {
 templates['application_versions'] = template(function (Handlebars,depth0,helpers,partials,data) {
   this.compilerInfo = [2,'>= 1.0.0-rc.3'];
 helpers = helpers || Handlebars.helpers; data = data || {};
-  var buffer = "", stack1, stack2, functionType="function", escapeExpression=this.escapeExpression, self=this;
+  var buffer = "", stack1, stack2, options, functionType="function", escapeExpression=this.escapeExpression, self=this, helperMissing=helpers.helperMissing;
 
 function program1(depth0,data) {
+  
+  var buffer = "", stack1;
+  buffer += "\n		<div class=\"btn-group btn-group-header\">\n			<a class=\"btn\" href=\"/application/"
+    + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
+    + "/newversion\"><i class=\"icon-plus\"></i> Create new version</a>\n		</div>\n	";
+  return buffer;
+  }
+
+function program3(depth0,data) {
   
   
   return "\n		<div class=\"btn-group btn-group-header\">\n			<a class=\"btn btn-danger\" data-toggle=\"modal\" data-target=\"#app_delete_modal\"><i class=\"icon-trash icon-white\"></i> Delete Application</a>\n		</div>\n	";
   }
 
-function program3(depth0,data) {
+function program5(depth0,data) {
   
   
   return "\n<table class=\"table table-striped table-bordered current_version\">\n		<tr>\n			<th>Current version</th>\n			<th>State</th>\n			<th>Health</th>\n			<th>Instances</th>\n			<th>Actions</th>\n		</tr>\n</table>\n";
@@ -633,23 +642,25 @@ function program3(depth0,data) {
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "\">Loading...</div>\n\n<h1>Application: "
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.name)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "</h1>\n\n<div class=\"btn-toolbar\">\n	<div class=\"btn-group btn-group-header\">\n		<a class=\"btn\" href=\"/application/"
-    + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "/newversion\"><i class=\"icon-plus\"></i> Create new version</a>\n	</div>\n	<div class=\"btn-group btn-group-header\">\n		<a class=\"btn\" href=\"/job/list/application/"
+    + "</h1>\n\n<div class=\"btn-toolbar\">\n	";
+  options = {hash:{},inverse:self.noop,fn:self.program(1, program1, data),data:data};
+  stack2 = ((stack1 = helpers.ifPermission),stack1 ? stack1.call(depth0, "APPLICATION_CREATE", ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.workspace_id), options) : helperMissing.call(depth0, "ifPermission", "APPLICATION_CREATE", ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.workspace_id), options));
+  if(stack2 || stack2 === 0) { buffer += stack2; }
+  buffer += "\n	<div class=\"btn-group btn-group-header\">\n		<a class=\"btn\" href=\"/job/list/application/"
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "\">All Jobs</a>\n		<a class=\"btn\" href=\"/application/"
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "/services\">Services</a>\n		<a class=\"btn\" href=\"/job/list/application/"
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "?sub=cron\">Crons</a>\n	</div>\n	";
-  stack2 = helpers['if'].call(depth0, ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.can_delete), {hash:{},inverse:self.noop,fn:self.program(1, program1, data),data:data});
+  stack2 = helpers['if'].call(depth0, ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.can_delete), {hash:{},inverse:self.noop,fn:self.program(3, program3, data),data:data});
   if(stack2 || stack2 === 0) { buffer += stack2; }
   buffer += "\n</div>\n\n<div id=\"app_delete_modal\" class=\"modal hide fade\" tabindex=\"-1\" role=\"dialog\" aria-labelledby=\"Delete Application\" aria-hidden=\"true\">\n  <div class=\"modal-header\">\n    <button type=\"button\" class=\"close\" data-dismiss=\"modal\" aria-hidden=\"true\">×</button>\n    <h3>Delete Application</h3>\n  </div>\n  <div class=\"modal-body\">\n	<p>Are you sure you want to delete "
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.name)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "?</p>\n	<p>This action cannot be undone.</p>\n  </div>\n  <div class=\"modal-footer\">\n    <button class=\"btn\" data-dismiss=\"modal\" aria-hidden=\"true\">Cancel</button>\n		<form method=\"POST\" action=\"/application/"
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "/delete\" style=\"display: inline;\">\n			<input type=\"submit\" class=\"btn btn-primary btn-danger\" value=\"Delete Application\" />\n		</form>\n  </div>\n</div>\n\n";
-  stack2 = helpers['if'].call(depth0, depth0.current_version, {hash:{},inverse:self.noop,fn:self.program(3, program3, data),data:data});
+  stack2 = helpers['if'].call(depth0, depth0.current_version, {hash:{},inverse:self.noop,fn:self.program(5, program5, data),data:data});
   if(stack2 || stack2 === 0) { buffer += stack2; }
   buffer += "\n\n<table class=\"table table-striped table-bordered all_versions\">\n	<tr>\n		<th>Number</th>\n		<th>State</th>\n		<th>Health</th>\n		<th>Instances</th>\n		<th>Actions</th>\n	</tr>\n</table>\n";
   return buffer;
@@ -997,7 +1008,7 @@ function program13(depth0,data) {
 templates['app_menu'] = template(function (Handlebars,depth0,helpers,partials,data) {
   this.compilerInfo = [2,'>= 1.0.0-rc.3'];
 helpers = helpers || Handlebars.helpers; data = data || {};
-  var buffer = "", stack1, stack2, self=this, functionType="function", escapeExpression=this.escapeExpression;
+  var buffer = "", stack1, stack2, options, self=this, functionType="function", escapeExpression=this.escapeExpression, helperMissing=helpers.helperMissing;
 
 function program1(depth0,data) {
   
@@ -1027,7 +1038,7 @@ function program1(depth0,data) {
   if (stack2 = helpers.name) { stack2 = stack2.call(depth0, {hash:{},data:data}); }
   else { stack2 = depth0.name; stack2 = typeof stack2 === functionType ? stack2.apply(depth0) : stack2; }
   buffer += escapeExpression(stack2)
-    + "</span>\n					<ul class=\"application-list-versions\">\n\n					</ul>\n				</a>\n			</li>\n			<li class=\"divider\"></li>\n		";
+    + "</span>\n					<ul class=\"application-list-versions\">\n\n					</ul>\n				</a>\n			</li>\n		";
   return buffer;
   }
 function program2(depth0,data) {
@@ -1039,10 +1050,21 @@ function program2(depth0,data) {
 function program4(depth0,data) {
   
   
-  return "\n			<li class=\"no-menu-items\">No applications in this workspace</li>\n			<li class=\"divider\"></li>\n		";
+  return "\n			<li class=\"no-menu-items\">No applications in this workspace</li>\n		";
   }
 
 function program6(depth0,data) {
+  
+  var buffer = "", stack1;
+  buffer += "\n			<li class=\"divider\"></li>\n			<li ";
+  stack1 = helpers['if'].call(depth0, depth0.new_application_active, {hash:{},inverse:self.noop,fn:self.program(7, program7, data),data:data});
+  if(stack1 || stack1 === 0) { buffer += stack1; }
+  buffer += "><a href=\"/workspace/"
+    + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
+    + "/applications/new\">Create Application</a></li>\n		";
+  return buffer;
+  }
+function program7(depth0,data) {
   
   
   return "class=\"active\"";
@@ -1056,12 +1078,11 @@ function program6(depth0,data) {
   buffer += "\n		";
   stack2 = helpers.unless.call(depth0, ((stack1 = depth0.applications),stack1 == null || stack1 === false ? stack1 : stack1.length), {hash:{},inverse:self.noop,fn:self.program(4, program4, data),data:data});
   if(stack2 || stack2 === 0) { buffer += stack2; }
-  buffer += "\n		<li ";
-  stack2 = helpers['if'].call(depth0, depth0.new_application_active, {hash:{},inverse:self.noop,fn:self.program(6, program6, data),data:data});
+  buffer += "\n		";
+  options = {hash:{},inverse:self.noop,fn:self.program(6, program6, data),data:data};
+  stack2 = ((stack1 = helpers.ifPermission),stack1 ? stack1.call(depth0, "APPLICATION_CREATE", ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id), options) : helperMissing.call(depth0, "ifPermission", "APPLICATION_CREATE", ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id), options));
   if(stack2 || stack2 === 0) { buffer += stack2; }
-  buffer += "><a href=\"/workspace/"
-    + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "/applications/new\">Create Application</a></li>\n	</ul>\n</div>\n";
+  buffer += "\n	</ul>\n</div>\n";
   return buffer;
   });
 })();(function() {
@@ -1420,21 +1441,32 @@ helpers = helpers || Handlebars.helpers; data = data || {};
 function program1(depth0,data) {
   
   var buffer = "", stack1;
-  buffer += "\n			<div class=\"btn-group btn-group-header\">\n				<a class=\"btn\" href=\"/workspace/"
+  buffer += "\n		<div class=\"btn-group btn-group-header\">\n			<a class=\"btn\" href=\"/workspace/"
     + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "\"><i class=\"icon-edit\"></i> Edit Workspace</a>\n			</div>\n		";
+    + "\"><i class=\"icon-edit\"></i> Edit Workspace</a>\n		</div>\n	";
+  return buffer;
+  }
+
+function program3(depth0,data) {
+  
+  var buffer = "", stack1;
+  buffer += "\n		<div class=\"btn-group btn-group-header\">\n			<a class=\"btn\" href=\"/workspace/"
+    + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
+    + "/applications/new\"><i class=\"icon-plus\"></i> Create Application</a>\n		</div>\n	";
   return buffer;
   }
 
   buffer += "<h1>Workspace: "
     + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.name)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "</h1>\n<div class=\"btn-toolbar\">\n		";
+    + "</h1>\n<div class=\"btn-toolbar\">\n	";
   options = {hash:{},inverse:self.noop,fn:self.program(1, program1, data),data:data};
   stack2 = ((stack1 = helpers.ifPermission),stack1 ? stack1.call(depth0, "WORKSPACE_EDIT", ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id), options) : helperMissing.call(depth0, "ifPermission", "WORKSPACE_EDIT", ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id), options));
   if(stack2 || stack2 === 0) { buffer += stack2; }
-  buffer += "\n	<div class=\"btn-group btn-group-header\">\n		<a class=\"btn\" href=\"/workspace/"
-    + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "/applications/new\"><i class=\"icon-plus\"></i> Create Application</a>\n	</div>\n	<div class=\"btn-group btn-group-header\">\n		<a class=\"btn\" href=\"/job/list/workspace/"
+  buffer += "\n	";
+  options = {hash:{},inverse:self.noop,fn:self.program(3, program3, data),data:data};
+  stack2 = ((stack1 = helpers.ifPermission),stack1 ? stack1.call(depth0, "APPLICATION_CREATE", ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id), options) : helperMissing.call(depth0, "ifPermission", "APPLICATION_CREATE", ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id), options));
+  if(stack2 || stack2 === 0) { buffer += stack2; }
+  buffer += "\n	<div class=\"btn-group btn-group-header\">\n		<a class=\"btn\" href=\"/job/list/workspace/"
     + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "\">All Jobs</a>\n		<a class=\"btn\" href=\"/job/list/workspace/"
     + escapeExpression(((stack1 = ((stack1 = depth0.workspace),stack1 == null || stack1 === false ? stack1 : stack1.id)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
