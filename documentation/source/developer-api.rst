@@ -25,6 +25,9 @@ Workspace
 .. autoclass:: paasmaker.common.api.workspace.WorkspaceListAPIRequest
     :members:
 
+.. autoclass:: paasmaker.common.api.workspace.WorkspaceDeleteAPIRequest
+    :members:
+
 Application
 -----------
 

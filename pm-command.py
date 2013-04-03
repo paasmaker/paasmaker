@@ -432,6 +432,19 @@ class WorkspaceListAction(RootAction):
 		self.point_and_auth(args, request)
 		request.send(self.generic_api_response)
 
+class WorkspaceDeleteAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("workspace_id", help="Workspace ID to delete")
+
+	def describe(self):
+		return "Delete a workspace."
+
+	def process(self, args):
+		request = paasmaker.common.api.workspace.WorkspaceDeleteAPIRequest(None)
+		request.set_workspace(int(args.workspace_id))
+		self.point_and_auth(args, request)
+		request.send(self.generic_api_response)
+
 class NodeListAction(RootAction):
 	def describe(self):
 		return "List nodes."
@@ -795,6 +808,7 @@ ACTION_MAP = {
 	'workspace-edit': WorkspaceEditAction(),
 	'workspace-get': WorkspaceGetAction(),
 	'workspace-list': WorkspaceListAction(),
+	'workspace-delete': WorkspaceDeleteAction(),
 	'node-list': NodeListAction(),
 	'role-allocation-list': RoleAllocationListAction(),
 	'role-allocate': RoleAllocationAction(),

@@ -137,3 +137,23 @@ class WorkspaceListAPIRequest(APIRequest):
 
 	def get_endpoint(self):
 		return '/workspace/list'
+
+class WorkspaceDeleteAPIRequest(APIRequest):
+	"""
+	Delete a workspace. Workspaces can only be deleted if they
+	have no applications in them.
+	"""
+	def __init__(self, *args, **kwargs):
+		super(WorkspaceDeleteAPIRequest, self).__init__(*args, **kwargs)
+		self.workspace_id = None
+
+	def set_workspace(self, workspace_id):
+		"""
+		Set the workspace to delete.
+
+		:arg int workspace_id: The workspace ID to delete.
+		"""
+		self.workspace_id = workspace_id
+
+	def get_endpoint(self):
+		return '/workspace/%d/delete' % self.workspace_id
