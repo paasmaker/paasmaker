@@ -62,7 +62,9 @@
 				<code class="uuid-shrink" title="{{instance_id}}"></code>
 			</td>
 			<td>
-				<a href="/node/{{node_id}}" class="version-instance-list-node" data-node-id="{{node_id}}">{{node_id}}</a>
+				{{#ifPermission 'NODE_DETAIL_VIEW'}}<a href="/node/{{node_id}}">{{/ifPermission}}
+					<span class="version-instance-list-node" data-node-id="{{node_id}}">#{{node_id}}</span>
+				{{#ifPermission 'NODE_DETAIL_VIEW'}}</a>{{/ifPermission}}
 			</td>
 			<td>
 				{{ port }}

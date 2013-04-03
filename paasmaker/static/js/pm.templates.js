@@ -1331,27 +1331,31 @@ function program13(depth0,data) {
 
 function program15(depth0,data) {
   
-  var buffer = "", stack1, stack2;
+  var buffer = "", stack1, stack2, options;
   buffer += "\n		<tr>\n			<td class=\"contains-uuid\">\n				<code class=\"uuid-shrink\" title=\"";
   if (stack1 = helpers.instance_id) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
   else { stack1 = depth0.instance_id; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
   buffer += escapeExpression(stack1)
-    + "\"></code>\n			</td>\n			<td>\n				<a href=\"/node/";
-  if (stack1 = helpers.node_id) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
-  else { stack1 = depth0.node_id; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
-  buffer += escapeExpression(stack1)
-    + "\" class=\"version-instance-list-node\" data-node-id=\"";
-  if (stack1 = helpers.node_id) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
-  else { stack1 = depth0.node_id; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
-  buffer += escapeExpression(stack1)
-    + "\">";
-  if (stack1 = helpers.node_id) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
-  else { stack1 = depth0.node_id; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
-  buffer += escapeExpression(stack1)
-    + "</a>\n			</td>\n			<td>\n				";
-  if (stack1 = helpers.port) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
-  else { stack1 = depth0.port; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
-  buffer += escapeExpression(stack1)
+    + "\"></code>\n			</td>\n			<td>\n				";
+  options = {hash:{},inverse:self.noop,fn:self.program(16, program16, data),data:data};
+  stack2 = ((stack1 = helpers.ifPermission),stack1 ? stack1.call(depth0, "NODE_DETAIL_VIEW", options) : helperMissing.call(depth0, "ifPermission", "NODE_DETAIL_VIEW", options));
+  if(stack2 || stack2 === 0) { buffer += stack2; }
+  buffer += "\n					<span class=\"version-instance-list-node\" data-node-id=\"";
+  if (stack2 = helpers.node_id) { stack2 = stack2.call(depth0, {hash:{},data:data}); }
+  else { stack2 = depth0.node_id; stack2 = typeof stack2 === functionType ? stack2.apply(depth0) : stack2; }
+  buffer += escapeExpression(stack2)
+    + "\">#";
+  if (stack2 = helpers.node_id) { stack2 = stack2.call(depth0, {hash:{},data:data}); }
+  else { stack2 = depth0.node_id; stack2 = typeof stack2 === functionType ? stack2.apply(depth0) : stack2; }
+  buffer += escapeExpression(stack2)
+    + "</span>\n				";
+  options = {hash:{},inverse:self.noop,fn:self.program(18, program18, data),data:data};
+  stack2 = ((stack1 = helpers.ifPermission),stack1 ? stack1.call(depth0, "NODE_DETAIL_VIEW", options) : helperMissing.call(depth0, "ifPermission", "NODE_DETAIL_VIEW", options));
+  if(stack2 || stack2 === 0) { buffer += stack2; }
+  buffer += "\n			</td>\n			<td>\n				";
+  if (stack2 = helpers.port) { stack2 = stack2.call(depth0, {hash:{},data:data}); }
+  else { stack2 = depth0.port; stack2 = typeof stack2 === functionType ? stack2.apply(depth0) : stack2; }
+  buffer += escapeExpression(stack2)
     + "\n			</td>\n			<td title=\""
     + escapeExpression(((stack1 = ((stack1 = depth0.created_moment),stack1 == null || stack1 === false ? stack1 : stack1.format)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
     + "\">\n				"
@@ -1378,6 +1382,22 @@ function program15(depth0,data) {
   buffer += escapeExpression(stack2)
     + "\">\n			</td>\n		</tr>\n	";
   return buffer;
+  }
+function program16(depth0,data) {
+  
+  var buffer = "", stack1;
+  buffer += "<a href=\"/node/";
+  if (stack1 = helpers.node_id) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
+  else { stack1 = depth0.node_id; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
+  buffer += escapeExpression(stack1)
+    + "\">";
+  return buffer;
+  }
+
+function program18(depth0,data) {
+  
+  
+  return "</a>";
   }
 
   buffer += "<hr><h2>Instance type: "

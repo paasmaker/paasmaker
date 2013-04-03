@@ -28,22 +28,23 @@ pm.version = (function() {
 		},
 
 		updateNodeNames: function() {
-			var node_ids = {};
-			$('a.version-instance-list-node').each(function(i, el) {
-				node_ids[$(el).data('node-id')] = true;
+			if (!pm.util.hasPermission('NODE_LIST')) { return false; }
+
+			pm.data.api({
+				endpoint: 'node/list',
+				callback: function(node_data) {
+					node_map = {};
+					node_data.nodes.forEach(function(node) {
+						node_map[node.id] = node.name;
+					});
+
+					$('span.version-instance-list-node').each(function(i, el) {
+						if (node_map[$(el).data('node-id')]) {
+							$(el).text(node_map[$(el).data('node-id')])
+						}
+					});
+				}
 			});
-			for (var id in node_ids) {
-				pm.data.api({
-					endpoint: 'node/' + id,
-					callback: function(node_data) {
-						$('a.version-instance-list-node').each(function(i, el) {
-							if ($(el).data('node-id') == node_data.node.id) {
-								$(el).text(node_data.node.name)
-							}
-						});
-					}
-				});
-			}
 		},
 
 		actionButton: function(e) {
