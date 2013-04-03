@@ -115,6 +115,7 @@ class VersionRegisterController(VersionRootController):
 
 	def post(self, version_id):
 		version = self._get_version(version_id)
+		self.require_permission(constants.PERMISSION.APPLICATION_DEPLOY, workspace=version.application.workspace)
 
 		# TODO: This prevents us from being able to add new
 		# instances if the instances have errors. Rethink this.
@@ -148,6 +149,8 @@ class VersionStartupController(VersionRootController):
 
 	def post(self, version_id):
 		version = self._get_version(version_id)
+		self.require_permission(constants.PERMISSION.APPLICATION_DEPLOY, workspace=version.application.workspace)
+
 		self.add_data('version', version)
 
 		if version.state != constants.VERSION.READY and version.state != constants.VERSION.PREPARED:
@@ -178,6 +181,8 @@ class VersionShutdownController(VersionRootController):
 
 	def post(self, version_id):
 		version = self._get_version(version_id)
+		self.require_permission(constants.PERMISSION.APPLICATION_DEPLOY, workspace=version.application.workspace)
+
 		self.add_data('version', version)
 
 		if version.state != constants.VERSION.RUNNING:
@@ -208,6 +213,8 @@ class VersionDeRegisterController(VersionRootController):
 
 	def post(self, version_id):
 		version = self._get_version(version_id)
+		self.require_permission(constants.PERMISSION.APPLICATION_DEPLOY, workspace=version.application.workspace)
+
 		self.add_data('version', version)
 
 		if version.state != constants.VERSION.READY:
@@ -238,6 +245,7 @@ class VersionDeleteController(VersionRootController):
 
 	def post(self, version_id):
 		version = self._get_version(version_id)
+		self.require_permission(constants.PERMISSION.APPLICATION_DELETE, workspace=version.application.workspace)
 		self.add_data('version', version)
 
 		if version.is_current:

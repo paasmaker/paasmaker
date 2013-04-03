@@ -140,6 +140,10 @@ APPLICATION_CREATE
 APPLICATION_DELETE
 	With this permission, the user can delete an application.
 
+APPLICATION_DEPLOY
+	With this permission, the user can start, stop, register, and deregister
+	instances.
+
 APPLICATION_SERVICE_DETAIL
 	With this permission, the user can view the full details for services
 	on applications. This will allow them to see the full credentials for
