@@ -488,16 +488,9 @@ class StreamConnection(tornadio2.SocketConnection):
 			def failed_stats(error, exception=None):
 				self.emit('router.stats.error', error, name, input_id)
 
-			def got_set(vtset):
-				stats_output.total_for_list('vt', vtset, got_stats, failed_stats)
-
 			# Request some stats.
 			# TODO: Check permissions!
-			stats_output.vtset_for_name(
-				name,
-				int(input_id),
-				got_set
-			)
+			stats_output.stats_for_name(name, input_id, got_stats)
 			# end of stats_ready()
 
 		if not self.configuration.is_pacemaker():
@@ -650,6 +643,14 @@ class StreamConnectionTest(BaseControllerTest):
 
 		# Wait for it to start up.
 		self.manager.prepare(self.stop, self.stop)
+		self.wait()
+
+		# Insert the stats scripts.
+		paasmaker.router.stats.ApplicationStats.load_redis_scripts(
+			self.configuration,
+			self.stop,
+			self.stop
+		)
 		self.wait()
 
 	def tearDown(self):
@@ -951,7 +952,7 @@ class StreamConnectionTest(BaseControllerTest):
 		# Ask for updates.
 		remote.stats('workspace', 1)
 		response = self.wait()
-		self.assertEquals(response[0], 'error', "Wrong response - got %s." % response[0])
+		self.assertEquals(response[0], 'update', "Wrong response - got %s." % response[0])
 
 		remote.stats('version_type', 1)
 		response = self.wait()

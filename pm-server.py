@@ -353,6 +353,17 @@ def on_redis_started(redis):
 	# but mark this item as complete.
 	on_intermediary_started("Started a redis successfully.")
 
+def on_stats_redis_started(redis):
+	# Load the scripts, if we're a Pacemaker.
+	if configuration.is_pacemaker():
+		paasmaker.router.stats.ApplicationStats.load_redis_scripts(
+			configuration,
+			on_redis_started,
+			on_intermediary_failed
+		)
+	else:
+		on_redis_started(redis)
+
 @tornado.stack_context.contextlib.contextmanager
 def handle_startup_exception():
 	try:
@@ -397,7 +408,7 @@ def on_ioloop_started():
 
 	# Possibly managed stats redis startup.
 	logger.info("Starting stats redis (async)...")
-	configuration.get_stats_redis(on_redis_started, on_intermediary_failed)
+	configuration.get_stats_redis(on_stats_redis_started, on_intermediary_failed)
 
 	with tornado.stack_context.StackContext(handle_startup_exception):
 		# Managed NGINX.

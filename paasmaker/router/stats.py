@@ -330,118 +330,63 @@ class ApplicationStats(object):
 	result. The stats redis already stores sets of version type IDs for
 	various containers; such as the workspace.
 	"""
+
+	# CAUTION: This list MUST match the length and order in the stats_standard.lua
+	# file. Otherwise they will get mismatched.
 	METRICS = [
 		'bytes',
 		'1xx',
+		'1xx_percentage',
 		'2xx',
+		'2xx_percentage',
 		'3xx',
+		'3xx_percentage',
 		'4xx',
+		'4xx_percentage',
 		'5xx',
+		'5xx_percentage',
 		'requests',
 		'time',
 		'timecount',
-		'nginxtime'
-	]
-	AVERAGES = [
-		('time', 'timecount'),
-		('nginxtime', 'requests')
-	]
-	PERCENTAGES = [
-		('1xx', 'requests'),
-		('2xx', 'requests'),
-		('3xx', 'requests'),
-		('4xx', 'requests'),
-		('5xx', 'requests')
+		'time_average',
+		'nginxtime',
+		'nginxtime_average'
 	]
 
-	DISPLAY_SET = [
-		# TODO: According to the docs, should be able to use %n to format
-		# including thousands seperators... but this doesn't work.
-		{
-			'title': 'Requests',
-			'key': 'requests',
-			'format': '%d',
-			'primary': True
-		},
-		{
-			'title': 'Bytes',
-			'key': 'bytes',
-			'format': '%d',
-			'primary': True
-		},
-		{
-			'title': 'Average Time',
-			'key': 'time_average',
-			'format': '%d',
-			'primary': True
-		},
-		{
-			'title': '1xx',
-			'key': '1xx',
-			'format': '%d',
-			'primary': False
-		},
-		{
-			'title': '1xx Percentage',
-			'key': '1xx_percentage',
-			'format': '%0.2f%%',
-			'primary': False
-		},
-		{
-			'title': '2xx',
-			'key': '2xx',
-			'format': '%d',
-			'primary': False
-		},
-		{
-			'title': '2xx Percentage',
-			'key': '2xx_percentage',
-			'format': '%0.2f%%',
-			'primary': False
-		},
-		{
-			'title': '3xx',
-			'key': '3xx',
-			'format': '%d',
-			'primary': False
-		},
-		{
-			'title': '3xx Percentage',
-			'key': '3xx_percentage',
-			'format': '%0.2f%%',
-			'primary': False
-		},
-		{
-			'title': '4xx',
-			'key': '4xx',
-			'format': '%d',
-			'primary': False
-		},
-		{
-			'title': '4xx Percentage',
-			'key': '4xx_percentage',
-			'format': '%0.2f%%',
-			'primary': False
-		},
-		{
-			'title': '5xx',
-			'key': '5xx',
-			'format': '%d',
-			'primary': False
-		},
-		{
-			'title': '5xx Percentage',
-			'key': '5xx_percentage',
-			'format': '%0.2f%%',
-			'primary': False
-		},
-		{
-			'title': 'NGINX Time',
-			'key': 'nginxtime_average',
-			'format': '%d',
-			'primary': False
-		}
-	]
+	@classmethod
+	def load_redis_scripts(cls, configuration, callback, error_callback):
+		# Load the scripts required for the stats into the stats Redis.
+		scripts = ['stats_standard.lua']
+		script_path = os.path.normpath(os.path.dirname(__file__))
+
+		def got_redis(client):
+			def load_script():
+				try:
+					script = scripts.pop()
+					full_path = os.path.join(script_path, script)
+
+					def script_loaded(sha1):
+						# Store the SHA1 for later.
+						configuration.redis_scripts[script] = sha1
+
+						# Load the next script.
+						load_script()
+
+						# end of script_loaded()
+
+					body = open(full_path, 'r').read()
+
+					client.script_load(body, script_loaded)
+
+				except IndexError, ex:
+					# No more to insert.
+					callback("Completed inserting stats scripts.")
+				# end of load_script()
+
+			load_script()
+			# end of got_redis()
+
+		configuration.get_stats_redis(got_redis, error_callback)
 
 	def __init__(self, configuration):
 		self.configuration = configuration
@@ -472,6 +417,71 @@ class ApplicationStats(object):
 		Close the attached Redis connection and any other resources.
 		"""
 		self.redis.disconnect()
+
+	def stats_for_name(self, name, input_id, callback, listtype='vt'):
+		"""
+		Fetch the router stats for the given input name and ID.
+
+		Name is one of a few options of aggregated sets
+		to return. ``input_id`` then selects the specific
+		aggregation.
+
+		Name can be one of the following:
+
+		* **workspace**: all the version type IDs in the
+		  specified workspace.
+		* **application**: all the version type IDs in the
+		  specified application.
+		* **version**: all the version type IDs in the specified
+		  version.
+		* **version_type**: just the version type ID specified.
+		* **uncaught**: a special case that returns stats on
+		  all requests that were unable to be routed to any instance.
+		  ``input_id`` is ignored.
+		* **pacemaker**: a special case that returns stats on
+		  pacemaker activity (if that activity passes through
+		  a router). ``input_id`` is ignored.
+
+		:arg str name: The name of the set to return.
+		:arg int input_id: The ID to match the set.
+		:arg callable callback: The callback to call with a dict of
+			stats.
+		:arg str listtype: One of 'node' or 'vt'. 'node' is currently
+			not implemented.
+		"""
+		if listtype not in ['node', 'vt']:
+			raise ValueError("List type must be either node or vt.")
+
+		def script_result(result):
+			# The result is a list, so convert it to a dict.
+			# The entries are in order, so we can just merge the
+			# two together.
+			stats = dict(zip(self.METRICS, result))
+			callback(stats)
+
+		real_list_type = 'stat_vt'
+		if listtype == 'node':
+			real_list_type = 'stat_node'
+
+		# Call the redis script to generate the stats.
+		self.redis.evalsha(
+			self.configuration.redis_scripts['stats_standard.lua'],
+			keys=[],
+			args=[real_list_type, name, input_id],
+			callback=script_result
+		)
+
+	def total_for_uncaught(self, callback, error_callback):
+		"""
+		Helper to return a list of stats for uncaught requests.
+		"""
+		self.stats_for_name('uncaught', None, callback)
+
+	def total_for_pacemaker(self, callback, error_callback):
+		"""
+		Helper to return a list of stats for pacemaker requests.
+		"""
+		self.stats_for_name('pacemaker', None, callback)
 
 	def vtset_for_name(self, name, input_id, callback):
 		"""
@@ -526,101 +536,6 @@ class ApplicationStats(object):
 
 		set_key = "%s:%d" % (name, input_id)
 		self.redis.smembers(set_key, callback=got_set)
-
-	def total_for_uncaught(self, callback, error_callback):
-		"""
-		Helper to return a list of stats for uncaught requests.
-		"""
-		self.total_for_list('vt', ['null'], callback, error_callback)
-
-	def total_for_pacemaker(self, callback, error_callback):
-		"""
-		Helper to return a list of stats for pacemaker requests.
-		"""
-		self.total_for_list('vt', ['pacemaker'], callback, error_callback)
-
-	def total_for_list(self, listtype, idset, callback, error_callback):
-		"""
-		Return the stats for the given list type and ID set.
-
-		A dict with all the possible stats is returned, which is
-		an aggregate of all the version type IDs supplied.
-
-		If an empty list of IDs is supplied, the error callback is
-		called.
-
-		:arg str listtype: One of "node" or "vt". If "node", idset is considered
-			to be a list of nodes to aggregate. If "vt", idset is considered a
-			list of version type IDs to aggregate.
-		:arg list idset: A list of version type IDs or nodes to
-			fetch the stats for.
-		:arg callable callback: A callback to call with the stats.
-			Passed a single argument which is a dict of stats.
-		:arg callable error_callback: A callback used if an error
-			occurs.
-		"""
-		if listtype not in ['node', 'vt']:
-			raise ValueError("List type must be either node or vt.")
-
-		def on_stats_fetched(stats):
-			# Parse the result from Redis into something more manageable.
-			metric_totals = {}
-			# Reverse it, so we can pop entries off it.
-			stats.reverse()
-			for vtid in idset:
-				row = stats.pop()
-				if row != None:
-					for metric in self.METRICS:
-						if not metric_totals.has_key(metric):
-							metric_totals[metric] = 0
-						if row.has_key(metric):
-							metric_totals[metric] += int(row[metric])
-
-			# Now hand it off to something else to finalize it.
-			self._finalize_stats(metric_totals, callback)
-
-		if len(idset) == 0:
-			# No sets to process - which will cause an error
-			# later. Call the error callback.
-			error_callback("Empty ID list supplied.")
-		else:
-			# Ok, now, for the given id set list,
-			# query out all the relevant metrics.
-			if listtype == 'vt':
-				root_key = "stat_vt"
-			elif listtype == 'node':
-				root_key = "stat_node"
-
-			pipeline = self.redis.pipeline(True)
-			for thing_id in idset:
-				pipeline.hgetall("%s:%s" % (root_key, thing_id))
-			pipeline.execute(callback=on_stats_fetched)
-
-	def _finalize_stats(self, totals, callback):
-		# Calculate any averages and percentages.
-		for average in self.AVERAGES:
-			output_key = "%s_average" % average[0]
-			quotient = totals[average[0]]
-			divisor = totals[average[1]]
-
-			if divisor == 0:
-				totals[output_key] = 0
-			else:
-				totals[output_key] = float(quotient) / float(divisor)
-
-		for percentage in self.PERCENTAGES:
-			output_key = "%s_percentage" % percentage[0]
-
-			quotient = totals[percentage[0]]
-			divisor = totals[percentage[1]]
-
-			if divisor == 0:
-				totals[output_key] = 0
-			else:
-				totals[output_key] = (float(quotient) / float(divisor)) * 100.0
-
-		# And we're done.
-		callback(totals)
 
 	def history(self, listtype, idset, metric, callback, error_callback, start, end=None):
 		"""
