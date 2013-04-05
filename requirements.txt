@@ -31,4 +31,4 @@ mock
 coverage
 
 # For documentation.
-sphinx
+sphinx==1.1.3
