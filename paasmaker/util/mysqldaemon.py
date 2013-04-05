@@ -24,7 +24,6 @@ from ..common.testhelpers import TestHelpers
 from manageddaemon import ManagedDaemon, ManagedDaemonError
 
 import tornado.testing
-import tornadoredis
 
 class MySQLDaemonError(ManagedDaemonError):
     def __init__(self, cmd, returncode, working_dir):

@@ -17,7 +17,6 @@ import hashlib
 import logging
 import subprocess
 
-import tornadoredis
 import tornado
 import yaml
 

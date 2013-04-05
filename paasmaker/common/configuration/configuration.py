@@ -34,8 +34,8 @@ from pubsub import pub
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 import colander
-import tornadoredis
 from paasmaker.thirdparty.pika import TornadoConnection
+from paasmaker.thirdparty.tornadoredis import Client as TornadoRedisClient
 import pika
 import yaml
 
@@ -752,6 +752,8 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.database_sessions_checked_out = 0
 		self.database_sessions_checkout_pending = 0
 
+		self.redis_scripts = {}
+
 		# Debug flag handling.
 		self.debug = debug
 		if options.debug == 1:
@@ -1240,7 +1242,7 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			``tornadoredis.Client``.
 		:arg callable error_callback: A callback called if an error occurs.
 		"""
-		client = tornadoredis.Client(
+		client = TornadoRedisClient(
 			host=credentials['host'],
 			port=credentials['port'],
 			password=credentials['password'],
@@ -1362,7 +1364,6 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 					self._get_redis(name, credentials, callback, error_callback)
 				else:
 					self._connect_redis(credentials, callback, error_callback)
-
 
 	def get_router_table_redis(self, callback, error_callback):
 		"""

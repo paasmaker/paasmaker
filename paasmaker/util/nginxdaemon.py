@@ -20,7 +20,6 @@ from ..common.testhelpers import TestHelpers
 from manageddaemon import ManagedDaemon, ManagedDaemonError
 
 import tornado.testing
-import tornadoredis
 
 class NginxDaemonError(ManagedDaemonError):
 	def __init__(self, cmd, returncode, message, output):

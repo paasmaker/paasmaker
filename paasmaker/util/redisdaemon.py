@@ -20,7 +20,7 @@ from ..common.testhelpers import TestHelpers
 from manageddaemon import ManagedDaemon, ManagedDaemonError
 
 import tornado.testing
-import tornadoredis
+from paasmaker.thirdparty.tornadoredis import Client as TornadoRedisClient
 
 class RedisDaemonError(ManagedDaemonError):
 	pass
@@ -157,7 +157,7 @@ appendonly no
 			return self.client
 
 		# Create a client for it.
-		self.client = tornadoredis.Client(
+		self.client = TornadoRedisClient(
 			host=self.parameters['host'],
 			port=self.parameters['port'],
 			io_loop=self.configuration.io_loop

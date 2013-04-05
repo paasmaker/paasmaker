@@ -13,7 +13,7 @@ from base import BaseService, BaseServiceTest
 import paasmaker
 
 import colander
-import tornadoredis
+from paasmaker.thirdparty.tornadoredis import Client as TornadoRedisClient
 
 class ManagedRedisServiceConfigurationSchema(colander.MappingSchema):
 	min_port = colander.SchemaNode(colander.Integer(),
@@ -257,7 +257,7 @@ class ManagedRedisServiceTest(BaseServiceTest):
 		self.assertTrue(self.success, "Service creation was not successful.")
 		self.assertEquals(len(self.credentials), 5, "Service did not return expected number of keys.")
 
-		client = tornadoredis.Client(
+		client = TornadoRedisClient(
 			host=self.credentials['hostname'],
 			port=self.credentials['port'],
 			password=self.credentials['password'],
@@ -289,7 +289,7 @@ class ManagedRedisServiceTest(BaseServiceTest):
 		self.wait()
 
 		# Try to connect again. This should work.
-		client = tornadoredis.Client(
+		client = TornadoRedisClient(
 			host=self.credentials['hostname'],
 			port=self.credentials['port'],
 			password=self.credentials['password'],
@@ -317,7 +317,7 @@ class ManagedRedisServiceTest(BaseServiceTest):
 		self.credentials = credentials_copy
 
 		# Try to connect again. Failure expected.
-		client = tornadoredis.Client(
+		client = TornadoRedisClient(
 			host=self.credentials['hostname'],
 			port=self.credentials['port'],
 			password=self.credentials['password'],
@@ -328,5 +328,5 @@ class ManagedRedisServiceTest(BaseServiceTest):
 			client.connect()
 
 			self.assertTrue(False, "Should have raised an exception.")
-		except tornadoredis.exceptions.ConnectionError, ex:
+		except paasmaker.thirdparty.tornadoredis.exceptions.ConnectionError, ex:
 			self.assertTrue(True, "Raised exception correctly.")

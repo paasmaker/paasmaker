@@ -22,7 +22,6 @@ from ..common.testhelpers import TestHelpers
 from manageddaemon import ManagedDaemon, ManagedDaemonError
 
 import tornado.testing
-import tornadoredis
 
 class ApacheDaemonError(ManagedDaemonError):
 	pass
