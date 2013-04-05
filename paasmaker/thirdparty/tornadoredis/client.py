@@ -431,7 +431,16 @@ class Client(object):
             yield gen.Task(self.connection.wait_until_ready)
 
         try:
-            self.connection.write(self.format_command(cmd, *args, **kwargs))
+            # Split the command, and add them to the front
+            # of the arguments, so they get formatted like the other
+            # parts. This is to handle SCRIPT LOAD commands.
+            bits = cmd.split(' ')
+            bits.reverse()
+            args = list(args)
+            args.reverse()
+            args.extend(bits)
+            args.reverse()
+            self.connection.write(self.format_command(*args, **kwargs))
         except Exception, e:
             self.connection.disconnect()
             raise e
