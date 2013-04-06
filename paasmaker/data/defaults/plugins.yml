@@ -184,6 +184,9 @@ plugins:
   - name: paasmaker.periodic.jobs
     class: paasmaker.common.periodic.jobs.JobsCleaner
     title: Jobs Cleaner
+  - name: paasmaker.periodic.statshistory
+    class: paasmaker.common.periodic.statshistory.StatsHistoryCleaner
+    title: Jobs Cleaner
 
   # SOURCE CODE PACKERS
   - name: paasmaker.packer.default

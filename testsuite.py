@@ -154,6 +154,7 @@ test_sets = {
 	paasmaker.common.helper.periodicmanager: ['normal', 'periodic', 'periodicmanager'],
 	paasmaker.common.periodic.logs: ['normal', 'periodic'],
 	paasmaker.common.periodic.jobs: ['normal', 'periodic'],
+	paasmaker.common.periodic.statshistory: ['normal', 'periodic', 'statscleaner'],
 
 	paasmaker.common.job.prepare.prepareroot: ['normal', 'application', 'prepare'],
 	paasmaker.common.job.coordinate.selectlocations: ['normal', 'application', 'coordinate'],
