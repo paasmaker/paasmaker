@@ -107,7 +107,7 @@ class StatsHistoryCleaner(BasePeriodic):
 				# this prevents issues where old stats came in really
 				# late after it had already been written. There isn't
 				# a nice way to handle this at the moment. TODO: Revise.
-				title = ".".join(group[0].split(':')[0:2])
+				title = ".".join(group[0].split(':')[0:3])
 				path = self.configuration.get_scratch_path_exists('old-history')
 				full_path = os.path.join(path, title + '.json.gz')
 				if not os.path.exists(full_path):
