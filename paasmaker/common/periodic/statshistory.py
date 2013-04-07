@@ -72,8 +72,9 @@ class StatsHistoryCleaner(BasePeriodic):
 
 			if timestamp != last_timestamp:
 				# End of group.
-				groups.append(group_accumulator)
-				group_accumulator = []
+				if len(group_accumulator) > 0:
+					groups.append(group_accumulator)
+					group_accumulator = []
 
 			group_accumulator.append(this_key)
 			last_timestamp = timestamp
