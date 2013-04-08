@@ -118,7 +118,7 @@ Now, you can edit ``config/environment.rb`` to make the following changes:
 
 .. literalinclude:: support/redmine-environment.rb
 	:language: ruby
-	:emphasize-lines: 15-21
+	:emphasize-lines: 3-9
 
 Create the file ``paasmaker-placeholder.yml`` in the root with the following contents.
 This is a dummy file for the Paasmaker interface to load later on, when you run

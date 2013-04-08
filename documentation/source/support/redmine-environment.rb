@@ -1,5 +1,13 @@
 # In file config/environment.rb
 
+# For Paasmaker, determine the rails environment.
+require 'paasmaker'
+interface = Paasmaker::Interface.new(['paasmaker-placeholder.yml'])
+ENV['RAILS_ENV'] = interface.get_rails_env('production')
+
+# Store the interface into a global variable for later use.
+$PAASMAKER_INTERFACE = interface
+
 # Load the rails application
 require File.expand_path('../application', __FILE__)
 
@@ -11,14 +19,6 @@ if Dir.glob(File.join(vendor_plugins_dir, "*")).any?
     "Redmine directory (#{File.join(Rails.root, "plugins")})"
   exit 1
 end
-
-# For Paasmaker, determine the rails environment.
-require 'paasmaker'
-interface = Paasmaker::Interface.new(['paasmaker-placeholder.yml'])
-ENV['RAILS_ENV'] = interface.get_rails_env('production')
-
-# Store the interface into a global variable for later use.
-$PAASMAKER_INTERFACE = interface
 
 # Initialize the rails application
 RedmineApp::Application.initialize!

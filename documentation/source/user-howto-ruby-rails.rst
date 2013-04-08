@@ -105,9 +105,6 @@ is the one in the middle.
 
 	# In file config/environment.rb:
 
-	# Load the rails application
-	require File.expand_path('../application', __FILE__)
-
 	# For Paasmaker, determine the rails environment.
 	require 'paasmaker'
 	interface = Paasmaker::Interface.new([])
@@ -115,6 +112,9 @@ is the one in the middle.
 
 	# Store the interface into a global variable for later use.
 	$PAASMAKER_INTERFACE = interface
+
+	# Load the rails application
+	require File.expand_path('../application', __FILE__)
 
 	# Initialize the rails application
 	PaasmakerRailsSimple::Application.initialize!
