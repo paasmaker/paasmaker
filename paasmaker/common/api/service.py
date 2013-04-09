@@ -93,7 +93,7 @@ class ServiceExportAPIRequest(APIRequest):
 				self.output_fp = open(output_file, 'w')
 
 		def complete(response):
-			if not self.output_is_stdout:
+			if not self.output_is_stdout and self.output_fp is not None:
 				self.output_fp.flush()
 				self.output_fp.close()
 

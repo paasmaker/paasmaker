@@ -9,18 +9,25 @@ function program1(depth0,data) {
   
   var buffer = "", stack1;
   buffer += "\n		<tr>\n			<td>\n				";
+  if (stack1 = helpers.id) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
+  else { stack1 = depth0.id; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
+  buffer += escapeExpression(stack1)
+    + "\n			</td>\n			<td>\n				";
   if (stack1 = helpers.name) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
   else { stack1 = depth0.name; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
   buffer += escapeExpression(stack1)
-    + "\n			</td>\n			<td>\n				";
+    + "\n				";
+  stack1 = helpers['if'].call(depth0, depth0.can_export, {hash:{},inverse:self.noop,fn:self.program(2, program2, data),data:data});
+  if(stack1 || stack1 === 0) { buffer += stack1; }
+  buffer += "\n			</td>\n			<td>\n				";
   if (stack1 = helpers.provider) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
   else { stack1 = depth0.provider; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
   buffer += escapeExpression(stack1)
     + "\n			</td>\n			<td>\n				";
-  stack1 = helpers['if'].call(depth0, depth0.credentials_text, {hash:{},inverse:self.noop,fn:self.program(2, program2, data),data:data});
+  stack1 = helpers['if'].call(depth0, depth0.credentials_text, {hash:{},inverse:self.noop,fn:self.program(4, program4, data),data:data});
   if(stack1 || stack1 === 0) { buffer += stack1; }
   buffer += "\n			</td>\n			<td>\n				<ul>\n					";
-  stack1 = helpers.each.call(depth0, depth0.application_versions, {hash:{},inverse:self.noop,fn:self.program(4, program4, data),data:data});
+  stack1 = helpers.each.call(depth0, depth0.application_versions, {hash:{},inverse:self.noop,fn:self.program(6, program6, data),data:data});
   if(stack1 || stack1 === 0) { buffer += stack1; }
   buffer += "\n				</ul>\n			</td>\n			<td>\n				<span class=\"service-";
   if (stack1 = helpers.state) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
@@ -36,6 +43,17 @@ function program1(depth0,data) {
 function program2(depth0,data) {
   
   var buffer = "", stack1;
+  buffer += "\n					<a href=\"/service/export/";
+  if (stack1 = helpers.id) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
+  else { stack1 = depth0.id; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
+  buffer += escapeExpression(stack1)
+    + "\" class=\"btn btn-mini\">Export</a>\n				";
+  return buffer;
+  }
+
+function program4(depth0,data) {
+  
+  var buffer = "", stack1;
   buffer += "\n					<pre>";
   if (stack1 = helpers.credentials_text) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
   else { stack1 = depth0.credentials_text; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
@@ -44,14 +62,14 @@ function program2(depth0,data) {
   return buffer;
   }
 
-function program4(depth0,data) {
+function program6(depth0,data) {
   
   var buffer = "", stack1;
   buffer += "\n						<li><a href=\"/version/";
   if (stack1 = helpers.id) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
   else { stack1 = depth0.id; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
   buffer += escapeExpression(stack1)
-    + "\">Version ";
+    + "\">v";
   if (stack1 = helpers.version) { stack1 = stack1.call(depth0, {hash:{},data:data}); }
   else { stack1 = depth0.version; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
   buffer += escapeExpression(stack1)
@@ -61,7 +79,7 @@ function program4(depth0,data) {
 
   buffer += "<ul class=\"breadcrumb\"></ul>\n\n<h1>Services: "
     + escapeExpression(((stack1 = ((stack1 = depth0.application),stack1 == null || stack1 === false ? stack1 : stack1.name)),typeof stack1 === functionType ? stack1.apply(depth0) : stack1))
-    + "</h1>\n\n<table class=\"table table-striped table-bordered\">\n	<tr>\n		<th>Name</th>\n		<th>Provider</th>\n		<th>Credentials</th>\n		<th>Used By</th>\n		<th>State</th>\n	</tr>\n	";
+    + "</h1>\n\n<table class=\"table table-striped table-bordered\">\n	<tr>\n		<th>ID</th>\n		<th>Name</th>\n		<th>Provider</th>\n		<th>Credentials</th>\n		<th>Used By</th>\n		<th>State</th>\n	</tr>\n	";
   stack2 = helpers.each.call(depth0, depth0.services, {hash:{},inverse:self.noop,fn:self.program(1, program1, data),data:data});
   if(stack2 || stack2 === 0) { buffer += stack2; }
   buffer += "\n</table>\n";

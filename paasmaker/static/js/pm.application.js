@@ -179,6 +179,11 @@ pm.application.services = (function() {
 						if (data.services[i].credentials) {
 							data.services[i].credentials_text = JSON.stringify(data.services[i].credentials, undefined, 4);
 						}
+						if (data.exportable_services[data.services[i].provider]) {
+							data.services[i].can_export = true;
+						} else {
+							data.services[i].can_export = false;
+						}
 					}
 
 					pm.data.get_app_parents({

@@ -398,6 +398,13 @@ class ApplicationServiceListController(ApplicationRootController):
 
 		self.add_data('services', application.services)
 
+		exportable_services = {}
+		if self.has_permission(constants.PERMISSION.SERVICE_EXPORT, workspace=application.workspace):
+			services = self.configuration.plugins.plugins_for(paasmaker.util.plugin.MODE.SERVICE_EXPORT)
+			for plugin in services:
+				exportable_services[plugin] = True
+		self.add_data('exportable_services', exportable_services)
+
 		# self.add_data('application', application)
 		# self.add_data_template('json', json)
 

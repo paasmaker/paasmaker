@@ -10,6 +10,7 @@
 
 <table class="table table-striped table-bordered">
 	<tr>
+		<th>ID</th>
 		<th>Name</th>
 		<th>Provider</th>
 		<th>Credentials</th>
@@ -19,7 +20,13 @@
 	{{#each services}}
 		<tr>
 			<td>
+				{{ id }}
+			</td>
+			<td>
 				{{ name }}
+				{{#if can_export}}
+					<a href="/service/export/{{ id }}" class="btn btn-mini">Export</a>
+				{{/if}}
 			</td>
 			<td>
 				{{ provider }}
@@ -32,7 +39,7 @@
 			<td>
 				<ul>
 					{{#each application_versions}}
-						<li><a href="/version/{{id}}">Version {{version}}</a></li>
+						<li><a href="/version/{{id}}">v{{version}}</a></li>
 					{{/each}}
 				</ul>
 			</td>
