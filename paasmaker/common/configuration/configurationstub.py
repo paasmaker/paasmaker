@@ -55,6 +55,7 @@ redis:
     host: 0.0.0.0
     port: %(router_table_port)d
     managed: true
+    shutdown: true
   # slaveof:
   #   enabled: true
   #   host: localhost
@@ -63,10 +64,12 @@ redis:
     host: 0.0.0.0
     port: %(router_stats_port)d
     managed: true
+    shutdown: true
   jobs:
     host: 0.0.0.0
     port: %(jobs_port)d
     managed: true
+    shutdown: true
 
 plugins:
   - name: paasmaker.service.parameters
@@ -121,6 +124,9 @@ heart:
 router:
   enabled: true
   stats_log: %(stats_log)s
+  nginx:
+    managed: true
+    shutdown: true
 """
 
     def __init__(self, port=42600, modules=[], io_loop=None):
