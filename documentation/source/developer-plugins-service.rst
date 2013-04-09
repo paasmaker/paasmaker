@@ -40,11 +40,12 @@ scenarios.
   move to production seamlessly later. It also means you are developing against the actual
   SQL database you're using in production, rather than an alternate like SQLite.
 
-SERVICE_CREATE and SERVICE_DELETE
----------------------------------
+SERVICE_CREATE, SERVICE_DELETE, SERVICE_EXPORT
+----------------------------------------------
 
-Both SERVICE_CREATE and SERVICE_DELETE are handled by a single base class, ``BaseService``.
-Your implementation should implement both.
+SERVICE_CREATE, SERVICE_DELETE, and SERVICE_EXPORT are handled by a single base class,
+``BaseService``. Your implementation should implement both SERVICE_CREATE and SERVICE_DELETE,
+and implement SERVICE_EXPORT if it makes sense for your service.
 
 .. autoclass:: paasmaker.pacemaker.service.base.BaseService
     :members:
