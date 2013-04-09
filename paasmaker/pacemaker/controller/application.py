@@ -41,7 +41,7 @@ class ApplicationNewSchema(colander.MappingSchema):
 		default=None,
 		missing=None)
 	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
-		title="Paramters",
+		title="Parameters",
 		description="Parameters for the target SCM. Validated when the plugin is called.",
 		missing={},
 		default={})

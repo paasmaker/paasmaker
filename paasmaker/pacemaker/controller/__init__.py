@@ -25,3 +25,4 @@ from scmlist import ScmListController
 from configuration import ConfigurationDumpController, PluginInformationController
 import stream
 import templates
+import service

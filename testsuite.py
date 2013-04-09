@@ -107,6 +107,7 @@ test_sets = {
 	paasmaker.pacemaker.controller.scmlist: ['normal', 'scmlist', 'controller'],
 	paasmaker.pacemaker.controller.configuration: ['normal', 'configuration', 'controller'],
 	paasmaker.pacemaker.controller.stream: ['normal', 'stream', 'controller'],
+	paasmaker.pacemaker.controller.service: ['normal', 'service', 'controller', 'serviceexport'],
 	paasmaker.heart.controller.instance: ['normal', 'controller', 'instance', 'heart'],
 
 	paasmaker.heart.runtime: ['normal', 'heart', 'runtime'],

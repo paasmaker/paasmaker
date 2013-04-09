@@ -9,6 +9,7 @@
 import uuid
 import re
 import time
+import datetime
 
 import tornado.testing
 import paasmaker
@@ -121,6 +122,24 @@ class BaseService(paasmaker.util.plugin.Plugin):
 			Don't assume that this chunk of data can stand on it's own.
 		"""
 		raise NotImplementedError("export() is not implemented for this service.")
+
+	def export_filename(self, service):
+		"""
+		Return a filename for the export. You can use this default and then add
+		an appropriate extension on the end for your use case.
+
+		This is called before export().
+
+		:arg Service service: An open service ORM object. You can use this
+			to pull attributes for your filename.
+		"""
+		filename = "export_%s_%d_%s" % (
+			service.name,
+			service.id,
+			datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+		)
+
+		return filename
 
 	def _safe_name(self, name, max_length=50):
 		"""

@@ -202,6 +202,10 @@ class MySQLService(BaseService):
 			io_loop=self.configuration.io_loop
 		)
 
+	def export_filename(self, service):
+		filename = super(MySQLService, self).export_filename(service)
+		return filename + ".sql"
+
 class MySQLServiceTest(BaseServiceTest):
 	def setUp(self):
 		super(MySQLServiceTest, self).setUp()
