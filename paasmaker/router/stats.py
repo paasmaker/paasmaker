@@ -104,18 +104,27 @@ class StatsLogReader(object):
 			self.fp = open(filename, 'r')
 			if position > 0:
 				self.fp.seek(position)
+			self.batches_read = 0
 			self._read_batch()
 
 	def _read_batch(self):
 		# Read in a batch.
-		batch = self.fp.readlines(READ_SIZE_BATCH)
-		logger.debug("%d lines in this batch.", len(batch))
-		if len(batch) == 0:
-			# Completed reading.
+		if self.batches_read > 10:
+			# If we've read more than 10 batches this pass,
+			# just flush that to Redis and then come back later.
+			# This prevents the scenario where we're several
+			# hundred megabytes of logs behind and we try to
+			# read all of that into memory to start with...
 			self._finalize_batch()
 		else:
-			# Process this batch.
-			self._process_batch(batch)
+			batch = self.fp.readlines(READ_SIZE_BATCH)
+			self.batches_read += 1
+			logger.debug("%d lines in this batch.", len(batch))
+			if len(batch) == 0:
+				self._finalize_batch()
+			else:
+				# Process this batch.
+				self._process_batch(batch)
 
 	def _process_batch(self, lines):
 		# Parse them all.
