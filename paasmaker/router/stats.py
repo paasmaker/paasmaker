@@ -365,7 +365,7 @@ class ApplicationStats(object):
 	@classmethod
 	def load_redis_scripts(cls, configuration, callback, error_callback):
 		# Load the scripts required for the stats into the stats Redis.
-		scripts = ['stats_standard.lua']
+		scripts = ['stats_standard.lua', 'stats_history.lua']
 		script_path = os.path.normpath(os.path.dirname(__file__))
 
 		def got_redis(client):
@@ -375,6 +375,10 @@ class ApplicationStats(object):
 					full_path = os.path.join(script_path, script)
 
 					def script_loaded(sha1):
+						if isinstance(sha1, paasmaker.thirdparty.tornadoredis.exceptions.ResponseError):
+							error_callback("Failed to load script %s: %s" % (script, str(sha1)))
+							return
+
 						# Store the SHA1 for later.
 						configuration.redis_scripts[script] = sha1
 
@@ -492,10 +496,9 @@ class ApplicationStats(object):
 		"""
 		self.stats_for_name('pacemaker', None, callback)
 
-	def vtset_for_name(self, name, input_id, callback):
+	def history_for_name(self, name, input_id, metrics, callback, start, end=None, listtype='vt'):
 		"""
-		Fetch a version type ID list for the given
-		input. This returns a list with the named aggregation.
+		Fetch the router history for the given input name and ID.
 
 		Name is one of a few options of aggregated sets
 		to return. ``input_id`` then selects the specific
@@ -517,67 +520,34 @@ class ApplicationStats(object):
 		  pacemaker activity (if that activity passes through
 		  a router). ``input_id`` is ignored.
 
-		:arg str name: The name of the set to return.
-		:arg int input_id: The ID to match the set.
-		:arg callable callback: The callback to call with the list
-			of version type IDs.
-		"""
-		def got_set(vtids):
-			callback(list(vtids))
-
-		if name == 'workspace' or name == 'application' or \
-			name == 'version': # or name == 'node':
-			# These are valid.
-			pass
-		elif name == 'version_type':
-			# Pass it back directly.
-			callback([input_id])
-			return
-		elif name == 'uncaught':
-			# Pass back a suitable list.
-			callback(['null'])
-			return
-		elif name == 'pacemaker':
-			callback(['pacemaker'])
-			return
-		else:
-			raise ValueError("Unknown input name %s" % name)
-
-		set_key = "%s:%d" % (name, input_id)
-		self.redis.smembers(set_key, callback=got_set)
-
-	def history(self, listtype, idset, metric, callback, error_callback, start, end=None):
-		"""
-		Return the history for a given metric, list type, and ID set.
+		Additionally:
 
 		* This can return up to one value per second in the range;
 		  keep your ranges as small as you need them.
 		* ``start`` and ``end`` are unix timestamps, in UTC.
-		* The output looks as follows::
 
-			[
-				[time, value],
-				[time, value],
-				...
-			]
+		The output looks as follows:
 
-		:arg str listtype: One of "node" or "vt". If "node", idset is considered
-			to be a list of nodes to aggregate. If "vt", idset is considered a
-			list of version type IDs to aggregate.
-		:arg list idset: The list of IDs to aggregate.
-		:arg str metric: One of the metrics for which the system records
-			history.
-		:arg callable callback: The callback to call with the history. This
-			is called with a single argument which is a list. Each list element
-			contains another list, in the format ``[time, value]``.
+		.. code-block:: json
+
+			{
+				"metric": [
+					[time, value],
+					[time, value],
+					...
+				]
+			}
+
+		:arg str name: The name of the set to return.
+		:arg int input_id: The ID to match the set.
+		:arg list metrics: The metric graphs to return.
+		:arg int start: The unix timestamp to start.
+		:arg callable callback: The callback to call with a dict of
+			stats.
+		:arg int|None end: The unix timestamp to end.
+		:arg str listtype: One of 'node' or 'vt'. 'node' is currently
+			not implemented.
 		"""
-		# CAUTION: Returns up to 1 value per second in the given range.
-		# Use very carefully!
-		# 1. Build list of history sets required from redis.
-		# 2. Query all those history sets.
-		# 3. Merge all those history sets together, culling off data in the process.
-		# 4. Perform finalization of the data (averaging, etc)
-
 		if listtype not in ['node', 'vt']:
 			raise ValueError("List type must be either node or vt.")
 
@@ -587,53 +557,36 @@ class ApplicationStats(object):
 		# Make sure it's an int.
 		start = int(start)
 
-		def on_stats_fetched(stats):
-			# Parse the result from Redis into something more manageable.
-			intermediate_merge = {}
-			for stat_set in stats:
-				for key, value in stat_set.iteritems():
-					ikey = int(key)
-					if ikey >= start and ikey <= end:
-						# The key here is the unix timestamp of the data.
-						if not intermediate_merge.has_key(key):
-							intermediate_merge[key] = 0
+		if isinstance(metrics, basestring):
+			metrics = [metrics]
 
-						intermediate_merge[key] += int(value)
+		def script_result(result):
+			# The result is a JSON encoded string, so decode it,
+			# and then perform some postprocessing on it.
+			decoded = json.loads(result)
+			# At the top level, convert the dicts into a list.
+			for key, entries in decoded.iteritems():
+				result = []
+				for timestamp, value in entries.iteritems():
+					result.append([int(timestamp), value])
 
-			# Now, convert that hash map into a sorted list.
-			ordered_data = []
-			for key, value in intermediate_merge.iteritems():
-				ordered_data.append([int(key), value])
+				# Sort the result.
+				result.sort(key=lambda x: x[0])
 
-			ordered_data.sort(key=lambda x: x[0])
+				# And replace it in the resulting list.
+				decoded[key] = result
 
-			# TODO: Handle averaging...
-			callback(ordered_data)
-			# end of on_stats_fetched()
+			callback(decoded)
 
-		# Output:
-		# [
-		#   [time, value]
-		# ]
-		# Queries from redis:
-		# history_<vt|node>:<id>:NNNNNNNNNN:<metric> x 1 per id x 1 per hour boundary.
-		real_start = int(start - (start % 3600))
-		hour_boundaries = range(real_start, int(end), 3600)
+		real_list_type = 'history_vt'
+		if listtype == 'node':
+			real_list_type = 'history_node'
 
-		if listtype == 'vt':
-			root_key = "history_vt"
-		elif listtype == 'node':
-			root_key = "history_node"
-
-		pipeline = self.redis.pipeline(True)
-		for thing_id in idset:
-			for boundary in hour_boundaries:
-				key = "%s:%s:%s:%s" % (
-					root_key,
-					thing_id,
-					boundary,
-					metric
-				)
-				pipeline.hgetall(key)
-
-		pipeline.execute(on_stats_fetched)
+		# Call the redis script to generate the history.
+		# Crude way to get a list of metrics in: JSON encode it.
+		self.redis.evalsha(
+			self.configuration.redis_scripts['stats_history.lua'],
+			keys=[],
+			args=[real_list_type, name, input_id, json.dumps(metrics), start, end],
+			callback=script_result
+		)

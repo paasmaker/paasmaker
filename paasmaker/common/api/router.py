@@ -36,7 +36,7 @@ class RouterStreamAPIRequest(StreamAPIRequest):
 
 		:arg str name: The name to fetch the history for.
 		:arg str|int input_id: The input ID for the name.
-		:arg str metric: The metric to fetch (eg, 'requests').
+		:arg str|list metric: The metric to fetch (eg, 'requests') or a list to fetch.
 		:arg int start: The unix timestamp to fetch from.
 		:arg int|None end: The unix timestamp to fetch to.
 		"""
@@ -46,11 +46,13 @@ class RouterStreamAPIRequest(StreamAPIRequest):
 		"""
 		Set the callback for when new history data is available.
 
-		The signature looks as follows::
+		The signature looks as follows:
+
+		.. code-block:: python
 
 			def history(name, input_id, start, end, values):
-				# values is a list of lists:
-				# [ [unixtimestamp, value], ... ]
+				# values is a dict of lists:
+				# { 'requests': [[unixtimestamp, value], ...] }
 				pass
 		"""
 		self.on('router.stats.history', callback)
@@ -59,7 +61,9 @@ class RouterStreamAPIRequest(StreamAPIRequest):
 		"""
 		Set the callback for when an router stats error occurs.
 
-		The callback looks like so::
+		The callback looks like so:
+
+		.. code-block:: python
 
 			def error(message, exception=None, name=None, input_id=None):
 				pass
@@ -70,7 +74,9 @@ class RouterStreamAPIRequest(StreamAPIRequest):
 		"""
 		Sets the callback called when an update is ready.
 
-		The callback looks like this::
+		The callback looks like this:
+
+		.. code-block:: python
 
 			def update(name, input_id, stats):
 				# stats is a dict of stats.

@@ -505,61 +505,38 @@ class StreamConnection(tornadio2.SocketConnection):
 		"""
 		Event to fetch router history.
 
-		:arg str metric: Either a string of one metric to fetch, or a list of metrics to
-		    fetch. If metric is a string, returns an array of stats items (where each item
-		    is a two-element array of unix timestamp and value). If metric is a list, the
-		    return value will be a dict of arrays of stats items, keyed by metric name.
+		:arg str|list metric: Either a string of one metric to fetch, or a list of metrics to
+		    fetch. The result is always a dict keyed by the metrics supplied.
 		"""
 		if end is None:
 			end = int(time.time())
 		# TODO: Limit start/end to prevent DoS style attacks.
 
 		def stats_ready(stats_output):
-			aggregated_history = {}
-
-			def failed_history(error, exception=None):
-				self.emit('router.stats.error', error)
-
-			def emit_history():
+			def emit_history(history_output):
 				self.emit(
 					'router.stats.history',
 					name,
 					input_id,
 					start,
 					end,
-					aggregated_history
+					history_output
 				)
-
-			def get_history_handler(current_metric, total_to_fetch):
-				def got_history(history):
-					aggregated_history[current_metric] = history
-					if len(aggregated_history) == total_to_fetch:
-						emit_history()
-				return got_history
-
-			def got_set(vtset):
-				if isinstance(metric, basestring):
-					metrics_to_query = [metric]
-				else:
-					metrics_to_query = metric
-
-				for current_metric in metrics_to_query:
-					stats_output.history(
-						'vt',
-						vtset,
-						current_metric,
-						get_history_handler(current_metric, len(metrics_to_query)),
-						failed_history,
-						start,
-						end
-					)
 
 			# Request some stats.
 			# TODO: Check permissions!
-			stats_output.vtset_for_name(
+			if isinstance(metric, basestring):
+				metrics_to_query = [metric]
+			else:
+				metrics_to_query = metric
+
+			stats_output.history_for_name(
 				name,
 				int(input_id),
-				got_set
+				metrics_to_query,
+				emit_history,
+				start,
+				end=end
 			)
 
 			# end of stats_ready()
