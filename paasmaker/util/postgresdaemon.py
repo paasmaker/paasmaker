@@ -163,7 +163,12 @@ class PostgresDaemon(ManagedDaemon):
 			if code == 0:
 				output = self._fetch_output()
 				pid = int(re.search('(\d+)', output).group(1))
-				os.kill(pid, sig)
+				try:
+					os.kill(pid, sig)
+				except OSError, ex:
+					# No such process. That's ok.
+					# Continue.
+					pass
 
 				# Wait for the process to finish.
 				self._wait_until_stopped(callback, error_callback)

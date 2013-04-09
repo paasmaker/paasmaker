@@ -7,6 +7,9 @@
 #
 
 import platform
+import copy
+import os
+import tempfile
 
 from base import BaseService, BaseServiceTest
 import paasmaker
@@ -35,10 +38,15 @@ class PostgresServiceParametersSchema(colander.MappingSchema):
 	# No parameters required. Plugins just ask for a database.
 	pass
 
+class PostgresServiceExportParametersSchema(colander.MappingSchema):
+	# No options available.
+	pass
+
 class PostgresService(BaseService):
 	MODES = {
 		paasmaker.util.plugin.MODE.SERVICE_CREATE: PostgresServiceParametersSchema(),
-		paasmaker.util.plugin.MODE.SERVICE_DELETE: None
+		paasmaker.util.plugin.MODE.SERVICE_DELETE: None,
+		paasmaker.util.plugin.MODE.SERVICE_EXPORT: PostgresServiceExportParametersSchema()
 	}
 	OPTIONS_SCHEMA = PostgresServiceConfigurationSchema()
 	API_VERSION = "0.9.0"
@@ -139,6 +147,58 @@ class PostgresService(BaseService):
 				'ioloop': self.configuration.io_loop
 			}
 		)
+
+	def export(self, name, credentials, complete_callback, error_callback, stream_callback):
+		# Export the contents of the database.
+		# From the credentials, basically run pg_dump on the database.
+		pwfile = tempfile.mkstemp()[1]
+		pwfile_fp = open(pwfile, 'w')
+		pwfile_fp.write("%s:%d:%s:%s:%s\n" % (
+				credentials['hostname'],
+				credentials['port'],
+				credentials['database'],
+				credentials['username'],
+				credentials['password']
+			)
+		)
+		pwfile_fp.close()
+
+		commandline = [
+			'pg_dump',
+			'-h', credentials['hostname'],
+			'-p', str(credentials['port']),
+			'-U', credentials['username'],
+			'-w', # Never ask for a password.
+			credentials['database']
+		]
+
+		environment = copy.deepcopy(os.environ)
+		environment['PGPASSFILE'] = pwfile
+
+		def buffer_errors(data):
+			buffer_errors.error_output += data
+
+		buffer_errors.error_output = ""
+
+		def completed(code):
+			os.unlink(pwfile)
+			if code == 0:
+				complete_callback("Completed export successfully.")
+			else:
+				error_callback("Failed with error code %d.\nOutput: %s" % (code, buffer_errors.error_output))
+
+		reader = paasmaker.util.popen.Popen(
+			commandline,
+			on_exit=completed,
+			on_stdout=stream_callback,
+			on_stderr=buffer_errors,
+			io_loop=self.configuration.io_loop,
+			env=environment
+		)
+
+	def export_filename(self, service):
+		filename = super(PostgresService, self).export_filename(service)
+		return filename + ".sql"
 
 class PostgresServiceTest(BaseServiceTest):
 	def _postgres_path(self):
@@ -242,11 +302,39 @@ class PostgresServiceTest(BaseServiceTest):
 
 		credentials_copy = self.credentials
 
+		# Export the database.
+		service.export(
+			'testlongname',
+			credentials_copy,
+			self.success_remove_callback,
+			self.failure_callback,
+			self.sink_export
+		)
+		self.wait()
+
+		self.assertTrue(self.success, "Did not succeed to export.")
+		self.assertIn('CREATE TABLE foo', self.export_data, "Export data missing table data.")
+
 		# Now attempt to delete the service.
-		service.remove('test', self.credentials, self.success_remove_callback, self.failure_callback)
+		service.remove('test', credentials_copy, self.success_remove_callback, self.failure_callback)
 		self.wait()
 
 		self.assertTrue(self.success, "Did not succeed.")
+
+		self.credentials = credentials_copy
+
+		# Try to export the DB again.
+		service.export(
+			'testlongname',
+			credentials_copy,
+			self.success_remove_callback,
+			self.failure_callback,
+			self.sink_export
+		)
+		self.wait()
+
+		self.assertFalse(self.success, "Succeeded when it should not have.")
+		self.assertIn("FATAL", self.message, "Wrong error message.")
 
 		self.credentials = credentials_copy
 
