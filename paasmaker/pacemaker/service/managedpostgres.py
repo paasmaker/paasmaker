@@ -47,7 +47,11 @@ class ManagedPostgresServiceConfigurationSchema(colander.MappingSchema):
 		missing="auto")
 
 class ManagedPostgresServiceParametersSchema(colander.MappingSchema):
-	# No options available for runtime configuration.
+	# No options available.
+	pass
+
+class ManagedPostgresServiceExportParametersSchema(colander.MappingSchema):
+	# No options available.
 	pass
 
 class ManagedPostgresService(PostgresService):
@@ -64,7 +68,8 @@ class ManagedPostgresService(PostgresService):
 		paasmaker.util.plugin.MODE.SERVICE_CREATE: ManagedPostgresServiceParametersSchema(),
 		paasmaker.util.plugin.MODE.SERVICE_DELETE: None,
 		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None,
-		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None
+		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None,
+		paasmaker.util.plugin.MODE.SERVICE_EXPORT: ManagedPostgresServiceExportParametersSchema()
 	}
 	OPTIONS_SCHEMA = ManagedPostgresServiceConfigurationSchema()
 	API_VERSION = "0.9.0"

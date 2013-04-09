@@ -37,11 +37,11 @@ class ManagedMySQLServiceConfigurationSchema(colander.MappingSchema):
 		missing=False)
 
 class ManagedMySQLServiceParametersSchema(colander.MappingSchema):
-	# No options available for runtime configuration.
+	# No options available.
 	pass
 
 class ManagedMySQLServiceExportParametersSchema(colander.MappingSchema):
-	# No options available for runtime configuration.
+	# No options available.
 	pass
 
 class ManagedMySQLService(MySQLService):
