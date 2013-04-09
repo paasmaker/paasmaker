@@ -97,6 +97,31 @@ class BaseService(paasmaker.util.plugin.Plugin):
 		"""
 		raise NotImplementedError("You must implement remove().")
 
+	def export(self, name, credentials, complete_callback, error_callback, stream_callback):
+		"""
+		Export this service in a format that makes sense for this service.
+		For example, for the MySQL service, this would be the output of
+		``mysqldump``.
+
+		The ``complete_callback`` argument is called when the export is complete.
+		The ``error_callback`` is called if something goes wrong.
+		The ``stream_callback`` is called with a chunk of data from the backend,
+		for you to do what you want with. For HTTP, you might stream this
+		back to the client.
+
+		The plugin metadata requires that options be passed in when you
+		instantiate this plugin. This can be used to control options when exporting
+		the data.
+
+		:arg str name: The name of the service.
+		:arg dict credentials: The credentials for the service.
+		:arg callable complete_callback: The callback to call when done.
+		:arg callable error_callback: The callback to call on error.
+		:arg callable stream_callback: The callback to call with a chunk of data.
+			Don't assume that this chunk of data can stand on it's own.
+		"""
+		raise NotImplementedError("export() is not implemented for this service.")
+
 	def _safe_name(self, name, max_length=50):
 		"""
 		Internal helper function to clean a user-supplied service name.
@@ -155,6 +180,7 @@ class BaseServiceTest(tornado.testing.AsyncTestCase):
 		self.success = None
 		self.message = None
 		self.exception = None
+		self.export_data = ""
 
 	def tearDown(self):
 		self.configuration.cleanup(self.stop, self.stop)
@@ -185,3 +211,6 @@ class BaseServiceTest(tornado.testing.AsyncTestCase):
 	def short_wait_hack(self, length=0.1):
 		self.io_loop.add_timeout(time.time() + length, self.stop)
 		self.wait()
+
+	def sink_export(self, data):
+		self.export_data += data

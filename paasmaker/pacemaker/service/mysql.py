@@ -6,6 +6,9 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
+import tempfile
+import os
+
 from base import BaseService, BaseServiceTest
 import paasmaker
 
@@ -30,6 +33,10 @@ class MySQLServiceConfigurationSchema(colander.MappingSchema):
 		description="The password for the user.")
 
 class MySQLServiceParametersSchema(colander.MappingSchema):
+	# No parameters required. Plugins just ask for a database.
+	pass
+
+class MySQLServiceExportParametersSchema(colander.MappingSchema):
 	# No parameters required. Plugins just ask for a database.
 	pass
 
@@ -108,7 +115,8 @@ class ThreadedMySQLDatabaseDeletor(paasmaker.util.threadcallback.ThreadCallback)
 class MySQLService(BaseService):
 	MODES = {
 		paasmaker.util.plugin.MODE.SERVICE_CREATE: MySQLServiceParametersSchema(),
-		paasmaker.util.plugin.MODE.SERVICE_DELETE: None
+		paasmaker.util.plugin.MODE.SERVICE_DELETE: None,
+		paasmaker.util.plugin.MODE.SERVICE_EXPORT: MySQLServiceExportParametersSchema()
 	}
 	OPTIONS_SCHEMA = MySQLServiceConfigurationSchema()
 	API_VERSION = "0.9.0"
@@ -152,6 +160,47 @@ class MySQLService(BaseService):
 
 		maker = ThreadedMySQLDatabaseDeletor(self.configuration.io_loop, completed_deleting, error_callback)
 		maker.work(self.options, existing_credentials)
+
+	def export(self, name, credentials, complete_callback, error_callback, stream_callback):
+		# Export the contents of the database.
+		# From the credentials, basically run mysqldump on the database.
+		# Write the password out to a temporary file (so it doesn't appear on the command line).
+		pwfile = tempfile.mkstemp()[1]
+		pwfile_fp = open(pwfile, 'w')
+		pwfile_fp.write("[client]\n")
+		pwfile_fp.write("password=")
+		pwfile_fp.write(credentials['password'])
+		pwfile_fp.write("\n")
+		pwfile_fp.close()
+
+		commandline = [
+			'mysqldump',
+			'--defaults-extra-file=' + pwfile,
+			'-h', credentials['hostname'],
+			'--port', str(credentials['port']),
+			'-u', credentials['username'],
+			credentials['database']
+		]
+
+		def buffer_errors(data):
+			buffer_errors.error_output += data
+
+		buffer_errors.error_output = ""
+
+		def completed(code):
+			os.unlink(pwfile)
+			if code == 0:
+				complete_callback("Completed export successfully.")
+			else:
+				error_callback("Failed with error code %d.\nOutput: %s" % (code, buffer_errors.error_output))
+
+		reader = paasmaker.util.popen.Popen(
+			commandline,
+			on_exit=completed,
+			on_stdout=stream_callback,
+			on_stderr=buffer_errors,
+			io_loop=self.configuration.io_loop
+		)
 
 class MySQLServiceTest(BaseServiceTest):
 	def setUp(self):
@@ -224,10 +273,37 @@ class MySQLServiceTest(BaseServiceTest):
 
 		connection.close()
 
+		# Export the database.
+		service.export(
+			'testlongname',
+			credentials,
+			self.success_remove_callback,
+			self.failure_callback,
+			self.sink_export
+		)
+		self.wait()
+
+		self.assertTrue(self.success, "Did not succeed to export.")
+		self.assertIn('`foo`', self.export_data, "Export data missing table data.")
+
 		# Now remove the database.
 		service.remove('testlongname', credentials, self.success_remove_callback, self.failure_callback)
+		self.wait()
 
 		self.assertTrue(self.success, "Service deletion was not successful.")
+
+		# Try to export the DB again.
+		service.export(
+			'testlongname',
+			credentials,
+			self.success_remove_callback,
+			self.failure_callback,
+			self.sink_export
+		)
+		self.wait()
+
+		self.assertFalse(self.success, "Succeeded when it should not have.")
+		self.assertIn("Unknown database", self.message, "Wrong error message.")
 
 		# Try to connect with the supplied credentials.
 		# This should fail.
