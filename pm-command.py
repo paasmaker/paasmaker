@@ -993,6 +993,34 @@ class LogStreamAction(RootAction):
 		request.subscribe(self.args.job_id, position=self.args.position)
 		request.connect()
 
+class ServiceExportAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("service_id", help="Service ID to export")
+		parser.add_argument("--parameters", default=None, help="JSON encoded parameters to pass to the exporter.")
+		parser.add_argument("--outputfile", default=None, help="Write out to this filename. If not given, the server supplied filename is used and is placed into the current directory. If '-' is given, it is written to stdout.")
+
+	def describe(self):
+		return "Export a service."
+
+	def process(self):
+		request = paasmaker.common.api.service.ServiceExportAPIRequest(None)
+		self.point_and_auth(request)
+
+		request.set_service_id(int(self.args.service_id))
+		if self.args.parameters is not None:
+			request.set_parameters(json.loads(self.args.parameters))
+
+		output_file = self.args.outputfile
+
+		def progress(bytes):
+			logging.info("Fetched %d bytes.", bytes)
+
+		def success(message):
+			logging.info(message)
+			self.exit(0)
+
+		request.fetch(success, self.generic_request_failed, progress_callback=progress, output_file=output_file)
+
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
@@ -1056,6 +1084,7 @@ ACTION_MAP = {
 	'log-stream': LogStreamAction(),
 	'router-table-dump': RouterTableDumpAction(),
 	'router-stream': RouterStreamAction(),
+	'service-export': ServiceExportAction(),
 	'help': HelpAction(),
 	'--help': HelpAction()
 }
