@@ -1511,7 +1511,7 @@ helpers = helpers || Handlebars.helpers; data = data || {};
 function program1(depth0,data) {
   
   
-  return "\n		<a href=\"#\" class=\"btn btn-success disabled\">\n			<i class=\"icon-star icon-white\"></i> Current\n		</a>\n	";
+  return "\n		<a href=\"#\" class=\"btn btn-primary disabled\">\n			<i class=\"icon-star icon-white\"></i> Current\n		</a>\n	";
   }
 
 function program3(depth0,data) {
