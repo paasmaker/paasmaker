@@ -207,3 +207,24 @@ class JobAbortController(BaseController):
 		routes = []
 		routes.append((r"/job/abort/(.*)", JobAbortController, configuration))
 		return routes
+
+class JobTreeController(BaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def get(self, job_id):
+		# TODO: Attempt to tie this to a workspace for permissions
+		# purposes.
+
+		# Fetch and return the job tree.
+		def got_pretty_tree(tree):
+			self.add_data('tree', tree)
+			self.add_data('job_id', job_id)
+			self.render("api/apionly.html")
+
+		self.configuration.job_manager.get_pretty_tree(job_id, got_pretty_tree)
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/job/tree/([-a-fA-F0-9]+)", JobTreeController, configuration))
+		return routes
