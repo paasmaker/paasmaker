@@ -12,6 +12,7 @@ import logging
 import time
 
 import paasmaker
+from paasmaker.common.core import constants
 
 import tornado
 
@@ -430,6 +431,76 @@ class ApplicationStats(object):
 		Close the attached Redis connection and any other resources.
 		"""
 		self.redis.disconnect()
+
+	def permission_required_for(self, name, input_id, session):
+		"""
+		From the supplied name and input ID, find the permission name
+		and workspace that you need to check permissions against before
+		fetching the stats.
+
+		Returns a tuple, with (exists, PERMISSION_NAME, workspace_id).
+		``exists`` is a boolean flag that indicates if the target exists
+		or not.
+
+		:arg str name: The name of the stat to fetch.
+		:arg str|int input_id: The input ID that matches the stat.
+		:arg Session session: An active SQLAlchemy session to do
+			lookups in.
+		"""
+		exists = False
+		permission = None
+		workspace_id = None
+
+		if name == 'workspace':
+			# Look up the workspace in the DB.
+			workspace = session.query(
+				paasmaker.model.Workspace
+			).get(int(input_id))
+
+			if workspace is not None:
+				workspace_id = workspace.id
+				exists = True
+				permission = constants.PERMISSION.WORKSPACE_VIEW
+
+		elif name == 'application':
+			# Look up the application.
+			application = session.query(
+				paasmaker.model.Application
+			).get(int(input_id))
+
+			if application is not None:
+				workspace_id = application.workspace.id
+				exists = True
+				permission = constants.PERMISSION.WORKSPACE_VIEW
+
+		elif name == 'version':
+			# Look up the version.
+			version = session.query(
+				paasmaker.model.ApplicationVersion
+			).get(int(input_id))
+
+			if version is not None:
+				workspace_id = version.application.workspace.id
+				exists = True
+				permission = constants.PERMISSION.WORKSPACE_VIEW
+
+		elif name == 'version_type':
+			# Look up the version type.
+			version_type = session.query(
+				paasmaker.model.ApplicationInstanceType
+			).get(int(input_id))
+
+			if version_type is not None:
+				workspace_id = version_type.application_version.application.workspace.id
+				exists = True
+				permission = constants.PERMISSION.WORKSPACE_VIEW
+
+		elif name == 'uncaught' or name == 'pacemaker':
+			# Requires SYSTEM_OVERVIEW
+			exists = True
+			permission = constants.PERMISSION.SYSTEM_OVERVIEW
+
+		return (exists, permission, workspace_id)
 
 	def stats_for_name(self, name, input_id, callback, listtype='vt'):
 		"""

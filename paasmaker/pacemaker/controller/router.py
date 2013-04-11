@@ -19,7 +19,6 @@ import colander
 class TableDumpController(BaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	@tornado.web.asynchronous
 	def get(self):
 		self.require_permission(constants.PERMISSION.SYSTEM_ADMINISTRATION)
 
@@ -42,6 +41,47 @@ class TableDumpController(BaseController):
 	def get_routes(configuration):
 		routes = []
 		routes.append((r"/router/dump", TableDumpController, configuration))
+		return routes
+
+class StatsSnapshotController(BaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def get(self, name, input_id=None):
+		# See if we have permissions.
+		stats = paasmaker.router.stats.ApplicationStats(self.configuration)
+
+		required_permissions = stats.permission_required_for(name, input_id, self.session)
+
+		if not required_permissions[0]:
+			# The input doesn't exist.
+			raise tornado.web.HTTPError(404, "No stats to fetch for that input.")
+
+		# Hard requirement on the permission.
+		self.require_permission(required_permissions[1], required_permissions[2])
+
+		def stats_read(values):
+			values['as_at'] = time.time()
+			self.add_data('values', values)
+
+			stats.close()
+
+			self.render("api/apionly.html")
+
+		def stats_reader_ready():
+			# Fetch those stats.
+			stats.stats_for_name(name, input_id, stats_read)
+
+		def stats_reader_error(message, exception=None):
+			raise tornado.web.HTTPError(500, message)
+
+		# Set up and fetch the stats.
+		stats.setup(stats_reader_ready, stats_reader_error)
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/router/stats/([a-z_]+)/([0-9]+)", StatsSnapshotController, configuration))
+		routes.append((r"/router/stats/([a-z]+)", StatsSnapshotController, configuration))
 		return routes
 
 class TableDumpControllerTest(BaseControllerTest):
