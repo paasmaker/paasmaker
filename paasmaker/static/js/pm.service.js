@@ -1,10 +1,10 @@
 /* Paasmaker - Platform as a Service
  *
+ * pm.service.js - interface for importing and exporting services.
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
  * file, You can obtain one at http://mozilla.org/MPL/2.0/.
- *
- * pm.service.js - interface for importing and exporting services.
  */
 
 if (!window.pm) { var pm = {}; }	// TODO: module handling
@@ -44,14 +44,14 @@ pm.service.import_service = (function() {
 		},
 
 		actionButton: function(e) {
-			pm.history.loadingOverlay("#main_right_view");
+			pm.history.showLoadingOverlay("#main_right_view");
 			var parent_form = $(e.target).parents('form');
 			pm.data.post({
 				endpoint: $(e.target).attr('href'),
 				body_data: $(parent_form).serialize(),
 				callback: function(data) {
 					if(data.data.job_id) {
-						$('.loading-overlay').remove();
+						pm.history.hideLoadingOverlay("#main_right_view");
 						// pushState so the Back button works, but TODO: this should be in pm.history?
 						var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
 						window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.data.job_id);

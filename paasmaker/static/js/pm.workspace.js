@@ -1,11 +1,10 @@
 /* Paasmaker - Platform as a Service
  *
+ * pm.workspace.js - interface for viewing a workspace
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-/**
- * pm.workspace.js - interface for viewing a workspace
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 if (!window.pm) { var pm = {}; }	// TODO: module handling
@@ -30,7 +29,7 @@ pm.workspace.view = (function() {
 					}
 
 					$('#main_right_view').html(Handlebars.templates.workspace_main(data));
-					$('.loading-overlay').remove();
+					pm.history.hideLoadingOverlay("#main_right_view");
 					pm.stats.workspace.redraw();
 
 					pm.data.api({
@@ -88,7 +87,7 @@ pm.workspace.edit = (function() {
 			$('head').append('<link rel="stylesheet" href="/static/css/tag_editor.css">');
 			pm.workspace.edit.jsonEditor(data.workspace.tags);
 
-			$('.loading-overlay').remove();
+			pm.history.hideLoadingOverlay("#main_right_view");
 		},
 
 		newWorkspaceForm: function() {
@@ -162,7 +161,7 @@ pm.workspace.edit = (function() {
 		},
 
 		actionButton: function(e) {
-			pm.history.loadingOverlay("#main_right_view");
+			pm.history.showLoadingOverlay("#main_right_view");
 			$("div.alert").remove();
 
 			pm.data.post({
@@ -174,7 +173,7 @@ pm.workspace.edit = (function() {
 							$("<div class=\"alert\">" + error + "</div>")
 						);
 					});
-					$('.loading-overlay').remove();
+					pm.history.hideLoadingOverlay("#main_right_view");
 				},
 				callback: function(response) {
 					window.history.pushState({ handle_in_js: true }, '', "/workspace/" + response.data.workspace.id + "/applications");

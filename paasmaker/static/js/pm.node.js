@@ -1,11 +1,10 @@
 /* Paasmaker - Platform as a Service
  *
+ * pm.node.js - interfaces for viewing the list of nodes, and individual nodes
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-/**
- * pm.node.js - interfaces for viewing the list of nodes, and individual nodes
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 if (!window.pm) { var pm = {}; }	// TODO: module handling
@@ -116,7 +115,7 @@ pm.node.list = (function() {
 					pm.node.list.updateNodeMenu();
 					pm.widgets.uuid.update();
 
-					$('.loading-overlay').remove();
+					pm.history.hideLoadingOverlay("#main_right_view");
 				}
 			});
 		}
@@ -241,7 +240,7 @@ pm.node.detail = (function() {
 						}
 					});
 
-					$('.loading-overlay').remove();
+					pm.history.hideLoadingOverlay("#main_right_view");
 				}
 			});
 		}

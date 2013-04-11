@@ -1,11 +1,10 @@
 /* Paasmaker - Platform as a Service
  *
+ * pm.application.js - interface for viewing an application and its versions
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-/**
- * pm.application.js - interface for viewing an application and its versions
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 if (!window.pm) { var pm = {}; }	// TODO: module handling
@@ -79,12 +78,12 @@ pm.application.view = (function() {
 		},
 
 		actionButton: function(e) {
-			pm.history.loadingOverlay("#main_right_view");
+			pm.history.showLoadingOverlay("#main_right_view");
 			pm.data.post({
 				endpoint: $(e.target).attr('href'),
 				callback: function(data) {
 					if(data.job_id) {
-						$('.loading-overlay').remove();
+						pm.history.hideLoadingOverlay("#main_right_view");
 						// pushState so the Back button works, but TODO: this should be in pm.history?
 						window.history.pushState({ handle_in_js: true }, '', "/job/detail/" + data.job_id);
 						pm.jobs.single.switchTo({ job_id: data.job_id, version_id: $(e.target).data('version-id') });
@@ -154,7 +153,7 @@ pm.application.view = (function() {
 						});
 					});
 
-					$('.loading-overlay').remove();
+					pm.history.hideLoadingOverlay("#main_right_view");
 					pm.stats.routerstats.redraw();
 				}
 			});
@@ -204,7 +203,7 @@ pm.application.services = (function() {
 								suffix: "Services"
 							});
 
-							$('.loading-overlay').remove();
+							pm.history.hideLoadingOverlay("#main_right_view");
 						}
 					});
 				}

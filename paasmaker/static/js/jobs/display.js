@@ -41,7 +41,7 @@ pm.jobs.list = (function() {
 
 						pm.jobs.list.render.all(data);
 						pm.data.get_app_parents(parent_search);
-						$('.loading-overlay').remove();
+						pm.history.hideLoadingOverlay("#main_right_view");
 					}
 				});
 			},
@@ -63,7 +63,7 @@ pm.jobs.list = (function() {
 
 						pm.widgets.uuid.update();
 						pm.node.list.updateBreadcrumbs(node_data);
-						$('.loading-overlay').remove();
+						pm.history.hideLoadingOverlay("#main_right_view");
 					}
 				});
 			},
@@ -234,7 +234,7 @@ pm.jobs.single = (function() {
 			}
 
 			new pm.jobs.display(job_well);
-			$('.loading-overlay').remove();
+			pm.history.hideLoadingOverlay("#main_right_view");
 		}
 	};
 }());

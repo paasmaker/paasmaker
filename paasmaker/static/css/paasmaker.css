@@ -240,9 +240,9 @@ ul.breadcrumb { min-height: 20px; }
 
 /* Left menu navigation: application (or node) list */
 
-#left_menu_wrapper { position: relative; }
+#left_menu_wrapper { position: relative; width: 250px; }
 
-.application-list { position: absolute; top: 0; left: 0; width: 250px; border: 1px solid #e3e3e3; border-radius: 4px; }
+.application-list { position: absolute; top: 0; left: 0; width: 100%; border: 1px solid #e3e3e3; border-radius: 4px; }
 
 .application-list-name { display: block; font-size: larger; font-weight: bold; }
 

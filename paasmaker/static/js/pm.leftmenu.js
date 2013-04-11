@@ -1,11 +1,10 @@
 /* Paasmaker - Platform as a Service
  *
+ * pm.leftmenu.js - management code for the left-side navigation (list of apps/versions, or list of nodes)
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-/**
- * pm.leftmenu.js - management code for the left-side navigation (list of apps/versions, or list of nodes)
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 if (!window.pm) { var pm = {}; }	// TODO: module handling
@@ -65,6 +64,11 @@ pm.leftmenu = (function() {
 			}
 		},
 
+		/**
+		 * Redraw container elements for the two-column view, if not present, or just clear
+		 * them (ready for new content) if they are. Called during the init phase of all two
+		 * column views. Also resets all loading spinners to just one for the right column.
+		 */
 		redrawContainers: function() {
 			var url_match = document.location.pathname.match(/\/(\d+)\/?$/);
 
@@ -78,11 +82,18 @@ pm.leftmenu = (function() {
 				);
 			}
 
-			$('.loading-overlay').remove();
-			pm.history.loadingOverlay("#main_right_view");
+			pm.history.hideLoadingOverlay();
+			pm.history.showLoadingOverlay("#main_right_view");
 		},
 
 		updateAppMenu: function(new_workspace_id, highlight_key) {
+			if ($('#left_menu_wrapper').children().length < 1) {
+				// if no left menu has already been drawn (by another view),
+				// show a spinner in the blank space
+				// TODO: something other than .children() may be faster
+				pm.history.showLoadingOverlay('#left_menu_wrapper');
+			}
+
 			pm.data.api({
 				endpoint: "workspace/" + new_workspace_id + "/applications",
 				callback: function(data) {

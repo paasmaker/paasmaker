@@ -1,11 +1,10 @@
 /* Paasmaker - Platform as a Service
  *
+ * pm.data.js - wrapper to manage Web Sockets and JSON API calls from frontend code
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-/**
- * pm.data.js - wrapper to manage Web Sockets and JSON API calls from frontend code
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 if (!window.pm) { var pm = {}; }	// TODO: module handling
@@ -22,13 +21,13 @@ pm.data = (function() {
 		/**
 		 * Generic error handler for ajax requests sent via pm.data: try to parse the response
 		 * body and show a Bootstrap alert box at the top of the page with the errors array.
-		 * TODO: fails for non-JSON responses, and assumes only one .loading-overlay at a time
+		 * TODO: fails for non-JSON responses, and assumes all loading overlays can be cleared
 		 *
 		 * @param options argument object from pm.data.api or pm.data.post
 		 */
 		xhrErrorHandler: function(options) {
 			return function(result) {
-				$('.loading-overlay').remove();
+				pm.history.hideLoadingOverlay();
 				if (result.responseText == '') {
 					// Couldn't even connect.
 					var responseData = {errors: ['Unable to connect to the remote server.']}

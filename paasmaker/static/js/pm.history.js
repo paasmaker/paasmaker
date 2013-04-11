@@ -1,11 +1,10 @@
 /* Paasmaker - Platform as a Service
  *
+ * pm.history.js - manage browser history and ajax versus page reload links
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-/**
- * pm.history.js - manage browser history and ajax versus page reload links
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 if (!window.pm) { var pm = {}; }	// TODO: module handling
@@ -54,18 +53,31 @@ pm.history = (function() {
 		},
 
 		/**
-		 * Draw a loading spinner and translucent overlay on top of the element el.
+		 * Draw a loading spinner and translucent overlay on top of the
+		 * element el, or over the whole view if el isn't specified.
 		 */
-		loadingOverlay: function(el) {
+		showLoadingOverlay: function(el) {
 			if (el) {
 				el = $(el);
 			} else {
-				// cover the whole view with a loading spinner
 				el = $('#main');
 			}
 			var overlay = $("<div class=\"loading-overlay\"><img src=\"/static/img/spinner32.gif\" alt=\"\"></div>");
 			el.append(overlay);
 			overlay.animate({ opacity: 0.8 });
+		},
+
+		/**
+		 * Remove the loading spinner on the element el, or
+		 * remove all spinners if el isn't specified.
+		 */
+		hideLoadingOverlay: function(el) {
+			if (el) {
+				el = $(el);
+			} else {
+				el = $(document);
+			}
+			$('.loading-overlay', el).remove();
 		},
 
 		/**
@@ -127,7 +139,7 @@ pm.history = (function() {
 				// TODO: update pages that need this with registerExitHandler
 				pm.data.removeListeners();
 
-				pm.history.loadingOverlay();
+				pm.history.showLoadingOverlay();
 				pm.history.runExitHandlers();
 
 				var module = pm.history.getRoute(address);

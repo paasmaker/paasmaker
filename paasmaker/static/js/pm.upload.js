@@ -1,11 +1,10 @@
 /* Paasmaker - Platform as a Service
  *
+ * pm.upload.js - interface for uploading/updating an application
+ *
  * This Source Code Form is subject to the terms of the Mozilla Public
  * License, v. 2.0. If a copy of the MPL was not distributed with this
- * file, You can obtain one at http://mozilla.org/MPL/2.0/. */
-
-/**
- * pm.upload.js - interface for uploading/updating an application
+ * file, You can obtain one at http://mozilla.org/MPL/2.0/.
  */
 
 if (!window.pm) { var pm = {}; }	// TODO: module handling
@@ -55,12 +54,12 @@ pm.upload = (function() {
 			// this code mostly duplicated with pm.version.js
 			var parent_form = $(e.target).parents('form');
 
-			pm.history.loadingOverlay("#main_right_view");
+			pm.history.showLoadingOverlay("#main_right_view");
 			pm.data.post({
 				endpoint: document.location.pathname,
 				body_data: $(parent_form).serialize(),
 				callback: function(data) {
-					$('.loading-overlay').remove();
+					pm.history.hideLoadingOverlay("#main_right_view");
 
 					// pushState so the Back button works, but TODO: this should be in pm.history?
 					var state = { job_id: data.job_id }, url_match;
@@ -129,7 +128,7 @@ pm.upload = (function() {
 
 					pm.upload.loadRepositoryLists();
 					pm.data.get_app_parents(parent_search);
-					$('.loading-overlay').remove();
+					pm.history.hideLoadingOverlay("#main_right_view");
 				}
 			});
 		}
