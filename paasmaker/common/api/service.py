@@ -28,7 +28,6 @@ class ServiceExportAPIRequest(APIRequest):
 	def __init__(self, configuration=None):
 		super(ServiceExportAPIRequest, self).__init__(configuration)
 		self.service_id = None
-		self.method = 'GET'
 		self.params = {}
 
 	def set_service_id(self, service_id):
@@ -46,7 +45,6 @@ class ServiceExportAPIRequest(APIRequest):
 		:arg dict parameters: The parameters for the export plugin.
 		"""
 		self.params['parameters'] = parameters
-		self.method = 'POST'
 
 	def build_payload(self):
 		# Build our payload.
@@ -144,9 +142,8 @@ class ServiceExportAPIRequest(APIRequest):
 		endpoint = self.target + self.get_endpoint() + '?format=json'
 
 		kwargs = {}
-		kwargs['method'] = self.method
-		if self.method == 'POST':
-			kwargs['body'] = json.dumps(self.build_payload())
+		kwargs['method'] = 'POST'
+		kwargs['body'] = json.dumps({'data': self.build_payload()})
 		kwargs['headers'] = headers
 		kwargs['request_timeout'] = 0
 		kwargs['follow_redirects'] = False

@@ -184,6 +184,11 @@ pm.application.services = (function() {
 						} else {
 							data.services[i].can_export = false;
 						}
+						if (data.importable_services[data.services[i].provider]) {
+							data.services[i].can_import = true;
+						} else {
+							data.services[i].can_import = false;
+						}
 					}
 
 					pm.data.get_app_parents({

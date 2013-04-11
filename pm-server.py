@@ -161,6 +161,7 @@ if configuration.is_pacemaker():
 
 	routes.extend(paasmaker.pacemaker.controller.router.TableDumpController.get_routes(route_extras))
 
+	routes.extend(paasmaker.pacemaker.controller.service.ServiceGetController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.service.ServiceExportController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.service.ServiceImportController.get_routes(route_extras))
 

@@ -30,7 +30,9 @@ pm.routingTable = [
 	[ /^\/workspace\/\d+\/applications\/?$/, pm.workspace.view ],
 	[ /^\/application\/\d+\/services\/?$/, pm.application.services ],
 	[ /^\/application\/\d+\/?$/, pm.application.view ],
-	[ /^\/version\/\d+\/?$/, pm.version ]
+	[ /^\/version\/\d+\/?$/, pm.version ],
+	[ /^\/service\/import\/\d+\/?$/, pm.service.import_service ],
+	[ /^\/service\/export\/\d+\/?$/, pm.service.export_service ]
 ];
 
 pm.history = (function() {

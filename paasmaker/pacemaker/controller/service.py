@@ -27,6 +27,39 @@ from pubsub import pub
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+class ServiceBaseController(BaseController):
+
+	def _get_service(self, service_id):
+		service = self.session.query(
+			paasmaker.model.Service
+		).get(int(service_id))
+
+		if service is None:
+			raise tornado.web.HTTPError(404, "No such service.")
+
+		return service
+
+class ServiceGetController(ServiceBaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def get(self, service_id):
+		service = self._get_service(service_id)
+
+		self.require_permission(
+			constants.PERMISSION.SERVICE_VIEW,
+			workspace=service.application.workspace
+		)
+
+		self.add_data('service', service)
+
+		self.render("api/apionly.html")
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/service/(\d+)", ServiceGetController, configuration))
+		return routes
+
 class ServiceExportSchema(colander.MappingSchema):
 	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="Parameters",
@@ -34,23 +67,16 @@ class ServiceExportSchema(colander.MappingSchema):
 		missing={},
 		default={})
 
-class ServiceExportController(BaseController):
+class ServiceExportController(ServiceBaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	# We allow GET and POST methods, to allow fetching
-	# with no parameters, or with parameters.
-
 	def get(self, service_id):
-		self.post(service_id)
+		service = self._get_service(service_id)
+		self.client_side_render()
 
 	def post(self, service_id):
 		# Load the service record from the database.
-		service = self.session.query(
-			paasmaker.model.Service
-		).get(int(service_id))
-
-		if service is None:
-			raise tornado.web.HTTPError(404, "No such service.")
+		service = self._get_service(service_id)
 
 		# Check permissions.
 		self.require_permission(
@@ -152,17 +178,16 @@ class ServiceImportSchema(colander.MappingSchema):
 		missing={},
 		default={})
 
-class ServiceImportController(BaseController):
+class ServiceImportController(ServiceBaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def get(self, service_id):
+		service = self._get_service(service_id)
+		self.client_side_render()
 
 	def post(self, service_id):
 		# Load the service record from the database.
-		service = self.session.query(
-			paasmaker.model.Service
-		).get(int(service_id))
-
-		if service is None:
-			raise tornado.web.HTTPError(404, "No such service.")
+		service = self._get_service(service_id)
 
 		# Check permissions.
 		self.require_permission(
@@ -185,8 +210,8 @@ class ServiceImportController(BaseController):
 		self.validate_data(ServiceImportSchema())
 
 		def job_started():
-			# Redirect to clear the post.
-			self._redirect_job(self.get_data('job_id'), '/application/%d' % service.application.id)
+			self.add_data('application_id', service.application.id)
+			self.action_success(self.get_data('job_id'), '/application/%d' % service.application.id)
 
 		def import_job_ready(job_id):
 			self.add_data('job_id', job_id)

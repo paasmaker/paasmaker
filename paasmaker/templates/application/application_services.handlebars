@@ -24,9 +24,6 @@
 			</td>
 			<td>
 				{{ name }}
-				{{#if can_export}}
-					<a href="/service/export/{{ id }}" class="btn btn-mini">Export</a>
-				{{/if}}
 			</td>
 			<td>
 				{{ provider }}
@@ -45,6 +42,12 @@
 			</td>
 			<td>
 				<span class="service-{{state}}">{{ state }}</span>
+				{{#if can_export}}
+					<br /><a href="/service/export/{{ id }}">Export...</a>
+				{{/if}}
+				{{#if can_import}}
+					<br /><a href="/service/import/{{ id }}">Import...</a>
+				{{/if}}
 			</td>
 		</tr>
 	{{/each}}
