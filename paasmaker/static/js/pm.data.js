@@ -29,10 +29,15 @@ pm.data = (function() {
 		xhrErrorHandler: function(options) {
 			return function(result) {
 				$('.loading-overlay').remove();
-				var responseData = JSON.parse(result.responseText);
-				if (responseData.data.input_errors) {
-					for(var key in responseData.data.input_errors) {
-						responseData.errors.push(key + ": " + responseData.data.input_errors[key]);
+				if (result.responseText == '') {
+					// Couldn't even connect.
+					var responseData = {errors: ['Unable to connect to the remote server.']}
+				} else {
+					var responseData = JSON.parse(result.responseText);
+					if (responseData.data.input_errors) {
+						for(var key in responseData.data.input_errors) {
+							responseData.errors.push(key + ": " + responseData.data.input_errors[key]);
+						}
 					}
 				}
 				if ($('#main_right_view').length) {
