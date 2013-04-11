@@ -24,8 +24,9 @@ from paasmaker.common.core import constants
 
 # Validation constants.
 # Identifiers, like application and service names.
+# Underscores are not permitted in identifiers, as they appear in DNS hostnames.
 VALID_IDENTIFIER = re.compile(r"^[-A-Za-z0-9.]{1,}$")
-VALID_PLUGIN_NAME = re.compile(r"^[-a-z0-9.]{1,}$")
+VALID_PLUGIN_NAME = re.compile(r"^[-a-z0-9._]{1,}$")
 
 # Schema definition.
 class Plugin(StrictAboutExtraKeysColanderMappingSchema):
@@ -236,20 +237,38 @@ class ApplicationConfiguration(paasmaker.util.configurationhelper.ConfigurationH
 					self.check_plugin_exists("application.prepare.commands.%d.plugin" % i, MODE.PREPARE_COMMAND)
 				)
 
+		seen_instance_names = {}
 		for i in range(len(self["instances"])):
+			instance_data = self['instances'][i]
+
+			if instance_data['name'] in seen_instance_names:
+				# Duplicated.
+				error_list.append(["Instance type %s appears more than once in the manifest file. Each instance type requires a unique name." % instance_data['name']])
+
+			seen_instance_names[instance_data['name']] = True
+
 			error_list.extend(
 				self.check_plugin_exists("instances.%d.runtime.plugin" % i, MODE.RUNTIME_EXECUTE)
 			)
 			error_list.extend(
 				self.check_plugin_exists("instances.%d.placement.plugin" % i, MODE.PLACEMENT)
 			)
-			if len(self["instances"][i]["startup"]) > 0:
-				for j in range(len(self["instances"][i]["startup"])):
+			if len(instance_data["startup"]) > 0:
+				for j in range(len(instance_data["startup"])):
 					error_list.extend(
 						self.check_plugin_exists("instances.%d.startup.%d.plugin" % (i, j), MODE.RUNTIME_STARTUP)
 					)
 
+		seen_service_names = {}
 		for i in range(len(self["services"])):
+			service_data = self['services'][i]
+
+			if service_data['name'] in seen_service_names:
+				# Duplicated.
+				error_list.append(["Service %s appears more than once in the manifest file. Each service requires a unique name." % service_data['name']])
+
+			seen_service_names[service_data['name']] = True
+
 			error_list.extend(
 				self.check_plugin_exists("services.%d.plugin" % i, MODE.SERVICE_CREATE)
 			)
@@ -453,6 +472,44 @@ services:
 	empty_config = """
 """
 
+	duplicated_services_instances = """
+manifest:
+  format: 1
+
+application:
+  name: foobar.com
+  prepare:
+    runtime:
+      plugin: paasmaker.runtime.lalala_notlistening
+      version: 1
+
+instances:
+  - name: web
+    quantity: 1
+    runtime:
+      plugin: paasmaker.runtime.php
+      parameters:
+        document_root: web
+      version: 5.4
+  - name: web
+    quantity: 1
+    runtime:
+      plugin: paasmaker.runtime.php
+      parameters:
+        document_root: web
+      version: 5.4
+
+services:
+  - name: test
+    plugin: paasmaker.service.test
+    parameters:
+      bar: foo
+  - name: test
+    plugin: paasmaker.service.test
+    parameters:
+      bar: foo
+"""
+
 	def setUp(self):
 		super(TestApplicationConfiguration, self).setUp()
 
@@ -511,6 +568,21 @@ services:
 			self.assertIn(
 				"Plugin paasmaker.service.icantbelieveitsnot_aplugin not enabled or doesn't exist (referenced in services.0.plugin)",
 				ex.message, "Invalid plugin config threw an exception without the expected error message"
+			)
+
+	def test_duplicated_instance_service_config(self):
+		try:
+			config = ApplicationConfiguration(self.configuration)
+			config.load(self.duplicated_services_instances)
+			self.assertTrue(False, "Invalid plugin config should have thrown an exception.")
+		except InvalidConfigurationParameterException, ex:
+			self.assertIn(
+				"Service test appears more than once in the manifest file. Each service requires a unique name.",
+				ex.message, "Duplicated services did not cause an error."
+			)
+			self.assertIn(
+				"Instance type web appears more than once in the manifest file. Each instance type requires a unique name.",
+				ex.message, "Duplicated instance types did not cause an error."
 			)
 
 	def test_unpack_configuration(self):
