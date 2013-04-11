@@ -103,10 +103,11 @@ pm.stats.routergraph = (function(){
 
 		// Subscribe to the router history events.
 		pm.data.subscribe(
-			'router.stats.history',
+			'router.history.update',
 			function(serverStatCategory, serverInputId, start, end, returned_data) {
 				if(serverStatCategory == statCategory && serverInputId == statInputId) {
 					// graph.newData(start, end, returned_data);
+					$('.graph-error', container.parent()).remove();
 					var processed_data = {};
 
 					for (var metric in returned_data) {
@@ -123,6 +124,21 @@ pm.stats.routergraph = (function(){
 
 					graph.showGraph(processed_data);
 					timeout = setTimeout(graph.requestUpdate, 1000);
+				}
+			}
+		);
+		// And to errors.
+		pm.data.subscribe(
+			'router.history.error',
+			function(message, serverStatCategory, serverInputId) {
+				if(serverStatCategory == statCategory && serverInputId == statInputId) {
+					var errorBox = $('.graph-error', container.parent());
+					if (errorBox.length == 0) {
+						console.log("Adding new error box.");
+						errorBox = $('<div class="graph-error"></div>');
+						container.parent().append(errorBox);
+					}
+					errorBox.text("Graph error: " + message);
 				}
 			}
 		);
@@ -257,7 +273,7 @@ pm.stats.routergraph = (function(){
 			// Request the last 60 seconds of stats from the server.
 			var now = new Date();
 			pm.data.emit(
-				'router.stats.history',
+				'router.history.update',
 				statCategory,
 				statInputId,
 				module.types[metric_type].socket_request,
@@ -394,7 +410,7 @@ pm.stats.routerstats = (function(){
 			{
 				if(serverStatCategory == statCategory && serverInputId == statInputId) {
 					// No stats available.
-					primaryStats.text("No stats available.");
+					primaryStats.text("Stats error: " + error);
 					buttonBox.hide();
 				}
 			}

@@ -40,7 +40,7 @@ class RouterStreamAPIRequest(StreamAPIRequest):
 		:arg int start: The unix timestamp to fetch from.
 		:arg int|None end: The unix timestamp to fetch to.
 		"""
-		self.emit('router.stats.history', {'name': name, 'input_id': input_id, 'metric': metric, 'start': start, 'end': end})
+		self.emit('router.history.update', {'name': name, 'input_id': input_id, 'metric': metric, 'start': start, 'end': end})
 
 	def set_history_callback(self, callback):
 		"""
@@ -55,7 +55,7 @@ class RouterStreamAPIRequest(StreamAPIRequest):
 				# { 'requests': [[unixtimestamp, value], ...] }
 				pass
 		"""
-		self.on('router.stats.history', callback)
+		self.on('router.history.update', callback)
 
 	def set_stats_error_callback(self, callback):
 		"""
@@ -69,6 +69,19 @@ class RouterStreamAPIRequest(StreamAPIRequest):
 				pass
 		"""
 		self.on('router.stats.error', callback)
+
+	def set_history_error_callback(self, callback):
+		"""
+		Set the callback for when an router history error occurs.
+
+		The callback looks like so:
+
+		.. code-block:: python
+
+			def error(message, exception=None, name=None, input_id=None):
+				pass
+		"""
+		self.on('router.history.error', callback)
 
 	def set_update_callback(self, callback):
 		"""

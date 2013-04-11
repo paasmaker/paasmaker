@@ -30,6 +30,10 @@ MAX_LOG_SIZE = 102400 # Don't send back more logs than this size.
 # TODO: Add hooks so that plugins can also use this connection.
 
 class StreamConnection(tornadio2.SocketConnection):
+	# Shared permissions cache for all socket.io sessions.
+	# Why no locking? We're relying on the Python GIL to sort
+	# this out for us.
+	PERMISSIONS_CACHE = {}
 
 	@tornado.gen.engine
 	def on_open(self, request):
@@ -73,6 +77,9 @@ class StreamConnection(tornadio2.SocketConnection):
 					if user and user.enabled and not user.deleted:
 						self.authenticated = True
 						self.auth_method = 'user'
+						self.user_id = user.id
+						self.store_permissions(session, user)
+
 					session.close()
 
 		auth_raw = request.get_argument('auth')
@@ -100,6 +107,9 @@ class StreamConnection(tornadio2.SocketConnection):
 				if user and user.enabled and not user.deleted:
 					self.authenticated = True
 					self.auth_method = 'user'
+					self.user_id = user.id
+					self.store_permissions(session, user)
+
 				session.close()
 
 		# According to the docs, we're allowed to raise this to indicate to
@@ -121,6 +131,14 @@ class StreamConnection(tornadio2.SocketConnection):
 
 		# Router setup.
 		self.router_stats_queue = []
+		self.router_stats_permission_cache = {}
+
+	def store_permissions(self, session, user):
+		# Create and or update the cache.
+		user_key = str(user.id)
+		if not self.PERMISSIONS_CACHE.has_key(user_key):
+			self.PERMISSIONS_CACHE[user_key] = paasmaker.model.WorkspaceUserRoleFlatCache(user)
+		self.PERMISSIONS_CACHE[user_key].check_cache(session)
 
 	def on_close(self):
 		"""
@@ -475,32 +493,95 @@ class StreamConnection(tornadio2.SocketConnection):
 				router_stats_error
 			)
 
+	def check_router_stats_permission(self, stats_output, name, input_id, callback, request_name):
+		# Check that the current user has permissions to view this router stream.
+		# If not - no stream for them.
+		def permission_denied():
+			self.emit('router.%s.error' % request_name, 'Permission denied.', name, input_id)
+
+		if self.auth_method == 'user':
+			logger.debug("Checking permissions for request %s/%s/%s, user %d" % (request_name, name, str(input_id), self.user_id))
+			stats_permission_key = "%s_%s_%s" % (name, str(input_id), str(self.user_id))
+
+			if stats_permission_key in self.router_stats_permission_cache:
+				if self.router_stats_permission_cache[stats_permission_key]:
+					# Yes - go forth and query.
+					logger.debug("Checking permissions for request %s/%s/%s, user %d: yes from cache." % (request_name, name, str(input_id), self.user_id))
+					callback()
+				else:
+					# Nope.
+					logger.debug("Checking permissions for request %s/%s/%s, user %d: no from cache." % (request_name, name, str(input_id), self.user_id))
+					permission_denied()
+			else:
+				# Do the permissions check.
+				def got_session(session):
+					exists, permission_name, workspace_id = stats_output.permission_required_for(
+						name,
+						input_id,
+						session
+					)
+
+					session.close()
+
+					if exists:
+						can_do = self.PERMISSIONS_CACHE[str(self.user_id)].has_permission(
+							permission_name,
+							workspace_id
+						)
+
+						self.router_stats_permission_cache[stats_permission_key] = can_do
+
+						if can_do:
+							logger.debug("Checking permissions for request %s/%s/%s, user %d: yes from db." % (request_name, name, str(input_id), self.user_id))
+							callback()
+						else:
+							logger.debug("Checking permissions for request %s/%s/%s, user %d: no from db." % (request_name, name, str(input_id), self.user_id))
+							permission_denied()
+					else:
+						self.emit('router.%s.error' % request_name, "Invalid request.", name, input_id)
+
+				def failed_session(message, exception=None):
+					self.emit('router.%s.error' % request_name, message, name, input_id)
+
+				self.configuration.get_database_session(got_session, failed_session)
+
+		elif self.auth_method == 'node':
+			# Nope. No access to stats.
+			permission_denied()
+		else:
+			# No checking - all clear. Probably because we're authed
+			# using the super token.
+			callback()
+
 	@tornadio2.event('router.stats.update')
 	def router_stats_update(self, name, input_id):
 		"""
 		Event to fetch a router stats update.
 		"""
 		def stats_ready(stats_output):
-			def got_stats(stats):
-				stats['as_at'] = time.time()
-				self.emit('router.stats.update', name, input_id, stats)
+			def has_permission():
+				def got_stats(stats):
+					stats['as_at'] = time.time()
+					self.emit('router.stats.update', name, input_id, stats)
 
-			def failed_stats(error, exception=None):
-				self.emit('router.stats.error', error, name, input_id)
+				def failed_stats(error, exception=None):
+					self.emit('router.stats.error', error, name, input_id)
 
-			# Request some stats.
-			# TODO: Check permissions!
-			stats_output.stats_for_name(name, input_id, got_stats)
+				# Request some stats.
+				stats_output.stats_for_name(name, input_id, got_stats)
+				# end of has_permission()
+
+			self.check_router_stats_permission(stats_output, name, input_id, has_permission, 'stats')
 			# end of stats_ready()
 
 		if not self.configuration.is_pacemaker():
 			# We don't relay job information if we're not a pacemaker.
-			self.emit('error', 'This node is not a pacemaker.')
+			self.emit('router.stats.error', 'This node is not a pacemaker.', name, input_id)
 			return
 
 		self.get_router_stats_handler(stats_ready)
 
-	@tornadio2.event('router.stats.history')
+	@tornadio2.event('router.history.update')
 	def handle_history(self, name, input_id, metric, start, end=None):
 		"""
 		Event to fetch router history.
@@ -513,42 +594,42 @@ class StreamConnection(tornadio2.SocketConnection):
 		# TODO: Limit start/end to prevent DoS style attacks.
 
 		def stats_ready(stats_output):
-			def emit_history(history_output):
-				self.emit(
-					'router.stats.history',
+			def has_permission():
+				def emit_history(history_output):
+					self.emit(
+						'router.history.update',
+						name,
+						input_id,
+						start,
+						end,
+						history_output
+					)
+
+				# Request some stats.
+				if isinstance(metric, basestring):
+					metrics_to_query = [metric]
+				else:
+					metrics_to_query = metric
+
+				stats_output.history_for_name(
 					name,
-					input_id,
+					int(input_id),
+					metrics_to_query,
+					emit_history,
 					start,
-					end,
-					history_output
+					end=end
 				)
+				# end of has_permission()
 
-			# Request some stats.
-			# TODO: Check permissions!
-			if isinstance(metric, basestring):
-				metrics_to_query = [metric]
-			else:
-				metrics_to_query = metric
-
-			stats_output.history_for_name(
-				name,
-				int(input_id),
-				metrics_to_query,
-				emit_history,
-				start,
-				end=end
-			)
-
+			self.check_router_stats_permission(stats_output, name, input_id, has_permission, 'history')
 			# end of stats_ready()
 
 		if not self.configuration.is_pacemaker():
 			# We don't relay router stats information if we're not a pacemaker.
-			self.emit('error', 'This node is not a pacemaker.')
+			self.emit('router.history.error', 'This node is not a pacemaker.', name, input_id)
 			return
 
 		self.get_router_stats_handler(stats_ready)
-
-
 
 
 class StreamConnectionTest(BaseControllerTest):
@@ -922,6 +1003,7 @@ class StreamConnectionTest(BaseControllerTest):
 
 		remote.set_history_callback(history)
 		remote.set_update_callback(update)
+		remote.set_history_error_callback(error)
 		remote.set_stats_error_callback(error)
 
 		remote.connect()
