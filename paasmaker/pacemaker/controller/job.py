@@ -9,6 +9,7 @@
 import logging
 import json
 import unittest
+import os
 
 import paasmaker
 from paasmaker.common.controller.base import BaseController, BaseControllerTest
@@ -227,4 +228,61 @@ class JobTreeController(BaseController):
 	def get_routes(configuration):
 		routes = []
 		routes.append((r"/job/tree/([-a-fA-F0-9]+)", JobTreeController, configuration))
+		return routes
+
+class JobLogController(BaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER, BaseController.NODE]
+
+	def get(self, job_id):
+		# TODO: Attempt to tie this to a workspace for permissions
+		# purposes.
+		# TODO: Allow fetching just a section of the log.
+		def found_log(result_job_id, result):
+			if isinstance(result, basestring):
+				logger.info("Found job log %s locally.", job_id)
+
+				log_file = self.configuration.get_job_log_path(job_id, create_if_missing=False)
+
+				if os.path.exists(log_file):
+					log_fp = open(log_file, 'r')
+					self.set_header('Content-Type', 'text/plain')
+					self.write(log_fp.read())
+					log_fp.close()
+					self.finish()
+				else:
+					raise tornado.web.HTTPError(404, "No such log.")
+
+			elif isinstance(result, paasmaker.model.Node):
+				# It's a remote node containing the log.
+				# Ie, the logs are in another Castle. Sorry Mario.
+				def got_log(response):
+					if response.code != 200:
+						raise tornado.web.HTTPError(response.code, response.body)
+					else:
+						self.set_header('Content-Type', 'text/plain')
+						self.write(response.body)
+						self.finish()
+
+				remote = "http://%s:%d/job/log/%s" % (result.route, result.apiport, job_id)
+				request = tornado.httpclient.HTTPRequest(
+					remote,
+					method="GET",
+					headers={'Auth-Paasmaker': self.configuration.get_flat('node_token')}
+				)
+				client = tornado.httpclient.AsyncHTTPClient(io_loop=self.configuration.io_loop)
+				client.fetch(request, got_log)
+
+		def unable_to_find_log(error_job_id, error_message):
+			raise tornado.web.HTTPError(404, "No such log.")
+
+		self.configuration.locate_log(
+			job_id,
+			found_log,
+			unable_to_find_log
+		)
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/job/log/([-a-fA-F0-9]+)", JobLogController, configuration))
 		return routes

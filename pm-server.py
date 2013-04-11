@@ -199,6 +199,7 @@ if configuration.is_router():
 
 logging.info("Setting up common routes...")
 routes.extend(paasmaker.common.controller.information.InformationController.get_routes(route_extras))
+routes.extend(paasmaker.pacemaker.controller.job.JobLogController.get_routes(route_extras))
 
 # The socketio routers. It's all in a single controller for the moment.
 socketio_router = tornadio2.TornadioRouter(
