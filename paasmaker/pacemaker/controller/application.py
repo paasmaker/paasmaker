@@ -12,6 +12,7 @@ import logging
 import json
 import os
 import tempfile
+import re
 
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest
@@ -39,7 +40,8 @@ class ApplicationNewSchema(colander.MappingSchema):
 		title="Uploaded File key",
 		description="The uploaded file unique identifier. This is injected into the appropriate SCM at the right time if supplied.",
 		default=None,
-		missing=None)
+		missing=None,
+		validator=colander.Regex(re.compile(r'^[A-Fa-f0-9]+$'), "Invalid uploaded file token."))
 	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="Parameters",
 		description="Parameters for the target SCM. Validated when the plugin is called.",
@@ -222,6 +224,9 @@ class ApplicationNewController(ApplicationRootController):
 		upload_location = None
 		if self.params['uploaded_file']:
 			# Insert the location of the file into the raw SCM params.
+			# NOTE: This parameter is checked by a regex in the colander
+			# schema to only allow [A-Fa-f0-9]+. This prevents users from
+			# inserting their own local filesystem path...
 			upload_location = os.path.join(
 				self.configuration.get_scratch_path_exists('uploads'),
 				self.params['uploaded_file']
