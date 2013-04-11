@@ -28,6 +28,11 @@ REPOS = [
 		'target': 'git@github.com:paasmaker/paasmaker-interface-ruby.git'
 	},
 	{
+		'symbolic': 'paasmaker-interface-nodejs',
+		'source': 'git@bitbucket.org:paasmaker/paasmaker-interface-nodejs.git',
+		'target': 'git@github.com:paasmaker/paasmaker-interface-nodejs.git'
+	},
+	{
 		'symbolic': 'paasmaker',
 		'source': 'git@bitbucket.org:paasmaker/paasmaker.git',
 		'target': 'git@github.com:paasmaker/paasmaker.git'
