@@ -30,6 +30,11 @@ pm.data = (function() {
 			return function(result) {
 				$('.loading-overlay').remove();
 				var responseData = JSON.parse(result.responseText);
+				if (responseData.data.input_errors) {
+					for(var key in responseData.data.input_errors) {
+						responseData.errors.push(key + ": " + responseData.data.input_errors[key]);
+					}
+				}
 				if ($('#main_right_view').length) {
 					$('#main_right_view').prepend(Handlebars.templates.error_block(responseData));
 				} else {
