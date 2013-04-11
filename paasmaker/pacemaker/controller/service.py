@@ -85,6 +85,7 @@ class ServiceExportController(BaseController):
 		self.set_header('Content-Disposition', 'attachment; filename=%s' % filename)
 		self.first_data = True
 
+		self.export_in_progress = True
 		self.plugin.export(
 			service.name,
 			service.credentials,
@@ -95,10 +96,12 @@ class ServiceExportController(BaseController):
 
 	def _complete(self, message):
 		# Finished. Finish the request.
+		self.export_in_progress = False
 		logger.info(message)
 		self.finish()
 
 	def _error(self, message, exception=None):
+		self.export_in_progress = False
 		logger.error(message)
 		if exception:
 			logger.error("Exception:", exc_info=exception)
@@ -119,6 +122,11 @@ class ServiceExportController(BaseController):
 		self.write(data)
 		# And flush now, because we want to stream it back.
 		self.flush()
+
+	def on_finished(self):
+		# Cancel an in-progress export.
+		if hasattr(self, 'export_in_progress') and self.export_in_progress:
+			self.plugin.export_cancel()
 
 	@staticmethod
 	def get_routes(configuration):

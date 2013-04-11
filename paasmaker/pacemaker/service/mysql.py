@@ -200,13 +200,17 @@ class MySQLService(BaseService):
 			else:
 				error_callback("Failed with error code %d.\nOutput: %s" % (code, buffer_errors.error_output))
 
-		reader = paasmaker.util.popen.Popen(
+		self.export_process = paasmaker.util.popen.Popen(
 			commandline,
 			on_exit=completed,
 			on_stdout=stream_callback,
 			on_stderr=buffer_errors,
 			io_loop=self.configuration.io_loop
 		)
+
+	def export_cancel(self):
+		if hasattr(self, 'export_process'):
+			self.export_process.kill()
 
 	def export_filename(self, service):
 		filename = super(MySQLService, self).export_filename(service)

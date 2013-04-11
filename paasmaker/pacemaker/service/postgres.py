@@ -208,7 +208,7 @@ class PostgresService(BaseService):
 			else:
 				error_callback("Failed with error code %d.\nOutput: %s" % (code, buffer_errors.error_output))
 
-		reader = paasmaker.util.popen.Popen(
+		self.export_process = paasmaker.util.popen.Popen(
 			commandline,
 			on_exit=completed,
 			on_stdout=stream_callback,
@@ -216,6 +216,10 @@ class PostgresService(BaseService):
 			io_loop=self.configuration.io_loop,
 			env=environment
 		)
+
+	def export_cancel(self):
+		if hasattr(self, 'export_process'):
+			self.export_process.kill()
 
 	def export_filename(self, service):
 		filename = super(PostgresService, self).export_filename(service)

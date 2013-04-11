@@ -126,6 +126,12 @@ class BaseService(paasmaker.util.plugin.Plugin):
 		"""
 		raise NotImplementedError("export() is not implemented for this service.")
 
+	def export_cancel(self):
+		"""
+		Cancel an export in progress.
+		"""
+		pass
+
 	def export_filename(self, service):
 		"""
 		Return a filename for the export. You can use this default and then add
