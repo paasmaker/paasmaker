@@ -897,8 +897,26 @@ class BaseControllerTest(tornado.testing.AsyncHTTPTestCase, TestHelpers):
 
 	def tearDown(self):
 		self.configuration.cleanup(self.stop, self.stop)
-		self.wait()
-		super(BaseControllerTest, self).tearDown()
+		try:
+			self.wait()
+		except Exception, ex:
+			if "ConnectionError" in str(ex.__class__):
+				# Ignore the Redis client throwing an exception because
+				# it's Redis was shut down. This happens because it's
+				# waiting in async callbacks when the connection is closed,
+				# and helpfully raises an exception.
+				pass
+			else:
+				raise ex
+		try:
+			super(BaseControllerTest, self).tearDown()
+		except Exception, ex:
+			if "IOError" in str(ex.__class__):
+				# Ignore this error - it's caused by the IO loop being destroyed
+				# when some Redis stuff is still trying to work on it.
+				pass
+			else:
+				raise ex
 
 	def get_http_port(self):
 		"""Returns the port used by the server.

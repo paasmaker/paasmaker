@@ -208,7 +208,10 @@ router:
           os.unlink(self.configname)
           callback("Completed cleanup.")
 
-        self.shutdown_managed_redis(finished_shutdown, error_callback)
+        def jobmanager_shutdown(message):
+          self.shutdown_managed_redis(finished_shutdown, error_callback)
+
+        self.job_manager.shutdown(jobmanager_shutdown, error_callback)
 
     def get_tornado_configuration(self):
         """
