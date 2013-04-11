@@ -24,8 +24,8 @@ from paasmaker.common.core import constants
 
 # Validation constants.
 # Identifiers, like application and service names.
-VALID_IDENTIFIER = re.compile("[-A-Za-z0-9.]{1,}")
-VALID_PLUGIN_NAME = re.compile("[-a-z0-9.]")
+VALID_IDENTIFIER = re.compile(r"^[-A-Za-z0-9.]{1,}$")
+VALID_PLUGIN_NAME = re.compile(r"^[-a-z0-9.]{1,}$")
 
 # Schema definition.
 class Plugin(StrictAboutExtraKeysColanderMappingSchema):
@@ -36,25 +36,35 @@ class Plugin(StrictAboutExtraKeysColanderMappingSchema):
 		missing='', default='',
 		validator=colander.Regex(VALID_IDENTIFIER, "Plugin name must match " + VALID_IDENTIFIER.pattern)
 	)
-	plugin = colander.SchemaNode(colander.String(),
+	plugin = colander.SchemaNode(
+		colander.String(),
 		title="Symbolic plugin name",
 		description="Symbolic name of this plugin, as defined in the main paasmaker options file",
-		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern))
-	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
+		validator=colander.Regex(VALID_PLUGIN_NAME, "Plugin name must match " + VALID_PLUGIN_NAME.pattern)
+	)
+	parameters = colander.SchemaNode(
+		colander.Mapping(unknown='preserve'),
+		missing={},
+		default={}
+	)
 
 class ServicePlugin(Plugin):
 	# Service definitions are identical to normal plugins, except that the
 	# name field is required (as well as the plugin field)
-	name = colander.SchemaNode(colander.String(),
+	name = colander.SchemaNode(
+		colander.String(),
 		title="Service name",
 		description="Your name for the service to identify it",
-		validator=colander.Regex(VALID_IDENTIFIER, "Service names must match " + VALID_IDENTIFIER.pattern))
+		validator=colander.Regex(VALID_IDENTIFIER, "Service names must match " + VALID_IDENTIFIER.pattern)
+	)
 
 class RuntimePlugin(Plugin):
 	# Runtime plugins have a required version field.
-	version = colander.SchemaNode(colander.String(),
+	version = colander.SchemaNode(
+		colander.String(),
 		title="Runtime version",
-		description="The requested runtime version.")
+		description="The requested runtime version."
+	)
 
 class PlacementPlugin(Plugin):
 	# Placement plugin doesn't have to be defined; just use the default if it isn't.
@@ -69,47 +79,72 @@ class Prepares(colander.SequenceSchema):
 	command = Plugin()
 
 class PrepareSection(StrictAboutExtraKeysColanderMappingSchema):
-	commands = Prepares(missing=[], default=[])
-	runtime = RuntimePlugin(missing={'plugin': None}, default={'plugin': None})
+	commands = Prepares(
+		missing=[],
+		default=[]
+	)
+	runtime = RuntimePlugin(
+		missing={'plugin': None},
+		default={'plugin': None}
+	)
 
 	@staticmethod
 	def default():
 		return {'commands': [], 'runtime': {'plugin': None}}
 
 class Application(StrictAboutExtraKeysColanderMappingSchema):
-	name = colander.SchemaNode(colander.String(),
+	name = colander.SchemaNode(
+		colander.String(),
 		title="Application name",
 		decription="The name of the application",
-		validator=colander.Regex(VALID_IDENTIFIER, "Application names must match " + VALID_IDENTIFIER.pattern))
-	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'), missing={}, default={})
-	prepare = PrepareSection(default=PrepareSection.default(), missing=PrepareSection.default())
+		validator=colander.Regex(VALID_IDENTIFIER, "Application names must match " + VALID_IDENTIFIER.pattern)
+	)
+	tags = colander.SchemaNode(
+		colander.Mapping(unknown='preserve'),
+		missing={},
+		default={}
+	)
+	prepare = PrepareSection(
+		default=PrepareSection.default(),
+		missing=PrepareSection.default()
+	)
 
 class Cron(StrictAboutExtraKeysColanderMappingSchema):
 	# TODO: Place an epic regex on this field to validate it.
-	runspec = colander.SchemaNode(colander.String(),
+	runspec = colander.SchemaNode(
+		colander.String(),
 		title="Run specification",
-		description="CRON-style time specification syntax.")
-	uri = colander.SchemaNode(colander.String(),
+		description="CRON-style time specification syntax."
+	)
+	uri = colander.SchemaNode(
+		colander.String(),
 		title="URI for script",
-		descripton="The URI for the appropriate cron script.")
-	username = colander.SchemaNode(colander.String(),
+		descripton="The URI for the appropriate cron script."
+	)
+	username = colander.SchemaNode(
+		colander.String(),
 		title="Authentication Username",
 		description="The HTTP basic authentication username, if the script requires it.",
 		default=None,
-		missing=None)
-	password = colander.SchemaNode(colander.String(),
+		missing=None
+	)
+	password = colander.SchemaNode(
+		colander.String(),
 		title="Authentication Password",
 		description="The HTTP basic authentication password, if the script requires it.",
 		default=None,
-		missing=None)
+		missing=None
+	)
 
 class Crons(colander.SequenceSchema):
 	crons = Cron()
 
 class Manifest(StrictAboutExtraKeysColanderMappingSchema):
-	format = colander.SchemaNode(colander.Integer(),
+	format = colander.SchemaNode(
+		colander.Integer(),
 		title="Manifest format",
-		description="The manifest format version number.")
+		description="The manifest format version number."
+	)
 
 class Instance(StrictAboutExtraKeysColanderMappingSchema):
 	name = colander.SchemaNode(
@@ -117,11 +152,13 @@ class Instance(StrictAboutExtraKeysColanderMappingSchema):
 		title="Name",
 		description="Instance type name for this instance."
 	)
-	quantity = colander.SchemaNode(colander.Integer(),
+	quantity = colander.SchemaNode(
+		colander.Integer(),
 		title="Quantity",
 		description="The quantity of instances to start with.",
 		missing=1,
-		default=1)
+		default=1
+	)
 	runtime = RuntimePlugin(
 		title="Runtime",
 		description="A section describing the runtime plugin name and version for this instance."
@@ -138,19 +175,22 @@ class Instance(StrictAboutExtraKeysColanderMappingSchema):
 		default=PlacementPlugin.default(),
 		missing=PlacementPlugin.default()
 	)
-	hostnames = colander.SchemaNode(colander.Sequence(),
+	hostnames = colander.SchemaNode(
+		colander.Sequence(),
 		colander.SchemaNode(colander.String()),
 		title="Hostnames",
 		description="A set of public hostnames that this instance will have if it is the current version of the application.",
 		default=[],
 		missing=[]
 	)
-	exclusive = colander.SchemaNode(colander.Boolean(),
+	exclusive = colander.SchemaNode(
+		colander.Boolean(),
 		title="Version Exclusive",
 		description="If set to true, only one version of this instance type will run at a time. This is good for background workers that you don't want overlapping.",
 		default=False,
 		missing=False)
-	standalone = colander.SchemaNode(colander.Boolean(),
+	standalone = colander.SchemaNode(
+		colander.Boolean(),
 		title="Standalone",
 		description="If true, this instance doesn't require a TCP port. Affects the startup of the application.",
 		default=False,
