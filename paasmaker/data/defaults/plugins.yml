@@ -64,6 +64,10 @@ plugins:
     class: paasmaker.common.job.delete.application.ApplicationDeleteServiceJob
     title: Delete Services for Application
 
+  - name: paasmaker.job.service.import
+    class: paasmaker.common.job.service.serviceimport.ServiceImportJob
+    title: Import a service Job
+
   # COORDINATION JOBS
   - name: paasmaker.job.coordinate.selectlocations
     class: paasmaker.common.job.coordinate.selectlocations.SelectLocationsJob

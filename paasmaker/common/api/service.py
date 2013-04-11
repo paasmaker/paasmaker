@@ -162,3 +162,37 @@ class ServiceExportAPIRequest(APIRequest):
 
 	def get_endpoint(self):
 		return '/service/export/%d' % self.service_id
+
+class ServiceImportAPIRequest(APIRequest):
+	"""
+	Import a service.
+	"""
+	def __init__(self, *args, **kwargs):
+		self.params = {}
+		self.params['parameters'] = {}
+		self.service_id = None
+		super(ServiceImportAPIRequest, self).__init__(*args, **kwargs)
+
+	def set_service(self, service_id):
+		"""
+		Set the service ID to import for.
+		"""
+		self.service_id = service_id
+
+	def set_uploaded_file(self, unique_identifier):
+		"""
+		Set the uploaded file identifier to use for this import.
+		"""
+		self.params['uploaded_file'] = unique_identifier
+
+	def set_parameters(self, parameters):
+		"""
+		Set the import parameters for this import.
+		"""
+		self.params['parameters'] = parameters
+
+	def build_payload(self):
+		return self.params
+
+	def get_endpoint(self):
+		return '/service/import/%d' % self.service_id

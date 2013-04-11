@@ -59,6 +59,7 @@ class ApplicationDeleteRootJob(BaseJob):
 
 			if application is None:
 				error_msg = "Can't find application of id %d to delete" % self.parameters["application_id"]
+				session.close()
 				self.logger.error(error_msg)
 				self.failed(error_msg)
 				return

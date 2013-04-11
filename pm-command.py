@@ -1021,6 +1021,32 @@ class ServiceExportAction(RootAction):
 
 		request.fetch(success, self.generic_request_failed, progress_callback=progress, output_file=output_file)
 
+class ServiceImportAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("service_id", help="The workspace to place this application in.")
+		parser.add_argument("uploadedfile", help="The uploaded file identifier.")
+		parser.add_argument("--parameters", default=None, help="JSON encoded parameters to pass to the exporter.")
+		parser.add_argument("--follow", default=False, help="Follow the progress of this job.", action="store_true")
+
+	def describe(self):
+		return "Create a new application."
+
+	def process(self):
+		request = paasmaker.common.api.service.ServiceImportAPIRequest(None)
+		self.point_and_auth(request)
+		request.set_service(int(self.args.service_id))
+		request.set_uploaded_file(self.args.uploadedfile)
+		if self.args.parameters is not None:
+			request.set_parameters(json.loads(self.args.parameters))
+		if self.args.follow:
+			self._follow(request)
+		else:
+			request.send(self.generic_api_response)
+
+	def _format_human(self, data):
+		if 'job_id' in data:
+			return "Submitted import job %s." % (data['job_id'])
+
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
@@ -1085,6 +1111,7 @@ ACTION_MAP = {
 	'router-table-dump': RouterTableDumpAction(),
 	'router-stream': RouterStreamAction(),
 	'service-export': ServiceExportAction(),
+	'service-import': ServiceImportAction(),
 	'help': HelpAction(),
 	'--help': HelpAction()
 }

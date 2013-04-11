@@ -10,14 +10,19 @@ import logging
 import datetime
 import tempfile
 import os
+import re
 
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest
 from paasmaker.common.core import constants
 from ..service.base import BaseService
+from user import UserEditController
+from upload import UploadController
+from workspace import WorkspaceEditController
 
 import tornado
 import colander
+from pubsub import pub
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -134,15 +139,90 @@ class ServiceExportController(BaseController):
 		routes.append((r"/service/export/(\d+)", ServiceExportController, configuration))
 		return routes
 
-class DummyExportableServiceOptionsSchema(colander.MappingSchema):
-	# No parameters required. Plugins just ask for a database.
+class ServiceImportSchema(colander.MappingSchema):
+	uploaded_file = colander.SchemaNode(colander.String(),
+		title="Uploaded File key",
+		description="The uploaded file unique identifier.",
+		default=None,
+		missing=None,
+		validator=colander.Regex(re.compile(r'^[A-Fa-f0-9]+$'), "Invalid uploaded file token."))
+	parameters = colander.SchemaNode(colander.Mapping(unknown='preserve'),
+		title="Parameters",
+		description="Parameters for the target SCM. Validated when the plugin is called.",
+		missing={},
+		default={})
+
+class ServiceImportController(BaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def post(self, service_id):
+		# Load the service record from the database.
+		service = self.session.query(
+			paasmaker.model.Service
+		).get(int(service_id))
+
+		if service is None:
+			raise tornado.web.HTTPError(404, "No such service.")
+
+		# Check permissions.
+		self.require_permission(
+			constants.PERMISSION.SERVICE_IMPORT,
+			workspace=service.application.workspace
+		)
+
+		# Now see if the service can be exported.
+		can_import = self.configuration.plugins.exists(
+			service.provider,
+			paasmaker.util.plugin.MODE.SERVICE_IMPORT
+		)
+
+		if not can_import:
+			raise tornado.web.HTTPError(400, "This service can not be imported.")
+
+		if service.state != constants.SERVICE.AVAILABLE:
+			raise tornado.web.HTTPError(400, "Can not import a service that is not available.")
+
+		self.validate_data(ServiceImportSchema())
+
+		def job_started():
+			# Redirect to clear the post.
+			self._redirect_job(self.get_data('job_id'), '/application/%d' % service.application.id)
+
+		def import_job_ready(job_id):
+			self.add_data('job_id', job_id)
+			self.configuration.job_manager.allow_execution(job_id, callback=job_started)
+
+		# NOTE: This parameter is checked by a regex in the colander
+		# schema to only allow [A-Fa-f0-9]+. This prevents users from
+		# inserting their own local filesystem path...
+		filename = os.path.join(
+			self.configuration.get_scratch_path_exists('uploads'),
+			self.params['uploaded_file']
+		)
+
+		paasmaker.common.job.service.serviceimport.ServiceImportJob.setup_for_service(
+			self.configuration,
+			service,
+			filename,
+			import_job_ready,
+			delete_after_import=True
+		)
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/service/import/(\d+)", ServiceImportController, configuration))
+		return routes
+
+class DummyImportExportServiceOptionsSchema(colander.MappingSchema):
 	pass
 
-class DummyExportableService(BaseService):
+class DummyImportExportService(BaseService):
 	MODES = {
-		paasmaker.util.plugin.MODE.SERVICE_EXPORT: DummyExportableServiceOptionsSchema()
+		paasmaker.util.plugin.MODE.SERVICE_EXPORT: DummyImportExportServiceOptionsSchema(),
+		paasmaker.util.plugin.MODE.SERVICE_IMPORT: DummyImportExportServiceOptionsSchema()
 	}
-	OPTIONS_SCHEMA = DummyExportableServiceOptionsSchema()
+	OPTIONS_SCHEMA = DummyImportExportServiceOptionsSchema()
 	API_VERSION = "0.9.0"
 
 	def export(self, name, credentials, complete_callback, error_callback, stream_callback):
@@ -166,30 +246,51 @@ class DummyExportableService(BaseService):
 		self.complete_callback("Completed exporting.")
 
 	def export_filename(self, service):
-		filename = super(DummyExportableService, self).export_filename(service)
+		filename = super(DummyImportExportService, self).export_filename(service)
 		return filename + ".test"
 
-class ServiceExportControllerTest(BaseControllerTest):
+	def import_file(self, name, credentials, filename, callback, error_callback):
+		# Read the file and return that in the callback.
+		def read_file():
+			contents = open(filename, 'r').read()
+			callback(contents)
+
+		self.configuration.io_loop.add_callback(read_file)
+
+class ServiceExportImportControllerTest(BaseControllerTest):
 	config_modules = ['pacemaker']
 
 	def setUp(self):
-		super(ServiceExportControllerTest, self).setUp()
+		super(ServiceExportImportControllerTest, self).setUp()
 
 		# Register a dummy service plugin.
 		self.configuration.plugins.register(
-			'paasmaker.service.dummyexport',
-			'paasmaker.pacemaker.controller.service.DummyExportableService',
+			'paasmaker.service.dummyexportimport',
+			'paasmaker.pacemaker.controller.service.DummyImportExportService',
 			{},
-			'Dummy export service'
+			'Dummy export/import service'
 		)
+
+		# Start the job manager.
+		self.manager = self.configuration.job_manager
+		self.manager.prepare(self.stop, self.stop)
+		self.wait()
 
 	def get_app(self):
 		self.late_init_configuration(self.io_loop)
 		routes = ServiceExportController.get_routes({'configuration': self.configuration})
+		routes.extend(ServiceImportController.get_routes({'configuration': self.configuration}))
+		routes.extend(UploadController.get_routes({'configuration': self.configuration}))
+		routes.extend(UserEditController.get_routes({'configuration': self.configuration}))
+		routes.extend(WorkspaceEditController.get_routes({'configuration': self.configuration}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
-	def test_simple(self):
+	def on_job_status(self, message):
+		#print str(message.flatten())
+		self.stop(message)
+
+	def test_export(self):
 		self.configuration.get_database_session(self.stop, None)
 		session = self.wait()
 
@@ -205,7 +306,7 @@ class ServiceExportControllerTest(BaseControllerTest):
 		service = paasmaker.model.Service()
 		service.name = "testexport"
 		service.credentials = {}
-		service.provider = 'paasmaker.service.dummyexport'
+		service.provider = 'paasmaker.service.dummyexportimport'
 		service.parameters = {}
 		service.application = application
 		service.state = constants.SERVICE.AVAILABLE
@@ -253,3 +354,103 @@ class ServiceExportControllerTest(BaseControllerTest):
 
 		if os.path.exists(output_location):
 			os.unlink(output_location)
+
+	def test_import(self):
+		# Create a user.
+		request = paasmaker.common.api.user.UserCreateAPIRequest(self.configuration)
+		request.set_superkey_auth()
+		request.set_user_params('User Name', 'username', 'username@example.com', True)
+		request.set_user_password('testtest')
+		request.send(self.stop)
+		response = self.wait()
+
+		self.failIf(not response.success)
+
+		# Fetch that user from the db.
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
+		user = session.query(paasmaker.model.User).get(response.data['user']['id'])
+		apikey = user.apikey
+
+		# And give them permission to upload a file.
+		# TODO: Check permissions work as well.
+		role = paasmaker.model.Role()
+		role.name = "Upload"
+		role.permissions = constants.PERMISSION.ALL
+		session.add(role)
+		allocation = paasmaker.model.WorkspaceUserRole()
+		allocation.user = user
+		allocation.role = role
+		session.add(allocation)
+		paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(session)
+
+		testfile = tempfile.mkstemp()[1]
+		fp = open(testfile, 'w')
+		fp.write("test contents of import")
+		fp.close()
+
+		def progress_callback(position, total):
+			logger.info("Progress: %d of %d bytes uploaded.", position, total)
+
+		# Now, attempt to upload a file.
+		request = paasmaker.common.api.upload.UploadFileAPIRequest(self.configuration)
+		request.set_auth(apikey)
+		request.send_file(testfile, progress_callback, self.stop, self.stop)
+		result = self.wait()
+
+		# Check that it succeeded.
+		self.assertTrue(result['data']['success'], "Uploading test file didn't succeed")
+		remote_file_id = result['data']['identifier']
+
+		# Create the workspace.
+		request = paasmaker.common.api.workspace.WorkspaceCreateAPIRequest(self.configuration)
+		request.set_auth(apikey)
+		request.set_workspace_name('Test workspace')
+		request.set_workspace_stub('test')
+		request.send(self.stop)
+		response = self.wait()
+		new_workspace_id =  response.data['workspace']['id']
+
+		# Fetch a database session.
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
+
+		# Create a dummy application and service.
+		workspace = session.query(
+			paasmaker.model.Workspace
+		).get(new_workspace_id)
+
+		application = paasmaker.model.Application()
+		application.name = "test"
+		application.workspace = workspace
+
+		service = paasmaker.model.Service()
+		service.name = "testexport"
+		service.credentials = {}
+		service.provider = 'paasmaker.service.dummyexportimport'
+		service.parameters = {}
+		service.application = application
+		service.state = constants.SERVICE.AVAILABLE
+
+		session.add(service)
+		session.commit()
+
+		session.refresh(service)
+
+		# Now attempt to import it.
+		request = paasmaker.common.api.service.ServiceImportAPIRequest(self.configuration)
+		request.set_service(service.id)
+		request.set_auth(apikey)
+		request.set_uploaded_file(remote_file_id)
+		request.send(self.stop)
+		response = self.wait()
+
+		job_id = response.data['job_id']
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(job_id))
+
+		# Wait for the import to finish successfully.
+		result = self.wait()
+		while result.state not in (constants.JOB_FINISHED_STATES):
+			result = self.wait()
+
+		self.assertEquals(result.state, constants.JOB.SUCCESS, "Service import job did not succeed.")
