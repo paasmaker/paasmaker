@@ -8,6 +8,7 @@
 
 import tempfile
 import os
+import subprocess
 
 from base import BaseService, BaseServiceTest
 import paasmaker
@@ -37,7 +38,11 @@ class MySQLServiceParametersSchema(colander.MappingSchema):
 	pass
 
 class MySQLServiceExportParametersSchema(colander.MappingSchema):
-	# No parameters required. Plugins just ask for a database.
+	# No parameters required.
+	pass
+
+class MySQLServiceImportParametersSchema(colander.MappingSchema):
+	# No parameters required.
 	pass
 
 def administrative_connection_helper(options):
@@ -116,7 +121,8 @@ class MySQLService(BaseService):
 	MODES = {
 		paasmaker.util.plugin.MODE.SERVICE_CREATE: MySQLServiceParametersSchema(),
 		paasmaker.util.plugin.MODE.SERVICE_DELETE: None,
-		paasmaker.util.plugin.MODE.SERVICE_EXPORT: MySQLServiceExportParametersSchema()
+		paasmaker.util.plugin.MODE.SERVICE_EXPORT: MySQLServiceExportParametersSchema(),
+		paasmaker.util.plugin.MODE.SERVICE_IMPORT: MySQLServiceImportParametersSchema()
 	}
 	OPTIONS_SCHEMA = MySQLServiceConfigurationSchema()
 	API_VERSION = "0.9.0"
@@ -206,6 +212,35 @@ class MySQLService(BaseService):
 		filename = super(MySQLService, self).export_filename(service)
 		return filename + ".sql"
 
+	def import_file(self, name, credentials, filename, callback, error_callback):
+		# Write out the password file.
+		pwfile = tempfile.mkstemp()[1]
+		pwfile_fp = open(pwfile, 'w')
+		pwfile_fp.write("[client]\n")
+		pwfile_fp.write("password=")
+		pwfile_fp.write(credentials['password'])
+		pwfile_fp.write("\n")
+		pwfile_fp.close()
+
+		commandline = [
+			'mysql',
+			'--defaults-extra-file=' + pwfile,
+			'-h', credentials['hostname'],
+			'--port', str(credentials['port']),
+			'-u', credentials['username'],
+			credentials['database']
+		]
+
+		def completed(message):
+			os.unlink(pwfile)
+			callback("Successfully imported database.")
+
+		def errored(message, exception=None):
+			os.unlink(pwfile)
+			error_callback(message, exception=exception)
+
+		self._wrap_import(filename, commandline, completed, errored)
+
 class MySQLServiceTest(BaseServiceTest):
 	def setUp(self):
 		super(MySQLServiceTest, self).setUp()
@@ -219,7 +254,7 @@ class MySQLServiceTest(BaseServiceTest):
 			self.stop,
 			password="test"
 		)
-		result = self.wait()
+		result = self.wait(timeout=10)
 		self.server.start(self.stop, self.stop)
 		result = self.wait()
 
@@ -243,10 +278,12 @@ class MySQLServiceTest(BaseServiceTest):
 		super(MySQLServiceTest, self).tearDown()
 
 	def test_simple(self):
+		logger = self.configuration.get_job_logger('testservice')
 		service = self.registry.instantiate(
 			'paasmaker.service.mysql',
 			paasmaker.util.plugin.MODE.SERVICE_CREATE,
-			{}
+			{},
+			logger=logger
 		)
 
 		service.create('testlongname', self.success_callback, self.failure_callback)
@@ -290,6 +327,9 @@ class MySQLServiceTest(BaseServiceTest):
 		self.assertTrue(self.success, "Did not succeed to export.")
 		self.assertIn('`foo`', self.export_data, "Export data missing table data.")
 
+		# Save the database data for later.
+		database_dump = self.export_data
+
 		# Now remove the database.
 		service.remove('testlongname', credentials, self.success_remove_callback, self.failure_callback)
 		self.wait()
@@ -308,6 +348,82 @@ class MySQLServiceTest(BaseServiceTest):
 
 		self.assertFalse(self.success, "Succeeded when it should not have.")
 		self.assertIn("Unknown database", self.message, "Wrong error message.")
+
+		# Create a new database.
+		service.create('testlongname2', self.success_callback, self.failure_callback)
+		self.wait()
+		self.assertTrue(self.success, "Service creation was not successful.")
+
+		import_credentials = self.credentials
+
+		# Now import the schema into that database.
+		tempimport = tempfile.mkstemp()[1]
+		open(tempimport, 'w').write(database_dump)
+
+		service.import_file(
+			'testlongname2',
+			import_credentials,
+			tempimport,
+			self.success_remove_callback,
+			self.failure_callback
+		)
+		self.wait()
+
+		# Try to connect with the supplied credentials,
+		# and make sure the database contains what we expect.
+		connection = torndb.Connection(
+			"%s:%d" % (import_credentials['hostname'], import_credentials['port']),
+			import_credentials['database'],
+			user=import_credentials['username'],
+			password=import_credentials['password']
+		)
+
+		results = connection.query("SELECT * FROM foo")
+
+		for row in results:
+			self.assertEqual(row['id'], 1, "Row value not as expected.")
+
+		connection.close()
+
+		# Drop it again, recreate, and then import a gzipped version.
+		service.remove('testlongname2', import_credentials, self.success_remove_callback, self.failure_callback)
+		self.wait()
+
+		self.assertTrue(self.success, "Service deletion was not successful.")
+
+		service.create('testlongname3', self.success_callback, self.failure_callback)
+		self.wait()
+		self.assertTrue(self.success, "Service creation was not successful.")
+
+		import_credentials = self.credentials
+
+		subprocess.check_call(['gzip', tempimport])
+		tempimport += '.gz'
+
+		service.import_file(
+			'testlongname2',
+			import_credentials,
+			tempimport,
+			self.success_remove_callback,
+			self.failure_callback
+		)
+		self.wait()
+
+		# Try to connect with the supplied credentials,
+		# and make sure the database contains what we expect.
+		connection = torndb.Connection(
+			"%s:%d" % (import_credentials['hostname'], import_credentials['port']),
+			import_credentials['database'],
+			user=import_credentials['username'],
+			password=import_credentials['password']
+		)
+
+		results = connection.query("SELECT * FROM foo")
+
+		for row in results:
+			self.assertEqual(row['id'], 1, "Row value not as expected.")
+
+		connection.close()
 
 		# Try to connect with the supplied credentials.
 		# This should fail.

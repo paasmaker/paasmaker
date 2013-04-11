@@ -54,6 +54,10 @@ class ManagedPostgresServiceExportParametersSchema(colander.MappingSchema):
 	# No options available.
 	pass
 
+class ManagedPostgresServiceImportParametersSchema(colander.MappingSchema):
+	# No options available.
+	pass
+
 class ManagedPostgresService(PostgresService):
 	"""
 	Start a Postgres server (using the PostgresDaemon class) and make
@@ -69,7 +73,8 @@ class ManagedPostgresService(PostgresService):
 		paasmaker.util.plugin.MODE.SERVICE_DELETE: None,
 		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None,
 		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None,
-		paasmaker.util.plugin.MODE.SERVICE_EXPORT: ManagedPostgresServiceExportParametersSchema()
+		paasmaker.util.plugin.MODE.SERVICE_EXPORT: ManagedPostgresServiceExportParametersSchema(),
+		paasmaker.util.plugin.MODE.SERVICE_IMPORT: ManagedPostgresServiceImportParametersSchema()
 	}
 	OPTIONS_SCHEMA = ManagedPostgresServiceConfigurationSchema()
 	API_VERSION = "0.9.0"

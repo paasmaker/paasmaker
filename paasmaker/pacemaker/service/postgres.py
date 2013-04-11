@@ -33,6 +33,11 @@ class PostgresServiceConfigurationSchema(colander.MappingSchema):
 	password = colander.SchemaNode(colander.String(),
 		title="Postgres Administrative password",
 		description="The password for the user.")
+	binary_path = colander.SchemaNode(colander.String(),
+		title="Postgres Binaries Path",
+		description="The path to the postgres binaries, specifically pg_dump and psql. If auto, it will use the one in the path.",
+		default="auto",
+		missing="auto")
 
 class PostgresServiceParametersSchema(colander.MappingSchema):
 	# No parameters required. Plugins just ask for a database.
@@ -42,14 +47,30 @@ class PostgresServiceExportParametersSchema(colander.MappingSchema):
 	# No options available.
 	pass
 
+class PostgresServiceImportParametersSchema(colander.MappingSchema):
+	# No options available.
+	pass
+
 class PostgresService(BaseService):
 	MODES = {
 		paasmaker.util.plugin.MODE.SERVICE_CREATE: PostgresServiceParametersSchema(),
 		paasmaker.util.plugin.MODE.SERVICE_DELETE: None,
-		paasmaker.util.plugin.MODE.SERVICE_EXPORT: PostgresServiceExportParametersSchema()
+		paasmaker.util.plugin.MODE.SERVICE_EXPORT: PostgresServiceExportParametersSchema(),
+		paasmaker.util.plugin.MODE.SERVICE_IMPORT: PostgresServiceImportParametersSchema()
 	}
 	OPTIONS_SCHEMA = PostgresServiceConfigurationSchema()
 	API_VERSION = "0.9.0"
+
+	def _postgres_path(self):
+		if self.options['binary_path'] == 'auto':
+			if platform.system() == 'Darwin':
+				# Postgres binaries are in the path on OSX.
+				return ""
+			else:
+				# TODO: This is Ubuntu specific.
+				return "/usr/lib/postgresql/9.1/bin"
+		else:
+			return self.options['binary_path']
 
 	def create(self, name, callback, error_callback):
 		# Choose a username, password, and database name.
@@ -164,7 +185,7 @@ class PostgresService(BaseService):
 		pwfile_fp.close()
 
 		commandline = [
-			'pg_dump',
+			os.path.join(self._postgres_path(), 'pg_dump'),
 			'-h', credentials['hostname'],
 			'-p', str(credentials['port']),
 			'-U', credentials['username'],
@@ -199,6 +220,42 @@ class PostgresService(BaseService):
 	def export_filename(self, service):
 		filename = super(PostgresService, self).export_filename(service)
 		return filename + ".sql"
+
+	def import_file(self, name, credentials, filename, callback, error_callback):
+		# Write out the password file.
+		pwfile = tempfile.mkstemp()[1]
+		pwfile_fp = open(pwfile, 'w')
+		pwfile_fp.write("%s:%d:%s:%s:%s\n" % (
+				credentials['hostname'],
+				credentials['port'],
+				credentials['database'],
+				credentials['username'],
+				credentials['password']
+			)
+		)
+		pwfile_fp.close()
+
+		environment = copy.deepcopy(os.environ)
+		environment['PGPASSFILE'] = pwfile
+
+		commandline = [
+			os.path.join(self._postgres_path(), 'psql'),
+			'-h', credentials['hostname'],
+			'-p', str(credentials['port']),
+			'-U', credentials['username'],
+			'-w', # Never ask for a password.
+			credentials['database']
+		]
+
+		def completed(message):
+			os.unlink(pwfile)
+			callback("Successfully imported database.")
+
+		def errored(message, exception=None):
+			os.unlink(pwfile)
+			error_callback(message, exception=exception)
+
+		self._wrap_import(filename, commandline, completed, errored, environment=environment)
 
 class PostgresServiceTest(BaseServiceTest):
 	def _postgres_path(self):
@@ -246,20 +303,17 @@ class PostgresServiceTest(BaseServiceTest):
 	def tearDown(self):
 		if hasattr(self, 'server'):
 			self.server.destroy(self.stop, self.stop)
-			try:
-				self.wait()
-			except psycopg2.OperationalError, ex:
-				# Ignore this exception - it's an async handler
-				# trying to reconnect to the now-stopped Postgres server.
-				pass
+			self.wait(timeout=10)
 
 		super(PostgresServiceTest, self).tearDown()
 
 	def test_simple(self):
+		logger = self.configuration.get_job_logger('testservice')
 		service = self.registry.instantiate(
 			'paasmaker.service.postgres',
 			paasmaker.util.plugin.MODE.SERVICE_CREATE,
-			{}
+			{},
+			logger=logger
 		)
 
 		service.create('test', self.success_callback, self.failure_callback)
@@ -338,27 +392,43 @@ class PostgresServiceTest(BaseServiceTest):
 
 		self.credentials = credentials_copy
 
-		# Try to connect again.
+		# Create a new database and import the backup into it.
+		service.create('test2', self.success_callback, self.failure_callback)
+		self.wait()
+
+		import_credentials = self.credentials
+
+		self.assertTrue(self.success, "Did not create new database.")
+
+		tempimport = tempfile.mkstemp()[1]
+		open(tempimport, 'w').write(self.export_data)
+
+		service.import_file(
+			'test2',
+			import_credentials,
+			tempimport,
+			self.success_remove_callback,
+			self.failure_callback
+		)
+		self.wait()
+
+		self.assertTrue(self.success, "Did not successfully import.")
+
+		# Connect to the database and execute a query.
 		db = momoko.AsyncClient(
 			{
-				'host': self.credentials['hostname'],
-				'port': self.credentials['port'],
-				'user': self.credentials['username'],
-				'password': self.credentials['password'],
+				'host': import_credentials['hostname'],
+				'port': import_credentials['port'],
+				'user': import_credentials['username'],
+				'password': import_credentials['password'],
 				'ioloop': self.configuration.io_loop
 			}
 		)
 
-		try:
-			db.execute("SELECT id FROM foo", callback=self.stop)
-			result = self.wait()
+		db.execute("SELECT id FROM foo", callback=self.stop)
+		result = self.wait()
 
-			for row in result:
-				self.assertEquals(row[0], 1, "Result was not as expected.")
-
-			self.assertFalse(True, "Did not raise exception as expected.")
-		except psycopg2.OperationalError, ex:
-
-			self.assertTrue(True, "Raised exception correctly.")
+		for row in result:
+			self.assertEquals(row[0], 1, "Result was not as expected.")
 
 		db.close()

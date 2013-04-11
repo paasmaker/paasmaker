@@ -51,6 +51,7 @@ MODE_REQUIRE_PARAMS = {
 	'SERVICE_CREATE': True,
 	'SERVICE_DELETE': False,
 	'SERVICE_EXPORT': True,
+	'SERVICE_IMPORT': True,
 
 	# This is for plugins that can run as startup commands for applications.
 	'RUNTIME_STARTUP': True,

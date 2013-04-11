@@ -32,6 +32,7 @@ SYSTEM_PACKAGES = {
 				'zip',
 				'python-pip',
 				'python-dev',
+				'file',
 
 				# For the MySQL python module.
 				'libmysqlclient-dev',

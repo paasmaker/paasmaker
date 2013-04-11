@@ -10,6 +10,9 @@ import uuid
 import re
 import time
 import datetime
+import os
+import pipes
+import tempfile
 
 import tornado.testing
 import paasmaker
@@ -141,6 +144,28 @@ class BaseService(paasmaker.util.plugin.Plugin):
 
 		return filename
 
+	def import_file(self, name, credentials, filename, callback, error_callback):
+		"""
+		Import the given file into the service. Exactly how this is performed
+		depends on your service.
+
+		:arg str name: The name of the service.
+		:arg dict credentials: The credentials of the service.
+		:arg str filename: The filename that contains the data to import.
+		:arg callable callback: The callback to call once done.
+		:arg callable error_callback: The callback to call on error.
+		"""
+		raise NotImplementedError("import_file() is not implemented for this service.")
+
+	def import_cancel(self):
+		"""
+		Cancel the import process. The default implementation kills off the
+		internal import process launched via _wrap_import(). If you don't use
+		this, you'll want to implement your own version.
+		"""
+		if hasattr(self, 'import_process'):
+			self.import_process.kill()
+
 	def _safe_name(self, name, max_length=50):
 		"""
 		Internal helper function to clean a user-supplied service name.
@@ -189,6 +214,123 @@ class BaseService(paasmaker.util.plugin.Plugin):
 			password = password[0:max_length]
 
 		return password
+
+	def _guess_compression(self, filename, callback, error_callback):
+		"""
+		Internal helper function to see if the given file is compressed,
+		and return a type based on that.
+
+		This is designed to be used in ``import_file()``. Uploaded files
+		don't have their original filename, making it hard to guess what
+		their contents might have been, so this function reads the file to
+		check.
+
+		The callback is called with one of a few values:
+		* gzip
+		* bzip2
+		* unknown (assumedly not compressed)
+
+		:arg str filename: The filename to check.
+		:arg callable callback: The callback to call with the result.
+		:arg callable error_callback: The callback used if an error occurs.
+		"""
+
+		def file_result(code):
+			if code == 0:
+				# Success! Read the output.
+				if "gzip compressed data" in file_result.buffer:
+					callback("gzip")
+				elif "bzip2 compressed data" in file_result.buffer:
+					callback("bzip2")
+				else:
+					callback("unknown")
+			else:
+				error_callback("Error whilst determining the type of file %s. Check to see if the 'file' binary is in the path." % filename)
+
+		file_result.buffer = ""
+
+		def buffer_output(data):
+			# Store stdout for a while.
+			file_result.buffer += data
+
+		checker = paasmaker.util.popen.Popen(
+			['file', filename],
+			on_stdout=buffer_output,
+			on_exit=file_result,
+			io_loop=self.configuration.io_loop
+		)
+
+	def _wrap_import(self, filename, command, callback, error_callback, environment=None):
+		"""
+		Helper function to wrap the supplied command around a cat. Eg,
+		it will basically run this in a shell:
+
+		.. code-block:: bash
+
+			$ cat filename | command argument ...
+
+		It will try to guess the compression and replace ``cat`` with ``zcat``
+		or ``bzcat`` as appropriate.
+
+		The instance variable ``import_process`` is set, which can be used to cancel
+		the import.
+
+		:arg str filename: The filename to import from.
+		:arg list command: The command to execute to import.
+		:arg callable callback: The callback to call once done.
+		:arg callable error_callback: The error callback to call on error.
+		"""
+		# Write out a small shell script to do the import.
+		scriptfile = tempfile.mkstemp()[1]
+		scriptfile_fp = open(scriptfile, 'w')
+		#scriptfile_fp.write("\nset -xe\n")
+		scriptfile_fp.write("set -o pipefail\n")
+
+		self.logger.debug("Guessing compression...")
+
+		def detected_compression(compression):
+			dcommand = 'cat'
+			if compression == 'gzip':
+				dcommand = 'zcat'
+			if compression == 'bzip2':
+				dcommand = 'bzcat'
+
+			self.logger.info("Detected compression %s, using %s to decompress.", compression, dcommand)
+
+			scriptfile_fp.write(dcommand)
+			scriptfile_fp.write(' ')
+			scriptfile_fp.write(filename)
+			scriptfile_fp.write(' | ')
+
+			for element in command:
+				scriptfile_fp.write(pipes.quote(element))
+				scriptfile_fp.write(' ')
+
+			scriptfile_fp.write('\n')
+			scriptfile_fp.close()
+
+			self.logger.info("Starting import.")
+			self.log_fp = self.logger.takeover_file()
+
+			def exited(code):
+				self.logger.untakeover_file(self.log_fp)
+				self.logger.info("Exited with code %d.", code)
+				os.unlink(scriptfile)
+				if code == 0:
+					callback("Successfully imported.")
+				else:
+					error_callback("Failed to import - exit code %d." % code)
+
+			self.import_process = paasmaker.util.Popen(
+				['bash', scriptfile],
+				on_exit=exited,
+				stdout=self.log_fp,
+				stderr=self.log_fp,
+				io_loop=self.configuration.io_loop,
+				env=environment
+			)
+
+		self._guess_compression(filename, detected_compression, error_callback)
 
 class BaseServiceTest(tornado.testing.AsyncTestCase):
 	def setUp(self):

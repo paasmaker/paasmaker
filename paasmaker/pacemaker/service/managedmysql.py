@@ -44,6 +44,10 @@ class ManagedMySQLServiceExportParametersSchema(colander.MappingSchema):
 	# No options available.
 	pass
 
+class ManagedMySQLServiceImportParametersSchema(colander.MappingSchema):
+	# No options available.
+	pass
+
 class ManagedMySQLService(MySQLService):
 	"""
 	Start a MySQL server (using the MySQLDaemon class) and make
@@ -59,7 +63,8 @@ class ManagedMySQLService(MySQLService):
 		paasmaker.util.plugin.MODE.SERVICE_DELETE: None,
 		paasmaker.util.plugin.MODE.STARTUP_ASYNC_PRELISTEN: None,
 		paasmaker.util.plugin.MODE.SHUTDOWN_POSTNOTIFY: None,
-		paasmaker.util.plugin.MODE.SERVICE_EXPORT: ManagedMySQLServiceExportParametersSchema()
+		paasmaker.util.plugin.MODE.SERVICE_EXPORT: ManagedMySQLServiceExportParametersSchema(),
+		paasmaker.util.plugin.MODE.SERVICE_IMPORT: ManagedMySQLServiceImportParametersSchema()
 	}
 	OPTIONS_SCHEMA = ManagedMySQLServiceConfigurationSchema()
 	API_VERSION = "0.9.0"
