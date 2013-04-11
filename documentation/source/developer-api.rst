@@ -124,6 +124,15 @@ Roles and Role Allocations
 .. autoclass:: paasmaker.common.api.role.RoleUnAllocationAPIRequest
     :members:
 
+Services
+--------
+
+.. autoclass:: paasmaker.common.api.service.ServiceImportAPIRequest
+    :members:
+
+.. autoclass:: paasmaker.common.api.service.ServiceExportAPIRequest
+    :members:
+
 Misc
 ----
 

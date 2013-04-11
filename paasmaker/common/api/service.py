@@ -165,7 +165,7 @@ class ServiceExportAPIRequest(APIRequest):
 
 class ServiceImportAPIRequest(APIRequest):
 	"""
-	Import a service.
+	Import a service. This submits a job on the server, which you can follow.
 	"""
 	def __init__(self, *args, **kwargs):
 		self.params = {}
