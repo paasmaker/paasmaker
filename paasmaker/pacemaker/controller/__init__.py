@@ -26,3 +26,4 @@ from configuration import ConfigurationDumpController, PluginInformationControll
 import stream
 import templates
 import service
+import plugin

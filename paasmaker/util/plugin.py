@@ -8,6 +8,8 @@
 
 import unittest
 import logging
+import inspect
+import os
 
 import paasmaker
 
@@ -299,6 +301,17 @@ class PluginRegistry(object):
 		has_mode = self.mode_registry.has_key(mode) and (plugin in self.mode_registry[mode])
 		return has_class and has_mode
 
+	def exists_at_all(self, plugin):
+		"""
+		Check to see if a plugin exists at all.
+
+		Use ``exists()`` where you can, as it's more specific.
+
+		:arg str plugin: The plugin to test.
+		"""
+		has_class = self.class_registry.has_key(plugin)
+		return has_class
+
 	def title(self, plugin):
 		"""
 		Return the title of the given plugin.
@@ -386,6 +399,49 @@ class PluginRegistry(object):
 			result[name] = this_plugin
 
 		return result
+
+	def locate_resource_for(self, plugin, filename_postfix):
+		"""
+		Locate the filesystem path of the filename for the given plugin.
+		For example, the plugin paasmaker.service.mysql might have
+		class ``paasmaker.pacemaker.service.mysql.MySQLService``, stored in
+		``paasmaker/pacemaker/service/mysql.py``. The JavaScript and CSS
+		would be stored at ``paasmaker/pacemaker/service/mysql.SERVICE_EXPORT.js``
+		and ``paasmaker/pacemaker/servce/mysql.css``.
+
+		This function looks for the locations of these files. If it can't be found
+		for the plugin exactly, it will look at the superclass for that plugin
+		and check that as well, and continue up the chain.
+
+		:arg str plugin: The plugin to fetch the resource for.
+		:arg str filename_postfix: The filename postfix to search for.
+		"""
+		if not plugin in self.class_registry:
+			raise ValueError("No such plugin %s." % plugin)
+
+		klass = get_class(self.class_registry[plugin])
+		return self._recurse_locate_class_resource(klass, filename_postfix)
+
+	def _recurse_locate_class_resource(self, klass, filename_postfix):
+		if klass.__module__ == '__builtin__':
+			# Gone too far. Stop.
+			return None
+
+		path = inspect.getfile(klass)
+		beginning, ext = os.path.splitext(path)
+		resource_path = "%s.%s" % (beginning, filename_postfix)
+
+		if os.path.exists(resource_path):
+			return resource_path
+		else:
+			# Check the superclasses.
+			for superclass in klass.__bases__:
+				result = self._recurse_locate_class_resource(superclass, filename_postfix)
+				if result is not None:
+					return result
+
+		return None
+
 
 class PluginExampleOptionsSchema(colander.MappingSchema):
 	# Required key.
@@ -565,3 +621,16 @@ class TestExample(unittest.TestCase):
 			self.assertTrue(False, "Should have thrown exception.")
 		except ValueError, ex:
 			self.assertTrue(True, "Didn't throw exception as expected.")
+
+	def test_plugin_resource_locator(self):
+		registry = PluginRegistry(2)
+		registry.register(
+			'paasmaker.test',
+			'paasmaker.util.PluginExample',
+			{'option1': 'test'},
+			"Test Plugin"
+		)
+
+		result = registry.locate_resource_for('paasmaker.test', 'TEST_PARAM.js')
+		self.assertNotEqual(result, None, "Should have found resource.")
+		self.assertEqual(os.path.dirname(result), os.path.dirname(__file__), "Resource not in current directory.")
