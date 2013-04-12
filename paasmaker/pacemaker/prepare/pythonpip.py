@@ -47,24 +47,32 @@ class PythonPipPrepare(BasePrepare):
 
 	def prepare(self, environment, directory, callback, error_callback):
 		# Create or fetch a temporary directory for the download cache.
-		download_cache_path = self.configuration.get_scratch_path_exists(self.called_name)
-		self.logger.info("Download cache path %s", download_cache_path)
+		bundle_cache_path = self.configuration.get_scratch_path_exists(self.called_name)
+		self.logger.info("Bundle cache path %s", bundle_cache_path)
 
 		our_environment = copy.deepcopy(environment)
-		our_environment['PIP_DOWNLOAD_CACHE'] = download_cache_path
+		our_environment['PIP_DOWNLOAD_CACHE'] = bundle_cache_path
+
+		requirements_path = os.path.join(directory, self.parameters['requirements_name'])
+		if not os.path.exists(requirements_path):
+			error_message = "Unable to find requirements file at %s." % self.parameters['requirements_name']
+			self.logger.error(error_message)
+			error_callback(error_message)
+			return
 
 		# Read the requirements file and create a checksum, to see
 		# if we can satisfy the requirements locally. As in, if you've not
 		# changed the requirements file, it should be able to install directly
 		# from the cache.
-		# TODO: This will have corner cases in it that cause the wrong packages to
-		# be installed. Think about this a little bit more.
 		requirements_fp = open(os.path.join(directory, self.parameters['requirements_name']), 'r')
 		requirements_raw = requirements_fp.read()
 		md5 = hashlib.md5()
 		md5.update(requirements_raw)
 		requirements_sum = md5.hexdigest()
-		requirements_checkfile = os.path.join(download_cache_path, requirements_sum) + '.checkfile'
+		bundle_cache_file = os.path.join(
+			bundle_cache_path,
+			"%s.pybundle" % requirements_sum
+		)
 
 		# Create a shell script to perform the commands for us.
 		self.tempnam = tempfile.mkstemp()[1]
@@ -86,18 +94,19 @@ class PythonPipPrepare(BasePrepare):
 		# (This also shortens the shebang lines, otherwise they can easily get too long)
 		fp.write("virtualenv --relocatable %s\n" % self.parameters['virtualenv_name'])
 
-		if not os.path.exists(requirements_checkfile):
+		if not os.path.exists(bundle_cache_file):
 			self.logger.info("New requirements file - downloading packages.")
 
 			# We need to download and cache the packages first.
+			# We do this into a bundle.
 			# In theory, this should mean we can reinstall the same packages again
 			# later without touching the internet at all.
-			fp.write("stdbuf -o0 pip install --download %s -r %s\n" % (download_cache_path, self.parameters['requirements_name']))
+			fp.write("stdbuf -o0 pip bundle %s -r %s\n" % (bundle_cache_file, self.parameters['requirements_name']))
 		else:
 			self.logger.info("Previously seen requirements file - using existing cache only.")
 
 		# Now install packages from the cache.
-		fp.write("stdbuf -o0 pip install --no-index --find-links=file://%s -r %s\n" % (download_cache_path, self.parameters['requirements_name']))
+		fp.write("stdbuf -o0 pip install %s\n" % bundle_cache_file)
 
 		fp.close()
 
@@ -110,10 +119,6 @@ class PythonPipPrepare(BasePrepare):
 			os.unlink(self.tempnam)
 			#self.configuration.debug_cat_job_log(self.logger.job_id)
 			if code == 0:
-				# Now that we've successfully downloaded it, record that we've downloaded
-				# this set of packages.
-				open(requirements_checkfile, 'w')  # This is equivalent to 'touch'.
-
 				# Report success.
 				callback("Successfully prepared via pip.")
 			else:
