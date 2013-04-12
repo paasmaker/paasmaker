@@ -11,6 +11,7 @@ import os
 import uuid
 import logging
 import traceback
+import tempfile
 
 import paasmaker
 
@@ -33,6 +34,33 @@ class TestHelpers(object):
 
 	def dump_job_tree(self, job_id):
 		self.configuration.job_manager.debug_dump_job_tree(job_id, self.stop)
+
+	def pack_sample_application_local(self, application):
+		# Pack up the tornado simple test application.
+		temptarball = tempfile.mkstemp()[1]
+		command_log = tempfile.mkstemp()[1]
+		command_log_fp = open(command_log, 'w')
+		workingdir = os.path.normpath(os.path.dirname(__file__) + '/../../misc/samples/%s' % application)
+		command = ['tar', 'zcvf', temptarball, '.']
+
+		tarrer = paasmaker.util.Popen(command,
+			on_exit=self.stop,
+			stderr=command_log_fp,
+			stdout=command_log_fp,
+			cwd=workingdir,
+			io_loop=self.io_loop)
+
+		code = self.wait()
+		command_log_fp.close()
+
+		if code != 0:
+			print open(command_log, 'r').read()
+
+		os.unlink(command_log)
+
+		self.assertEquals(code, 0, "Unable to create temporary tarball file.")
+
+		return temptarball
 
 	def pack_sample_application(self, application):
 		# Pack up the tornado simple test application.
@@ -347,12 +375,44 @@ class BaseMultipaasTest(tornado.testing.AsyncTestCase, TestHelpers):
 				# the errors if not.
 				self.assertTrue(success, errors)
 
-			self.stop(timeout=timeout)
+			self.stop()
 
 		self.executor.run(command, cb)
 
 		if wait:
-			self.wait()
+			self.wait(timeout=timeout)
+
+	def follow_job(self, job_id, timeout=5):
+		"""
+		Connect to the cluster using the API, and track the progress
+		of the given job tree. Return control once the job reaches
+		a finished state.
+		"""
+		remote = paasmaker.common.api.job.JobStreamAPIRequest(None)
+		# Hack to get the IO loop into the API request.
+		remote.io_loop = self.io_loop
+		remote.set_auth(self.executor.auth_value)
+		remote.set_target("%s:%d" % (self.executor.target_host, self.executor.target_port))
+
+		logger.debug("Waiting for job ID %s", job_id)
+
+		def job_status(remote_job_id, data):
+			logger.debug("Job status: %s", str(data))
+			if remote_job_id == job_id and data['state'] in paasmaker.common.core.constants.JOB_FINISHED_STATES:
+				self.data = data
+				self.success = data['state'] in paasmaker.common.core.constants.JOB_SUCCESS_STATES
+				remote.close()
+				self.stop()
+
+		def job_tree(job_id, tree):
+			logger.debug("Tree: %s", str(tree))
+
+		remote.set_status_callback(job_status)
+		remote.set_tree_callback(job_tree)
+		remote.connect()
+		remote.subscribe(job_id)
+
+		self.wait(timeout=timeout)
 
 	def tearDown(self):
 		if hasattr(self, 'multipaas'):

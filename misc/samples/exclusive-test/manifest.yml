@@ -1,0 +1,32 @@
+manifest:
+  format: 1
+
+application:
+  name: exclusive-test
+  prepare:
+    runtime:
+      plugin: paasmaker.runtime.shell
+      version: 1
+
+instances:
+  - name: web
+    quantity: 1
+    runtime:
+      plugin: paasmaker.runtime.shell
+      parameters:
+        launch_command: "python web.py"
+      version: 1
+    placement:
+      plugin: paasmaker.placement.default
+
+  - name: standalone
+    quantity: 1
+    runtime:
+      plugin: paasmaker.runtime.shell
+      parameters:
+        launch_command: "python standalone.py"
+      version: 1
+    standalone: true
+    exclusive: true
+    placement:
+      plugin: paasmaker.placement.default

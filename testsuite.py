@@ -171,7 +171,8 @@ test_sets = {
 
 	paasmaker.integration.example: ['integration', 'i-example'],
 	paasmaker.integration.workspace: ['integration', 'i-workspace'],
-	paasmaker.integration.user: ['integration', 'i-user']
+	paasmaker.integration.user: ['integration', 'i-user'],
+	paasmaker.integration.exclusive: ['integration', 'i-exclusive']
 }
 
 ########################################

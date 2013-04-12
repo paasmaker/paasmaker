@@ -17,7 +17,9 @@ import shutil
 import signal
 
 import paasmaker
+
 import yaml
+import tornado
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
@@ -211,6 +213,8 @@ class Executor(object):
 	"""
 	def __init__(self, target_host, target_port, auth_value, io_loop):
 		self.target = []
+		self.target_host = target_host
+		self.target_port = target_port
 		self.target.extend(['-r', target_host])
 		self.target.extend(['-p', str(target_port)])
 		self.target.extend(['--format', 'json'])
@@ -218,7 +222,24 @@ class Executor(object):
 		self.io_loop = io_loop
 
 	def set_auth(self, auth_value):
+		self.auth_value = auth_value
 		self.auth = '--key=' + auth_value
+
+	def switch_to_user_auth(self, user_id, callback):
+		def got_apikey(response):
+			# TODO: Error checking...
+			parsed = json.loads(response.body)
+			self.set_auth(parsed['data']['apikey'])
+			callback(parsed['data']['apikey'])
+
+		endpoint = "http://%s:%d/debug/userkey/%d?format=json" % (self.target_host, self.target_port, user_id)
+		request = tornado.httpclient.HTTPRequest(
+			endpoint,
+			headers={'Auth-Paasmaker': self.auth_value},
+			method="GET"
+		)
+		client = tornado.httpclient.AsyncHTTPClient(io_loop=self.io_loop)
+		client.fetch(request, got_apikey)
 
 	def run(self, arguments, callback):
 		"""
@@ -393,6 +414,11 @@ plugins:
     parameters:
       shutdown: true
     title: Managed Redis Service
+
+  # Debugging / test
+  - class: paasmaker.pacemaker.miscplugins.superusertoken.SuperUserTokenMetadata
+    name: paasmaker.debug.apikey
+    title: Debug Fetch User API key
 """
 
 	# TODO: The frontend_domain_postfix command below will fail
