@@ -4,9 +4,10 @@ Python PIP Prepare
 This plugin creates a virtualenv and installs the packages given by the
 ``requirements.txt`` file in your project.
 
-It tries to be clever with package caching; if it has seen the ``requirements.txt``
-file before, it instructs pip not to check the index and just to fetch
-the packages from the cache, which does speed up redeploys somewhat.
+This plugin is very crude and only does just enough to speed up deployments
+with PIP. It will create a checksum of your ``requirements.txt`` contents, and then
+download and install packages into a persistent ``.pybundle`` file. This ``.pybundle``
+file is re-used on subsequent deploys instead of fetching from the internet.
 
 The basic process it takes is this:
 
@@ -14,21 +15,14 @@ The basic process it takes is this:
 
 	$ virtualenv <environment name>
 	$ . <environment name>/bin/activate
-	$ pip install -r <requirements file name>
 	$ virtualenv relocatable <environment name>
+	$ # If this is the first time we've seen this requirements.txt file:
+	$ pip bundle /persistent/bundle/location -r <requirements file name>
+	$ pip install /persistent/bundle/location
 
 .. warning::
-	This plugin is not heavily tested. Please let us know about your experiences
-	with this plugin.
-
-.. note::
-	If you have issues with this plugin, for example if you aborted the prepare
-	and on subsequent times it fails, you might want to clear out the checkfiles
-	to reset the cache:
-
-	.. code-block:: bash
-
-		$ rm scratch/paasmaker.prepare.pythonpip/*.checkfile
+	This plugin is quite crude, and is the minimum to get you started. Please
+	let us know how we can improve it.
 
 Application Configuration
 -------------------------
