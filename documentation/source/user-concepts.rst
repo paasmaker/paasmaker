@@ -4,6 +4,37 @@ Concepts
 Before you delve into Paasmaker, we would like to introduce a few concepts.
 There are quite a few here, but these are core to understanding Paasmaker.
 
+If you've never used a PaaS
+---------------------------
+
+If you've never developed with a Platform as a Service, there are some important
+general concepts that you might not be familiar with.
+
+Nodes are immutable and expendable
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+All PaaS products, including Paasmaker, work by automatically deciding where your
+application should be run, and then deploying separate copies of your code onto
+each new server/node. Nodes may be started or stopped at any time, such as if there
+is a sudden increase (or decrease) in traffic to your site.
+
+You don't know in advance which node(s) your application will be deployed to, and
+the node allocation could change at any time. Therefore, you shouldn't rely on being
+deployed on any particular node.
+
+Don't use the filesystem
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+For the same reason, when a server is no longer needed, it will be "deregistered"
+- meaning all of your application code, along with any other files you write,
+will be deleted. Thus you cannot rely on writing to the filesystem for storage.
+
+Your applications must store data either in a database of some kind,
+or an external filesystem (such as Amazon S3).
+
+Terms
+-----
+
 Runtime
 	A runtime is the language that your application is written in. Paasmaker
 	uses the runtime name to figure out what plugin to use to
