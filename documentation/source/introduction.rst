@@ -17,12 +17,12 @@ Why use a Platform as a Service?
 In traditional web development, you have a set of files (and possibly data) that
 form your application or website. Then, you have a database that you connect to
 and store data in. The code provides some kind of website, and possibly background
-tasks such a cron jobs, or backround workers to do offline processing.
+tasks such as cron jobs, or background workers to do offline processing.
 
-Traditionally, to go live with these, you need to create the appropriate databases,
+In this model, to take the website live, you need to create the appropriate databases,
 choosing usernames, passwords, and database names. Then, you select a location for
-the files, and set up the appropriate stack to host your application, and set up
-ways to start it. You also decide how to run background tasks and cron jobs, and
+the files, and manually set up the appropriate stack to host your application
+(with scripts to start it). You also decide how to run background tasks and cron jobs, and
 edit the appropriate configuration files to set this up. Optionally, once you've
 defined all this, you then come up with a strategy to update the application as you
 make changes. You then test that all the components work together, and go live.
@@ -54,18 +54,17 @@ more capacity automatically as your application needs it.
 What limitations are there in using a Platform as a Service?
 ------------------------------------------------------------
 
-A Platform as a Service is not a magic bullet. No technology really is. To allow the
-Platform as a Service to perform it's job, you will need to consider a few aspects when
-writing your application to get the most out of it.
+That said, no technology is a magic bullet, and all Platform as a Service systems have
+certain design assumptions.
 
-* PaaSs are designed to scale your application horizontally, rather than vertically.
-  That means that it will run your code on more servers to meet demand, rather than
-  finding a bigger server to run your application on. For that reason, the application
-  code should be considered as immutable. That is, you should not store permanent data
-  on the filesystem alongside the application code. This is because the PaaS will delete
-  an instance of your application when it's no longer required on a specific server.
-  Also, each instance of your application that the PaaS starts has it's own seperate
-  filesystem - which might well be on different physical servers.
+* Your application will be scaled horizontally, rather than vertically.
+  In other words, as demand increases, more of the same type of server will
+  be added, rather than finding bigger/faster server(s). For that reason, the application
+  code should be considered as immutable and expendable. That is, every server should have
+  the same codebase (you shouldn't try to run different code on different servers), and
+  permanent data should not be stored on the filesystem alongside the application code.
+  Each instance of your application will have its own separate filesystem that will be
+  deleted when the application is no longer required on a specific server.
 
   This might seem like a huge limitation of the system. And for certain applications
   and hosting systems, it is. Older CMS applications, like Drupal, Wordpress, and Joomla,
@@ -78,21 +77,23 @@ writing your application to get the most out of it.
   either using a traditional NFS setup, or something clustered like Gluster.
 
   Most applications store their user data in databases of some kind - either a relational
-  SQL database or a NoSQL database, or an external web service. These applications are
-  quite easy to run on a PaaS.
+  SQL database or a NoSQL database, or an external web service. Applications where the
+  database is the only storage are very easy to run on a PaaS.
 
   There is nothing stopping your application from writing files to it's filesystem; and
   in fact you might like to write temporary cache files, that you can easily generate,
   onto the filesystem to speed up your application, knowing that they will vanish when
   a new version is deployed or more instances started.
 
-  Paasmaker has the concept of a "filesystem" service, that can be used to host some legacy
-  CMS applications on a single node. However, these applications will not be able to scale
-  unless they are updated to use a shared filesystem of some kind.
-* The PaaS will choose the TCP port that your specific application will run on. It will
-  provide to you the port that you should use when your application starts. This is
-  so that the PaaS can run several of the same application on a single node, and ensure
-  that several different applications on the same node to not conflict.
+  Paasmaker has a :doc:`filesystem service <plugin-service-filesystem>`, to provide backwards
+  compatibility for legacy applications on a single node. However, these applications will
+  not be able to scale unless they are updated to use a shared filesystem of some kind.
+
+* The PaaS will choose the TCP port that your specific application will run on. The idea here is
+  the PaaS then has the ability to rearrange applications to work around failures or balance
+  the load across the system as demand varies. You can provide hints about where to place
+  applications, either by node tags or custom placement plugins, and control how many nodes
+  are started. But the process of starting and stopping instances is left to the PaaS.
 * The PaaS will choose a server for your application to run on. The idea here is that
   the PaaS then has the power to rearrange applications to work around failures or balance
   the load across the system. Paasmaker does allow you to give hints about where to place
@@ -100,7 +101,7 @@ writing your application to get the most out of it.
 
   If your tasks rely on being on a specific server, either because that server is set up
   in a particular way, or that the IP of a given server is whitelisted to access a remote
-  service but other servers are not, you will need to arrange a way to fix these things.
+  service but other servers are not, you will need to arrange a workaround.
   In the case of the servers being set up in the same way, systems such as Opscode's Chef
   or Puppet can be used to keep a set of nodes up to date.
 
