@@ -41,6 +41,7 @@ Below are some notes on integrating with specific languages.
    user-howto-php
    user-howto-ruby
    user-howto-python
+   user-howto-nodejs
    user-howto-generic
 
 Preparing and starting applications
