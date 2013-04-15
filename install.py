@@ -400,6 +400,8 @@ if context['my_name'] is not None:
 	configuration['my_name'] = context['my_name']
 if context['my_route'] is not None:
 	configuration['my_route'] = context['my_route']
+if context['cluster_name'] is not None:
+	configuration['cluster_name'] = context['cluster_name']
 
 if context['node_token'] is None and ('node_token' not in configuration or configuration['node_token'] is None):
 	# Generate a new node token.
@@ -620,6 +622,7 @@ serialized = """# Generated configuration file for Paasmaker.
 #  pacemaker.frontend_domain_postfix
 #  my_name
 #  my_route
+#  cluster_name
 #  master.host
 #  master.port
 #  heart.enabled

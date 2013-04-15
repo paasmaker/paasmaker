@@ -4,6 +4,7 @@ is_pacemaker: true
 
 cluster_hostname: local.paasmaker.net
 frontend_domain_postfix: ":42530"
+cluster_name: Development
 
 master_node: localhost
 master_port: 42500

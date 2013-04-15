@@ -502,6 +502,14 @@ class ConfigurationSchema(StrictAboutExtraKeysColanderMappingSchema):
 		missing=None,
 		default=None)
 
+	cluster_name = colander.SchemaNode(
+		colander.String(),
+		title="Friendly Cluster name",
+		description="The friendly cluster name presented to users when they log in, and also in page titles to identify this cluster.",
+		missing=None,
+		default=None
+	)
+
 	node_token = colander.SchemaNode(colander.String(),
 		title="Node Authentication Token",
 		description="Token used by nodes to validate each other. All nodes should have the same token")

@@ -136,6 +136,7 @@ DEFAULT_INSTALLER_CONFIGURATION = {
 
 	'cluster_hostname': 'local.paasmaker.net',
 	'frontend_domain_postfix': ':42530',
+	'cluster_name': None,
 
 	'redis_mode': 'completely-managed', # or 'defer-to-master'. If node is a router and defer-to-master is set, will create a managed slave.
 

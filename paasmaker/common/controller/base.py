@@ -133,6 +133,7 @@ class BaseController(tornado.web.RequestHandler):
 		self.add_data_template('is_heart', self.configuration.is_heart())
 		self.add_data_template('format_form_error', self.format_form_error)
 		self.add_data_template('nice_state', self.nice_state)
+		self.add_data_template('cluster_name', self.configuration.get_flat('cluster_name'))
 
 		# Add a header that is our node's UUID.
 		uuid = self.configuration.get_node_uuid()
