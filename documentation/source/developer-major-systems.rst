@@ -83,7 +83,7 @@ All HTTP controllers are API or web control endpoints. A full treatment of this 
 Node Registration
 -----------------
 
-The Pacemaker will make it's decisions on what actions to take based on the data
+The Pacemaker will make its decisions on what actions to take based on the data
 recorded in it's SQL database. This means that it needs to know what nodes are available,
 and the status of each instance on that node.
 

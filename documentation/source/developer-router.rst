@@ -16,7 +16,7 @@ HTTP requests are routed inside the system with several components:
   the results into another redis instance.
 * Pacemakers update the routing table as instances are started or stopped,
   or errors detected.
-* Each router host should have it's own Redis instance local to that host.
+* Each router host should have its own Redis instance local to that host.
   This redis instance then is a slave of the master instance. This is for
   several reasons:
 

@@ -3,11 +3,11 @@ The Tornado Web framework
 
 Paasmaker relies heavily on the `Tornado web framework <http://www.tornadoweb.org/>`_.
 Tornado is more than a web framework though; it's a complete asynchronous IO system
-similiar to Twisted or gevent.
+similiar to `Twisted <http://twistedmatrix.com/trac/>`_ or `gevent <http://www.gevent.org/>`_.
 
 Tornado was chosen because a lot of tasks that Paasmaker performs are IO bound,
 which is well suited to this framework, and also removed the need to consider
-locks between threads (irrespective of the Python GIL).
+locks between threads (irrespective of the Python `GIL <http://wiki.python.org/moin/GlobalInterpreterLock>`_).
 
 Asynchronous code and callbacks
 -------------------------------
