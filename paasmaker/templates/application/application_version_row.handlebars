@@ -28,7 +28,7 @@
 				<a class="btn btn-mini btn-success job-action-button" data-version-id="{{id}}" href="/version/{{id}}/start">Start</a>
 			{{/if}}
 			{{#if buttons_to_show.stop}}
-				<a class="btn btn-mini btn-danger job-action-button" data-version-id="{{id}}" href="/version/{{id}}/stop">Stop</a>
+				<a class="btn btn-mini btn-danger" data-toggle="modal" data-target="#app_stop_current_{{id}}_modal">Stop</a>
 			{{/if}}
 			{{#if buttons_to_show.deregister}}
 				<a class="btn btn-mini btn-warning job-action-button" data-version-id="{{id}}" href="/version/{{id}}/deregister">De Register</a>
@@ -39,6 +39,22 @@
 			{{#if buttons_to_show.delete}}
 				<a class="btn btn-mini btn-danger job-action-button" data-version-id="{{id}}" href="/version/{{id}}/delete">Delete</a>
 			{{/if}}
+		</div>
+
+		{{! TODO: Don't duplicate this for every version. }}
+		<div id="app_stop_current_{{id}}_modal" class="modal hide fade" tabindex="-1" role="dialog" aria-labelledby="Stop Current Version" aria-hidden="true">
+			<div class="modal-header">
+				<button type="button" class="close" data-dismiss="modal" aria-hidden="true">×</button>
+				<h3>Stop current version</h3>
+			</div>
+			<div class="modal-body">
+				<p>Stop the current version?</p>
+				<p>This will cause the application to become unavailable and traffic will be lost.</p>
+			</div>
+			<div class="modal-footer">
+				<button class="btn" data-dismiss="modal" aria-hidden="true">Cancel</button>
+				<a class="btn btn-danger job-action-button" data-dismiss="modal" data-version-id="{{id}}" href="/version/{{id}}/stop">Stop</a>
+			</div>
 		</div>
 	</td>
 </tr>
