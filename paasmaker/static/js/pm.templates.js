@@ -542,7 +542,10 @@ function program1(depth0,data) {
   else { stack1 = depth0.version; stack1 = typeof stack1 === functionType ? stack1.apply(depth0) : stack1; }
   buffer += escapeExpression(stack1)
     + "\n				";
-  stack1 = helpers['if'].call(depth0, depth0.is_current, {hash:{},inverse:self.noop,fn:self.program(4, program4, data),data:data});
+  stack1 = helpers['if'].call(depth0, depth0.is_running, {hash:{},inverse:self.noop,fn:self.program(4, program4, data),data:data});
+  if(stack1 || stack1 === 0) { buffer += stack1; }
+  buffer += "\n				";
+  stack1 = helpers['if'].call(depth0, depth0.is_current, {hash:{},inverse:self.noop,fn:self.program(7, program7, data),data:data});
   if(stack1 || stack1 === 0) { buffer += stack1; }
   buffer += "\n			</span>\n		</a>\n	</li>\n";
   return buffer;
@@ -556,16 +559,26 @@ function program2(depth0,data) {
 function program4(depth0,data) {
   
   var buffer = "", stack1;
-  buffer += "\n					<i class=\"icon-star ";
+  buffer += "\n					<i class=\"icon-play ";
   stack1 = helpers['if'].call(depth0, depth0.is_active, {hash:{},inverse:self.noop,fn:self.program(5, program5, data),data:data});
   if(stack1 || stack1 === 0) { buffer += stack1; }
-  buffer += "\" title=\"Version is current\"></i>\n				";
+  buffer += "\" title=\"Version is running\"></i>\n				";
   return buffer;
   }
 function program5(depth0,data) {
   
   
   return "icon-white";
+  }
+
+function program7(depth0,data) {
+  
+  var buffer = "", stack1;
+  buffer += "\n					<i class=\"icon-star ";
+  stack1 = helpers['if'].call(depth0, depth0.is_active, {hash:{},inverse:self.noop,fn:self.program(5, program5, data),data:data});
+  if(stack1 || stack1 === 0) { buffer += stack1; }
+  buffer += "\" title=\"Version is current\"></i>\n				";
+  return buffer;
   }
 
   stack1 = helpers.each.call(depth0, depth0.versions, {hash:{},inverse:self.noop,fn:self.program(1, program1, data),data:data});

@@ -9,6 +9,9 @@
 		<a href="/version/{{id}}">
 			<span class="application-list-version">
 				Version {{version}}
+				{{#if is_running}}
+					<i class="icon-play {{#if is_active}}icon-white{{/if}}" title="Version is running"></i>
+				{{/if}}
 				{{#if is_current}}
 					<i class="icon-star {{#if is_active}}icon-white{{/if}}" title="Version is current"></i>
 				{{/if}}

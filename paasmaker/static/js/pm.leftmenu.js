@@ -131,6 +131,9 @@ pm.leftmenu = (function() {
 							if (highlight_key && highlight_key.version_id && highlight_key.version_id == version.id) {
 								version.is_active = true;
 							}
+							if (version.state == 'RUNNING') {
+								version.is_running = true;
+							}
 							processed_version_list.push(version);
 						});
 						data.versions = processed_version_list;
