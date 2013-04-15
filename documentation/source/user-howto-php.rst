@@ -6,17 +6,17 @@ The implementation starts up an Apache 2 server per heart node, and all applicat
 run under that server instance. Each instance is given it's own virtual host for
 that application, with a seperate port.
 
-Integrating with common Frameworks and CMSs
+Integrating with common systems
 -------------------------------------------
 
-The guides below show how to integrate Paasmaker with some common PHP frameworks
-and CMS systems, including pitfalls for them.
+The guides below show how to integrate Paasmaker with some common PHP systems.
 
 .. toctree::
    :maxdepth: 2
 
    user-howto-php-wordpress
    user-howto-php-symfony2
+   user-howto-php-ttrss
 
 Integrating with any PHP project
 --------------------------------

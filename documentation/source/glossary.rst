@@ -79,7 +79,7 @@ This is a glossary of terms used by Paasmaker.
 		download dependencies for that project, or any other task that is required
 		only once for all instances), and then pack those files and store them somewhere
 		for Hearts to be able to fetch those files later.
-		
+
 	Registering
 		*Registering* is the action taken by a heart to get the instance ready to
 		run. This involves downloading the appropriate version of the application
@@ -98,6 +98,11 @@ This is a glossary of terms used by Paasmaker.
 		creation or management of that database is up to Paasmaker, and the application
 		is simply passed the credentials for the database so it can perform it's task.
 		A named service is shared between all applications in a :term:`workspace`.
+
+	Standalone instance
+		An instance that doesn't listed on a TCP port; typically a background runner task.
+		This type of instance is not supplied with a TCP port nor are any routes added for
+		it. It is managed in the same way as other instances, and can have it's own runtime.
 
 	Version
 		See :term:`application version <application version>`.
