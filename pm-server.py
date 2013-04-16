@@ -134,9 +134,6 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.plugin.PluginResourceJsController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.plugin.PluginResourceCssController.get_routes(route_extras))
 
-	# scaffolds for the new web interface
-	routes.extend(paasmaker.pacemaker.controller.newinterface.NewInterfaceController.get_routes(route_extras))
-	routes.extend(paasmaker.pacemaker.controller.newinterface.NewInterfaceQUnitTestController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.tools.ToolsController.get_routes(route_extras))
 
 	if configuration.debug:
