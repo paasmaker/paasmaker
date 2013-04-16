@@ -162,3 +162,15 @@ SERVICE_CREDENTIAL_VIEW
 	Allows a user to view (through the web interface or API) the credentials
 	associated with services in the workspace. This includes usernames and
 	passwords for database connections, or other shared secrets in a service.
+
+SERVICE_IMPORT
+	Allows a user to import the contents of a service. They also need to be
+	able to upload files for this to work.
+
+SERVICE_EXPORT
+	Allows a user to download a service's contents.
+
+SERVICE_TUNNEL
+	Allows a user to create a TCP tunnel to a service. This also allows them
+	to see all the credentials for the service as well, as this is returned
+	when the tunnel is created.

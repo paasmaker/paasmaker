@@ -13,7 +13,7 @@ import sys
 import json
 
 import paasmaker
-from apirequest import APIRequest, APIResponse
+from apirequest import APIRequest, APIResponse, StreamAPIRequest
 
 import tornado
 
@@ -193,3 +193,135 @@ class ServiceImportAPIRequest(APIRequest):
 
 	def get_endpoint(self):
 		return '/service/import/%d' % self.service_id
+
+# TODO: Handle timeouts and errors better.
+# TODO: Check that all of this is really binary safe.
+class ServiceTunnelStreamAPIRequest(StreamAPIRequest):
+
+	def __init__(self, *args, **kwargs):
+		super(ServiceTunnelStreamAPIRequest, self).__init__(*args, **kwargs)
+		self._callbacks = {}
+
+		self.on('service.tunnel.created', self._created_callback)
+		self.on('service.tunnel.connected', self._opened_callback)
+		self.on('service.tunnel.closed', self._closed_callback)
+		self.on('service.tunnel.data', self._data_callback)
+
+	def _created_callback(self, service_id, identifier, credentials):
+		callback_key = "%s_created" % str(service_id)
+		if callback_key in self._callbacks:
+			self._callbacks[callback_key](service_id, identifier, credentials)
+
+	def _opened_callback(self, identifier):
+		callback_key = "%s_opened" % identifier
+		if callback_key in self._callbacks:
+			self._callbacks[callback_key](identifier)
+
+	def _closed_callback(self, identifier):
+		callback_key = "%s_closed" % identifier
+		if callback_key in self._callbacks:
+			self._callbacks[callback_key](identifier)
+
+	def _data_callback(self, identifier, data):
+		callback_key = "%s_data" % identifier
+		if callback_key in self._callbacks:
+			self._callbacks[callback_key](identifier, data)
+
+	def set_error_callback(self, callback):
+		"""
+		Set the callback for when an error occurs.
+
+		The callback looks like so:
+
+		.. code-block:: python
+
+			def error(message):
+				pass
+		"""
+		self.on('service.tunnel.error', callback)
+
+	def create_tunnel(self, service_id, callback):
+		"""
+		Create a service tunnel. Calls the callback with the
+		identifier that you can use to connect to the tunnel,
+		once you've set up your callbacks.
+
+		If an error occurs, the callback set with ``set_error_callback()``
+		will be called instead.
+
+		The callback looks like this:
+
+		.. code-block:: python
+
+			def created(service_id, identifier, credentials):
+				# service_id is the database service ID.
+				# identifier is a string, the identifier used later to connect/write/close.
+				# credentials is a dict, containing the raw credentials from the remote end.
+				# credentials contains any relevant usernames or passwords required.
+				pass
+
+		:arg int service_id: The service ID to connect to.
+		:arg callable callback: The callback to call with the identifier
+			once the remote end has been set up.
+		"""
+		callback_key = "%s_created" % str(service_id)
+		self._callbacks[callback_key] = callback
+		self.emit('service.tunnel.create', {'service_id': service_id})
+
+	def connect_tunnel(self, identifier, open_callback, data_callback, close_callback):
+		"""
+		Connect to the service tunnel created with ``create()``.
+		Supply the identifier you got from the callback.
+
+		On success, this will call the ``open_callback`` supplied. When
+		data is available, it will call the ``data_callback`` with that
+		data. Finally, when the remote end closes the connection, the ``close_callback``
+		will be called. The ``close_callback`` will be called immediately if
+		the remote end was unable to connect.
+
+		The callbacks look like this:
+
+		.. code-block:: python
+
+			def open_callback(identifier):
+				pass
+
+			def data_callback(identifier, data):
+				# data is a string of data.
+				pass
+
+			def close_callback(identifier):
+				pass
+
+		:arg str identifier: The tunnel identifier.
+		:arg callable open_callback: The callback called when the remote
+			end is ready.
+		:arg callable data_callback: The callback called with the remote
+			end sends data.
+		:arg callable close_callback: The callback called when the remote
+			end closes.
+		"""
+		# Store the callbacks.
+		self._callbacks["%s_opened" % identifier] = open_callback
+		self._callbacks["%s_closed" % identifier] = close_callback
+		self._callbacks["%s_data" % identifier] = data_callback
+
+		# And ask the remote end to connect.
+		self.emit('service.tunnel.connect', identifier)
+
+	def close_tunnel(self, identifier):
+		"""
+		Ask the remote end to disconnect this tunnel.
+
+		:arg str identifier: The identifier to close.
+		"""
+		self.emit('service.tunnel.close', identifier)
+
+	def write_tunnel(self, identifier, data):
+		"""
+		Write data to the remote tunnel.
+
+		:arg str identifier: The identifier to write to.
+		:arg str data: The data to write.
+		"""
+		self.emit('service.tunnel.write', identifier, data)

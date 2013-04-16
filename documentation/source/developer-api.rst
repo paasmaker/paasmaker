@@ -133,6 +133,9 @@ Services
 .. autoclass:: paasmaker.common.api.service.ServiceExportAPIRequest
     :members:
 
+.. autoclass:: paasmaker.common.api.service.ServiceTunnelStreamAPIRequest
+    :members:
+
 Misc
 ----
 

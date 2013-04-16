@@ -11,6 +11,7 @@ import os
 import time
 import unittest
 import uuid
+import socket
 
 import paasmaker
 from ...common.controller.base import BaseControllerTest
@@ -133,6 +134,9 @@ class StreamConnection(tornadio2.SocketConnection):
 		self.router_stats_queue = []
 		self.router_stats_permission_cache = {}
 
+		# Service tunnels.
+		self.service_tunnels = {}
+
 	def store_permissions(self, session, user):
 		# Create and or update the cache.
 		user_key = str(user.id)
@@ -163,6 +167,10 @@ class StreamConnection(tornadio2.SocketConnection):
 		# Clean up router stats.
 		if hasattr(self, 'router_stats_output') and self.router_stats_ready:
 			self.router_stats_output.close()
+
+		# Clean up tunnels.
+		for identifier, tunnel in self.service_tunnels.iteritems():
+			tunnel.close()
 
 	#
 	# JOB HANDLING
@@ -631,6 +639,165 @@ class StreamConnection(tornadio2.SocketConnection):
 
 		self.get_router_stats_handler(stats_ready)
 
+	@tornadio2.event('service.tunnel.create')
+	def service_tunnel_create(self, service_id):
+		# Create a tunnel to the given service.
+		if not self.configuration.is_pacemaker():
+			# Non pacemakers may not create tunnels.
+			self.emit('service.tunnel.error', 'This node is not a pacemaker.')
+			return
+		if self.auth_method == 'node':
+			# Access denied.
+			self.emit('service.tunnel.error', 'Nodes may not create service tunnels.')
+			return
+
+		def got_session(session):
+			# Load the service first.
+			service = session.query(
+				paasmaker.model.Service
+			).get(int(service_id))
+
+			if service is None:
+				self.emit('service.tunnel.error', 'No such service ID %d' % service_id)
+				return
+
+			# Check that the service is tunnelable.
+			credentials = service.credentials
+			if not 'hostname' in credentials and not 'port' in credentials:
+				self.emit('service.tunnel.error', 'Can not connect to this service - it does not have a hostname and port.')
+				return
+
+			# Check permissions.
+			if self.auth_method == 'user':
+				can_do = self.PERMISSIONS_CACHE[str(self.user_id)].has_permission(
+					contants.PERMISSION.SERVICE_TUNNEL,
+					service.application.workspace_id
+				)
+			else:
+				# We would have authenticated with the super token,
+				# so we're allowed to do this.
+				can_do = True
+
+			if not can_do:
+				self.emit('service.tunnel.error', 'Permission denied.')
+			else:
+				# Go ahead and create the tunnel, ready for connection later.
+				identifier = str(uuid.uuid4())
+				self.service_tunnels[identifier] = TCPTunnel(
+					identifier,
+					credentials['hostname'],
+					credentials['port'],
+					self.configuration.io_loop
+				)
+
+				# Return all the credentials - this is to let the remote end
+				# know what details to connect with. Note that this means that
+				# the user can see the credentials.
+				self.emit('service.tunnel.created', service_id, identifier, service.credentials)
+
+		def failed_session(message, exception=None):
+			self.emit('service.tunnel.error', message)
+
+		self.configuration.get_database_session(got_session, failed_session)
+
+	@tornadio2.event('service.tunnel.connect')
+	def service_tunnel_connect(self, identifier):
+		# Connect to the service tunnel.
+		if not identifier in self.service_tunnels:
+			self.emit('service.tunnel.error', 'No such tunnel.')
+		else:
+			def tunnel_connected(stream):
+				self.emit('service.tunnel.connected', identifier)
+
+			def tunnel_closed(stream):
+				self.emit('service.tunnel.closed', identifier)
+
+			def tunnel_data(stream, data):
+				self.emit('service.tunnel.data', identifier, data)
+
+			self.service_tunnels[identifier].set_connect_callback(tunnel_connected)
+			self.service_tunnels[identifier].set_close_callback(tunnel_closed)
+			self.service_tunnels[identifier].set_data_callback(tunnel_data)
+			self.service_tunnels[identifier].connect()
+
+	@tornadio2.event('service.tunnel.write')
+	def service_tunnel_write(self, identifier, data):
+		if not identifier in self.service_tunnels:
+			self.emit('service.tunnel.error', 'No such tunnel.')
+		else:
+			self.service_tunnels[identifier].write(bytes(data))
+
+	@tornadio2.event('service.tunnel.close')
+	def service_tunnel_close(self, identifier):
+		if not identifier in self.service_tunnels:
+			self.emit('service.tunnel.error', 'No such tunnel.')
+		else:
+			self.service_tunnels[identifier].close()
+
+class TCPTunnel(object):
+	def __init__(self, identifier, hostname, port, io_loop):
+		self.io_loop = io_loop
+		self.identifier = identifier
+		self.socket = None
+		self.hostname = hostname
+		self.port = port
+
+		self.connecting = False
+		self.stream = None
+
+		self.connect_callback = None
+		self.data_callback = None
+		self.close_callback = None
+
+	def set_connect_callback(self, callback):
+		self.connect_callback = callback
+
+	def set_close_callback(self, callback):
+		self.close_callback = callback
+
+	def set_data_callback(self, callback):
+		self.data_callback = callback
+
+	def close(self):
+		self.stream.close()
+
+	def connect(self):
+		s = socket.socket(socket.AF_INET, socket.SOCK_STREAM, 0)
+		self.stream = tornado.iostream.IOStream(s, io_loop=self.io_loop)
+		self.stream.set_close_callback(self._closed)
+		self.connecting = True
+		self.stream.connect((self.hostname, self.port), self._connection_complete)
+
+	def _connection_complete(self):
+		self.connecting = False
+		if self.connect_callback:
+			self.connect_callback(self)
+		self.stream.read_until_close(self._read_closed, streaming_callback=self._read_data)
+
+	def is_connected(self):
+		return self.connecting and not self.stream.closed()
+
+	def _closed(self):
+		# Closed - either a connection error or the remote end
+		# closed our connection.
+		self.connecting = False
+		if self.close_callback:
+			self.close_callback(self)
+
+	def _read_closed(self, data=None):
+		# Done.
+		pass
+
+	def _read_data(self, data):
+		if self.data_callback:
+			self.data_callback(self, data)
+
+	def write(self, data):
+		if not self.stream.closed():
+			self.stream.write(data)
+		else:
+			raise IOError("Socket is closed.")
+
 
 class StreamConnectionTest(BaseControllerTest):
 	config_modules = ['pacemaker']
@@ -1032,3 +1199,101 @@ class StreamConnectionTest(BaseControllerTest):
 		remote.history('version_type', 1, 'requests', time.time() - 60, time.time())
 		response = self.wait()
 		self.assertEquals(response[0], 'history', "Wrong response - got %s." % response[0])
+
+	def test_raw_tcptunnel(self):
+		stream = TCPTunnel('foo', 'localhost', self.get_http_port(), self.configuration.io_loop)
+
+		def tunnel_data(stm, data):
+			self.assertIn("404 Not Found", data, "Response was not as expected.")
+			# Close it off and continue.
+			stream.close()
+
+		def tunnel_open(stm):
+			stm.write("GET / HTTP/1.1\r\nHost: localhost:%d\r\n\r\n" % self.get_http_port())
+
+		def tunnel_close(stm):
+			self.stop()
+
+		# What does this test do? Once connected, it sends a very simple
+		# HTTP request. When it gets the data back, it checks it, and then
+		# closes the connection. Then we get the close event.
+
+		stream.set_connect_callback(tunnel_open)
+		stream.set_close_callback(tunnel_close)
+		stream.set_data_callback(tunnel_data)
+
+		stream.connect()
+
+		self.wait()
+
+	def test_service_tunnel(self):
+		# Create a test service to tunnel to.
+		self.configuration.get_database_session(self.stop, None)
+		session = self.wait()
+
+		workspace = paasmaker.model.Workspace()
+		workspace.name = "Test"
+		workspace.stub = "test"
+
+		session.add(workspace)
+
+		application = paasmaker.model.Application()
+		application.name = "test"
+		application.workspace = workspace
+
+		service = paasmaker.model.Service()
+		service.name = "testtunnel"
+		service.credentials = {'hostname': 'localhost', 'port': self.get_http_port()}
+		service.provider = 'paasmaker.service.testtunnel'
+		service.parameters = {}
+		service.application = application
+		service.state = constants.SERVICE.AVAILABLE
+
+		session.add(service)
+		session.commit()
+
+		session.refresh(service)
+
+		# Test the websocket version.
+		self._test_service_tunnel(service.id, False)
+		# And then the longpoll version.
+		self._test_service_tunnel(service.id, True)
+
+	def _test_service_tunnel(self, service_id, force_longpoll):
+		def error(message):
+			# Abort the processing of this test.
+			self.assertTrue(False, message)
+
+		remote = paasmaker.common.api.service.ServiceTunnelStreamAPIRequest(self.configuration, force_longpoll=force_longpoll)
+		remote.set_superkey_auth()
+
+		remote.set_error_callback(error)
+		remote.connect()
+
+		# Try to create a tunnel to the service.
+		def got_tunnel(service_id, identifier, credentials):
+			self.stop((identifier, credentials))
+
+		remote.create_tunnel(service_id, got_tunnel)
+		identifier, credentials = self.wait()
+
+		self.assertIn('hostname', credentials, "Missing hostname from credentials.")
+		self.assertIn('port', credentials, "Missing port from credentials.")
+
+		# Now try to connect.
+		def opened(identifier):
+			# Send some data down the tunnel.
+			remote.write_tunnel(identifier, "GET / HTTP/1.1\r\nHost: localhost:%d\r\n\r\n" % self.get_http_port())
+
+		def closed(identifier):
+			# Indicate that we closed the remote end.
+			self.stop(identifier)
+
+		def data(identifier, data):
+			self.assertIn("404 Not Found", data, "Response was not as expected.")
+			# Close it off and continue.
+			remote.close_tunnel(identifier)
+
+		remote.connect_tunnel(identifier, opened, data, closed)
+		self.wait()
+
