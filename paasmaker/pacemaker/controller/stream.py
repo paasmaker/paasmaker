@@ -1297,3 +1297,27 @@ class StreamConnectionTest(BaseControllerTest):
 		remote.connect_tunnel(identifier, opened, data, closed)
 		self.wait()
 
+		# Try the listener helper.
+		port = self.configuration.get_free_port()
+		remote.listen_tunnel(identifier, port, io_loop=self.configuration.io_loop)
+
+		local = TCPTunnel(identifier, 'localhost', port, self.configuration.io_loop)
+
+		def tunnel_data(stm, data):
+			self.assertIn("404 Not Found", data, "Response was not as expected.")
+			# Close it off and continue.
+			local.close()
+
+		def tunnel_open(stm):
+			stm.write("GET / HTTP/1.1\r\nHost: localhost:%d\r\n\r\n" % self.get_http_port())
+
+		def tunnel_close(stm):
+			self.stop()
+
+		local.set_connect_callback(tunnel_open)
+		local.set_close_callback(tunnel_close)
+		local.set_data_callback(tunnel_data)
+
+		local.connect()
+
+		self.wait()

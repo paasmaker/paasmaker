@@ -17,6 +17,13 @@ from apirequest import APIRequest, APIResponse, StreamAPIRequest
 
 import tornado
 
+try:
+	# Tornado 3.x
+	from tornado.tcpserver import TCPServer
+except ImportError, ex:
+	# Tornado < 3.x
+	from tornado.netutil import TCPServer
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
@@ -325,3 +332,54 @@ class ServiceTunnelStreamAPIRequest(StreamAPIRequest):
 		:arg str data: The data to write.
 		"""
 		self.emit('service.tunnel.write', identifier, data)
+
+	def listen_tunnel(self, identifier, port, address='localhost', io_loop=None):
+		"""
+		A helper to set up a local listening TCP port that connects
+		that back to the given service identifier.
+
+		Note that no other security is implemented on this tunnel;
+		anyone can connect to the port, although generally you would
+		need the credentials to be able to access the service behind it.
+
+		:arg str identifier: The identifier to connect this TCP port to.
+		:arg int port: The TCP port to listen on.
+		:arg str address: The address to listen on - defaults to localhost.
+		:arg IOLoop io_loop: The IO loop to use to listen with.
+		"""
+		server = ServiceTunnelListener(io_loop=io_loop)
+		server.setup_tunnel(identifier, self)
+		server.listen(port, address)
+
+class ServiceTunnelListener(TCPServer):
+	def setup_tunnel(self, identifier, remote):
+		self.remote = remote
+		self.identifier = identifier
+
+	def handle_stream(self, stream, address):
+		# New connection. Add callbacks.
+		def opened_callback(identifier):
+			# No action to take.
+			logger.info("Connection established from %s", address)
+
+		def closed_callback(identifier):
+			logger.info("Connection closed from %s", address)
+			stream.close()
+
+		def server_data_callback(identifier, data):
+			stream.write(bytes(data))
+
+		def local_data_callback(data):
+			self.remote.write_tunnel(self.identifier, data)
+
+		def local_data_done(data=None):
+			pass
+
+		self.remote.connect_tunnel(
+			self.identifier,
+			opened_callback,
+			server_data_callback,
+			closed_callback
+		)
+
+		stream.read_until_close(local_data_done, local_data_callback)
