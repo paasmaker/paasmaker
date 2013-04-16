@@ -1047,6 +1047,31 @@ class ServiceImportAction(RootAction):
 		if 'job_id' in data:
 			return "Submitted import job %s." % (data['job_id'])
 
+class ServiceTunnelAction(RootAction):
+	def options(self, parser):
+		parser.add_argument("service_id", help="Service ID to tunnel to.")
+		parser.add_argument("--localport", default=10010, help="The local TCP port to listen on.")
+		parser.add_argument("--localaddress", default='localhost', help="The local address to bind to.")
+
+	def describe(self):
+		return "Create a TCP tunnel to the given service ID."
+
+	def process(self):
+		request = paasmaker.common.api.service.ServiceTunnelStreamAPIRequest(None)
+		request.set_error_callback(self._stream_error_callback)
+		self.point_and_auth(request)
+		request.connect()
+
+		# Try to create a tunnel to the service.
+		def got_tunnel(service_id, identifier, credentials):
+			logger.info("Access credentials:")
+			self.prettyprint(credentials)
+			logger.info("** Going to listen on %s:%d", self.args.localaddress, self.args.localport)
+			logger.info("** Press CTRL+C to exit.")
+			request.listen_tunnel(identifier, self.args.localport, self.args.localaddress)
+
+		request.create_tunnel(int(self.args.service_id), got_tunnel)
+
 class HelpAction(RootAction):
 	def options(self, parser):
 		pass
@@ -1112,6 +1137,7 @@ ACTION_MAP = {
 	'router-stream': RouterStreamAction(),
 	'service-export': ServiceExportAction(),
 	'service-import': ServiceImportAction(),
+	'service-tunnel': ServiceTunnelAction(),
 	'help': HelpAction(),
 	'--help': HelpAction()
 }

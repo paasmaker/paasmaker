@@ -11,6 +11,7 @@ import os
 import urllib
 import sys
 import json
+import base64
 
 import paasmaker
 from apirequest import APIRequest, APIResponse, StreamAPIRequest
@@ -232,7 +233,7 @@ class ServiceTunnelStreamAPIRequest(StreamAPIRequest):
 	def _data_callback(self, identifier, data):
 		callback_key = "%s_data" % identifier
 		if callback_key in self._callbacks:
-			self._callbacks[callback_key](identifier, data)
+			self._callbacks[callback_key](identifier, base64.b64decode(data))
 
 	def set_error_callback(self, callback):
 		"""
@@ -331,7 +332,7 @@ class ServiceTunnelStreamAPIRequest(StreamAPIRequest):
 		:arg str identifier: The identifier to write to.
 		:arg str data: The data to write.
 		"""
-		self.emit('service.tunnel.write', identifier, data)
+		self.emit('service.tunnel.write', identifier, base64.b64encode(data))
 
 	def listen_tunnel(self, identifier, port, address='localhost', io_loop=None):
 		"""
@@ -373,7 +374,8 @@ class ServiceTunnelListener(TCPServer):
 			self.remote.write_tunnel(self.identifier, data)
 
 		def local_data_done(data=None):
-			pass
+			if data:
+				local_data_callback(data)
 
 		self.remote.connect_tunnel(
 			self.identifier,

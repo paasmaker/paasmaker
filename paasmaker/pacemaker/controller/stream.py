@@ -12,6 +12,7 @@ import time
 import unittest
 import uuid
 import socket
+import base64
 
 import paasmaker
 from ...common.controller.base import BaseControllerTest
@@ -29,6 +30,10 @@ BLOCK_READ = 8192
 MAX_LOG_SIZE = 102400 # Don't send back more logs than this size.
 
 # TODO: Add hooks so that plugins can also use this connection.
+# TODO: Service tunnelling is not efficient because it has to base64 the data
+# coming in and out, which increases the size. This is because tornadio2
+# does some unicode handling for us which isn't directly compatible with
+# sending the arguments along.
 
 class StreamConnection(tornadio2.SocketConnection):
 	# Shared permissions cache for all socket.io sessions.
@@ -639,6 +644,10 @@ class StreamConnection(tornadio2.SocketConnection):
 
 		self.get_router_stats_handler(stats_ready)
 
+	#
+	# SERVICE TUNNELS
+	#
+
 	@tornadio2.event('service.tunnel.create')
 	def service_tunnel_create(self, service_id):
 		# Create a tunnel to the given service.
@@ -670,7 +679,7 @@ class StreamConnection(tornadio2.SocketConnection):
 			# Check permissions.
 			if self.auth_method == 'user':
 				can_do = self.PERMISSIONS_CACHE[str(self.user_id)].has_permission(
-					contants.PERMISSION.SERVICE_TUNNEL,
+					constants.PERMISSION.SERVICE_TUNNEL,
 					service.application.workspace_id
 				)
 			else:
@@ -713,7 +722,7 @@ class StreamConnection(tornadio2.SocketConnection):
 				self.emit('service.tunnel.closed', identifier)
 
 			def tunnel_data(stream, data):
-				self.emit('service.tunnel.data', identifier, data)
+				self.emit('service.tunnel.data', identifier, base64.b64encode(data))
 
 			self.service_tunnels[identifier].set_connect_callback(tunnel_connected)
 			self.service_tunnels[identifier].set_close_callback(tunnel_closed)
@@ -725,7 +734,7 @@ class StreamConnection(tornadio2.SocketConnection):
 		if not identifier in self.service_tunnels:
 			self.emit('service.tunnel.error', 'No such tunnel.')
 		else:
-			self.service_tunnels[identifier].write(bytes(data))
+			self.service_tunnels[identifier].write(base64.b64decode(data))
 
 	@tornadio2.event('service.tunnel.close')
 	def service_tunnel_close(self, identifier):
@@ -785,8 +794,8 @@ class TCPTunnel(object):
 			self.close_callback(self)
 
 	def _read_closed(self, data=None):
-		# Done.
-		pass
+		if data:
+			self._read_data(data)
 
 	def _read_data(self, data):
 		if self.data_callback:
