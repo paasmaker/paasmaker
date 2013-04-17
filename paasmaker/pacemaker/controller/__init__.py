@@ -7,7 +7,6 @@
 #
 
 from index import IndexController
-from newinterface import NewInterfaceController, NewInterfaceQUnitTestController
 from tools import ToolsController
 from login import LoginController, LogoutController
 from node import NodeRegisterController, NodeListController
