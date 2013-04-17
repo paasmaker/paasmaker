@@ -139,6 +139,7 @@ test_sets = {
 	paasmaker.pacemaker.scm.zip: ['normal', 'scm'],
 	paasmaker.pacemaker.scm.tarball: ['normal', 'scm'],
 	paasmaker.pacemaker.scm.git: ['normal', 'scm'],
+	paasmaker.pacemaker.scm.subversion: ['normal', 'scm'],
 
 	paasmaker.pacemaker.scmlist.bitbucket: ['normal', 'scmlist', 'slow'],
 
