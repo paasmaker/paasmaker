@@ -14,13 +14,16 @@ import colander
 import tornado
 import tornado.auth
 
-# TODO: Add the ability to restrict login/account creation to certain
-# domain names; eg your work domain name. This stops random user
-# account creation, even though they'd have no permissions.
+# TODO: Allow auto-assigning a role.
 
 class GoogleAuthConfigurationSchema(colander.MappingSchema):
-	# No options defined.
-	pass
+	limit_domains = colander.SchemaNode(
+		colander.String(),
+		title="Limit login domain names",
+		description="Limit login domain names to the comma seperated list provided. If a user has an email that doesn't match, they are not permitted to log in.",
+		default=None,
+		missing=None
+	)
 
 class GoogleAuthMetadata(paasmaker.util.plugin.Plugin):
 	MODES = {
@@ -33,7 +36,7 @@ class GoogleAuthMetadata(paasmaker.util.plugin.Plugin):
 	def add_routes(self, routes, route_extras):
 		# Add the additional route required.
 		routes.extend(
-			GoogleAuthController.get_routes(route_extras, self.called_name)
+			GoogleAuthController.get_routes(route_extras, self.called_name, self.options)
 		)
 
 	def get_login_metadata(self):
@@ -46,6 +49,16 @@ class GoogleAuthMetadata(paasmaker.util.plugin.Plugin):
 class GoogleAuthController(BaseController, tornado.auth.GoogleMixin):
 	AUTH_METHODS = [BaseController.ANONYMOUS]
 
+	def initialize(self, **kwargs):
+		# Take out our kwargs.
+		self.called_name = kwargs['called_name']
+		self.options = kwargs['options']
+
+		del kwargs['called_name']
+		del kwargs['options']
+
+		super(GoogleAuthController, self).initialize(**kwargs)
+
 	def get(self):
 		if self.get_argument("openid.mode", None):
 			self.get_authenticated_user(self.async_callback(self._on_auth))
@@ -57,6 +70,19 @@ class GoogleAuthController(BaseController, tornado.auth.GoogleMixin):
 		if not google_user:
 			raise tornado.web.HTTPError(500, "Google auth failed")
 
+		# Split up the allowed email names.
+		if self.options['limit_domains']:
+			limited_list = self.options['limit_domains'].split(',')
+			allowed = False
+			for domain in limited_list:
+				domain = domain.strip()
+
+				if google_user['email'].endswith(domain):
+					allowed = True
+
+			if not allowed:
+				raise tornado.web.HTTPError(403, "Not permitted to log in to this server.")
+
 		# The google_user dict has the following keys:
 		# first_name
 		# name
@@ -66,12 +92,11 @@ class GoogleAuthController(BaseController, tornado.auth.GoogleMixin):
 		# email
 
 		# Look up the user by email address.
-		# TODO: Use the correct auth source name.
 		user = self.session.query(
 			paasmaker.model.User
 		).filter(
 			paasmaker.model.User.login==google_user['email'],
-			paasmaker.model.User.auth_source=="paasmaker.auth.google"
+			paasmaker.model.User.auth_source==self.called_name
 		).first()
 
 		if not user:
@@ -98,13 +123,17 @@ class GoogleAuthController(BaseController, tornado.auth.GoogleMixin):
 		self.redirect('/')
 
 	@staticmethod
-	def get_routes(configuration, called_name):
+	def get_routes(configuration, called_name, options):
+		configcopy = {}
+		configcopy['called_name'] = called_name
+		configcopy['options'] = options
+		configcopy.update(configuration)
 		routes = []
 		routes.append(
 			(
 				r"/login/%s" % called_name,
 				GoogleAuthController,
-				configuration
+				configcopy
 			)
 		)
 		return routes
