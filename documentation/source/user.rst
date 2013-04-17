@@ -15,6 +15,7 @@ below, to understand how Paasmaker works and how it runs your applications.
    user-gettingstarted
    user-concepts
    user-application-manifest
+   user-commandline
 
 An important point
 ------------------
