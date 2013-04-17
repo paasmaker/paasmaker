@@ -94,7 +94,7 @@ class GitSCM(BaseSCM):
 				# Build a few output parameters.
 				# TODO: Make this async.
 				git_version = subprocess.check_output(['git', 'version']).split(" ")[-1].strip()
-				this_revision = subprocess.check_output(['git', 'log', '-n', '1', '--format=oneline']).split(" ")[0].strip()
+				this_revision = subprocess.check_output(['git', 'log', '-n', '1', '--format=oneline'], cwd=self.path).split(" ")[0].strip()
 				parameters = {
 					'revision': this_revision,
 					'tool_version': git_version,
