@@ -61,7 +61,7 @@ class PostgresService(BaseService):
 	OPTIONS_SCHEMA = PostgresServiceConfigurationSchema()
 	API_VERSION = "0.9.0"
 
-	def _postgres_path(self):
+	def _postgres_binary_path(self):
 		if self.options['binary_path'] == 'auto':
 			if platform.system() == 'Darwin':
 				# Postgres binaries are in the path on OSX.
@@ -185,7 +185,7 @@ class PostgresService(BaseService):
 		pwfile_fp.close()
 
 		commandline = [
-			os.path.join(self._postgres_path(), 'pg_dump'),
+			os.path.join(self._postgres_binary_path(), 'pg_dump'),
 			'-h', credentials['hostname'],
 			'-p', str(credentials['port']),
 			'-U', credentials['username'],
@@ -243,7 +243,7 @@ class PostgresService(BaseService):
 		environment['PGPASSFILE'] = pwfile
 
 		commandline = [
-			os.path.join(self._postgres_path(), 'psql'),
+			os.path.join(self._postgres_binary_path(), 'psql'),
 			'-h', credentials['hostname'],
 			'-p', str(credentials['port']),
 			'-U', credentials['username'],
@@ -262,7 +262,7 @@ class PostgresService(BaseService):
 		self._wrap_import(filename, commandline, completed, errored, environment=environment)
 
 class PostgresServiceTest(BaseServiceTest):
-	def _postgres_path(self):
+	def _postgres_binary_path(self):
 		if platform.system() == 'Darwin':
 			# Postgres binaries are in the path on OSX.
 			return ""
@@ -276,7 +276,7 @@ class PostgresServiceTest(BaseServiceTest):
 		self.server = paasmaker.util.postgresdaemon.PostgresDaemon(self.configuration)
 		self.server.configure(
 			self.configuration.get_scratch_path_exists('postgres'),
-			self._postgres_path(),
+			self._postgres_binary_path(),
 			self.configuration.get_free_port(),
 			'127.0.0.1',
 			self.stop,
@@ -299,7 +299,7 @@ class PostgresServiceTest(BaseServiceTest):
 				'port': self.server.get_port(),
 				'username': 'postgres',
 				'password': 'test',
-				'binary_path': self._postgres_path()
+				'binary_path': self._postgres_binary_path()
 			},
 			'Postgres Service'
 		)
