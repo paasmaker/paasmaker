@@ -305,14 +305,14 @@ if context['runtime_nvm_enable']:
 				context,
 				'bash -c ". %s; nvm install %s"' % (nvm_script, version)
 			)
-		# TODO: Hack to install handlebars so that the --debug=1 mode works.
+		# TODO: Hack to install requirejs.
 		if version == 'v0.8.22':
-			logger.info("Installing handlebars to compile JavaScript templates in debug mode.")
+			logger.info("Installing requirejs to compile JavaScript.")
 			npm_list = subprocess.check_output('bash -c ". %s; nvm use v0.8.22; npm list -g"' % nvm_script, shell=True)
-			if ' handlebars@' not in npm_list:
+			if ' requirejs@' not in npm_list:
 				install.helpers.generic_command_shell(
 					context,
-					'bash -c ". %s; nvm use v0.8.22; npm install handlebars -g"' % nvm_script
+					'bash -c ". %s; nvm use v0.8.22; npm install requirejs -g"' % nvm_script
 				)
 
 

@@ -135,47 +135,18 @@
 			</div>
 		</div>
 
-		<script src="{{ static_url("js/libs/jquery-1.9.1.js") }}"></script>
-		<script src="{{ static_url("js/libs/jquery.json-2.4.min.js") }}"></script>
-		<script src="{{ static_url("js/libs/jquery.flot.js") }}"></script>
-		<script src="{{ static_url("js/libs/jquery.flot.pie.js") }}"></script>
-		<script src="{{ static_url("js/libs/jquery.jsoneditor.js") }}"></script>
-		<script src="{{ static_url("js/libs/bootstrap.js") }}"></script>
-		<script src="{{ static_url("js/libs/resumable.js") }}"></script>
-		<script src="{{ static_url("js/libs/socket.io.js") }}"></script>
-		<script src="{{ static_url("js/libs/handlebars.js") }}"></script>
-		<script src="{{ static_url("js/libs/moment.js") }}"></script>
-
-		<script src="{{ static_url("js/script.js") }}"></script>
-		<script src="{{ static_url("js/pm.util.js") }}"></script>
-		<script src="{{ static_url("js/pm.data.js") }}"></script>
-		<script src="{{ static_url("js/stats/router.js") }}"></script>
-		<script src="{{ static_url("js/logs/instance.js") }}"></script>
-		<script src="{{ static_url("js/jobs/display.js") }}"></script>
-		<script src="{{ static_url("js/widgets/upload.js") }}"></script>
-
-		<script src="{{ static_url("js/pm.leftmenu.js") }}"></script>
-		<script src="{{ static_url("js/pm.admin.js") }}"></script>
-		<script src="{{ static_url("js/pm.node.js") }}"></script>
-		<script src="{{ static_url("js/pm.workspace.js") }}"></script>
-		<script src="{{ static_url("js/pm.application.js") }}"></script>
-		<script src="{{ static_url("js/pm.version.js") }}"></script>
-		<script src="{{ static_url("js/pm.service.js") }}"></script>
-		<script src="{{ static_url("js/pm.upload.js") }}"></script>
-		<script src="{{ static_url("js/pm.history.js") }}"></script>
-
-		{# Handlebars templates. Run in debug mode and view the page to recompile them all.
-			Check in any changes that it makes to pm.templates.js for production systems. #}
 		{% if debug %}
-			<script src="/development/templates.js"></script>
+			<script data-main="/static/js/main" src="{{ static_url("js/libs/require/require.js") }}"></script>
+			{# You should check in the updated main-built.js, as that's the production version. #}
+			<script src="/development/rebuild-javascript.txt" type="text/plain"></script>
 		{% else %}
-			<script src="{{ static_url("js/pm.templates.js") }}"></script>
+			<script src="{{ static_url("js/main-built.js") }}"></script>
 		{% end %}
 
-		<script src="/my-permissions.js" type="text/javascript"></script>
+		{# <script src="/my-permissions.js" type="text/javascript"></script>
 		<script type="text/javascript">
 			{% if "js_commands" in globals() %}{% raw js_commands %}{% end %}
-		</script>
+		</script> #}
 		{% block scripts %}
 		{% end %}
 	</body>

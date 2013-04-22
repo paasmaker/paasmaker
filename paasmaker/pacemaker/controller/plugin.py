@@ -49,13 +49,9 @@ class PluginResourceBaseController(BaseController):
 class PluginResourceJsController(PluginResourceBaseController):
 	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
 
-	def get(self, plugin_name, mode):
-		if mode not in plugin.MODE.ALL:
-			raise tornado.web.HTTPError(400, "No such plugin mode.")
-
-		exists = self.configuration.plugins.exists(
-			plugin_name,
-			mode
+	def get(self, plugin_name):
+		exists = self.configuration.plugins.exists_at_all(
+			plugin_name
 		)
 
 		if not exists:
@@ -63,7 +59,7 @@ class PluginResourceJsController(PluginResourceBaseController):
 
 		result = self.configuration.plugins.locate_resource_for(
 			plugin_name,
-			"%s.js" % mode
+			"script.js"
 		)
 
 		if result is None:
@@ -75,7 +71,36 @@ class PluginResourceJsController(PluginResourceBaseController):
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
-		routes.append((r"/plugin/([-a-z0-9._]+)/([A-Z_]+)\.js", PluginResourceJsController, configuration))
+		routes.append((r"/plugin/([-a-z0-9._]+)/script\.js", PluginResourceJsController, configuration))
+		return routes
+
+class PluginResourceTemplateController(PluginResourceBaseController):
+	AUTH_METHODS = [BaseController.SUPER, BaseController.USER]
+
+	def get(self, plugin_name, template_name):
+		exists = self.configuration.plugins.exists_at_all(
+			plugin_name
+		)
+
+		if not exists:
+			raise tornado.web.HTTPError(404, "No such plugin.")
+
+		result = self.configuration.plugins.locate_resource_for(
+			plugin_name,
+			template_name + '.html'
+		)
+
+		if result is None:
+			raise tornado.web.HTTPError(404, "No such resource.")
+
+		self.set_header("Content-Type", 'text/html')
+		self._send_file(result)
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		# Can't contain /'s in the name, as that might allow escaping the directory.
+		routes.append((r"/plugin/([-a-z0-9._]+)/([-_.a-z]+)\.html", PluginResourceTemplateController, configuration))
 		return routes
 
 class PluginResourceCssController(PluginResourceBaseController):
@@ -91,7 +116,7 @@ class PluginResourceCssController(PluginResourceBaseController):
 
 		result = self.configuration.plugins.locate_resource_for(
 			plugin_name,
-			"css"
+			"stylesheet.css"
 		)
 
 		if result is None:
