@@ -9,7 +9,6 @@
 
 		<link rel="icon" href="{{ static_url("img/favicon.ico") }}" sizes="16x16 32x32 48x48 64x64" type="image/vnd.microsoft.icon">
 
-		<!-- Le styles -->
 		<link href="{{ static_url("css/bootstrap.css") }}" rel="stylesheet">
 		<style>
 			body {
@@ -20,13 +19,6 @@
 		<link href="{{ static_url("css/paasmaker.css") }}" rel="stylesheet">
 		{% block styles %}
 		{% end %}
-
-		<!-- Le fav and touch icons -->
-		{# <link rel="shortcut icon" href="../assets/ico/favicon.ico">
-		<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../assets/ico/apple-touch-icon-144-precomposed.png">
-		<link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
-		<link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
-		<link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png"> #}
 	</head>
 	<body>
 		<div class="navbar navbar-inverse navbar-fixed-top">
@@ -37,10 +29,10 @@
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 			</a>
-			<a class="brand" href="/"><img src="{{ static_url("img/pm-dark-32.png") }}" alt="Paasmaker"></a>
-			<div class="nav-collapse collapse">
+			<a class="brand" href="/"><img src="{{ static_url("img/pm-dark-32.png") }}" width="143" height="32" alt="Paasmaker"></a>
+			<div class="nav-collapse">
 				{% if is_pacemaker %}
-					<p class="navbar-text pull-right">
+					<p class="navbar-text pull-right hidden-phone">
 						{% if current_user %}
 							Logged in as <a href="/profile" class="navbar-link">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
 						{% else %}
@@ -51,50 +43,14 @@
 					<ul class="nav">
 						{# Don't bother showing any of this if you're not logged in. #}
 						{% if current_user %}
-							<li class="dropdown">
-								<a href="#" class="dropdown-toggle" data-toggle="dropdown">Workspaces <b class="caret"></b></a>
-								<ul class="dropdown-menu workspace-list">
-									{% if user_permissions.has_permission(PERMISSION.WORKSPACE_EDIT, None) %}
-										<li><a href="/workspace/create"><i class="icon-plus"></i> Create workspace</a></li>
-										<li role="presentation" class="divider"></li>
-									{% end %}
-								</ul>
+							<li>
+								<a href="/workspace/list">Workspaces</a>
 							</li>
-							{% if user_permissions.has_permission(PERMISSION.NODE_LIST, None) %}
-								<li class="dropdown">
-									<a href="#" class="dropdown-toggle" data-toggle="dropdown">Nodes <b class="caret"></b></a>
-									<ul class="dropdown-menu node-list">
-										<li><a href="/node/list">All Nodes</a></li>
-										<li role="presentation" class="divider"></li>
-									</ul>
-								</li>
-							{% end %}
-							<li class="dropdown">
-								<a href="#" class="dropdown-toggle" data-toggle="dropdown">Administration <b class="caret"></b></a>
-								<ul class="dropdown-menu">
-									<li><a href="/profile">Your Profile</a></li>
-									{% if user_permissions.has_permission(PERMISSION.USER_LIST, None) %}
-										<li><a href="/user/list">Users</a></li>
-									{% end %}
-									{% if user_permissions.has_permission(PERMISSION.ROLE_LIST, None) %}
-										<li role="presentation" class="divider"></li>
-										<li><a href="/role/list">Roles</a></li>
-									{% end %}
-									{% if user_permissions.has_permission(PERMISSION.ROLE_ASSIGN, None) %}
-										<li><a href="/role/allocation/list">Role Allocations</a></li>
-									{% end %}
-									{% if user_permissions.has_permission(PERMISSION.HEALTH_CHECK, None) %}
-										<li role="presentation" class="divider"></li>
-										<li><a href="/job/list/health">Health Checks</a></li>
-									{% end %}
-									{% if user_permissions.has_permission(PERMISSION.SYSTEM_ADMINISTRATION, None) %}
-										<li><a href="/job/list/periodic">Periodic Tasks</a></li>
-										<li role="presentation" class="divider"></li>
-										<li><a href="/router/dump">Router Table Dump</a></li>
-										<li><a href="/configuration/dump">System Configuration</a></li>
-										<li><a href="/configuration/plugins">Plugins</a></li>
-									{% end %}
-								</ul>
+							<li>
+								<a href="/node/list">Nodes</a>
+							</li>
+							<li>
+								<a href="/administration/list">Administration</a>
 							</li>
 						{% end %}
 					</ul>
@@ -105,12 +61,7 @@
 		</div>
 
 		<div class="container" id="main">
-			{% block leftnav %}{% end %}
-
-			<div id="main_right_view" {% block mainmodifier %}{% end %}>
-				{% block pretitle %}{% end %}
-				<h1>{% block pagetitle %}{% end %}</h1>
-
+			<div id="error-block">
 				{% block errors %}
 					{% if len(errors) > 0 %}
 						<div class="alert alert-error">
@@ -129,24 +80,30 @@
 						</div>
 					{% end %}
 				{% end %}
+			</div>
 
-				{% block body %}
+			{% block body %}
+			{% end %}
+		</div>
+
+		{% if is_pacemaker %}
+			<div class="hidden-desktop hidden-tablet footer">
+				{% if current_user %}
+					Logged in as <a href="/profile" class="navbar-link">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
+				{% else %}
+					<a href="/login">Login</a>
 				{% end %}
 			</div>
-		</div>
+		{% end %}
 
 		{% if debug %}
 			<script data-main="/static/js/main" src="{{ static_url("js/libs/require/require.js") }}"></script>
 			{# You should check in the updated main-built.js, as that's the production version. #}
 			<script src="/development/rebuild-javascript.txt" type="text/plain"></script>
 		{% else %}
-			<script src="{{ static_url("js/main-built.js") }}"></script>
+			<script data-main="/static/js/main-built" src="{{ static_url("js/libs/require/require.js") }}"></script>
 		{% end %}
 
-		{# <script src="/my-permissions.js" type="text/javascript"></script>
-		<script type="text/javascript">
-			{% if "js_commands" in globals() %}{% raw js_commands %}{% end %}
-		</script> #}
 		{% block scripts %}
 		{% end %}
 	</body>

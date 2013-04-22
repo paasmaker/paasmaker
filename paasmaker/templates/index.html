@@ -1,0 +1,32 @@
+{% extends "layout/main.html" %}
+
+{% block body %}
+	<div class="page-loading">
+		<script type="text/javascript">
+			document.write('Loading...');
+			document.write('<img src="{{ static_url('img/spinner32.gif') }}" width="32" height="32" alt="Loading..." />');
+		</script>
+		<noscript>You must have JavaScript enabled to use this console.</noscript>
+	</div>
+
+	<div class="container-fluid" style="display: none;" id="page-container">
+		<div class="row-fluid">
+			<div class="span3 hidden-phone well well-small" id="sidebar">
+
+			</div>
+			<div class="span9">
+				<ul class="breadcrumb" id="breadcrumb">
+				</ul>
+				<div id="mainarea">
+				</div>
+			</div>
+		</div>
+	</div>
+{% end %}
+
+{% block scripts %}
+<script type="text/javascript">
+var permissions = {% raw json.dumps(permissions) %};
+var workspaces = {% raw workspace_json %};
+</script>
+{% end %}

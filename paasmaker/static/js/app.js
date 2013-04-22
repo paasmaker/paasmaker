@@ -17,6 +17,10 @@ define([
 			el: $('.nav .workspace-list')
 		});
 
+		// Hide the page loading div.
+		$('.page-loading').hide();
+		$('#page-container').fadeIn();
+
 		// Kick off the controllers.
 		// CAUTION: This ends control of this function.
 		Backbone.history.start({pushState: true});

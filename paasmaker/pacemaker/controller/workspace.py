@@ -138,7 +138,7 @@ class WorkspaceListController(BaseController):
 		workspaces = self._my_workspace_list()
 
 		self._paginate('workspaces', workspaces)
-		self.render("workspace/list.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):

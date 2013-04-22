@@ -10,22 +10,12 @@ body .navbar .brand { padding: 5px 20px 3px; }
 /* Login page */
 .index_column { width: 45%; float: left; margin: 20px; }
 
-/* Overview / dashboard page */
-.overview-block { width: 250px; float: left; margin-right: 10px; min-height: 150px; }
-.overview-block .title { text-align: center; font-weight: bold; }
-.router-stats-collection { clear: both; }
-.overview-block table { width: 100%; }
-.overview-block table td { min-width: 5em; }
-.overview-block ul { list-style-type: none; margin-left: 0px; }
-td.overview-count { text-align: right; }
-.overview-more-link { margin-top: 1em; font-style: italic; }
-/* TODO: check this block is from merge conflict
-.overview_block { width: 30%; float: left; margin: 10px; }
-.router-stats-collection { clear: both; padding-top: 40px; }
-.overview_block table td { min-width: 5em; }
-td.overview_count { text-align: right; }
-.overview_more_link { margin-top: 1em; font-style: italic; }
-*/
+/* Main page loading screen */
+.page-loading { text-align: center; }
+.page-loading img { display: block; margin: auto; }
+
+/* Footer */
+.footer { border-top: 1px solid #e0e0e0; text-align: center; padding-top: 2px; }
 
 /* Ajax interface loader */
 .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; text-align: center; background: white; opacity: 0; }
