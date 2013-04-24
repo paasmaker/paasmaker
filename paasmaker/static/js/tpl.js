@@ -84,6 +84,8 @@
       "var print=function(){__p+=Array.prototype.join.call(arguments, '')};" +
       source + "return __p;";
 
+    // console.log(source);
+
     var render = new Function(settings.variable || 'obj', '_', source);
     if (data) return render(data, _);
     var template = function(data) {

@@ -3,19 +3,26 @@ define([
 	'underscore',
 	'backbone',
 	'context',
-	'tpl!templates/workspace/header.html'
+	'tpl!templates/workspace/sidebar.html'
 ], function($, _, Backbone, context, headerListViewTemplate){
 	var WorkspaceHeaderListView = Backbone.View.extend({
 		initialize: function() {
 			// Render a blank template to start off with.
-			this.$el.html(headerListViewTemplate({workspaces: []}));
+			this.$el.html(headerListViewTemplate({workspaces: [], context: context}));
 
 			// And when the data comes in, update the whole list.
-			this.collection.on('sync', _.bind(this.render, this));
+			this.collection.on('sync', this.render, this);
+			this.collection.on('reset', this.render, this);
+		},
+		loading: function() {
+			this.$('.loading').show();
 		},
 		render: function() {
 			// Render the entire list.
-			this.$el.html(headerListViewTemplate({workspaces: this.collection.models}));
+			this.$el.html(headerListViewTemplate({
+				context: context,
+				workspaces: this.collection.models,
+			}));
 		},
 		events: {
 			"click a": "navigateAway",

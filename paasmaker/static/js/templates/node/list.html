@@ -1,0 +1,25 @@
+
+<h2>Nodes</h2>
+
+<div class="block-load-small loading" style="display: none;">
+	<img src="/static/img/load-inline.gif" width="16" height="11" alt="Loading..." />
+</div>
+
+<div class="node-list">
+	{{% for(var i = 0; i < nodes.length; i++) { }}
+		{{% var node = nodes[i] }}
+		<div class="node tile">
+			<div class="title">
+				{{% if(context.hasPermission('NODE_DETAIL_VIEW')) { }}
+					<a href="/node/{{ node.attributes.id }}">
+				{{% } }}
+
+				{{ node.attributes.name }}
+
+				{{% if(context.hasPermission('NODE_DETAIL_VIEW')) { }}
+					</a>
+				{{% } }}
+			</div>
+		</div>
+	{{% } }}
+</div>

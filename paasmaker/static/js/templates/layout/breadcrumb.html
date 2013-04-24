@@ -1,0 +1,8 @@
+{{% for(var i = 0; i < crumbs.length; i++) { }}
+	{{% var isLast = ((crumbs.length - 1) == i) }}
+	<li>
+		{{% if(!isLast) { }}<a href="{{ crumbs[i].href }}">{{% } }}
+			{{ crumbs[i].title }}
+		{{% if(!isLast) { }}</a>{{% } }}
+	</li>
+{{% } }}

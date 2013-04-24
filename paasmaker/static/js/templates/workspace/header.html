@@ -1,6 +1,0 @@
-<li><a href="/workspace/create"><i class="icon-plus"></i> Create workspace</a></li>
-<li role="presentation" class="divider"></li>
-{{% for(var i = 0; i < workspaces.length; i++) { }}
-	{{% var workspace = workspaces[i] }}
-	<li><a href="/workspace/{{ workspace.attributes.id }}/applications">{{ workspace.attributes.name }}</a></li>
-{{% } }}

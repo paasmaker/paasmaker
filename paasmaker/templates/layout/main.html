@@ -32,7 +32,7 @@
 			<a class="brand" href="/"><img src="{{ static_url("img/pm-dark-32.png") }}" width="143" height="32" alt="Paasmaker"></a>
 			<div class="nav-collapse">
 				{% if is_pacemaker %}
-					<p class="navbar-text pull-right hidden-phone">
+					<p class="navbar-text pull-right hidden-phone hidden-tablet">
 						{% if current_user %}
 							Logged in as <a href="/profile" class="navbar-link">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
 						{% else %}
@@ -87,7 +87,7 @@
 		</div>
 
 		{% if is_pacemaker %}
-			<div class="hidden-desktop hidden-tablet footer">
+			<div class="hidden-desktop footer">
 				{% if current_user %}
 					Logged in as <a href="/profile" class="navbar-link">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
 				{% else %}

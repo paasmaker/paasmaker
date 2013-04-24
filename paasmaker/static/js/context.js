@@ -2,19 +2,49 @@ define([
 	'jquery',
 	'underscore',
 	'backbone',
-	'router',
-	'collections/workspaces'
-], function($, _, Backbone, Router, WorkspaceCollection) {
+	'collections/workspaces',
+	'collections/nodes'
+], function($, _, Backbone, WorkspaceCollection, NodeCollection) {
 	var module = {};
 	module.dispatcher = _.clone(Backbone.Events);
 	module.workspaces = new WorkspaceCollection();
+	module.nodes = new NodeCollection();
 
-	module.router = new Router();
-	// TODO: Workaround to get the context into the router.
-	module.router.context = module;
+	module.navigate = function(url) {
+		module.router.navigate(url, {trigger: true});
+	};
+
+	module.hasPermission = function(permission, workspace_id, table) {
+		// From the given table, figure out if the user has that
+		// permission or not.
+		// permission: the string permission name.
+		// workspace_id: if supplied, should be an integer that is the
+		//   workspace ID to limit the request to.
+		// table: an object of values from the server.
+
+		if(!table) {
+			// Use the server-supplied permissions table.
+			table = permissions;
+		}
+
+		var testKeys = [];
+		if(workspace_id) {
+			testKeys.push('' + workspace_id + '_' + permission);
+		}
+		testKeys.push('None_' + permission);
+
+		for(var i = 0; i < testKeys.length; i++) {
+			if(table[testKeys[i]]) {
+				return true;
+			}
+		}
+
+		return false;
+	};
 
 	module.initialize = function() {
-		module.workspaces.fetch();
+		// Load the workspaces from the containing page.
+		module.workspaces.reset(workspaces);
 	};
 
 	module.loadPlugin = function(pluginName, callback) {

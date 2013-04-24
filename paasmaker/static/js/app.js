@@ -3,22 +3,27 @@ define([
 	'underscore',
 	'backbone',
 	'context',
-	'views/workspace/header'
-], function($, _, Backbone, Context, WorkspaceHeaderView) {
+	'router'
+], function($, _, Backbone, Context, Router) {
 	var module = {};
 
 	module.initialize = function() {
-		Context.router.initialize();
+		// Manually set up the router. This stops loops between the
+		// context and the router.
 		Context.initialize();
+		Context.router = new Router();
+		Context.router.context = Context;
+		Context.router.initialize();
 
-		// Set up the header workspace list.
-		var headerWorkspaceViewList = new WorkspaceHeaderView({
-			collection: Context.workspaces,
-			el: $('.nav .workspace-list')
+		// Make the links in the header navigate using the router.
+		$('.navbar .brand, .navbar .nav-collapse a').click(function(e) {
+			var el = $(this);
+			Context.navigate(el.attr('href'));
+			return false;
 		});
 
 		// Hide the page loading div.
-		$('.page-loading').hide();
+		$('.page-loading').fadeOut();
 		$('#page-container').fadeIn();
 
 		// Kick off the controllers.
