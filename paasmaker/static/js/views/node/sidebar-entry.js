@@ -14,7 +14,7 @@ define([
 			this.$el.html(nodeSidebarEntryTemplate({
 				context: context,
 				node: this.model,
-				stateClasses: this.stateClasses
+				stateClasses: context.nodes.stateClasses
 			}));
 
 			if (this.model.attributes.active) {
@@ -29,13 +29,6 @@ define([
 		navigateAway: function(e) {
 			context.navigate($(e.currentTarget).attr('href'));
 			e.preventDefault();
-		},
-
-		stateClasses: {
-			'ACTIVE': { badge: 'badge-success', icon: 'icon-ok' },
-			'STOPPED': { badge: 'badge-warning', icon: 'icon-warning-sign' },
-			'INACTIVE': { badge: 'badge-warning', icon: 'icon-warning-sign' },
-			'DOWN': { badge: 'badge-important', icon: 'icon-ban-circle' }
 		}
 	});
 

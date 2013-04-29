@@ -15,6 +15,10 @@
 				{{% if(context.hasPermission('NODE_DETAIL_VIEW')) { }}
 					</a>
 				{{% } }}
+
+				<span class="state">
+					<span class="badge {{ stateClasses[node.attributes.state].badge }}" title="State: {{ node.attributes.state }}"><i class="{{ stateClasses[node.attributes.state].icon }} icon-white"></i></span>
+				</span>
 			</div>
 			<div class="body">
 				{{% if (node.attributes.pacemaker) { }}

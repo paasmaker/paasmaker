@@ -28,7 +28,7 @@ body #main
 {
 	/* The main area is given a min-height to make sure that the footer
 	   clears the loading div on page load. */
-	min-height: 70px;
+	min-height: 100px;
 
 	/* Make it use the whole browser width, for better tiled lists. */
 	width: 100%;

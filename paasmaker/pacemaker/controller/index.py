@@ -31,3 +31,16 @@ class IndexController(BaseController):
 		routes = []
 		routes.append((r"/", IndexController, configuration))
 		return routes
+
+# A controller for URLs that only ever exist on the front end.
+class VirtualPageController(BaseController):
+	AUTH_METHODS = [BaseController.USER]
+
+	def get(self):
+		self.client_side_render()
+
+	@staticmethod
+	def get_routes(configuration):
+		routes = []
+		routes.append((r"/administration/list", VirtualPageController, configuration))
+		return routes

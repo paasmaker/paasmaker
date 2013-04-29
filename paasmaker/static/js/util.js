@@ -20,5 +20,22 @@ define([
 		return moment(dateString + ' +0000', module.dateFormats.pacemaker);
 	};
 
+	module.shrinkUuids = function(scope) {
+		$('code.uuid-shrink', scope).each(function(i, el) {
+			el = $(el);
+			el.text(el.attr('title').substr(0,8));
+			el.on('click', module.shrinkClickHandler);
+		});
+	};
+
+	module.shrinkClickHandler = function(e) {
+		var el = $(e.target);
+		if (el.text().length > 8) {
+			el.text(el.attr('title').substr(0,8));
+		} else {
+			el.text(el.attr('title'));
+		}
+	};
+
 	return module;
 });

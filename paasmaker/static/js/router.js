@@ -33,6 +33,7 @@ define([
 			this.route('workspace/create', 'workspaceEdit');
 			this.route('node/list', 'nodeList');
 			this.route(/^node\/(\d+)$/, 'nodeDetail');
+			this.route('administration/list', 'administrationList');
 
 			// TODO: Catch the default.
 			//this.route('*path', 'defaultAction');
@@ -175,6 +176,10 @@ define([
 				// Render with a blank node, so the user gets feedback.
 				nodeDetailInner();
 			}
+		},
+
+		administrationList: function() {
+			this.ensureVisible('administration');
 		},
 
 		defaultAction: function(args) {

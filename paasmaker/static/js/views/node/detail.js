@@ -4,8 +4,10 @@ define([
 	'backbone',
 	'context',
 	'bases',
-	'tpl!templates/node/detail.html'
-], function($, _, Backbone, context, Bases, NodeDetailTemplate){
+	'util',
+	'tpl!templates/node/detail.html',
+	'views/node/instances'
+], function($, _, Backbone, context, Bases, util, NodeDetailTemplate, NodeInstancesView){
 	var NodeDetailView = Bases.BaseView.extend({
 		initialize: function() {
 			if (this.model) {
@@ -21,6 +23,8 @@ define([
 				node: this.model
 			}));
 
+			util.shrinkUuids(this.$el);
+
 			if (this.model.attributes.stats.disk_total && this.model.attributes.stats.disk_free) {
 				$.plot(this.$('.node-disk .chart'), [
 					{ label: "Disk used", color: "darkviolet", data: (this.model.attributes.stats.disk_total - this.model.attributes.stats.disk_free) },
@@ -33,6 +37,12 @@ define([
 					{ label: "Memory free", color: "lightblue", data: this.model.attributes.stats.mem_adjusted_free }
 				], { series: { pie: { show: true } }, legend: { container: this.$('.node-memory .legend') } });
 			}
+
+			var niv = new NodeInstancesView({
+				collection: this.model.instances,
+				el: this.$('.instances-list')
+			});
+			this.model.instances.fetch();
 
 			return this;
 		},

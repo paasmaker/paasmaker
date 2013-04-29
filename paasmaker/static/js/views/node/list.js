@@ -21,7 +21,8 @@ define([
 
 			this.$el.html(nodeListTemplate({
 				nodes: this.collection.models,
-				context: context
+				context: context,
+				stateClasses: this.collection.stateClasses
 			}));
 
 			return this;

@@ -1,9 +1,16 @@
 define([
 	'underscore',
 	'backbone',
-	'util'
-], function(_, Backbone, util){
+	'util',
+	'collections/instances'
+], function(_, Backbone, util, InstancesCollection){
 	var NodeModel = Backbone.Model.extend({
+		initialize: function() {
+			// Create an instances collection for this node.
+			// Don't load it until we need to though.
+			this.instances = new InstancesCollection();
+			this.instances.url = '/node/' + this.id + '/instances?format=json';
+		},
 		defaults: {
 			name: "none",
 			uuid: "none"
