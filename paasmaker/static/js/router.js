@@ -49,12 +49,20 @@ define([
 		/* HELPERS */
 
 		ensureVisible: function(section) {
+			// Get the current view to "destroy" itself.
+			if (this.currentMainView) {
+				this.currentMainView.destroy();
+				this.currentMainView = null;
+			}
+
+			// Hide all pages.
 			var _self = this;
 			_.each(pages, function(value, key, list) {
 				if(section != key) {
 					value.hide();
 				}
 			});
+			// Show the right page.
 			_.each(pages, function(value, key, list) {
 				if(section == key) {
 					_self.currentPage = value;
@@ -127,7 +135,7 @@ define([
 		nodeList: function() {
 			this.ensureVisible('nodes');
 
-			var nlv = new NodeListView({
+			this.currentMainView = new NodeListView({
 				collection: this.context.nodes,
 				el: $('.mainarea', pages.nodes)
 			});
@@ -140,8 +148,8 @@ define([
 
 			this.breadcrumbs([{href: '/node/list', title: 'Nodes'}]);
 
-			nlv.render();
-			nlv.startLoadingFull();
+			this.currentMainView.render();
+			this.currentMainView.startLoadingFull();
 		},
 
 		nodeDetail: function(node_id) {
@@ -167,7 +175,7 @@ define([
 					]);
 				}
 
-				var ndv = new NodeDetailView({
+				_self.currentMainView = new NodeDetailView({
 					model: node,
 					el: $('.mainarea', pages.nodes)
 				});
@@ -200,7 +208,7 @@ define([
 				{href: '/administration/list', title: 'Administration'}
 			]);
 
-			var alv = new AdministrationListView({
+			this.currentMainView = new AdministrationListView({
 				collection: this.context.administrations,
 				el: $('.mainarea', pages.administration)
 			});
@@ -218,7 +226,7 @@ define([
 				{href: '/profile', title: 'Your Profile'}
 			]);
 
-			var pv = new ProfileView({
+			this.currentMainView = new ProfileView({
 				el: $('.mainarea', pages.administration)
 			});
 

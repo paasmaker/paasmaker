@@ -19,6 +19,10 @@ define([
 
 			this.startLoadingFull();
 		},
+		destroy: function() {
+			this.collection.off('request', this.startLoadingFull, this);
+			this.collection.off('sync', this.render, this);
+		},
 		render: function() {
 			this.doneLoading();
 

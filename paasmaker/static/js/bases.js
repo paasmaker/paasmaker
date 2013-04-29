@@ -35,6 +35,9 @@ define([
 			this.doneLoading();
 			this.$('.error').show();
 			this.$('.error .contents').text(xhr.status + ' ' + xhr.statusText + ': ' + xhr.responseText)
+		},
+		destroy: function() {
+			// Override in your class.
 		}
 	});
 

@@ -17,6 +17,14 @@ define([
 				this.startLoadingFull();
 			}
 		},
+		destroy: function() {
+			if (this.model) {
+				this.model.off('change', this.render, this);
+			}
+			if (this.nodeInstancesView) {
+				this.nodeInstancesView.destroy();
+			}
+		},
 		render: function() {
 			this.$el.html(NodeDetailTemplate({
 				context: context,
@@ -38,7 +46,7 @@ define([
 				], { series: { pie: { show: true } }, legend: { container: this.$('.node-memory .legend') } });
 			}
 
-			var niv = new NodeInstancesView({
+			this.nodeInstancesView = new NodeInstancesView({
 				collection: this.model.instances,
 				el: this.$('.instances-list')
 			});
