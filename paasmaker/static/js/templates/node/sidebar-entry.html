@@ -1,14 +1,14 @@
+{{% if(context.hasPermission('NODE_DETAIL_VIEW')) { }}
+	<a href="/node/{{ node.attributes.id }}">
+{{% } }}
 <div class="title">
-	{{% if(context.hasPermission('NODE_DETAIL_VIEW')) { }}
-		<a href="/node/{{ node.attributes.id }}">
-	{{% } }}
-		{{ node.attributes.name }}
-	{{% if(context.hasPermission('NODE_DETAIL_VIEW')) { }}
-		</a>
-	{{% } }}
-	<span class="badge {{ stateClasses[node.attributes.state].badge }}" title="State: {{ node.attributes.state }}"><i class="{{ stateClasses[node.attributes.state].icon }} icon-white"></i></span>
+	<span class="state">
+		<span class="badge {{ stateClasses[node.attributes.state].badge }}" title="State: {{ node.attributes.state }}"><i class="{{ stateClasses[node.attributes.state].icon }} icon-white"></i></span>
+	</span>
+	<span class="name">{{ node.attributes.name }}</span>
 </div>
-<div class="status">
+<div class="details">
+	Score: {{ node.attributes.score.toFixed(2) }}, Last heard: {{ node.attributes.updated_age.toFixed(2) }}s
 	{{% if(node.attributes.pacemaker) { }}
 		<i class="icon-calendar" title="Pacemaker"></i>
 	{{% } }}
@@ -18,6 +18,7 @@
 	{{% if(node.attributes.router) { }}
 		<i class="icon-random" title="Router"></i>
 	{{% } }}
-
-	Score {{ node.attributes.score.toFixed(2) }}, Last heard {{ node.attributes.updated_age.toFixed(2) }}s
 </div>
+{{% if(context.hasPermission('NODE_DETAIL_VIEW')) { }}
+	</a>
+{{% } }}

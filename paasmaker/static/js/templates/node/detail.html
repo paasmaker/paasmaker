@@ -1,0 +1,96 @@
+<h1>
+	Node {{ node.attributes.name }}
+
+	{{% if (node.attributes.pacemaker) { }}
+		<a href="#" class="btn disabled">
+			<i class="icon-calendar"></i> Pacemaker
+		</a>
+	{{% } }}
+	{{% if (node.attributes.heart) { }}
+		<a href="#" class="btn disabled">
+			<i class="icon-heart"></i> Heart
+		</a>
+	{{% } }}
+	{{% if (node.attributes.router) { }}
+		<a href="#" class="btn disabled">
+			<i class="icon-random"></i> Router
+		</a>
+	{{% } }}
+</h1>
+
+<div class="node-chart node-disk">
+	<div class="chart"></div><div class="legend"></div>
+</div>
+<div class="node-chart node-memory">
+	<div class="chart"></div><div class="legend"></div>
+</div>
+
+<ul class="node-details">
+	<li><strong>UUID:</strong> <code>{{ node.attributes.uuid }}</code></li>
+	<li><strong>Route:</strong> {{ node.attributes.route }}:{{ node.attributes.apiport }}</li>
+	<li><strong>State:</strong> {{ node.attributes.state }}</li>
+	<li title="Started at {{ node.attributes.start_time }}"><strong>Uptime:</strong> {{ node.attributes.start_time }}</li>
+	<li title="{{ node.attributes.updated_age.toFixed(2) }}"><strong>Last report:</strong> {{ node.attributes.updated_age.toFixed(2) }} seconds ago</li>
+	<li><strong>Score:</strong> {{ node.attributes.score.toFixed(2) }}</li>
+</ul>
+
+<h2 class="node-instances">Instances</h2>
+<table class="table table-bordered node-instances">
+	<tr class="node-table-header">
+		<th>ID</th>
+		<th>Application</th>
+		<th>Version</th>
+		<th>State</th>
+		<th></th>
+	</tr>
+</table>
+
+<hr>
+
+{{% if (node.attributes.tags.runtimes) { }}
+	<table class="table table-bordered node-runtime">
+		<tr class="node-table-header">
+			<th>Runtimes</th>
+			<th>Version(s)</th>
+		</tr>
+
+		{{% for(var i = 0; i < node.attributes.tags.runtimes.length; i++) { }}
+			{{% var runtime = node.attributes.tags.runtimes[i] }}
+			<tr>
+				<td>{{ runtime.name }}</td>
+				<td>{{ runtime.versions }}</td>
+			</tr>
+		{{% } }}
+	</table>
+{{% } }}
+
+<table class="table table-bordered">
+	<tr>
+		<th>Tags</th>
+		<th>Stats</th>
+	</tr>
+	<tr>
+		<td>
+			<pre>{{ JSON.stringify(node.attributes.tags, undefined, 4) }}</pre>
+		</td>
+		<td>
+			<pre>{{ JSON.stringify(node.attributes.stats, undefined, 4) }}</pre>
+		</td>
+	</tr>
+</table>
+
+<table class="table table-bordered jobs">
+	<tr>
+		<th>
+			Jobs
+			<div class="all-jobs-button">
+				<a class="btn btn-mini" href="/job/list/node/{{ node.attributes.id }}">View All</a>
+			</div>
+		</th>
+	</tr>
+	<tr>
+		<td>
+			<div class="well job-overview"></div>
+		</td>
+	</tr>
+</table>

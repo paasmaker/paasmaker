@@ -3,6 +3,6 @@
 	<li>
 		{{% if(!isLast) { }}<a href="{{ crumbs[i].href }}">{{% } }}
 			{{ crumbs[i].title }}
-		{{% if(!isLast) { }}</a>{{% } }}
+		{{% if(!isLast) { }}</a><span class=\"divider\">&middot;</span>{{% } }}
 	</li>
 {{% } }}

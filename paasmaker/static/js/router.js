@@ -3,14 +3,18 @@ define([
 	'underscore',
 	'backbone',
 	'tpl!templates/layout/breadcrumb.html',
+	'models/node',
 	'views/node/list',
 	'views/workspace/sidebar',
-	'views/node/sidebar'
+	'views/node/sidebar',
+	'views/node/detail'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
+	NodeModel,
 	NodeListView,
 	WorkspaceSidebarList,
-	NodeSidebarList
+	NodeSidebarList,
+	NodeDetailView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -60,6 +64,9 @@ define([
 						collection: this.context.nodes,
 						el: $('.sidebar', this.currentPage)
 					});
+
+					// Load the initial set of nodes.
+					this.context.nodes.fetch();
 				}
 				if(section == 'workspaces') {
 					sidebars[section] = new WorkspaceSidebarList({
@@ -107,18 +114,51 @@ define([
 				el: $('.mainarea', pages.nodes)
 			});
 
+			// Refresh the list of nodes.
 			this.context.nodes.fetch();
 
-			this.breadcrumbs([{href: '/node/list', title: 'Node List'}])
+			// Reset the active flag on all nodes.
+			this.context.nodes.invoke('set', {active: false});
+
+			this.breadcrumbs([{href: '/node/list', title: 'Nodes'}])
 		},
 
 		nodeDetail: function(node_id) {
 			this.ensureVisible('nodes');
 
-			this.breadcrumbs([
-				{href: '/node/list', title: 'Node List'},
-				{href: '/node/' + node_id, title: 'Node ' + node_id}
-			]);
+			var _self = this;
+			function nodeDetailInner(node) {
+				// Add to the collection, and refetch, so it's tied
+				// to the collection's events.
+				_self.context.nodes.add(node);
+				node = _self.context.nodes.get(node.id);
+
+				_self.breadcrumbs([
+					{href: '/node/list', title: 'Nodes'},
+					{href: '/node/' + node_id, title: node.attributes.name}
+				]);
+
+				node.set({active: true});
+
+				var ndv = new NodeDetailView({
+					model: node,
+					el: $('.mainarea', pages.nodes)
+				});
+			}
+
+			// Try to load from the collection first.
+			var node = this.context.nodes.get(node_id);
+			if (node) {
+				nodeDetailInner(node)
+			} else {
+				// Load it directly from the server.
+				node = new NodeModel({'id': node_id});
+				node.fetch({
+					success: function(model, response, options) {
+						nodeDetailInner(model);
+					}
+				});
+			}
 		},
 
 		defaultAction: function(args) {

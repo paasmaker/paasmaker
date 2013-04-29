@@ -16,6 +16,12 @@ define([
 				node: this.model,
 				stateClasses: this.stateClasses
 			}));
+
+			if (this.model.attributes.active) {
+				this.$el.addClass("active");
+			} else {
+				this.$el.removeClass("active");
+			}
 		},
 		events: {
 			"click a": "navigateAway",

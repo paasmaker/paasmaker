@@ -18,12 +18,23 @@ body .navbar .brand { padding: 5px 20px 3px; }
 .footer { border-top: 1px solid #e0e0e0; text-align: center; padding-top: 2px; }
 
 /* Sidebars */
-.sidebar { position: relative; }
+.sidebar
+{
+	border: 1px solid #e3e3e3;
+	border-radius: 4px;
+	position: relative;
+}
+
+.sidebar .controls
+{
+	position: absolute; right: 10px; top: 3px;
+}
 
 /* Ajax interface loader */
 .loading-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; text-align: center; background: white; opacity: 0; }
 .loading-overlay img { position: absolute; top: 50%; }
-.block-load-small { text-align: center; position: absolute; right: 10px; top: 5px; }
+
+.sidebar .error .label { white-space: inherit; }
 
 /* Instance log / job log display */
 a.toggle { text-decoration: none; }
@@ -239,6 +250,19 @@ textarea.example-configuration
 {
 	display: none;
 }
+
+/* NODE SIDEBAR NAVIGATION */
+.node-sidebar-list .title .name
+{
+	display: block;
+	font-size: larger;
+	font-weight: bold;
+	text-overflow: ellipsis;
+	overflow: hidden;
+}
+.node-sidebar-list .title .state { float: right; }
+.node-sidebar-list .details { display: block; font-size: smaller; color: #999999; clear: right; }
+.node-sidebar-list .active .details { color: #e5e5e5; }
 
 /* Workspace view - application list */
 #main_right_view { min-height: 400px; position: relative; }
