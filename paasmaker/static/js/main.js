@@ -3,11 +3,14 @@ require.config({
 		jquery: 'libs/jquery/jquery',
 		underscore: 'libs/underscore/underscore',
 		backbone: 'libs/backbone/backbone',
+		// WARNING: If you update these paths, make sure to do the same in build.js.
+		// Otherwise the compiled version will break.
+
 		// Twitter Bootstrap loading:
 		// https://github.com/twitter/bootstrap/pull/534#issuecomment-6438820
 		'jquery.bootstrap': 'libs/bootstrap/bootstrap',
-		'jquery.flot.pie': 'libs/flot/flot.pie',
-		'jquery.flot': 'libs/flot/flot',
+		'flot.pie': 'libs/flot/flot.pie',
+		'flot': 'libs/flot/flot',
 		moment: 'libs/moment/moment',
 		// Plugin loading.
 		plugin: '/plugin'
@@ -17,12 +20,12 @@ require.config({
 			deps: ['jquery'],
 			exports: 'jquery'
 		},
-		'jquery.flot': {
+		'flot': {
 			deps: ['jquery'],
 			exports: 'jquery'
 		},
-		'jquery.flot.pie': {
-			deps: ['jquery.flot'],
+		'flot.pie': {
+			deps: ['flot'],
 			exports: 'jquery'
 		}
 	}
@@ -31,8 +34,8 @@ require.config({
 require([
 	'jquery',
 	'jquery.bootstrap',
-	'jquery.flot',
-	'jquery.flot.pie',
+	'flot',
+	'flot.pie',
 	'app'
 ], function($, bootstrap, flot, flotpie, App) {
 	App.initialize();

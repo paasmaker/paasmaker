@@ -13,14 +13,14 @@ define([
 			this.$el.html(Bases.errorLoadingHtml + nodeSidebarTemplate({nodes: [], context: context}));
 
 			// Add our refresh button.
-			this.$('.controls').append($('<a href="" class="refresh"><i class="icon-refresh"></i></a>'));
+			this.$('.controls').append($('<a href="#" class="refresh"><i class="icon-refresh"></i></a>'));
 
 			// And when the data comes in, update the whole list.
-			this.collection.on('request', this.startLoading, this);
+			this.collection.on('request', this.startLoadingInline, this);
 			this.collection.on('sync', this.render, this);
 			this.collection.on('add', this.addNode, this);
 			this.collection.on('error', this.loadingError, this);
-			this.startLoading();
+			this.startLoadingInline();
 		},
 		addNode: function(node) {
 			// Add a container for this node, and a view.
@@ -36,8 +36,7 @@ define([
 			this.doneLoading();
 		},
 		events: {
-			"click a.refresh": "refreshList",
-			"click a": "navigateAway",
+			"click a.refresh": "refreshList"
 		},
 		refreshList: function(e) {
 			this.collection.fetch();

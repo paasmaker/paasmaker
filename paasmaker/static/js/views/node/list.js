@@ -3,29 +3,31 @@ define([
 	'underscore',
 	'backbone',
 	'context',
+	'bases',
 	'tpl!templates/node/list.html'
-], function($, _, Backbone, context, nodeListTemplate){
-	var NodeListView = Backbone.View.extend({
+], function($, _, Backbone, context, Bases, nodeListTemplate){
+	var NodeListView = Bases.BaseView.extend({
 		initialize: function() {
-			this.collection.on('request', this.loading, this);
+			this.collection.on('request', this.startLoadingFull, this);
 			this.collection.on('sync', this.render, this);
-			this.loading();
-		},
-		loading: function() {
-			this.$('.loading').show();
+
+			this.$el.html(nodeListTemplate({
+				nodes: [],
+				context: context
+			}));
 		},
 		render: function() {
+			this.doneLoading();
+
 			this.$el.html(nodeListTemplate({
 				nodes: this.collection.models,
 				context: context
 			}));
+
+			return this;
 		},
 		events: {
 			"click a": "navigateAway",
-		},
-		navigateAway: function(e) {
-			context.navigate($(e.currentTarget).attr('href'));
-			return false;
 		}
 	});
 

@@ -51,21 +51,23 @@ class DevelopmentJavascriptController(BaseController):
 		self.set_header('Content-Type', 'text/html')
 
 		if should_rebuild:
-			self.write("<pre>")
-			self.write("Rebuild at " + str(datetime.datetime.now()))
+			self.output_cache = ""
+			self.output_cache += "<pre>"
+			self.output_cache += "Rebuild at " + str(datetime.datetime.now())
 
 			environment = copy.deepcopy(os.environ)
 			environment['PATH'] = "%s:%s" % (os.path.expanduser('~/.nvm/v0.8.22/bin'), environment['PATH'])
 
 			def chunk(data):
-				self.write(data)
+				self.output_cache += data
 
 			def complete(code):
-				self.write("</pre>")
+				self.output_cache += "</pre>"
 				if code == 0:
+					self.write(self.output_cache)
 					self.finish()
 				else:
-					self.write_error(500, "Failed to compile.")
+					raise tornado.web.HTTPError(500, "Failed to compile. " + self.output_cache)
 
 			process = paasmaker.util.popen.Popen(
 				['r.js', '-o', 'build.js'],

@@ -8,8 +8,12 @@ define([
 ], function($, _, Backbone, context, Bases, NodeDetailTemplate){
 	var NodeDetailView = Bases.BaseView.extend({
 		initialize: function() {
-			this.model.on('change', this.render, this);
-			this.render();
+			if (this.model) {
+				this.model.on('change', this.render, this);
+				this.render();
+			} else {
+				this.startLoadingFull();
+			}
 		},
 		render: function() {
 			this.$el.html(NodeDetailTemplate({
@@ -29,6 +33,8 @@ define([
 					{ label: "Memory free", color: "lightblue", data: this.model.attributes.stats.mem_adjusted_free }
 				], { series: { pie: { show: true } }, legend: { container: this.$('.node-memory .legend') } });
 			}
+
+			return this;
 		},
 		events: {
 			"click a": "navigateAway",

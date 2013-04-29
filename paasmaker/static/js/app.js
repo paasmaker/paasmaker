@@ -16,7 +16,7 @@ define([
 		Context.router.initialize();
 
 		// Make the links in the header navigate using the router.
-		$('.navbar .brand, .navbar .nav-collapse a').click(function(e) {
+		$('.navbar .brand, .navbar .nav-collapse a.virtual').click(function(e) {
 			var el = $(this);
 			Context.navigate(el.attr('href'));
 			return false;

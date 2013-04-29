@@ -34,7 +34,7 @@
 				{% if is_pacemaker %}
 					<p class="navbar-text pull-right hidden-phone hidden-tablet">
 						{% if current_user %}
-							Logged in as <a href="/profile" class="navbar-link">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
+							Logged in as <a href="/profile" class="navbar-link virtual">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
 						{% else %}
 							<a href="/login">Login</a>
 						{% end %}
@@ -44,13 +44,13 @@
 						{# Don't bother showing any of this if you're not logged in. #}
 						{% if current_user %}
 							<li>
-								<a href="/workspace/list">Workspaces</a>
+								<a href="/workspace/list" class="virtual">Workspaces</a>
 							</li>
 							<li>
-								<a href="/node/list">Nodes</a>
+								<a href="/node/list" class="virtual">Nodes</a>
 							</li>
 							<li>
-								<a href="/administration/list">Administration</a>
+								<a href="/administration/list" class="virtual">Administration</a>
 							</li>
 						{% end %}
 					</ul>
@@ -61,25 +61,29 @@
 		</div>
 
 		<div class="container" id="main">
-			<div id="error-block">
-				{% block errors %}
-					{% if len(errors) > 0 %}
-						<div class="alert alert-error">
-							<ul class="errors">
-								{% for error in errors %}
-									<li>{{ error }}</li>
-								{% end %}
-								{% try %}
-									{% for key, error in input_errors.iteritems() %}
-										<li>{{ key }}: {{ error }}</li>
-									{% end %}
-								{% except NameError, ex %}
-									{# Does't have input errors. Ignore. #}
-								{% end %}
-							</ul>
-						</div>
-					{% end %}
-				{% end %}
+			<div class="container-fluid">
+				<div class="span12">
+					<div id="error-block">
+						{% block errors %}
+							{% if len(errors) > 0 %}
+								<div class="alert alert-error">
+									<ul class="errors">
+										{% for error in errors %}
+											<li>{{ error }}</li>
+										{% end %}
+										{% try %}
+											{% for key, error in input_errors.iteritems() %}
+												<li>{{ key }}: {{ error }}</li>
+											{% end %}
+										{% except NameError, ex %}
+											{# Does't have input errors. Ignore. #}
+										{% end %}
+									</ul>
+								</div>
+							{% end %}
+						{% end %}
+					</div>
+				</div>
 			</div>
 
 			{% block body %}
@@ -89,7 +93,7 @@
 		{% if is_pacemaker %}
 			<div class="hidden-desktop footer">
 				{% if current_user %}
-					Logged in as <a href="/profile" class="navbar-link">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
+					Logged in as <a href="/profile" class="navbar-link virtual">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
 				{% else %}
 					<a href="/login">Login</a>
 				{% end %}

@@ -1,11 +1,7 @@
 
-<h2>Nodes</h2>
+<h1>Nodes</h1>
 
-<div class="block-load-small loading" style="display: none;">
-	<img src="/static/img/load-inline.gif" width="16" height="11" alt="Loading..." />
-</div>
-
-<div class="node-list">
+<div class="node-list clearfix">
 	{{% for(var i = 0; i < nodes.length; i++) { }}
 		{{% var node = nodes[i] }}
 		<div class="node tile">
@@ -19,6 +15,23 @@
 				{{% if(context.hasPermission('NODE_DETAIL_VIEW')) { }}
 					</a>
 				{{% } }}
+			</div>
+			<div class="body">
+				{{% if (node.attributes.pacemaker) { }}
+					<i class="icon-calendar"></i> Pacemaker
+				{{% } }}
+				{{% if (node.attributes.heart) { }}
+					<i class="icon-heart"></i> Heart
+				{{% } }}
+				{{% if (node.attributes.router) { }}
+					<i class="icon-random"></i> Router
+				{{% } }}
+				<br />
+				<strong>Uptime:</strong> {{ node.uptimeString() }}
+				<br />
+				<strong>Last report:</strong> {{ node.attributes.updated_age.toFixed(2) }} seconds ago
+				<br />
+				<strong>Score:</strong> {{ node.attributes.score.toFixed(2) }}
 			</div>
 		</div>
 	{{% } }}

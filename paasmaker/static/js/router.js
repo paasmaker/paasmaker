@@ -38,6 +38,8 @@ define([
 			//this.route('*path', 'defaultAction');
 		},
 
+		/* HELPERS */
+
 		ensureVisible: function(section) {
 			var _self = this;
 			_.each(pages, function(value, key, list) {
@@ -87,6 +89,8 @@ define([
 			});
 		},
 
+		/* CONTROLLER FUNCTIONS */
+
 		overview: function() {
 			this.ensureVisible('workspaces');
 			console.log('Overview');
@@ -120,7 +124,10 @@ define([
 			// Reset the active flag on all nodes.
 			this.context.nodes.invoke('set', {active: false});
 
-			this.breadcrumbs([{href: '/node/list', title: 'Nodes'}])
+			this.breadcrumbs([{href: '/node/list', title: 'Nodes'}]);
+
+			nlv.render();
+			nlv.startLoadingFull();
 		},
 
 		nodeDetail: function(node_id) {
@@ -130,15 +137,21 @@ define([
 			function nodeDetailInner(node) {
 				// Add to the collection, and refetch, so it's tied
 				// to the collection's events.
-				_self.context.nodes.add(node);
-				node = _self.context.nodes.get(node.id);
+				if (node) {
+					_self.context.nodes.add(node);
+					node = _self.context.nodes.get(node.id);
+					node.set({active: true});
 
-				_self.breadcrumbs([
-					{href: '/node/list', title: 'Nodes'},
-					{href: '/node/' + node_id, title: node.attributes.name}
-				]);
-
-				node.set({active: true});
+					_self.breadcrumbs([
+						{href: '/node/list', title: 'Nodes'},
+						{href: '/node/' + node_id, title: node.attributes.name}
+					]);
+				} else {
+					_self.breadcrumbs([
+						{href: '/node/list', title: 'Nodes'},
+						{href: '#', title: 'Loading node ' + node_id + '...'}
+					]);
+				}
 
 				var ndv = new NodeDetailView({
 					model: node,
@@ -158,6 +171,9 @@ define([
 						nodeDetailInner(model);
 					}
 				});
+
+				// Render with a blank node, so the user gets feedback.
+				nodeDetailInner();
 			}
 		},
 

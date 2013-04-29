@@ -45,6 +45,19 @@ define([
 			uptimeString += uptime + (uptime == 1 ? " second" : " seconds");
 
 			return uptimeString;
+		},
+
+		runtimeSummary: function() {
+			var runtimes = [];
+			if (this.attributes.tags.runtimes && Object.keys(this.attributes.tags.runtimes).length > 0) {
+				for (var name in this.attributes.tags.runtimes) {
+					runtimes.push({
+						name: name,
+						versions: this.attributes.tags.runtimes[name].join(', ')
+					});
+				}
+			}
+			return runtimes;
 		}
 	});
 

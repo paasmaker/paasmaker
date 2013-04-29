@@ -28,7 +28,7 @@ define([
 		},
 		navigateAway: function(e) {
 			context.navigate($(e.currentTarget).attr('href'));
-			return false;
+			e.preventDefault();
 		},
 
 		stateClasses: {
