@@ -3,24 +3,31 @@ define([
 	'underscore',
 	'backbone',
 	'context',
-	'router'
-], function($, _, Backbone, Context, Router) {
+	'router',
+	'collections/administrations'
+], function($, _, Backbone, context, Router, AdministrationCollection) {
 	var module = {};
 
 	module.initialize = function() {
 		// Manually set up the router. This stops loops between the
 		// context and the router.
-		Context.initialize();
-		Context.router = new Router();
-		Context.router.context = Context;
-		Context.router.initialize();
+		context.initialize();
+		context.router = new Router();
+		context.router.context = context;
+		context.router.initialize();
 
 		// Make the links in the header navigate using the router.
 		$('.navbar .brand, .navbar .nav-collapse a.virtual').click(function(e) {
 			var el = $(this);
-			Context.navigate(el.attr('href'));
+			context.navigate(el.attr('href'));
 			return false;
 		});
+
+		// Create the administration collection.
+		context.administrations = new AdministrationCollection();
+		context.administrations.add([
+			{name: 'Your Profile', path: '/profile'}
+		]);
 
 		// Hide the page loading div.
 		$('.page-loading').fadeOut();

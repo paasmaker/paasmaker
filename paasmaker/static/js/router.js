@@ -7,14 +7,20 @@ define([
 	'views/node/list',
 	'views/workspace/sidebar',
 	'views/node/sidebar',
-	'views/node/detail'
+	'views/node/detail',
+	'views/administration/sidebar',
+	'views/administration/profile',
+	'views/administration/list'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
 	NodeListView,
 	WorkspaceSidebarList,
 	NodeSidebarList,
-	NodeDetailView
+	NodeDetailView,
+	AdministrationSidebarList,
+	ProfileView,
+	AdministrationListView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -34,6 +40,7 @@ define([
 			this.route('node/list', 'nodeList');
 			this.route(/^node\/(\d+)$/, 'nodeDetail');
 			this.route('administration/list', 'administrationList');
+			this.route('profile', 'userProfile');
 
 			// TODO: Catch the default.
 			//this.route('*path', 'defaultAction');
@@ -74,6 +81,12 @@ define([
 				if(section == 'workspaces') {
 					sidebars[section] = new WorkspaceSidebarList({
 						collection: this.context.workspaces,
+						el: $('.sidebar', this.currentPage)
+					});
+				}
+				if(section == 'administration') {
+					sidebars[section] = new AdministrationSidebarList({
+						collection: this.context.administrations,
 						el: $('.sidebar', this.currentPage)
 					});
 				}
@@ -180,6 +193,44 @@ define([
 
 		administrationList: function() {
 			this.ensureVisible('administration');
+
+			this.context.administrations.invoke('set', {active: false});
+
+			this.breadcrumbs([
+				{href: '/administration/list', title: 'Administration'}
+			]);
+
+			var alv = new AdministrationListView({
+				collection: this.context.administrations,
+				el: $('.mainarea', pages.administration)
+			});
+		},
+
+		userProfile: function() {
+			this.ensureVisible('administration');
+
+			// Mark us as active.
+			this.context.administrations.invoke('set', {active: false});
+			this.context.administrations.findWhere({path: window.location.pathname}).set({active: true});
+
+			this.breadcrumbs([
+				{href: '/administration/list', title: 'Administration'},
+				{href: '/profile', title: 'Your Profile'}
+			]);
+
+			var pv = new ProfileView({
+				el: $('.mainarea', pages.administration)
+			});
+
+			// Load the data manually.
+			// TODO: Error handling.
+			$.getJSON(
+				'/profile?format=json',
+				function(data)
+				{
+					pv.render(data.data.apikey);
+				}
+			);
 		},
 
 		defaultAction: function(args) {

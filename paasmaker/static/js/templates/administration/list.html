@@ -1,0 +1,12 @@
+<div class="administration-list tile-box">
+	{{% for(var i = 0; i < administrations.length; i++) { }}
+		{{% var administration = administrations[i] }}
+		<div class="administration tile">
+			<div class="title">
+				<a href="{{ administration.attributes.path }}">
+					{{ administration.attributes.name }}
+				</a>
+			</div>
+		</div>
+	{{% } }}
+</div>

@@ -1,0 +1,11 @@
+<ul class="nav nav-list node-sidebar-list">
+	<li class="nav-header">Nodes</li>
+	{{% for(var i = 0; i < administrations.length; i++) { }}
+		{{% var administration = administrations[i] }}
+		<li {{% if (administration.attributes.active) { }}class="active"{{% } }}>
+			<a href="{{ administration.attributes.path }}">
+				{{ administration.attributes.name }}
+			</a>
+		</li>
+	{{% } }}
+</ul>
