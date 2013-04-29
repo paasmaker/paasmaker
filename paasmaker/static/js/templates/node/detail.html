@@ -29,7 +29,7 @@
 	<li><strong>UUID:</strong> <code>{{ node.attributes.uuid }}</code></li>
 	<li><strong>Route:</strong> {{ node.attributes.route }}:{{ node.attributes.apiport }}</li>
 	<li><strong>State:</strong> {{ node.attributes.state }}</li>
-	<li title="Started at {{ node.attributes.start_time }}"><strong>Uptime:</strong> {{ node.attributes.start_time }}</li>
+	<li title="Started at {{ node.attributes.start_time }}"><strong>Uptime:</strong> {{ node.uptimeString() }}</li>
 	<li title="{{ node.attributes.updated_age.toFixed(2) }}"><strong>Last report:</strong> {{ node.attributes.updated_age.toFixed(2) }} seconds ago</li>
 	<li><strong>Score:</strong> {{ node.attributes.score.toFixed(2) }}</li>
 </ul>

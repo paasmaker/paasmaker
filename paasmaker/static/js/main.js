@@ -8,6 +8,7 @@ require.config({
 		'jquery.bootstrap': 'libs/bootstrap/bootstrap',
 		'jquery.flot.pie': 'libs/flot/flot.pie',
 		'jquery.flot': 'libs/flot/flot',
+		moment: 'libs/moment/moment',
 		// Plugin loading.
 		plugin: '/plugin'
 	},

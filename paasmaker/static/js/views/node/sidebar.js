@@ -13,7 +13,7 @@ define([
 			this.$el.html(Bases.errorLoadingHtml + nodeSidebarTemplate({nodes: [], context: context}));
 
 			// Add our refresh button.
-			this.$('.controls').prepend($('<a href="" class="refresh"><i class="icon-refresh"></i></a>'));
+			this.$('.controls').append($('<a href="" class="refresh"><i class="icon-refresh"></i></a>'));
 
 			// And when the data comes in, update the whole list.
 			this.collection.on('request', this.startLoading, this);
