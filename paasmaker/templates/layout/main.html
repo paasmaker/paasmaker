@@ -29,7 +29,10 @@
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 			</a>
-			<a class="brand" href="/"><img src="{{ static_url("img/pm-dark-32.png") }}" width="143" height="32" alt="Paasmaker"></a>
+			<a class="brand" href="/">
+				<img class="connected" src="{{ static_url("img/pm-dark-32.png") }}" width="143" height="32" alt="Paasmaker" />
+				<img class="disconnected" src="{{ static_url("img/pm-dark-32-flatline.png") }}" width="143" height="32" alt="Paasmaker - disconnected" style="display: none;" />
+			</a>
 			<div class="nav-collapse">
 				{% if is_pacemaker %}
 					<p class="navbar-text pull-right hidden-phone hidden-tablet">

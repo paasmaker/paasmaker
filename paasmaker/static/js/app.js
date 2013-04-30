@@ -16,6 +16,26 @@ define([
 		context.router.context = context;
 		context.router.initialize();
 
+		// Set up the web socket for getting stats, job, and other data
+		// from the pacemaker (or long poll -- handled by socket.io)
+		// CAUTION: This version of socket.io has been modified
+		// so it falls back to XHR when the websocket connection fails.
+
+		// When not connected, we use a "flatline" image for the logo.
+		var logo = $('.brand .connected');
+		var connectedLogoSrc = logo.attr('src');
+		var disconnectedLogoSrc = $('.brand .disconnected').attr('src');
+		logo.attr('src', disconnectedLogoSrc);
+
+		context.streamSocket = new io.connect(window.location.protocol + '//' + window.location.host, {'connect timeout': 10000});
+		context.streamSocket.on('connect', function() {
+			logo.attr('src', connectedLogoSrc);
+		});
+		context.streamSocket.on('disconnect', function() {
+			logo.attr('src', disconnectedLogoSrc);
+			context.streamSocket.socket.reconnect();
+		});
+
 		// Disable PUT requests.
 		Backbone.emulateHTTP = true;
 

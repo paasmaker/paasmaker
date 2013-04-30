@@ -2,6 +2,7 @@ define([
 	'jquery',
 	'underscore',
 	'backbone',
+	'socketio',
 	'moment',
 	'collections/workspaces',
 	'collections/nodes',
@@ -10,6 +11,7 @@ define([
 	'collections/roleallocations'
 ], function($, _, Backbone,
 	moment,
+	socketio,
 	WorkspaceCollection,
 	NodeCollection,
 	UserCollection,

@@ -12,6 +12,8 @@ require.config({
 		'flot.pie': 'libs/flot/flot.pie',
 		'flot': 'libs/flot/flot',
 		moment: 'libs/moment/moment',
+		socketio: 'libs/socket.io/socket.io',
+
 		// Plugin loading.
 		plugin: '/plugin'
 	},
@@ -27,6 +29,9 @@ require.config({
 		'flot.pie': {
 			deps: ['flot'],
 			exports: 'jquery'
+		},
+		socketio: {
+			exports: 'io'
 		}
 	}
 });
