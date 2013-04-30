@@ -4,12 +4,14 @@ define([
 	'backbone',
 	'moment',
 	'collections/workspaces',
-	'collections/nodes'
-], function($, _, Backbone, moment, WorkspaceCollection, NodeCollection) {
+	'collections/nodes',
+	'collections/users'
+], function($, _, Backbone, moment, WorkspaceCollection, NodeCollection, UserCollection) {
 	var module = {};
 	module.dispatcher = _.clone(Backbone.Events);
 	module.workspaces = new WorkspaceCollection();
 	module.nodes = new NodeCollection();
+	module.users = new UserCollection();
 
 	module.navigate = function(url) {
 		module.router.navigate(url, {trigger: true});

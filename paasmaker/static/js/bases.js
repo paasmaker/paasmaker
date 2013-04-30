@@ -33,8 +33,18 @@ define([
 		},
 		loadingError: function(model, xhr, options) {
 			this.doneLoading();
-			this.$('.error').show();
-			this.$('.error .contents').text(xhr.status + ' ' + xhr.statusText + ': ' + xhr.responseText)
+			this.$('.alert').show();
+			var errorText = "";
+			if (xhr.status) {
+				errorText += xhr.status + ' ';
+			}
+			if (xhr.statusText) {
+				errorText += xhr.statusText + ' ';
+			}
+			if (xhr.responseText) {
+				errorText += xhr.responseText;
+			}
+			this.$('.alert').text(errorText);
 		},
 		destroy: function() {
 			// Override in your class.

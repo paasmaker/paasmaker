@@ -1,0 +1,23 @@
+
+<h1>{{% if (newUser) { }}Create user{{% } else { }}Edit user{{% } }}</h1>
+
+<form method="POST">
+	<label for="name">Name:</label>
+	<input name="name" id="name" type="text" value="{{ user.attributes.name }}" />
+
+	<label for="login">Login:</label>
+	<input name="login" id="login" type="text" value="{{ user.attributes.login }}" />
+
+	<label for="email">Email address:</label>
+	<input name="email" id="email" type="email" value="{{ user.attributes.email }}" />
+
+	<label for="password">Password:</label>
+	<input name="password" id="password" type="password" value="" />
+
+	<label for="enabled" class="checkbox">
+		<input name="enabled" id="enabled" type="checkbox" {{% if (user.attributes.enabled) { }}checked="checked"{{% } }} />
+		Enabled
+	</label>
+
+	<button type="submit" class="btn">Submit</button>
+</form>

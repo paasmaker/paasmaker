@@ -106,7 +106,7 @@ class UserEditController(BaseController):
 			user = self._default_user()
 			self.add_data('user', user)
 
-		self.render("user/edit.html")
+		self.client_side_render()
 
 	def post(self, user_id=None):
 		self.require_permission(constants.PERMISSION.USER_EDIT)
@@ -129,7 +129,7 @@ class UserEditController(BaseController):
 				valid_data = False
 
 		if valid_data:
-			if self.params.has_key('password'):
+			if self.params.has_key('password') and len(self.params['password']) > 0:
 				user.password = self.params['password']
 
 			self.session.add(user)

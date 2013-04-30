@@ -63,7 +63,7 @@ body #main
 	position: relative;
 }
 
-.sidebar .controls
+.sidebar .controls, .mainarea .controls
 {
 	position: absolute; right: 10px; top: 3px;
 }

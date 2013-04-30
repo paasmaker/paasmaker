@@ -4,23 +4,31 @@ define([
 	'backbone',
 	'tpl!templates/layout/breadcrumb.html',
 	'models/node',
+	'models/user',
 	'views/node/list',
 	'views/workspace/sidebar',
 	'views/node/sidebar',
 	'views/node/detail',
 	'views/administration/sidebar',
 	'views/administration/profile',
-	'views/administration/list'
+	'views/administration/list',
+	'views/administration/user-list',
+	'views/layout/genericloading',
+	'views/administration/user-edit'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
+	UserModel,
 	NodeListView,
 	WorkspaceSidebarList,
 	NodeSidebarList,
 	NodeDetailView,
 	AdministrationSidebarList,
 	ProfileView,
-	AdministrationListView
+	AdministrationListView,
+	UserListView,
+	GenericLoadingView,
+	UserEditView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -40,7 +48,10 @@ define([
 			this.route('node/list', 'nodeList');
 			this.route(/^node\/(\d+)$/, 'nodeDetail');
 			this.route('administration/list', 'administrationList');
-			this.route('profile', 'userProfile');
+			this.route('profile', 'yourProfile');
+			this.route('user/list', 'userList');
+			this.route(/^user\/(\d+)$/, 'userEdit');
+			this.route('user/create', 'userEdit');
 
 			// TODO: Catch the default.
 			//this.route('*path', 'defaultAction');
@@ -111,6 +122,16 @@ define([
 			});
 		},
 
+		adminSetActive: function(override) {
+			var path = window.location.pathname;
+			if (override) {
+				path = override;
+			}
+			// Mark us as active.
+			this.context.administrations.invoke('set', {active: false});
+			this.context.administrations.findWhere({path: path}).set({active: true});
+		},
+
 		/* CONTROLLER FUNCTIONS */
 
 		overview: function() {
@@ -159,21 +180,14 @@ define([
 			function nodeDetailInner(node) {
 				// Add to the collection, and refetch, so it's tied
 				// to the collection's events.
-				if (node) {
-					_self.context.nodes.add(node);
-					node = _self.context.nodes.get(node.id);
-					node.set({active: true});
+				_self.context.nodes.add(node);
+				node = _self.context.nodes.get(node.id);
+				node.set({active: true});
 
-					_self.breadcrumbs([
-						{href: '/node/list', title: 'Nodes'},
-						{href: '/node/' + node_id, title: node.attributes.name}
-					]);
-				} else {
-					_self.breadcrumbs([
-						{href: '/node/list', title: 'Nodes'},
-						{href: '#', title: 'Loading node ' + node_id + '...'}
-					]);
-				}
+				_self.breadcrumbs([
+					{href: '/node/list', title: 'Nodes'},
+					{href: '/node/' + node_id, title: node.attributes.name}
+				]);
 
 				_self.currentMainView = new NodeDetailView({
 					model: node,
@@ -186,16 +200,21 @@ define([
 			if (node) {
 				nodeDetailInner(node)
 			} else {
+				this.currentMainView = new GenericLoadingView({el: $('.mainarea', pages.nodes)});
+
+				this.breadcrumbs([
+					{href: '/node/list', title: 'Nodes'},
+					{href: '#', title: 'Loading node ' + node_id + '...'}
+				]);
+
 				// Load it directly from the server.
 				node = new NodeModel({'id': node_id});
 				node.fetch({
 					success: function(model, response, options) {
 						nodeDetailInner(model);
-					}
+					},
+					error: _.bind(this.currentMainView.loadingError, this.currentMainView)
 				});
-
-				// Render with a blank node, so the user gets feedback.
-				nodeDetailInner();
 			}
 		},
 
@@ -214,17 +233,15 @@ define([
 			});
 		},
 
-		userProfile: function() {
+		yourProfile: function() {
 			this.ensureVisible('administration');
-
-			// Mark us as active.
-			this.context.administrations.invoke('set', {active: false});
-			this.context.administrations.findWhere({path: window.location.pathname}).set({active: true});
 
 			this.breadcrumbs([
 				{href: '/administration/list', title: 'Administration'},
 				{href: '/profile', title: 'Your Profile'}
 			]);
+
+			this.adminSetActive();
 
 			this.currentMainView = new ProfileView({
 				el: $('.mainarea', pages.administration)
@@ -232,13 +249,87 @@ define([
 
 			// Load the data manually.
 			// TODO: Error handling.
+			var _self = this;
 			$.getJSON(
 				'/profile?format=json',
 				function(data)
 				{
-					pv.render(data.data.apikey);
+					_self.currentMainView.render(data.data.apikey);
 				}
 			);
+		},
+
+		userList: function() {
+			this.ensureVisible('administration');
+
+			this.adminSetActive();
+
+			this.currentMainView = new UserListView({
+				collection: this.context.users,
+				el: $('.mainarea', pages.administration)
+			});
+
+			// Refresh the list of nodes.
+			this.context.users.fetch();
+
+			this.breadcrumbs([
+				{href: '/administration/list', title: 'Administration'},
+				{href: '/user/list', title: 'User List'}
+			]);
+
+			this.currentMainView.render();
+			if (this.context.users.models.length == 0) {
+				this.currentMainView.startLoadingFull();
+			} else {
+				this.currentMainView.startLoadingInline();
+			}
+		},
+
+		userEdit: function(user_id) {
+			this.ensureVisible('administration');
+			this.adminSetActive('/user/list');
+
+			var _self = this;
+			function userEditInner(user) {
+				var crumbs = [
+					{href: '/administration/list', title: 'Administration'},
+					{href: '/user/list', title: 'Users'}
+				];
+				console.log(user);
+				if (user) {
+					crumbs.push({href: '/user/' + user_id, title: 'Edit user ' + user.attributes.name});
+				} else {
+					crumbs.push({href: '/user/create', title: 'Create user'})
+				}
+				_self.breadcrumbs(crumbs);
+
+				_self.currentMainView = new UserEditView({
+					model: user,
+					el: $('.mainarea', pages.administration)
+				});
+			}
+
+			if (user_id) {
+				// Always fetch from the server before editing.
+				this.currentMainView = new GenericLoadingView({el: $('.mainarea', pages.nodes)});
+
+				this.breadcrumbs([
+					{href: '/administration/list', title: 'Administration'},
+					{href: '/user/list', title: 'Users'},
+					{href: '#', title: 'Loading user ' + user_id + '...'}
+				]);
+
+				var user = new UserModel({'id': user_id});
+				user.fetch({
+					success: function(model, response, options) {
+						userEditInner(model);
+					},
+					error: _.bind(this.currentMainView.loadingError, this.currentMainView)
+				});
+			} else {
+				// Load empty user.
+				userEditInner();
+			}
 		},
 
 		defaultAction: function(args) {
