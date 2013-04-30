@@ -129,7 +129,7 @@ code.uuid-shrink { cursor: pointer; }
 	 -moz-border-radius: 3px;
 	      border-radius: 3px;
 }
-.tile .title
+.tile .title, .tile .title-multilink
 {
 	width: 100%;
 	text-overflow: ellipsis;
