@@ -22,6 +22,7 @@ define([
 		destroy: function() {
 			this.collection.off('request', this.startLoadingFull, this);
 			this.collection.off('sync', this.render, this);
+			this.undelegateEvents();
 		},
 		render: function() {
 			this.doneLoading();

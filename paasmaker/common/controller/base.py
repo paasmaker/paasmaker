@@ -394,6 +394,10 @@ class BaseController(tornado.web.RequestHandler):
 			self.add_data_template('permissions', cache.cache)
 			self.add_data_template('json', json)
 
+			available_permissions = constants.PERMISSION.ALL
+			available_permissions.sort()
+			self.add_data_template('available_permissions', available_permissions)
+
 			workspace_json = json.dumps(self._my_workspace_list(), cls=paasmaker.util.jsonencoder.JsonEncoder, model_additional=self.extra_data_fields)
 			self.add_data_template('workspace_json', workspace_json)
 

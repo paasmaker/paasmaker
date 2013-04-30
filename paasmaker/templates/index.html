@@ -67,6 +67,7 @@
 {% block scripts %}
 <script type="text/javascript">
 var permissions = {% raw json.dumps(permissions) %};
+var available_permissions = {% raw json.dumps(available_permissions) %};
 var workspaces = {% raw workspace_json %};
 </script>
 {% end %}

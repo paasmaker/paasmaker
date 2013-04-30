@@ -14,9 +14,11 @@ define([
 
 	module.BaseView = Backbone.View.extend({
 		navigateAway: function(e) {
-			context.navigate($(e.currentTarget).attr('href'));
-
+			// Prevent the default first, which prevents us navigating
+			// away in case of error - which makes debugging hard.
 			e.preventDefault();
+
+			context.navigate($(e.currentTarget).attr('href'));
 		},
 		startLoadingInline: function() {
 			this.$('.loading').show();
@@ -86,6 +88,9 @@ define([
 		},
 		destroy: function() {
 			// Override in your class.
+			// If you do, make sure to call undelegateEvents()
+			// as well.
+			this.undelegateEvents();
 		}
 	});
 

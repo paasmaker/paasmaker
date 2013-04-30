@@ -121,9 +121,9 @@ class RoleEditController(BaseController):
 		self.add_data('role', role)
 		available_permissions = constants.PERMISSION.ALL
 		available_permissions.sort()
-		self.add_data_template('available_permissions', available_permissions)
+		self.add_data('available_permissions', available_permissions)
 
-		self.render("role/edit.html")
+		self.client_side_render()
 
 	def post(self, role_id=None):
 		self.require_permission(constants.PERMISSION.ROLE_EDIT)

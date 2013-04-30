@@ -136,6 +136,11 @@ code.uuid-shrink { cursor: pointer; }
 	overflow: hidden;
 }
 
+.tile .title a
+{
+	display: block;
+}
+
 /* Empty menu placeholders */
 
 li.no-menu-items { font-size: smaller; font-style: italic; }

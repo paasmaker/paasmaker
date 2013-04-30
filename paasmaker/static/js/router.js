@@ -5,6 +5,7 @@ define([
 	'tpl!templates/layout/breadcrumb.html',
 	'models/node',
 	'models/user',
+	'models/role',
 	'views/node/list',
 	'views/workspace/sidebar',
 	'views/node/sidebar',
@@ -14,11 +15,14 @@ define([
 	'views/administration/list',
 	'views/administration/user-list',
 	'views/layout/genericloading',
-	'views/administration/user-edit'
+	'views/administration/user-edit',
+	'views/administration/role-list',
+	'views/administration/role-edit'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
 	UserModel,
+	RoleModel,
 	NodeListView,
 	WorkspaceSidebarList,
 	NodeSidebarList,
@@ -28,7 +32,9 @@ define([
 	AdministrationListView,
 	UserListView,
 	GenericLoadingView,
-	UserEditView
+	UserEditView,
+	RoleListView,
+	RoleEditView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -45,13 +51,20 @@ define([
 			this.route(/^workspace\/(\d+)\/applications$/, 'applicationList');
 			this.route(/^workspace\/(\d+)$/, 'workspaceEdit');
 			this.route('workspace/create', 'workspaceEdit');
+
 			this.route('node/list', 'nodeList');
 			this.route(/^node\/(\d+)$/, 'nodeDetail');
+
 			this.route('administration/list', 'administrationList');
 			this.route('profile', 'yourProfile');
+
 			this.route('user/list', 'userList');
 			this.route(/^user\/(\d+)$/, 'userEdit');
 			this.route('user/create', 'userEdit');
+
+			this.route('role/list', 'roleList');
+			this.route(/^role\/(\d+)$/, 'roleEdit');
+			this.route('role/create', 'roleEdit');
 
 			// TODO: Catch the default.
 			//this.route('*path', 'defaultAction');
@@ -310,7 +323,7 @@ define([
 
 			if (user_id) {
 				// Always fetch from the server before editing.
-				this.currentMainView = new GenericLoadingView({el: $('.mainarea', pages.nodes)});
+				this.currentMainView = new GenericLoadingView({el: $('.mainarea', pages.administration)});
 
 				this.breadcrumbs([
 					{href: '/administration/list', title: 'Administration'},
@@ -328,6 +341,78 @@ define([
 			} else {
 				// Load empty user.
 				userEditInner();
+			}
+		},
+
+		roleList: function() {
+			this.ensureVisible('administration');
+
+			this.adminSetActive();
+
+			this.currentMainView = new RoleListView({
+				collection: this.context.roles,
+				el: $('.mainarea', pages.administration)
+			});
+
+			// Refresh the list of roles.
+			this.context.roles.fetch();
+
+			this.breadcrumbs([
+				{href: '/administration/list', title: 'Administration'},
+				{href: '/role/list', title: 'Role List'}
+			]);
+
+			this.currentMainView.render();
+			if (this.context.roles.models.length == 0) {
+				this.currentMainView.startLoadingFull();
+			} else {
+				this.currentMainView.startLoadingInline();
+			}
+		},
+
+		roleEdit: function(role_id) {
+			this.ensureVisible('administration');
+			this.adminSetActive('/role/list');
+
+			var _self = this;
+			function roleEditInner(role) {
+				var crumbs = [
+					{href: '/administration/list', title: 'Administration'},
+					{href: '/role/list', title: 'Roles'}
+				];
+				if (role) {
+					crumbs.push({href: '/role/' + role_id, title: 'Edit Role ' + role.attributes.name});
+				} else {
+					crumbs.push({href: '/role/create', title: 'Create role'})
+				}
+				_self.breadcrumbs(crumbs);
+
+				_self.currentMainView = new RoleEditView({
+					model: role,
+					el: $('.mainarea', pages.administration)
+				});
+			}
+
+			if (role_id) {
+				// Always fetch from the server before editing.
+				this.currentMainView = new GenericLoadingView({el: $('.mainarea', pages.administration)});
+
+				this.breadcrumbs([
+					{href: '/administration/list', title: 'Administration'},
+					{href: '/role/list', title: 'Roles'},
+					{href: '#', title: 'Loading role ' + role_id + '...'}
+				]);
+
+				var role = new RoleModel({'id': role_id});
+				role.fetch({
+					success: function(model, response, options) {
+						roleEditInner(model);
+					},
+					error: _.bind(this.currentMainView.loadingError, this.currentMainView)
+				});
+			} else {
+				// Load empty role.
+				roleEditInner();
 			}
 		},
 

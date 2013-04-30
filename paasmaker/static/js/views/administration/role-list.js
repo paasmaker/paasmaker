@@ -4,15 +4,15 @@ define([
 	'backbone',
 	'context',
 	'bases',
-	'tpl!templates/node/list.html'
-], function($, _, Backbone, context, Bases, nodeListTemplate){
-	var NodeListView = Bases.BaseView.extend({
+	'tpl!templates/administration/role-list.html'
+], function($, _, Backbone, context, Bases, RoleListTemplate){
+	var RoleListView = Bases.BaseView.extend({
 		initialize: function() {
 			this.collection.on('request', this.startLoadingFull, this);
 			this.collection.on('sync', this.render, this);
 
-			this.$el.html(nodeListTemplate({
-				nodes: [],
+			this.$el.html(RoleListTemplate({
+				roles: [],
 				context: context
 			}));
 		},
@@ -24,10 +24,9 @@ define([
 		render: function() {
 			this.doneLoading();
 
-			this.$el.html(nodeListTemplate({
-				nodes: this.collection.models,
-				context: context,
-				stateClasses: this.collection.stateClasses
+			this.$el.html(Bases.errorLoadingHtml + RoleListTemplate({
+				roles: this.collection.models,
+				context: context
 			}));
 
 			return this;
@@ -37,5 +36,5 @@ define([
 		}
 	});
 
-	return NodeListView;
+	return RoleListView;
 });

@@ -41,7 +41,7 @@ define([
 				error: _.bind(this.loadingError, this)
 			});
 		},
-		saveOk: function(arg, arg2, arg3) {
+		saveOk: function() {
 			context.navigate("/user/list");
 		},
 		events: {

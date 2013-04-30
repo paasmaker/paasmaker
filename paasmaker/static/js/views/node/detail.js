@@ -24,6 +24,7 @@ define([
 			if (this.nodeInstancesView) {
 				this.nodeInstancesView.destroy();
 			}
+			this.undelegateEvents();
 		},
 		render: function() {
 			this.$el.html(NodeDetailTemplate({
