@@ -17,7 +17,35 @@ define([
 		context.router.initialize();
 
 		// Disable PUT requests.
-		Backbone.emulateHTTP = true
+		Backbone.emulateHTTP = true;
+
+		// Replace the backbone default sync with one that handles
+		// the errors slightly differently, and also puts any outgoing
+		// data into a "data" section.
+		var oldBackboneSync = Backbone.sync;
+		Backbone.sync = function(method, model, options) {
+			if(method === 'create' || method === 'update') {
+				// Wrap the values into the "data" section of the request.
+				options.attrs = {data: model.toJSON(options)};
+
+				// Also, catch the case where the server returns
+				// a 200 code, but there are actually errors.
+				var oldSuccessHandler = options.success;
+				options.success = function(data, xhr, resultoptions) {
+					if (data.errors && data.errors.length > 0) {
+						// Call the error handler instead.
+						if (options.error) {
+							options.error(data, xhr, options);
+						}
+					} else {
+						if (oldSuccessHandler) {
+							oldSuccessHandler(data, xhr, options);
+						}
+					}
+				}
+			}
+			oldBackboneSync(method, model, options);
+		};
 
 		// Make the links in the header navigate using the router.
 		$('.navbar .brand, .navbar .nav-collapse a.virtual').click(function(e) {

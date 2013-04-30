@@ -32,6 +32,7 @@ define([
 			this.startLoadingFull();
 			this.model.save({
 				name: this.$('#name').val(),
+				login: this.$('#login').val(),
 				email: this.$('#email').val(),
 				enabled: this.$('#enabled').is(':checked'),
 				password: this.$('#password').val()
@@ -40,7 +41,7 @@ define([
 				error: _.bind(this.loadingError, this)
 			});
 		},
-		saveOk: function() {
+		saveOk: function(arg, arg2, arg3) {
 			context.navigate("/user/list");
 		},
 		events: {

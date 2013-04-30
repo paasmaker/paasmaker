@@ -26,13 +26,6 @@ define([
 				// To handle when the collection sends us data.
 				return data;
 			}
-		},
-		sync: function(method, model, options) {
-			if(method === 'create' || method === 'update') {
-				// Wrap the values into the "data" section of the request.
-				options.attrs = {data: model.toJSON(options)};
-			}
-			Backbone.sync(method, model, options);
 		}
 	});
 

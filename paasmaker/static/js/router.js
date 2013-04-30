@@ -295,7 +295,6 @@ define([
 					{href: '/administration/list', title: 'Administration'},
 					{href: '/user/list', title: 'Users'}
 				];
-				console.log(user);
 				if (user) {
 					crumbs.push({href: '/user/' + user_id, title: 'Edit user ' + user.attributes.name});
 				} else {

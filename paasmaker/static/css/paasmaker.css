@@ -68,6 +68,11 @@ body #main
 	position: absolute; right: 10px; top: 3px;
 }
 
+.sidebar .alert ul, .mainarea .alert ul
+{
+	margin-bottom: 0px;
+}
+
 /* Ajax interface loader */
 .loading-overlay
 {
