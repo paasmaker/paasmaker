@@ -17,7 +17,9 @@ define([
 	'views/layout/genericloading',
 	'views/administration/user-edit',
 	'views/administration/role-list',
-	'views/administration/role-edit'
+	'views/administration/role-edit',
+	'views/administration/role-allocation-list',
+	'views/administration/role-allocation-assign'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
@@ -34,7 +36,9 @@ define([
 	GenericLoadingView,
 	UserEditView,
 	RoleListView,
-	RoleEditView
+	RoleEditView,
+	RoleAllocationListView,
+	RoleAllocationAssignView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -65,6 +69,9 @@ define([
 			this.route('role/list', 'roleList');
 			this.route(/^role\/(\d+)$/, 'roleEdit');
 			this.route('role/create', 'roleEdit');
+
+			this.route('role/allocation/list', 'roleAllocationList');
+			this.route('role/allocation/assign', 'roleAllocationAssign');
 
 			// TODO: Catch the default.
 			//this.route('*path', 'defaultAction');
@@ -414,6 +421,53 @@ define([
 				// Load empty role.
 				roleEditInner();
 			}
+		},
+
+		roleAllocationList: function() {
+			this.ensureVisible('administration');
+			this.adminSetActive();
+
+			this.currentMainView = new RoleAllocationListView({
+				collection: this.context.roleallocations,
+				el: $('.mainarea', pages.administration)
+			});
+
+			// Refresh the list of role allocations.
+			this.context.roleallocations.fetch();
+
+			this.breadcrumbs([
+				{href: '/administration/list', title: 'Administration'},
+				{href: '/role/allocation/list', title: 'Role Allocations'}
+			]);
+
+			this.currentMainView.render();
+			if (this.context.roleallocations.models.length == 0) {
+				this.currentMainView.startLoadingFull();
+			} else {
+				this.currentMainView.startLoadingInline();
+			}
+		},
+
+		roleAllocationAssign: function() {
+			this.ensureVisible('administration');
+			this.adminSetActive('/role/allocation/list');
+
+			this.breadcrumbs([
+				{href: '/administration/list', title: 'Administration'},
+				{href: '/role/allocation/list', title: 'Role Allocations'},
+				{href: '/role/allocation/assign', title: 'Assign Role'}
+			]);
+
+			this.currentMainView = new RoleAllocationAssignView({
+				el: $('.mainarea', pages.administration)
+			});
+
+			this.currentMainView.render();
+
+			// Refresh all data from the server.
+			this.context.roles.fetch();
+			this.context.users.fetch();
+			this.context.workspaces.fetch();
 		},
 
 		defaultAction: function(args) {

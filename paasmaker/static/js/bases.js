@@ -43,15 +43,21 @@ define([
 			if (xhr.status) {
 				errorText += xhr.status + ' ';
 			}
+			if (model.status) {
+				errorText += model.status + ' ';
+			}
 			if (xhr.statusText) {
 				errorText += xhr.statusText + ' ';
+			}
+			if (model.statusText) {
+				errorText += model.statusText + ' ';
 			}
 			if (errorText.length > 0) {
 				lineOne.text(errorText);
 			}
-			if (xhr.responseText) {
+			function parseResponseText(text) {
 				try {
-					var parsed = JSON.parse(xhr.responseText);
+					var parsed = JSON.parse(text);
 					lineThree = $('<ul></ul>');
 
 					if (parsed.data && parsed.data.input_errors) {
@@ -70,8 +76,14 @@ define([
 				} catch (e) {
 					// Couldn't parse it as JSON.
 					lineTwo = $('<pre></pre>');
-					lineTwo.text(xhr.responseText);
+					lineTwo.text(text);
 				}
+			}
+			if (xhr.responseText) {
+				parseResponseText(xhr.responseText);
+			}
+			if (model.responseText) {
+				parseResponseText(model.responseText);
 			}
 			if (xhr.errors) {
 				lineThree = $('<ul></ul>');

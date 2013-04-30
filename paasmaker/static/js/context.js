@@ -6,14 +6,23 @@ define([
 	'collections/workspaces',
 	'collections/nodes',
 	'collections/users',
-	'collections/roles'
-], function($, _, Backbone, moment, WorkspaceCollection, NodeCollection, UserCollection, RoleCollection) {
+	'collections/roles',
+	'collections/roleallocations'
+], function($, _, Backbone,
+	moment,
+	WorkspaceCollection,
+	NodeCollection,
+	UserCollection,
+	RoleCollection,
+	RoleAllocationCollection
+) {
 	var module = {};
 	module.dispatcher = _.clone(Backbone.Events);
 	module.workspaces = new WorkspaceCollection();
 	module.nodes = new NodeCollection();
 	module.users = new UserCollection();
 	module.roles = new RoleCollection();
+	module.roleallocations = new RoleAllocationCollection();
 
 	module.navigate = function(url) {
 		module.router.navigate(url, {trigger: true});
