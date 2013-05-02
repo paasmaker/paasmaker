@@ -211,6 +211,23 @@ class StreamConnection(tornadio2.SocketConnection):
 	def bounce(self, message):
 		self.emit('bounce', message)
 
+	@tornadio2.event('job.tree')
+	def job_tree(self, job_id):
+		"""
+		Just fetch the job tree only, and return that. Don't subscribe
+		along the way.
+		"""
+		if not self.configuration.is_pacemaker():
+			# We don't relay job information if we're not a pacemaker.
+			self.emit('error', 'This node is not a pacemaker.')
+			return
+
+		def got_pretty_tree(tree):
+			# Send back the pretty tree to the client.
+			self.emit('job.tree', job_id, tree)
+
+		self.configuration.job_manager.get_pretty_tree(job_id, got_pretty_tree)
+
 	@tornadio2.event('job.subscribe')
 	def job_subscribe(self, job_id):
 		"""

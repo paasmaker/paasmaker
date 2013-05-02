@@ -19,7 +19,8 @@ define([
 	'views/administration/role-list',
 	'views/administration/role-edit',
 	'views/administration/role-allocation-list',
-	'views/administration/role-allocation-assign'
+	'views/administration/role-allocation-assign',
+	'views/layout/genericjobslist'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
@@ -38,7 +39,8 @@ define([
 	RoleListView,
 	RoleEditView,
 	RoleAllocationListView,
-	RoleAllocationAssignView
+	RoleAllocationAssignView,
+	GenericJobsListView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -72,6 +74,8 @@ define([
 
 			this.route('role/allocation/list', 'roleAllocationList');
 			this.route('role/allocation/assign', 'roleAllocationAssign');
+
+			this.route('job/list/health', 'adminHealthJobs');
 
 			// TODO: Catch the default.
 			//this.route('*path', 'defaultAction');
@@ -150,6 +154,14 @@ define([
 			// Mark us as active.
 			this.context.administrations.invoke('set', {active: false});
 			this.context.administrations.findWhere({path: path}).set({active: true});
+		},
+
+		genericJobsListPage: function(sourceUrl, title) {
+			this.currentMainView = new GenericJobsListView({
+				url: sourceUrl,
+				title: title,
+				el: $('.mainarea', this.currentPage)
+			});
 		},
 
 		/* CONTROLLER FUNCTIONS */
@@ -468,6 +480,18 @@ define([
 			this.context.roles.fetch();
 			this.context.users.fetch();
 			this.context.workspaces.fetch();
+		},
+
+		adminHealthJobs: function() {
+			this.ensureVisible('administration');
+			this.adminSetActive('/job/list/health');
+
+			this.breadcrumbs([
+				{href: '/administration/list', title: 'Administration'},
+				{href: '/job/list/health', title: 'Health Checks'}
+			]);
+
+			this.genericJobsListPage('/job/list/health?format=json', 'Health Checks');
 		},
 
 		defaultAction: function(args) {

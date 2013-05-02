@@ -99,12 +99,11 @@ body #main
 	position: relative;
 }
 
-/* Instance log / job log display */
-a.toggle { text-decoration: none; }
-
 /* UUID display for instances, nodes etc. */
-td.contains-uuid { width: 265px; }
-code.uuid-shrink { cursor: pointer; }
+code.uuid-shrink
+{
+	cursor: pointer;
+}
 
 /* Generic tile box lists. */
 .tile
@@ -181,68 +180,36 @@ textarea.example-configuration
 }
 
 /* JOB STATUSES */
-.job-root
+div.job
 {
-	margin-bottom: 10px;
-}
-
-.job-status .state
-{
-	float: left;
-}
-
-.icon-loading
-{
-	background-image: url('../img/loading.gif');
-	background-position: center center;
-}
-
-.job-status
-{
-	padding-left: 15px;
-	padding-top: 2px;
-	padding-bottom: 2px;
 	position: relative;
 }
 
-.job-status.level0
+div.job .particulars
 {
-	padding-left: 0px;
+	margin-left: 25px;
 }
 
-.job-status .toolbox
+div.job .children
 {
-	margin-left: 5px;
-	float: left;
+	margin-left: 25px;
 }
 
-.job-status .details .title
-{
-	margin-left: 50px;
-	display: block;
-}
-
-.job-status .details .summary
-{
-	margin-left: 50px;
-	display: block;
-}
-
-.job-status .log
+div.job .particulars .log
 {
 	display: none;
+}
+
+div.job .particulars .log pre.data
+{
 	height: 150px;
 	overflow: auto;
 }
 
-.job-status .log.no-data
+div.job .particulars .summary-SUCCESS
 {
-	height: auto;
+	display: none;
 }
-
-/* Summary jobs view */
-.job-overview .details .title { margin-left: 5px; }
-.job-overview li { list-style-type: none; }
 
 /* INSTANCE LOGS */
 .instance-log-container pre
