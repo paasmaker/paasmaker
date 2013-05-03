@@ -16,7 +16,6 @@ define([
 		dataReady: function(data) {
 			this.doneLoading();
 			this.routerTable = data.data;
-			console.log(data.data);
 			this.render();
 		},
 		render: function() {
