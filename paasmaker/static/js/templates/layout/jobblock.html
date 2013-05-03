@@ -4,7 +4,7 @@
 	</span>
 	<span class="title"><a href="#" class="viewlog" data-jobid="{{ job.job_id }}">{{ job.title }}</a></span>
 	<span class="controls">
-		{{% if (!isFinished) { }}<a href="#" class="abort btn btn-mini"><i class="icon-off"></i>Abort</a>{{% } }}
+		{{% if (isRoot && !isFinished) { }}<a href="#" class="abort btn"><i class="icon-off"></i>Abort</a>{{% } }}
 	</span>
 </div>
 <div class="particulars particulars-{{ job.job_id }} clearfix">
