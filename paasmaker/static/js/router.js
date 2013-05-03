@@ -76,6 +76,7 @@ define([
 			this.route('role/allocation/assign', 'roleAllocationAssign');
 
 			this.route('job/list/health', 'adminHealthJobs');
+			this.route('job/list/periodic', 'adminPeriodicJobs');
 
 			// TODO: Catch the default.
 			//this.route('*path', 'defaultAction');
@@ -492,6 +493,18 @@ define([
 			]);
 
 			this.genericJobsListPage('/job/list/health?format=json', 'Health Checks');
+		},
+
+		adminPeriodicJobs: function() {
+			this.ensureVisible('administration');
+			this.adminSetActive('/job/list/periodic');
+
+			this.breadcrumbs([
+				{href: '/administration/list', title: 'Administration'},
+				{href: '/job/list/periodic', title: 'Periodic Tasks'}
+			]);
+
+			this.genericJobsListPage('/job/list/periodic?format=json', 'Periodic Tasks');
 		},
 
 		defaultAction: function(args) {
