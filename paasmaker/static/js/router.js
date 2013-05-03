@@ -22,7 +22,8 @@ define([
 	'views/administration/role-allocation-assign',
 	'views/layout/genericjobslist',
 	'views/administration/router-dump',
-	'views/administration/configuration-dump'
+	'views/administration/configuration-dump',
+	'views/administration/plugin-dump'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
@@ -44,7 +45,8 @@ define([
 	RoleAllocationAssignView,
 	GenericJobsListView,
 	RouterDumpView,
-	ConfigurationDumpView
+	ConfigurationDumpView,
+	PluginsDumpView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -84,6 +86,7 @@ define([
 
 			this.route('router/dump', 'adminRouterDump');
 			this.route('configuration/dump', 'adminConfigurationDump');
+			this.route('configuration/plugins', 'adminPluginsDump');
 
 			// TODO: Catch the default.
 			//this.route('*path', 'defaultAction');
@@ -550,6 +553,18 @@ define([
 			]);
 
 			this.genericDataTemplatePage('/configuration/dump?format=json', ConfigurationDumpView);
+		},
+
+		adminPluginsDump: function() {
+			this.ensureVisible('administration');
+			this.adminSetActive();
+
+			this.breadcrumbs([
+				{href: '/administration/list', title: 'Administration'},
+				{href: '/configuration/plugins', title: 'Plugins'}
+			]);
+
+			this.genericDataTemplatePage('/configuration/plugins?format=json', PluginsDumpView);
 		},
 
 		defaultAction: function(args) {
