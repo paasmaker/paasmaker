@@ -77,7 +77,7 @@ class LogsCleaner(BasePeriodic):
 				# log files and certain filesystems, this
 				# could hang up the process for a while.
 				if information.st_size > 1024 * 1024:
-					self.logger.error("Removing %s via subprocess", this_file)
+					self.logger.info("Removing %s via subprocess", this_file)
 					def on_rm_finished(code):
 						# Move onto the next file.
 						self.removed_files += 1
@@ -90,7 +90,7 @@ class LogsCleaner(BasePeriodic):
 						on_exit=on_rm_finished
 					)
 				else:
-					self.logger.error("Removing %s", this_file)
+					self.logger.info("Removing %s", this_file)
 					os.unlink(this_file)
 					self.removed_files += 1
 					# Process the next file on the IO loop.
