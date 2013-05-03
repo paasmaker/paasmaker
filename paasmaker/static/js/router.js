@@ -20,7 +20,8 @@ define([
 	'views/administration/role-edit',
 	'views/administration/role-allocation-list',
 	'views/administration/role-allocation-assign',
-	'views/layout/genericjobslist'
+	'views/layout/genericjobslist',
+	'views/administration/router-dump'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
@@ -40,7 +41,8 @@ define([
 	RoleEditView,
 	RoleAllocationListView,
 	RoleAllocationAssignView,
-	GenericJobsListView
+	GenericJobsListView,
+	RouterDumpView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -77,6 +79,8 @@ define([
 
 			this.route('job/list/health', 'adminHealthJobs');
 			this.route('job/list/periodic', 'adminPeriodicJobs');
+
+			this.route('router/dump', 'adminRouterDump');
 
 			// TODO: Catch the default.
 			//this.route('*path', 'defaultAction');
@@ -162,6 +166,20 @@ define([
 				url: sourceUrl,
 				title: title,
 				el: $('.mainarea', this.currentPage)
+			});
+		},
+
+		genericDataTemplatePage: function(url, view) {
+			this.currentMainView = new view({
+				el: $('.mainarea', this.currentPage)
+			});
+
+			// TODO: Handle when you navigate away before this returns.
+			$.ajax({
+				url: url,
+				dataType: 'json',
+				success: _.bind(this.currentMainView.dataReady, this.currentMainView),
+				error: _.bind(this.currentMainView.loadingError, this.currentMainView)
 			});
 		},
 
@@ -505,6 +523,18 @@ define([
 			]);
 
 			this.genericJobsListPage('/job/list/periodic?format=json', 'Periodic Tasks');
+		},
+
+		adminRouterDump: function() {
+			this.ensureVisible('administration');
+			this.adminSetActive();
+
+			this.breadcrumbs([
+				{href: '/administration/list', title: 'Administration'},
+				{href: '/router/dump', title: 'Router Dump'}
+			]);
+
+			this.genericDataTemplatePage('/router/dump?format=json', RouterDumpView);
 		},
 
 		defaultAction: function(args) {

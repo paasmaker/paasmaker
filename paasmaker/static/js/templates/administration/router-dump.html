@@ -1,0 +1,43 @@
+<h1>Router Table dump</h1>
+
+<p>Serial number {{ table.serial }}.</p>
+
+<div class="router-dump">
+	{{% for (var i = 0; i < table.table.length; i++) { }}
+		{{% var entry = table.table[i] }}
+		<div class="tile">
+			<div class="title">
+				<a target="_blank" href="http://{{ entry.hostname }}{{ table.frontend_domain_postfix }}">
+					{{ entry.hostname }}
+				</a>
+			</div>
+			<div class="body">
+				<a href="#" class="instances">{{ entry.instances.length }} instance{{% if (entry.instances.length != 1) { }}s{{% } }}</a>,
+				<a href="#" class="nodes">{{ entry.nodes.length }} node{{% if (entry.nodes.length != 1) { }}s{{% } }}</a>,
+				<a href="#" class="routes">{{ entry.routes.length }} route{{% if (entry.routes.length != 1) { }}s{{% } }}</a>
+
+				<div class="instances" style="display: none;">
+					<strong>Instances:</strong><br />
+					{{% for (var j = 0; j < entry.instances.length; j++) { }}
+						<code class="uuid-shrink" title="{{ entry.instances[j].instance_id }}">{{ entry.instances[j].instance_id }}</code>, {{ entry.instances[j].state }}{{% if (j < entry.instances.length - 1) { }}<br />{{% } }}
+					{{% } }}
+					{{% if (entry.instances.length == 0) { }}No instances{{% } }}
+				</div>
+				<div class="nodes" style="display: none;">
+					<strong>Nodes:</strong><br />
+					{{% for (var j = 0; j < entry.nodes.length; j++) { }}
+						<code class="uuid-shrink" title="{{ entry.nodes[j].uuid }}">{{ entry.nodes[j].uuid }}</code>, {{ entry.nodes[j].state }}{{% if (j < entry.nodes.length - 1) { }}<br />{{% } }}
+					{{% } }}
+					{{% if (entry.nodes.length == 0) { }}No nodes{{% } }}
+				</div>
+				<div class="routes" style="display: none;">
+					<strong>Routes:</strong><br />
+					{{% for (var j = 0; j < entry.routes.length; j++) { }}
+						{{ entry.routes[j] }}{{% if (j < entry.routes.length - 1) { }}<br />{{% } }}
+					{{% } }}
+					{{% if (entry.routes.length == 0) { }}No routes{{% } }}
+				</div>
+			</div>
+		</div>
+	{{% } }}
+</div>
