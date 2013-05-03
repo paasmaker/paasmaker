@@ -211,6 +211,12 @@ div.job .particulars .summary-SUCCESS
 	display: none;
 }
 
+.icon-loading
+{
+	background-image: url('../img/loading.gif');
+	background-position: center center;
+}
+
 /* INSTANCE LOGS */
 .instance-log-container pre
 {
