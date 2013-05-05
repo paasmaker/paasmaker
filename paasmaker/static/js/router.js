@@ -23,7 +23,8 @@ define([
 	'views/layout/genericjobslist',
 	'views/administration/router-dump',
 	'views/administration/configuration-dump',
-	'views/administration/plugin-dump'
+	'views/administration/plugin-dump',
+	'views/workspace/list'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
@@ -46,7 +47,8 @@ define([
 	GenericJobsListView,
 	RouterDumpView,
 	ConfigurationDumpView,
-	PluginsDumpView
+	PluginsDumpView,
+	WorkspaceListView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -60,6 +62,7 @@ define([
 	var AppRouter = Backbone.Router.extend({
 		initialize: function() {
 			this.route(/^$/, "overview");
+			this.route('workspace/list', 'workspaceList');
 			this.route(/^workspace\/(\d+)\/applications$/, 'applicationList');
 			this.route(/^workspace\/(\d+)$/, 'workspaceEdit');
 			this.route('workspace/create', 'workspaceEdit');
@@ -202,6 +205,23 @@ define([
 			this.ensureVisible('workspaces');
 			console.log('Workspace edit');
 			console.log(workspace_id);
+		},
+
+		workspaceList: function() {
+			console.log("Workspace list");
+			this.ensureVisible('workspaces');
+
+			this.currentMainView = new WorkspaceListView({
+				collection: this.context.workspaces,
+				el: $('.mainarea', this.currentPage)
+			});
+
+			this.context.workspaces.fetch();
+
+			this.breadcrumbs([{href: '/workspace/list', title: 'Workspaces'}]);
+
+			this.currentMainView.render();
+			this.currentMainView.startLoadingFull();
 		},
 
 		applicationList: function(workspace_id) {
