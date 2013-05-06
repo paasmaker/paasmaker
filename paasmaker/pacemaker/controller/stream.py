@@ -193,7 +193,14 @@ class StreamConnection(tornadio2.SocketConnection):
 			# Existing job that's subscribed - fetch and send a complete
 			# status update to the client.
 			def got_job_full(jobs):
-				self.emit('job.status', job_id, jobs[job_id])
+				# Remove some data before sending back.
+				job_data = {}
+				job_data.update(jobs[job_id])
+				del job_data['parameters']
+				del job_data['plugin']
+				if 'tags' in job_data:
+					del job_data['tags']
+				self.emit('job.status', job_id, job_data)
 
 			# Fetch all the data.
 			self.configuration.job_manager.get_jobs([message.job_id], got_job_full)

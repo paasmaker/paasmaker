@@ -1,12 +1,35 @@
 
 <h1>Version {{ version.attributes.version }} of {{ version.attributes.application.name }}</h1>
 
+<div class="btn-toolbar">
+	<div class="btn-group btn-group-header">
+		{{% if(version.canRegister(context)) { }}
+			<a class="btn btn-success register">Register</a>
+		{{% } }}
+		{{% if(version.canStart(context)) { }}
+			<a class="btn btn-success start">Start</a>
+		{{% } }}
+		{{% if(version.canStop(context)) { }}
+			<a class="btn btn-danger stop">Stop</a>
+		{{% } }}
+		{{% if(version.canDeregister(context)) { }}
+			<a class="btn btn-warning deregister">Deregister</a>
+		{{% } }}
+		{{% if(version.canMakeCurrent(context)) { }}
+			<a class="btn btn-info makecurrent">Make Current</a>
+		{{% } }}
+		{{% if(version.canDelete(context)) { }}
+			<a class="btn btn-danger delete">Delete</a>
+		{{% } }}
+	</div>
+</div>
+
 <ul>
 	<li>
 		{{% if(version.attributes.is_current) { }}
-				<i class="icon-star"></i> Current
+			<i class="icon-star"></i> Current
 		{{% } else { }}
-				<i class="icon-minus"></i> Not current
+			<i class="icon-minus"></i> Not current
 		{{% } }}
 	</li>
 	<li><b>State:</b> {{ version.attributes.state }}</li>

@@ -42,5 +42,8 @@ class VirtualPageController(BaseController):
 	@staticmethod
 	def get_routes(configuration):
 		routes = []
+		# Administration homepage.
 		routes.append((r"/administration/list", VirtualPageController, configuration))
+		# Virtual "job" following pages for versions.
+		routes.append((r"/version/\d+/[a-z]+/[-a-z0-9]+", VirtualPageController, configuration))
 		return routes

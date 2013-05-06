@@ -8,6 +8,7 @@ define([
 	'models/role',
 	'models/application',
 	'models/version',
+	'models/workspace',
 	'views/node/list',
 	'views/workspace/sidebar',
 	'views/node/sidebar',
@@ -29,7 +30,8 @@ define([
 	'views/workspace/list',
 	'views/application/list',
 	'views/application/detail',
-	'views/version/detail'
+	'views/version/detail',
+	'views/layout/genericjob'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
@@ -37,6 +39,7 @@ define([
 	RoleModel,
 	ApplicationModel,
 	VersionModel,
+	WorkspaceModel,
 	NodeListView,
 	WorkspaceSidebarList,
 	NodeSidebarList,
@@ -58,7 +61,8 @@ define([
 	WorkspaceListView,
 	ApplicationListView,
 	ApplicationDetailView,
-	VersionDetailView
+	VersionDetailView,
+	GenericJobView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -79,6 +83,7 @@ define([
 
 			this.route(/^application\/(\d+)$/, 'applicationView');
 			this.route(/^version\/(\d+)$/, 'versionView');
+			this.route(/^version\/(\d+)\/([a-z]+)\/([-a-z0-9]+)$/, 'versionJob');
 
 			this.route('node/list', 'nodeList');
 			this.route(/^node\/(\d+)$/, 'nodeDetail');
@@ -205,6 +210,46 @@ define([
 			});
 		},
 
+		genericJobFollowerPage: function(breadcrumbs, title, job_id) {
+
+		},
+
+		fromCollectionOrServer: function(server_id, collection, model, innerFunction, alreadyLoadedCallback) {
+			// Fetch the given object from the given collection,
+			// or fetch it from the server if we need to.
+			// Calls the innerFunction() with the object once it has it.
+			// It calls alreadyLoadedCallback() after innerFunction() if the object
+			// was loaded without a hit to the server.
+
+			// Try to load the object first.
+			var obj = collection.get(server_id);
+			if (obj) {
+				innerFunction(obj);
+				if (alreadyLoadedCallback) {
+					alreadyLoadedCallback(obj);
+				}
+			} else {
+				this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
+
+				this.breadcrumbs([
+					{href: '/workspace/list', title: 'Workspaces'},
+					{href: '#', title: 'Loading ...'}
+				]);
+
+				// Load it directly from the server.
+				obj = new model({'id': server_id});
+				obj.fetch({
+					success: function(model, response, options) {
+						// Add to collection, and fetch back, so events work correctly.
+						collection.add(model);
+						result = collection.get(model.id);
+						innerFunction(result);
+					},
+					error: _.bind(this.currentMainView.loadingError, this.currentMainView)
+				});
+			}
+		},
+
 		/* CONTROLLER FUNCTIONS */
 
 		overview: function() {
@@ -240,162 +285,137 @@ define([
 			this.ensureVisible('workspaces');
 
 			var _self = this;
-			function applicationListInner(workspace) {
-				// Add to the collection, and refetch, so it's tied
-				// to the collection's events.
-				_self.context.workspaces.add(workspace);
-				workspace = _self.context.workspaces.get(workspace.id);
+			this.fromCollectionOrServer(
+				workspace_id,
+				this.context.workspaces,
+				WorkspaceModel,
+				function (workspace) {
+					_self.breadcrumbs([
+						{href: '/workspace/list', title: 'Workspaces'},
+						{href: '/workspace/' + workspace_id + '/applications', title: workspace.attributes.name}
+					]);
 
-				_self.breadcrumbs([
-					{href: '/workspace/list', title: 'Workspaces'},
-					{href: '/workspace/' + workspace_id + '/applications', title: workspace.attributes.name}
-				]);
+					_self.currentMainView = new ApplicationListView({
+						collection: workspace.applications,
+						workspace: workspace,
+						el: $('.mainarea', _self.currentPage)
+					});
 
-				_self.currentMainView = new ApplicationListView({
-					collection: workspace.applications,
-					workspace: workspace,
-					el: $('.mainarea', this.currentPage)
-				});
-
-				// Load from the server.
-				workspace.applications.fetch();
-			}
-
-			// Try to load the workspace first.
-			var workspace = this.context.workspaces.get(workspace_id);
-			if (workspace) {
-				applicationListInner(workspace);
-			} else {
-				this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
-
-				this.breadcrumbs([
-					{href: '/workspace/list', title: 'Workspaces'},
-					{href: '#', title: 'Loading ...'}
-				]);
-
-				// Load it directly from the server.
-				workspace = new WorkspaceModel({'id': workspace_id});
-				workspace.fetch({
-					success: function(model, response, options) {
-						applicationListInner(model);
-					},
-					error: _.bind(this.currentMainView.loadingError, this.currentMainView)
-				});
-			}
+					// Load from the server.
+					workspace.applications.fetch();
+				}
+			);
 		},
 
 		applicationView: function(application_id) {
 			this.ensureVisible('workspaces');
 
 			var _self = this;
-			function applicationViewInner(application) {
-				// Add to the collection, and refetch, so it's tied
-				// to the collection's events.
-				_self.context.applications.add(application);
-				application = _self.context.applications.get(application.id);
+			this.fromCollectionOrServer(
+				application_id,
+				this.context.applications,
+				ApplicationModel,
+				function (application) {
+					_self.breadcrumbs([
+						{href: '/workspace/list', title: 'Workspaces'},
+						{
+							href: '/workspace/' + application.attributes.workspace.id + '/applications',
+							title: application.attributes.workspace.name
+						},
+						{
+							href: '/application/' + application.id,
+							title: application.attributes.name
+						}
+					]);
 
-				_self.breadcrumbs([
-					{href: '/workspace/list', title: 'Workspaces'},
-					{
-						href: '/workspace/' + application.attributes.workspace.id + '/applications',
-						title: application.attributes.workspace.name
-					},
-					{
-						href: '/application/' + application.id,
-						title: application.attributes.name
-					}
-				]);
-
-				_self.currentMainView = new ApplicationDetailView({
-					model: application,
-					el: $('.mainarea', this.currentPage)
-				});
-			}
-
-			// Try to load the application first.
-			var application = this.context.applications.get(application_id);
-			if (application) {
-				applicationViewInner(application);
-
-				// Refresh the application.
-				application.fetch();
-			} else {
-				this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
-
-				this.breadcrumbs([
-					{href: '/workspace/list', title: 'Workspaces'},
-					{href: '#', title: 'Loading ...'}
-				]);
-
-				// Load it directly from the server.
-
-				application = new ApplicationModel({'id': application_id});
-				application.fetch({
-					success: function(model, response, options) {
-						applicationViewInner(model);
-					},
-					error: _.bind(this.currentMainView.loadingError, this.currentMainView)
-				});
-			}
+					_self.currentMainView = new ApplicationDetailView({
+						model: application,
+						el: $('.mainarea', _self.currentPage)
+					});
+				}
+			);
 		},
 
 		versionView: function(version_id) {
 			this.ensureVisible('workspaces');
 
 			var _self = this;
-			function versionViewInner(version) {
-				// Add to the collection, and refetch, so it's tied
-				// to the collection's events.
-				_self.context.versions.add(version);
-				version = _self.context.versions.get(version.id);
+			this.fromCollectionOrServer(
+				version_id,
+				this.context.versions,
+				VersionModel,
+				function (version) {
+					_self.breadcrumbs([
+						{href: '/workspace/list', title: 'Workspaces'},
+						{
+							href: '/workspace/' + version.attributes.workspace.id + '/applications',
+							title: version.attributes.workspace.name
+						},
+						{
+							href: '/application/' + version.attributes.application.id,
+							title: version.attributes.application.name
+						},
+						{
+							href: '/version/' + version.attributes.id,
+							title: 'Version ' + version.attributes.version
+						}
+					]);
 
-				_self.breadcrumbs([
-					{href: '/workspace/list', title: 'Workspaces'},
-					{
-						href: '/workspace/' + version.attributes.workspace.id + '/applications',
-						title: version.attributes.workspace.name
-					},
-					{
-						href: '/application/' + version.attributes.application.id,
-						title: version.attributes.application.name
-					},
-					{
-						href: '/version/' + version.attributes.id,
-						title: 'Version ' + version.attributes.version
-					}
-				]);
+					_self.currentMainView = new VersionDetailView({
+						model: version,
+						el: $('.mainarea', _self.currentPage)
+					});
+				},
+				function (version) {
+					// If fetched from the collection, refresh from the server.
+					version.fetch();
+				}
+			);
+		},
 
-				_self.currentMainView = new VersionDetailView({
-					model: version,
-					el: $('.mainarea', this.currentPage)
-				});
-			}
+		jobActionMap: {
+			'start': 'Start',
+			'stop': 'Stop',
+			'register': 'Register',
+			'deregister': 'De-Register',
+			'makecurrent': 'Make Current'
+		},
 
-			// Try to load the version first.
-			var version = this.context.versions.get(version_id);
-			if (version) {
-				versionViewInner(version);
+		versionJob: function(version_id, action, job_id) {
+			this.ensureVisible('workspaces');
 
-				// Refresh the version.
-				version.fetch();
-			} else {
-				this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
+			var _self = this;
+			this.fromCollectionOrServer(
+				version_id,
+				this.context.versions,
+				VersionModel,
+				function (version) {
+					_self.breadcrumbs([
+						{href: '/workspace/list', title: 'Workspaces'},
+						{
+							href: '/workspace/' + version.attributes.workspace.id + '/applications',
+							title: version.attributes.workspace.name
+						},
+						{
+							href: '/application/' + version.attributes.application.id,
+							title: version.attributes.application.name
+						},
+						{
+							href: '/version/' + version.attributes.id,
+							title: 'Version ' + version.attributes.version
+						},
+						{
+							href: window.location.pathname,
+							title: _self.jobActionMap[action]
+						}
+					]);
 
-				this.breadcrumbs([
-					{href: '/workspace/list', title: 'Workspaces'},
-					{href: '#', title: 'Loading ...'}
-				]);
-
-				// Load it directly from the server.
-
-				version = new VersionModel({'id': version_id});
-				version.fetch({
-					success: function(model, response, options) {
-						versionViewInner(model);
-					},
-					error: _.bind(this.currentMainView.loadingError, this.currentMainView)
-				});
-			}
+					_self.currentMainView = new GenericJobView({
+						job_id: job_id,
+						el: $('.mainarea', _self.currentPage)
+					});
+				}
+			);
 		},
 
 		nodeList: function() {

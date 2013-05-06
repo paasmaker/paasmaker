@@ -83,7 +83,7 @@ body #main
 	height: 100%;
 	text-align: center;
 	background: white;
-	opacity: 0;
+	opacity: 0.5;
 }
 .loading-overlay img
 {
