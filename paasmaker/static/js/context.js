@@ -8,7 +8,9 @@ define([
 	'collections/nodes',
 	'collections/users',
 	'collections/roles',
-	'collections/roleallocations'
+	'collections/roleallocations',
+	'collections/applications',
+	'collections/versions'
 ], function($, _, Backbone,
 	moment,
 	socketio,
@@ -16,11 +18,15 @@ define([
 	NodeCollection,
 	UserCollection,
 	RoleCollection,
-	RoleAllocationCollection
+	RoleAllocationCollection,
+	ApplicationCollection,
+	VersionCollection
 ) {
 	var module = {};
 	module.dispatcher = _.clone(Backbone.Events);
 	module.workspaces = new WorkspaceCollection();
+	module.applications = new ApplicationCollection();
+	module.versions = new VersionCollection();
 	module.nodes = new NodeCollection();
 	module.users = new UserCollection();
 	module.roles = new RoleCollection();

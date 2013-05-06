@@ -1,0 +1,25 @@
+
+<h1>Version {{ version.attributes.version }} of {{ version.attributes.application.name }}</h1>
+
+<ul>
+	<li>
+		{{% if(version.attributes.is_current) { }}
+				<i class="icon-star"></i> Current
+		{{% } else { }}
+				<i class="icon-minus"></i> Not current
+		{{% } }}
+	</li>
+	<li><b>State:</b> {{ version.attributes.state }}</li>
+	<li><b>Health:</b> {{ version.attributes.health.overall }}</li>
+	<li><b>SCM:</b> {{ version.attributes.scm_name }}</li>
+	{{%if (version.attributes.scm_parameters.formatted_location) { }}
+		<li><b>Original source location:</b> {{ version.attributes.scm_parameters.formatted_location }}</li>
+	{{% } else { }}
+		{{% if (version.attributes.scm_parameters.location) { }}
+			<li><b>Original source location:</b> {{ version.attributes.scm_parameters.location }}</li>
+		{{% } }}
+	{{% } }}
+	{{% if (version.attributes.source_package_type && version.attributes.source_package_type == 'devdirectory') { }}
+		<li><b>Package type:</b> {{ version.attributes.source_package_type }}</li>
+	{{% } }}
+</ul>

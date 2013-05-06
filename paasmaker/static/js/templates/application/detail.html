@@ -1,0 +1,29 @@
+
+<h1>Application {{ application.attributes.name }}</h1>
+
+<ul>
+	<li>{{ application.attributes.versions.length }} version{{% if(application.attributes.versions.length != 1) { }}s{{% } }}</li>
+	<li>Health: {{ application.attributes.health }}</li>
+</ul>
+
+<div class="version-list clearfix">
+	{{% for(var i = 0; i < application.attributes.versions.length; i++) { }}
+		{{% var version = application.attributes.versions[i] }}
+		<div class="version tile">
+			<div class="title title-status">
+				<a href="/version/{{ version.id }}">Version {{ version.version }}</a>
+			</div>
+			<div class="body">
+				{{% if(version.is_current) { }}
+					<strong><i class="icon-star"></i> Current Version</strong>
+				{{% } else { }}
+					Not current
+				{{% } }}
+				<br />
+				<strong>State:</strong> {{ version.state }}
+				<br />
+				<strong>Health:</strong> {{ version.health.overall }}
+			</div>
+		</div>
+	{{% } }}
+</div>

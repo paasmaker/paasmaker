@@ -1,0 +1,25 @@
+
+<h1>Applications in {{ workspace.attributes.name }}</h1>
+
+<div class="application-list clearfix">
+	{{% for(var i = 0; i < applications.length; i++) { }}
+		{{% var application = applications[i] }}
+		<div class="application tile">
+			<div class="title title-status">
+				<span class="state">
+					<span class="badge {{ healthClasses[application.attributes.health].badge}}" title="Health: {{ application.attributes.health }}">
+						<i class="{{ healthClasses[application.attributes.health].icon }} icon-white"></i>
+					</span>
+				</span>
+				<a href="/application/{{ application.attributes.id }}">{{ application.attributes.name }}</a>
+			</div>
+			<div class="body">
+				{{% if(application.attributes.can_delete) { }}
+					Can delete.
+				{{% } else { }}
+					Can't delete.
+				{{% } }}
+			</div>
+		</div>
+	{{% } }}
+</div>

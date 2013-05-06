@@ -59,6 +59,8 @@ class VersionController(VersionRootController):
 		self.add_data_template('configuration', self.configuration)
 
 		self.add_data('version', version)
+		self.add_data('application', version.application)
+		self.add_data('workspace', version.application.workspace)
 
 		self.add_data('frontend_domain_postfix', self.configuration.get_flat('pacemaker.frontend_domain_postfix'))
 

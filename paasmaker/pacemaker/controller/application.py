@@ -280,15 +280,6 @@ class ApplicationController(ApplicationRootController):
 		self.add_data('workspace', workspace)
 		self.add_data_template('paasmaker', paasmaker)
 
-		applications = self.session.query(
-			paasmaker.model.Application
-		).filter(
-			paasmaker.model.Application.workspace == workspace
-		).filter(
-			paasmaker.model.Application.deleted == None
-		)
-		self.add_data('applications', applications)
-
 		versions = application.versions.filter(
 			paasmaker.model.ApplicationVersion.deleted == None
 		).order_by(

@@ -133,11 +133,22 @@ code.uuid-shrink
 	width: 100%;
 	text-overflow: ellipsis;
 	overflow: hidden;
+	white-space: nowrap;
+}
+
+.tile .title-status .status
+{
+	float: right;
 }
 
 .tile .title a
 {
 	display: block;
+}
+
+.tile .title .state
+{
+	float: right;
 }
 
 /* Empty menu placeholders */
@@ -309,6 +320,7 @@ div.job .particulars .summary-SUCCESS
 	font-weight: bold;
 	text-overflow: ellipsis;
 	overflow: hidden;
+	white-space: nowrap;
 }
 .node-sidebar-list .title .state { float: right; }
 .node-sidebar-list .details { display: block; font-size: smaller; color: #999999; clear: right; }
@@ -323,19 +335,6 @@ div.job .particulars .summary-SUCCESS
 
 /* Workspace view - job summary */
 .workspace-overview table.jobs { width: 790px; margin: 10px; }
-
-/* Left menu navigation: application (or node) list */
-
-#left_menu_wrapper { position: relative; width: 250px; }
-
-.application-list { position: absolute; top: 0; left: 0; width: 100%; border: 1px solid #e3e3e3; border-radius: 4px; }
-
-.application-list-name { display: block; font-size: larger; font-weight: bold; }
-
-.application-list-state { float: right; }
-.application-list .version { padding-left: 1.5em; }
-
-.with-application-list { margin-left: 270px; }
 
 /* Workspace edit page */
 .workspace-tag-editor { width: 480px; margin: 20px 0; }
