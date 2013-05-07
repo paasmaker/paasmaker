@@ -75,7 +75,7 @@ class ScmListController(BaseController):
 	def _got_error(self, error, exception=None):
 		logger.error(error)
 		if exception:
-			logger.error(exc_info=exception)
+			logger.error("Exception", exc_info=exception)
 		self.add_error(error)
 		self._render()
 

@@ -110,5 +110,21 @@ define([
 		return moment(dateString + ' +0000', module.dateFormats.pacemaker);
 	};
 
+	module.getScmListSimple = function(pluginName, success, error) {
+		var url = "/scm/list/repos?plugin=" + pluginName;
+		$.ajax({
+			url: url,
+			dataType: 'json',
+			success: function(data) {
+				if (data.error && data.error.length > 0) {
+					error({}, data);
+				} else {
+					success(data.data.repositories);
+				}
+			},
+			error: error
+		});
+	};
+
 	return module;
 });

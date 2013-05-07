@@ -1,0 +1,10 @@
+<strong>{{ title }}</strong>:<br />
+<select>
+	{{% if (repositories.length == 0) { }}
+		<option value="">Loading...</option>
+	{{% } else { }}
+		{{% for (var i = 0; i < repositories.length; i++) { }}
+			<option value="{{ repositories[i].url }}">{{ repositories[i].title }}</option>
+		{{% } }}
+	{{% } }}
+</select>

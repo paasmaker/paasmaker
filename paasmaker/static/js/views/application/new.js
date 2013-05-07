@@ -78,16 +78,16 @@ define([
 
 			// Get each plugin to set up it's own view.
 			var _self = this;
-			_.each(this.scms, function(element, index, list) {
+			_.each(this.scms, function(scm, index, list) {
 				var container = _self.$('#export-' + index + ' .scm-inner');
-				var view = new _self.scmPlugins[element.plugin].SCM_EXPORT({
+				var view = new _self.scmPlugins[scm.plugin].SCM_EXPORT({
 					el: container,
 					workspace: _self.options.workspace
 				});
-				_self.scmInstances[element.plugin] = view;
+				_self.scmInstances[scm.plugin] = view;
 
 				// Select the tab, if this was the last used SCM.
-				if (_self.metadata.last_scm_name && _self.metadata.last_scm_name == element.plugin) {
+				if (_self.metadata.last_scm_name && _self.metadata.last_scm_name == scm.plugin) {
 					_self.$('.nav-tabs a.export-' + index).tab('show');
 
 					// Reload the parameters.
@@ -98,6 +98,38 @@ define([
 						$('input[name=manifest_path]', container.parent()).val(_self.metadata.last_scm_params.manifest_path);
 					}
 				}
+
+				// Set up any SCM listers for this SCM.
+				_.each(scm.listers, function(lister, index, list) {
+					context.loadPlugin(lister.plugin, function(listerPluginModule) {
+						// Create a box for the SCM lister.
+						var listerContainer = $('<div class="tile scm-list"><img src="/static/img/load-inline.gif" width="16" height="11" alt="Loading..." /></div>');
+						var allListers = $('.scm-listers', container.parent());
+						allListers.append(listerContainer);
+
+						_self.scmInstances[lister.plugin] = new listerPluginModule.SCM_LIST({
+							el: listerContainer,
+							title: lister.title,
+							plugin: lister.plugin,
+							selectedCallback: function(values) {
+								// Get all the controls on the form.
+								// The plugin should give us "parameters.location"
+								// and so forth, and we look for an populate all those.
+								var inputs = $('select, input', container);
+
+								_.each(values, function(scmValue, scmKeyName, list) {
+									_.each(inputs, function(input, index, list) {
+										input = $(input);
+										if (input.attr('name') == scmKeyName) {
+											input.val(scmValue);
+										}
+									});
+								});
+							}
+						});
+
+					}, _.bind(_self.pluginError, _self))
+				});
 			});
 
 			return this;
