@@ -1,6 +1,26 @@
 
 <h1>Application {{ application.attributes.name }}</h1>
 
+<div class="btn-toolbar">
+	{{% if (context.hasPermission('APPLICATION_CREATE', application.workspace_id)) { }}
+		<div class="btn-group btn-group-header">
+			<a class="btn" href="/application/{{ application.id }}/newversion"><i class="icon-plus"></i> Create new version</a>
+		</div>
+	{{% } }}
+	<div class="btn-group btn-group-header">
+		<a class="btn" href="/job/list/application/{{ application.id }}">All Jobs</a>
+		{{% if (context.hasPermission('SERVICE_VIEW', application.workspace_id)) { }}
+			<a class="btn" href="/application/{{ application.id }}/services">Services</a>
+		{{% } }}
+		<a class="btn" href="/job/list/application/{{ application.id }}?sub=cron">Crons</a>
+	</div>
+	{{% if (context.hasPermission('APPLICATION_DELETE') && application.attributes.can_delete) { }}
+		<div class="btn-group btn-group-header">
+			<a class="btn btn-danger" data-toggle="modal" data-target="#app_delete_modal"><i class="icon-trash icon-white"></i> Delete Application</a>
+		</div>
+	{{% } }}
+</div>
+
 <ul>
 	<li>{{ application.attributes.versions.length }} version{{% if(application.attributes.versions.length != 1) { }}s{{% } }}</li>
 	<li>Health: {{ application.attributes.health }}</li>

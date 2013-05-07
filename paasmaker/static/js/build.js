@@ -10,7 +10,8 @@
 		'flot.pie': 'libs/flot/flot.pie',
 		'flot': 'libs/flot/flot',
 		moment: 'libs/moment/moment',
-		socketio: 'libs/socket.io/socket.io'
+		socketio: 'libs/socket.io/socket.io',
+		resumable: 'libs/resumable/resumable'
 	},
     name: "main",
     out: "main-built.js"

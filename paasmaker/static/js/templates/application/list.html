@@ -1,5 +1,27 @@
 
-<h1>Applications in {{ workspace.attributes.name }}</h1>
+<h1>Workspace: {{ workspace.attributes.name }}</h1>
+
+<div class="btn-toolbar">
+	{{% if (context.hasPermission('WORKSPACE_EDIT', workspace.id)) { }}
+		<div class="btn-group btn-group-header">
+			<a class="btn" href="/workspace/{{ workspace.id }}"><i class="icon-edit"></i> Edit Workspace</a>
+		</div>
+	{{% } }}
+	{{% if (context.hasPermission('WORKSPACE_DELETE', workspace.id) && workspace.attributes.can_delete) { }}
+		<div class="btn-group btn-group-header">
+			<a class="btn btn-danger"><i class="icon-trash icon-white"></i> Delete Workspace</a>
+		</div>
+	{{% } }}
+	{{% if (context.hasPermission('APPLICATION_CREATE', workspace.id)) { }}
+		<div class="btn-group btn-group-header">
+			<a class="btn" href="/workspace/{{ workspace.id }}/applications/new"><i class="icon-plus"></i> Create Application</a>
+		</div>
+	{{% } }}
+	<div class="btn-group btn-group-header">
+		<a class="btn" href="/job/list/workspace/{{ workspace.id }}">All Jobs</a>
+		<a class="btn" href="/job/list/workspace/{{ workspace.id }}?sub=cron">Cron Jobs</a>
+	</div>
+</div>
 
 <div class="application-list clearfix">
 	{{% for(var i = 0; i < applications.length; i++) { }}
@@ -12,13 +34,6 @@
 					</span>
 				</span>
 				<a href="/application/{{ application.attributes.id }}">{{ application.attributes.name }}</a>
-			</div>
-			<div class="body">
-				{{% if(application.attributes.can_delete) { }}
-					Can delete.
-				{{% } else { }}
-					Can't delete.
-				{{% } }}
 			</div>
 		</div>
 	{{% } }}

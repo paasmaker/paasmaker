@@ -46,4 +46,6 @@ class VirtualPageController(BaseController):
 		routes.append((r"/administration/list", VirtualPageController, configuration))
 		# Virtual "job" following pages for versions.
 		routes.append((r"/version/\d+/[a-z]+/[-a-z0-9]+", VirtualPageController, configuration))
+		routes.append((r"/workspace/\d+/applications/new/[-a-z0-9]+", VirtualPageController, configuration))
+		routes.append((r"/application/\d+/newversion/[-a-z0-9]+", VirtualPageController, configuration))
 		return routes

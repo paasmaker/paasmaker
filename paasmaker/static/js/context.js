@@ -69,7 +69,7 @@ define([
 		module.workspaces.reset(workspaces);
 	};
 
-	module.loadPlugin = function(pluginName, callback) {
+	module.loadPlugin = function(pluginName, callback, errback) {
 		var moduleName = 'plugin/' + pluginName + '/script'
 		require([moduleName], function(loadedPlugin) {
 			var completedInit = function() {
@@ -93,7 +93,7 @@ define([
 			} else {
 				completedInit();
 			}
-		});
+		}, errback);
 	};
 
 	module.dateFormats = {

@@ -63,7 +63,7 @@ body #main
 	position: relative;
 }
 
-.sidebar .controls, .mainarea .controls
+.sidebar .area-controls, .mainarea .area-controls
 {
 	position: absolute; right: 10px; top: 3px;
 }
@@ -401,8 +401,6 @@ h1 code.uuid-shrink { vertical-align: middle; font-size: 24px; }
 .scm-container form label { width: 420px; line-height: 30px; height: 40px; }
 .scm-container form label input { float: right; vertical-align: middle; }
 
-.scm-form-submit { width: 420px; text-align: right; }
-
 .scm-container .tab-pane { position: relative; }
 .scm-list-container { position: absolute; top: 0; right: 0; }
 .scm-list-container h4 { margin: 0; font-size: inherit; font-weight: normal; font-style: italic; }
@@ -412,8 +410,8 @@ form.editable-field-form { display: inline-block; }
 form.editable-field-form input { width: 135px; }
 
 /* File upload widget */
-.file-uploader-widget { width: 420px; text-align: right; margin: 10px 0 30px 0; }
-.file-uploader-widget div.drop, .file-uploader-widget div.status { display: inline-block; width: 168px; text-align: left; margin-right: 30px; }
+/*.file-uploader-widget { margin: 10px 0 30px 0; }
+.file-uploader-widget div.drop, .file-uploader-widget div.status { display: inline-block; width: 168px; text-align: left; margin-right: 30px; }*/
 
 .file-uploader-widget div.status { font-style: italic; }
 .file-uploader-widget progress { width: 220px; }

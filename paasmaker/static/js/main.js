@@ -13,6 +13,7 @@ require.config({
 		'flot': 'libs/flot/flot',
 		moment: 'libs/moment/moment',
 		socketio: 'libs/socket.io/socket.io',
+		resumable: 'libs/resumable/resumable',
 
 		// Plugin loading.
 		plugin: '/plugin'
@@ -32,6 +33,9 @@ require.config({
 		},
 		socketio: {
 			exports: 'io'
+		},
+		resumable: {
+			exports: 'Resumable'
 		}
 	}
 });

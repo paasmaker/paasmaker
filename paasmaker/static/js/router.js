@@ -31,7 +31,9 @@ define([
 	'views/application/list',
 	'views/application/detail',
 	'views/version/detail',
-	'views/layout/genericjob'
+	'views/layout/genericjob',
+	'views/application/new',
+	'views/layout/fileupload'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
@@ -62,7 +64,9 @@ define([
 	ApplicationListView,
 	ApplicationDetailView,
 	VersionDetailView,
-	GenericJobView
+	GenericJobView,
+	ApplicationNewView,
+	FileUploadView // Not actually used, but referenced here to ensure it ends up in the built version.
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -81,7 +85,12 @@ define([
 			this.route(/^workspace\/(\d+)$/, 'workspaceEdit');
 			this.route('workspace/create', 'workspaceEdit');
 
+			this.route(/^workspace\/(\d+)\/applications\/new$/, 'applicationNew');
+			this.route(/^workspace\/(\d+)\/applications\/new\/([-a-z0-9]+)$/, 'applicationNewJob');
+
 			this.route(/^application\/(\d+)$/, 'applicationView');
+			this.route(/^application\/(\d+)\/newversion$/, 'applicationNewVersion');
+			this.route(/^application\/(\d+)\/newversion\/([-a-z0-9]+)$/, 'applicationNewVersionJob');
 			this.route(/^version\/(\d+)$/, 'versionView');
 			this.route(/^version\/(\d+)\/([a-z]+)\/([-a-z0-9]+)$/, 'versionJob');
 
@@ -330,6 +339,123 @@ define([
 
 					_self.currentMainView = new ApplicationDetailView({
 						model: application,
+						el: $('.mainarea', _self.currentPage)
+					});
+				}
+			);
+		},
+
+		applicationNew: function(workspace_id) {
+			this.ensureVisible('workspaces');
+
+			var _self = this;
+			this.fromCollectionOrServer(
+				workspace_id,
+				this.context.workspaces,
+				WorkspaceModel,
+				function (workspace) {
+					_self.breadcrumbs([
+						{href: '/workspace/list', title: 'Workspaces'},
+						{href: '/workspace/' + workspace_id + '/applications', title: workspace.attributes.name},
+						{href: '/workspace/' + workspace_id + '/applications/new', title: 'New Application'}
+					]);
+
+					_self.currentMainView = new ApplicationNewView({
+						url: window.location.pathname + '?format=json',
+						workspace: workspace,
+						newApplication: true,
+						el: $('.mainarea', _self.currentPage)
+					});
+				}
+			);
+		},
+
+		applicationNewJob: function(workspace_id, job_id) {
+			this.ensureVisible('workspaces');
+
+			var _self = this;
+			this.fromCollectionOrServer(
+				workspace_id,
+				this.context.workspaces,
+				WorkspaceModel,
+				function (workspace) {
+					_self.breadcrumbs([
+						{href: '/workspace/list', title: 'Workspaces'},
+						{href: '/workspace/' + workspace_id + '/applications', title: workspace.attributes.name},
+						{
+							href: window.location.pathname,
+							title: "New Application"
+						}
+					]);
+
+					_self.currentMainView = new GenericJobView({
+						job_id: job_id,
+						el: $('.mainarea', _self.currentPage)
+					});
+				}
+			);
+		},
+
+		applicationNewVersion: function(application_id) {
+			this.ensureVisible('workspaces');
+
+			var _self = this;
+			this.fromCollectionOrServer(
+				application_id,
+				this.context.applications,
+				ApplicationModel,
+				function (application) {
+					_self.breadcrumbs([
+						{href: '/workspace/list', title: 'Workspaces'},
+						{
+							href: '/workspace/' + application.attributes.workspace.id + '/applications',
+							title: application.attributes.workspace.name
+						},
+						{
+							href: '/application/' + application.id,
+							title: application.attributes.name
+						},
+						{href: window.location.pathname, title: 'New Version'}
+					]);
+
+					_self.currentMainView = new ApplicationNewView({
+						url: window.location.pathname + '?format=json',
+						workspace: application.attributes.workspace,
+						application: application,
+						newApplication: false,
+						el: $('.mainarea', _self.currentPage)
+					});
+				}
+			);
+		},
+
+		applicationNewVersionJob: function(application_id, job_id) {
+			this.ensureVisible('workspaces');
+
+			var _self = this;
+			this.fromCollectionOrServer(
+				application_id,
+				this.context.applications,
+				ApplicationModel,
+				function (application) {
+					_self.breadcrumbs([
+						{href: '/workspace/list', title: 'Workspaces'},
+						{
+							href: '/workspace/' + application.attributes.workspace.id + '/applications',
+							title: application.attributes.workspace.name
+						},
+						{
+							href: '/application/' + application.id,
+							title: application.attributes.name
+						},
+						{
+							href: window.location.pathname,
+							title: "New Version"
+						}
+					]);
+
+					_self.currentMainView = new GenericJobView({
+						job_id: job_id,
 						el: $('.mainarea', _self.currentPage)
 					});
 				}

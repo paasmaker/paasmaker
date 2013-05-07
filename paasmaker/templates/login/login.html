@@ -4,13 +4,24 @@
 	<div class="container-fluid">
 		<div class="span12">
 			<h1>Login to {% if cluster_name %}{{ cluster_name }}{% else %}Paasmaker{% end %}</h1>
-			<form method="POST">
-				<label for="username">Username:<label>
-				<input type="text" name="username" id="username" required="required" />
-				<label for="password">Password:</label>
-				<input type="password" id="password" name="password" required="required" />
-				<br />
-				<input type="submit" class="btn" value="Login" />
+			<form method="POST" class="form-horizontal">
+				<div class="control-group">
+					<label class="control-label" for="username">Username:</label>
+					<div class="controls">
+						<input type="text" name="username" id="username" required="required" />
+					</div>
+				</div>
+				<div class="control-group">
+					<label class="control-label" for="password">Password:</label>
+					<div class="controls">
+						<input type="password" id="password" name="password" required="required" />
+					</div>
+				</div>
+				<div class="control-group">
+					<div class="controls">
+						<input type="submit" class="btn" value="Login" />
+					</div>
+				</div>
 			</form>
 
 			{% if len(external_logins) > 0 %}

@@ -3,7 +3,7 @@
 		<i class="{{ statusIconMap[job.state] }} icon-white"></i>
 	</span>
 	<span class="title"><a href="#" class="viewlog" data-jobid="{{ job.job_id }}">{{ job.title }}</a></span>
-	<span class="controls">
+	<span class="area-controls">
 		{{% if (isRoot && !isFinished) { }}<a href="#" class="abort btn"><i class="icon-off"></i>Abort</a>{{% } }}
 	</span>
 </div>
