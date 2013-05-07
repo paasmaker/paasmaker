@@ -120,23 +120,6 @@ class GitSCM(BaseSCM):
 		elif self.output_in_progress:
 			self.rsync.kill()
 
-	def create_form(self, last_parameters):
-		template = """
-		<label>Repository URL:
-		<input class="lister-target" type="text" name="parameters.location" value="%(location)s" required="required"></label>
-
-		<label>Branch:
-		<input type="text" name="parameters.branch" value="%(branch)s" placeholder="master"></label>
-
-		<label>Revision:
-		<input type="text" name="parameters.revision" placeholder="HEAD"></label>
-		"""
-
-		return template % {
-			'location': self._encoded_or_default(last_parameters, 'location', ''),
-			'branch': self._encoded_or_default(last_parameters, 'branch', '')
-		}
-
 	def create_summary(self):
 		return {
 			'location': 'The git repository URL',

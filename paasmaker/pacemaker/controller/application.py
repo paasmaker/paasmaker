@@ -169,30 +169,16 @@ class ApplicationNewController(ApplicationRootController):
 			result = {}
 			result['listers'] = repo_listers
 
-			if self.format == 'html':
-				# Fetch the HTML instead.
-				result['plugin'] = plugin_name
-				result['title'] = self.configuration.plugins.title(plugin_name)
-				result['form'] = plugin.create_form(last_version_params)
-			else:
-				result['plugin'] = plugin_name
-				result['title'] = self.configuration.plugins.title(plugin_name)
-				result['parameters'] = plugin.create_summary()
-				result['parameters']['manifest_path'] = "The path inside the SCM to the manifest file."
+			result['plugin'] = plugin_name
+			result['title'] = self.configuration.plugins.title(plugin_name)
+			result['parameters'] = plugin.create_summary()
+			result['parameters']['manifest_path'] = "The path inside the SCM to the manifest file."
 
 			result_list.append(result)
 
 		self.add_data('scms', result_list)
 
-		# Special case for this controller: because SCM plugins generate their own form and return an
-		# HTML string, this controller supports a ?raw=true suffix on the URL to return the contents
-		# of the template rendered without any chrome from main.html. This can then be injected into
-		# the page by JavaScript. Without the suffix, treat as a normal client_side_render().
-		# TODO: a better method for SCM plugins to define their inputs
-		if self.get_argument('raw', '') == 'true':
-			self.render("application/new.html")
-		else:
-			self.client_side_render()
+		self.client_side_render()
 
 	def post(self, input_id):
 		if self.request.uri.startswith('/application'):

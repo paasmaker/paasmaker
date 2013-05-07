@@ -39,18 +39,6 @@ class DevDirectorySCM(BaseSCM):
 			}
 		)
 
-	def create_form(self, last_parameters):
-		template = """
-		<label>
-			Local Directory:
-			<input type="text" name="parameters.location" value="%(location)s" required="required">
-		</label>
-		"""
-
-		return template % {
-			'location': self._encoded_or_default(last_parameters, 'location', '')
-		}
-
 	def create_summary(self):
 		return {
 			'location': 'The local directory to use.'
