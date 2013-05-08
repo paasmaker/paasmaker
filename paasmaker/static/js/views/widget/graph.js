@@ -126,6 +126,7 @@ define([
 		onData: function(serverStatCategory, serverInputId, start, end, data) {
 			if (serverStatCategory == this.statCategory && serverInputId == this.statInputId) {
 				var processedData = {};
+				$('.graph-error', this.$el.parent()).remove();
 				for (var metric in data) {
 					if (graphTypes[this.options.graphType].socket_request.indexOf(metric) === -1) {
 						// we did not request this metric (but might get it because the subscribe call
@@ -144,7 +145,12 @@ define([
 		},
 		onError: function(message, serverStatCategory, serverInputId) {
 			if (serverStatCategory == this.statCategory && serverInputId == this.statInputId) {
-				// TODO: Implement.
+				var errorBox = $('.graph-error', this.$el.parent());
+				if (errorBox.length == 0) {
+					errorBox = $('<div class="graph-error"></div>');
+					container.parent().append(errorBox);
+				}
+				errorBox.text("Graph error: " + message);
 			}
 		},
 		processTimeSeries: function(start, end, graphPoints) {
