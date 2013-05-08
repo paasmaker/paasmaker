@@ -109,7 +109,8 @@ code.uuid-shrink
 .tile
 {
 	float: left;
-	width: 300px;
+	width: 95%;
+	max-width: 300px;
 
 	/* Borrowed from the Bootstrap well and well-small styles, to save us
 	 having to give those classes for every single tile. */
