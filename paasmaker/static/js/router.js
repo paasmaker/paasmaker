@@ -23,7 +23,7 @@ define([
 	'views/administration/role-edit',
 	'views/administration/role-allocation-list',
 	'views/administration/role-allocation-assign',
-	'views/layout/genericjobslist',
+	'views/widget/genericjobslist',
 	'views/administration/router-dump',
 	'views/administration/configuration-dump',
 	'views/administration/plugin-dump',
@@ -31,9 +31,9 @@ define([
 	'views/application/list',
 	'views/application/detail',
 	'views/version/detail',
-	'views/layout/genericjob',
+	'views/widget/genericjob',
 	'views/application/new',
-	'views/layout/fileupload'
+	'views/widget/fileupload'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,

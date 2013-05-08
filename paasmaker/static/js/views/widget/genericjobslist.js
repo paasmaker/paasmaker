@@ -4,8 +4,8 @@ define([
 	'backbone',
 	'context',
 	'bases',
-	'tpl!templates/layout/joblist.html',
-	'views/layout/jobblock'
+	'tpl!templates/widget/joblist.html',
+	'views/widget/jobblock'
 ], function($, _, Backbone, context, Bases, JobListTemplate, JobBlockView){
 	var GenericJobsListView = Bases.BaseView.extend({
 		initialize: function() {

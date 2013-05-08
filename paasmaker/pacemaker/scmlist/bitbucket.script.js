@@ -4,7 +4,7 @@ define([
 	'backbone',
 	'context',
 	'bases',
-	'tpl!templates/layout/scmlister-default.html'
+	'tpl!templates/widget/scmlister-default.html'
 ], function($, _, Backbone, context, Bases, ScmListerDefaultTemplate) {
 	var module = {};
 

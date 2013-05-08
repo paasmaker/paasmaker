@@ -4,8 +4,8 @@ define([
 	'backbone',
 	'context',
 	'bases',
-	'tpl!templates/layout/jobblock.html',
-	'views/layout/logviewer'
+	'tpl!templates/widget/jobblock.html',
+	'views/widget/logviewer'
 ], function($, _, Backbone, context, Bases, JobBlockTemplate, LogView){
 	var statusClassMap = {
 		'FAILED': 'important',
@@ -148,7 +148,7 @@ define([
 			// If the job finished, and it wasn't successful, populate the summary box.
 			if (finished && status.state != "SUCCESS") {
 				var summaryBox = $('.particulars-' + job_id + ' .summary', this.$el);
-				summaryBox.text(job.summary);
+				summaryBox.text(status.summary);
 				summaryBox.attr('class', 'summary summary-' + status.state);
 			}
 		},

@@ -4,7 +4,7 @@ define([
 	'backbone',
 	'context',
 	'bases',
-	'views/layout/fileupload'
+	'views/widget/fileupload'
 ], function($, _, Backbone, Context, Bases, FileUploadView) {
 	var module = {};
 

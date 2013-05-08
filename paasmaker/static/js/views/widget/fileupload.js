@@ -4,7 +4,7 @@ define([
 	'backbone',
 	'context',
 	'bases',
-	'tpl!templates/layout/fileupload.html',
+	'tpl!templates/widget/fileupload.html',
 	'resumable'
 ], function($, _, Backbone, context, Bases, FileUploadTemplate, Resumable){
 	var FileUploaderView = Bases.BaseView.extend({
