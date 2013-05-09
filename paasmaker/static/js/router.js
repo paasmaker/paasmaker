@@ -704,7 +704,7 @@ define([
 
 			this.breadcrumbs([
 				{href: '/administration/list', title: 'Administration'},
-				{href: '/user/list', title: 'User List'}
+				{href: '/user/list', title: 'Users'}
 			]);
 
 			this.currentMainView.render();

@@ -1,20 +1,33 @@
 
 <h1>Assign Role</h1>
 
-<form method="POST">
-	<label for="user_id">User:</label>
-	<select name="user_id" id="user_id">
-	</select>
+<form method="POST" class="form-horizontal">
+	<div class="control-group">
+		<label class="control-label" for="user_id">User:</label>
+		<div class="controls">
+			<select name="user_id" id="user_id"></select>
+		</div>
+	</div>
 
-	<label for="role_id">Role:</label>
-	<select name="role_id" id="role_id">
-	</select>
+	<div class="control-group">
+		<label class="control-label" for="role_id">Role:</label>
+		<div class="controls">
+			<select name="role_id" id="role_id"></select>
+		</div>
+	</div>
 
-	<label for="workspace_id">Workspace:</label>
-	<select name="workspace_id" id="workspace_id">
-		<option value="">-- Global</option>
-	</select>
+	<div class="control-group">
+		<label class="control-label" for="workspace_id">Workspace:</label>
+		<div class="controls">
+			<select name="workspace_id" id="workspace_id">
+				<option value="">-- Global</option>
+			</select>
+		</div>
+	</div>
 
-	<br />
-	<button type="submit" class="btn">Submit</button>
+	<div class="control-group">
+		<div class="controls">
+			<button type="submit" class="btn">Submit</button>
+		<div>
+	</div>
 </form>
