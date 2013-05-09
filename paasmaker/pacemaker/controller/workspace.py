@@ -10,6 +10,7 @@ import unittest
 import uuid
 import logging
 import json
+import re
 
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest
@@ -23,6 +24,8 @@ import sqlalchemy.exc
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
 
+VALID_IDENTIFIER = re.compile(r"^[-A-Za-z0-9.]{1,}$")
+
 class WorkspaceSchema(colander.MappingSchema):
 	name = colander.SchemaNode(colander.String(),
 		title="Workspace Name",
@@ -31,7 +34,8 @@ class WorkspaceSchema(colander.MappingSchema):
 	# TODO: Put proper validation on this.
 	stub = colander.SchemaNode(colander.String(),
 		title="Workspace stub",
-		description="A short, URL friendly name for the workspace.")
+		description="A short, URL friendly name for the workspace.",
+		validator=colander.Regex(VALID_IDENTIFIER, "Workspace stub must match " + VALID_IDENTIFIER.pattern))
 	tags = colander.SchemaNode(colander.Mapping(unknown='preserve'),
 		title="Workspace Tags",
 		description="A set of tags for this workspace.",
