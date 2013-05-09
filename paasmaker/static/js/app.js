@@ -69,9 +69,16 @@ define([
 
 		// Make the links in the header navigate using the router.
 		$('.navbar .brand, .navbar .nav-collapse a.virtual').click(function(e) {
-			var el = $(this);
-			context.navigate(el.attr('href'));
-			return false;
+			// This if wrapper allows middle clicks to open new tabs
+			// with the target URL.
+			// Based on http://stackoverflow.com/questions/1795734/triggering-onclick-event-using-middle-click
+			if (e.which != 2) {
+				var el = $(this);
+				context.navigate(el.attr('href'));
+				e.preventDefault();
+			} else {
+				e.stopPropagation();
+			}
 		});
 
 		// Create the administration collection.

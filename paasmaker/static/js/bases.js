@@ -16,9 +16,16 @@ define([
 		navigateAway: function(e) {
 			// Prevent the default first, which prevents us navigating
 			// away in case of error - which makes debugging hard.
-			e.preventDefault();
+			// This if wrapper allows middle clicks to open new tabs
+			// with the target URL.
+			// Based on http://stackoverflow.com/questions/1795734/triggering-onclick-event-using-middle-click
+			if (e.which != 2) {
+				e.preventDefault();
 
-			context.navigate($(e.currentTarget).attr('href'));
+				context.navigate($(e.currentTarget).attr('href'));
+			} else {
+				e.stopPropagation();
+			}
 		},
 		startLoadingInline: function() {
 			this.$('.loading').show();
