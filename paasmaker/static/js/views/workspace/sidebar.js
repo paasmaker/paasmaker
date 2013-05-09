@@ -51,7 +51,12 @@ define([
 			}
 			location.after(workspaceContainer);
 
-			workspace.applications.on('sync', this.renderApplications, this);
+			var workspaceId = workspace.id;
+			var _self = this;
+			workspace.applications.on('sync', function(collection, response, options) {
+				options.workspace_id = workspaceId;
+				_self.renderApplications(collection, response, options);
+			});
 
 			this.delegateEvents();
 
