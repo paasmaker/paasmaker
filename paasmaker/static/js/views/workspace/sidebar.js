@@ -17,6 +17,8 @@ define([
 			// Add our refresh button.
 			this.$('.area-controls').append($('<a href="#" class="refresh"><i class="icon-refresh"></i></a>'));
 
+			this.activeItem = '';
+
 			// Add all initial workspaces.
 			var _self = this;
 			this.collection.each(function(workspace, index, list) {
@@ -28,6 +30,17 @@ define([
 			this.collection.on('sync', this.render, this);
 			this.collection.on('add', this.addWorkspace, this);
 			this.collection.on('error', this.loadingError, this);
+		},
+		setActive: function(active) {
+			this.activeItem = active;
+
+			this.$('li').removeClass('active');
+			if (active != '') {
+				this.$('li.' + active).addClass('active');
+			}
+		},
+		resetActive: function() {
+			this.setActive(this.activeItem);
 		},
 		addWorkspace: function(workspace) {
 			// Add a container for this workspace, and a view.
@@ -91,6 +104,7 @@ define([
 			applicationContainer.replaceWith(replacement);
 
 			this.delegateEvents();
+			this.resetActive();
 		},
 		expandVersionsClick: function(e) {
 			e.preventDefault();
@@ -130,6 +144,7 @@ define([
 			applicationContainer.replaceWith(replacement);
 
 			this.delegateEvents();
+			this.resetActive();
 		}
 	});
 

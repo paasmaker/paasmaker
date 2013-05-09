@@ -28,7 +28,6 @@ define([
 			// TODO: Properly load this CSS file another way.
 			$('head').append('<link rel="stylesheet" href="/static/css/tag_editor.css">');
 
-			console.log(this.$('.workspace-tag-editor'));
 			this.$('.workspace-tag-editor').jsonEditor(
 				{
 					Tags: this.model.attributes.tags

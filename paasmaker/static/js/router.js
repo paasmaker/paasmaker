@@ -199,6 +199,12 @@ define([
 			this.context.administrations.findWhere({path: path}).set({active: true});
 		},
 
+		workspaceSetActive: function(active) {
+			if (sidebars['workspaces']) {
+				sidebars['workspaces'].setActive(active);
+			}
+		},
+
 		genericJobsListPage: function(sourceUrl, title) {
 			this.currentMainView = new GenericJobsListView({
 				url: sourceUrl,
@@ -272,6 +278,7 @@ define([
 
 		workspaceEdit: function(workspace_id) {
 			this.ensureVisible('workspaces');
+			this.workspaceSetActive('workspace-' + workspace_id);
 
 			var _self = this;
 			function workspaceEditInner(workspace) {
@@ -315,6 +322,7 @@ define([
 
 		workspaceList: function() {
 			this.ensureVisible('workspaces');
+			this.workspaceSetActive('');
 
 			this.currentMainView = new WorkspaceListView({
 				collection: this.context.workspaces,
@@ -331,6 +339,7 @@ define([
 
 		applicationList: function(workspace_id) {
 			this.ensureVisible('workspaces');
+			this.workspaceSetActive('workspace-' + workspace_id);
 
 			var _self = this;
 			this.fromCollectionOrServer(
@@ -357,6 +366,7 @@ define([
 
 		applicationView: function(application_id) {
 			this.ensureVisible('workspaces');
+			this.workspaceSetActive('application-' + application_id);
 
 			var _self = this;
 			this.fromCollectionOrServer(
@@ -386,6 +396,7 @@ define([
 
 		applicationNew: function(workspace_id) {
 			this.ensureVisible('workspaces');
+			this.workspaceSetActive('workspace-' + workspace_id);
 
 			var _self = this;
 			this.fromCollectionOrServer(
@@ -411,6 +422,7 @@ define([
 
 		applicationNewJob: function(workspace_id, job_id) {
 			this.ensureVisible('workspaces');
+			this.workspaceSetActive('workspace-' + workspace_id);
 
 			var _self = this;
 			this.fromCollectionOrServer(
@@ -437,6 +449,7 @@ define([
 
 		applicationNewVersion: function(application_id) {
 			this.ensureVisible('workspaces');
+			this.workspaceSetActive('application-' + application_id);
 
 			var _self = this;
 			this.fromCollectionOrServer(
@@ -470,6 +483,7 @@ define([
 
 		applicationNewVersionJob: function(application_id, job_id) {
 			this.ensureVisible('workspaces');
+			this.workspaceSetActive('application-' + application_id);
 
 			var _self = this;
 			this.fromCollectionOrServer(
@@ -503,6 +517,7 @@ define([
 
 		versionView: function(version_id) {
 			this.ensureVisible('workspaces');
+			this.workspaceSetActive('version-' + version_id);
 
 			var _self = this;
 			this.fromCollectionOrServer(
@@ -548,6 +563,7 @@ define([
 
 		versionJob: function(version_id, action, job_id) {
 			this.ensureVisible('workspaces');
+			this.workspaceSetActive('version-' + version_id);
 
 			var _self = this;
 			this.fromCollectionOrServer(
