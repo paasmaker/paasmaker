@@ -73,6 +73,21 @@ body #main
 	margin-bottom: 0px;
 }
 
+.workspace-sidebar-list li
+{
+	position: relative;
+	text-overflow: ellipsis;
+	overflow: hidden;
+	white-space: nowrap;
+}
+
+.workspace-sidebar-list a.expand-applications, .workspace-sidebar-list a.expand-versions
+{
+	position: absolute;
+	right: 10px;
+	top: 0px;
+}
+
 /* Ajax interface loader */
 .loading-overlay
 {
@@ -351,7 +366,10 @@ div.job .particulars .summary-SUCCESS
 .workspace-overview table.jobs { width: 790px; margin: 10px; }
 
 /* Workspace edit page */
-.workspace-tag-editor { width: 480px; margin: 20px 0; }
+.workspace-tag-editor
+{
+
+}
 
 /* Version view - instance types list */
 .instance-type-column { width: 45%; float: left; }

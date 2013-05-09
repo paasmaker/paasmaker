@@ -33,7 +33,8 @@ define([
 	'views/version/detail',
 	'views/widget/genericjob',
 	'views/application/new',
-	'views/widget/fileupload'
+	'views/widget/fileupload',
+	'views/workspace/edit'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
@@ -66,7 +67,8 @@ define([
 	VersionDetailView,
 	GenericJobView,
 	ApplicationNewView,
-	FileUploadView // Not actually used, but referenced here to ensure it ends up in the built version.
+	FileUploadView, // Not actually used, but referenced here to ensure it ends up in the built version.
+	WorkspaceEditView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -270,8 +272,45 @@ define([
 
 		workspaceEdit: function(workspace_id) {
 			this.ensureVisible('workspaces');
-			console.log('Workspace edit');
-			console.log(workspace_id);
+
+			var _self = this;
+			function workspaceEditInner(workspace) {
+				var crumbs = [
+					{href: '/workspace/list', title: 'Workspaces'}
+				];
+				if (workspace) {
+					crumbs.push({href: '/workspace/' + workspace_id, title: 'Edit workspace ' + workspace.attributes.name});
+				} else {
+					crumbs.push({href: '/workspace/create', title: 'Create workspace'})
+				}
+				_self.breadcrumbs(crumbs);
+
+				_self.currentMainView = new WorkspaceEditView({
+					model: workspace,
+					el: $('.mainarea', pages.workspaces)
+				});
+			}
+
+			if (workspace_id) {
+				// Always fetch from the server before editing.
+				this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
+
+				this.breadcrumbs([
+					{href: '/workspace/list', title: 'Workspaces'},
+					{href: '#', title: 'Loading workspace ' + workspace_id + '...'}
+				]);
+
+				var workspace = new WorkspaceModel({'id': workspace_id});
+				workspace.fetch({
+					success: function(model, response, options) {
+						workspaceEditInner(model);
+					},
+					error: _.bind(this.currentMainView.loadingError, this.currentMainView)
+				});
+			} else {
+				// Load empty workspace.
+				workspaceEditInner();
+			}
 		},
 
 		workspaceList: function() {

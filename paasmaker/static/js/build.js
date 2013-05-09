@@ -9,6 +9,7 @@
 		'jquery.bootstrap': 'libs/bootstrap/bootstrap',
 		'flot.pie': 'libs/flot/flot.pie',
 		'flot': 'libs/flot/flot',
+		'jsoneditor': 'libs/jsoneditor/jsoneditor',
 		moment: 'libs/moment/moment',
 		socketio: 'libs/socket.io/socket.io',
 		resumable: 'libs/resumable/resumable'

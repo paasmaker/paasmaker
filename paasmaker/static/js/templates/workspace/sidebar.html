@@ -1,20 +1,8 @@
 
-<div class="block-load-small loading" style="display: none;">
-	<img src="/static/img/load-inline.gif" width="16" height="11" alt="Loading..." />
-</div>
-
-<div class="workspace-list">
-	{{% for(var i = 0; i < workspaces.length; i++) { }}
-		{{% var workspace = workspaces[i] }}
-		<div class="workspace workspace-{{ workspace.attributes.id }}">
-			<a href="/workspace/{{ workspace.attributes.id }}/applications">{{ workspace.attributes.name }}</a>
-			{{% if (context.hasPermission('WORKSPACE_EDIT', workspace.attributes.id)) { }}
-				<a href="/workspace/{{ workspace.attributes.id }}" class="btn btn-mini workspace-edit"><i class="icon-edit"></i></a>
-			{{% } }}
-		</div>
+<ul class="nav nav-list workspace-sidebar-list">
+	<li class="nav-header">Workspaces</li>
+	{{% if (context.hasPermission('WORKSPACE_EDIT')) { }}
+		<li class="divider"></li>
+		<li><a href="/workspace/create" class="virtual"><i class="icon-plus"></i> Create workspace</a></li>
 	{{% } }}
-</div>
-
-{{% if (context.hasPermission('WORKSPACE_EDIT')) { }}
-	<div><a href="/workspace/create"><i class="icon-plus"></i> Create workspace</a></div>
-{{% } }}
+</ul>

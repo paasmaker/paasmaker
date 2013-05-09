@@ -3,15 +3,16 @@ define([
 	'underscore',
 	'backbone',
 	'context',
+	'bases',
 	'tpl!templates/node/sidebar-entry.html'
-], function($, _, Backbone, context, nodeSidebarEntryTemplate){
-	var NodeSidebarEntryView = Backbone.View.extend({
+], function($, _, Backbone, context, Bases, NodeSidebarEntryTemplate){
+	var NodeSidebarEntryView = Bases.BaseView.extend({
 		initialize: function() {
 			this.model.on('change', this.render, this);
 			this.render();
 		},
 		render: function() {
-			this.$el.html(nodeSidebarEntryTemplate({
+			this.$el.html(NodeSidebarEntryTemplate({
 				context: context,
 				node: this.model,
 				stateClasses: context.nodes.stateClasses
@@ -25,10 +26,6 @@ define([
 		},
 		events: {
 			"click a": "navigateAway",
-		},
-		navigateAway: function(e) {
-			context.navigate($(e.currentTarget).attr('href'));
-			e.preventDefault();
 		}
 	});
 

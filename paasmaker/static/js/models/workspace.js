@@ -5,15 +5,20 @@ define([
 ], function(_, Backbone, ApplicationCollection){
 	var WorkspaceModel = Backbone.Model.extend({
 		defaults: {
-			name: "None",
-			stub: "none"
+			name: "",
+			stub: "",
+			tags: {}
 		},
 		initialize: function() {
 			this.applications = new ApplicationCollection();
 			this.applications.url = '/workspace/' + this.id + '/applications?format=json';
 		},
 		url: function() {
-			return '/workspace/' + this.id + '?format=json';
+			if (this.id) {
+				return '/workspace/' + this.id + '?format=json';
+			} else {
+				return '/workspace/create?format=json'
+			}
 		},
 		parse: function(data) {
 			if(data.data) {

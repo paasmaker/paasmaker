@@ -11,6 +11,7 @@ require.config({
 		'jquery.bootstrap': 'libs/bootstrap/bootstrap',
 		'flot.pie': 'libs/flot/flot.pie',
 		'flot': 'libs/flot/flot',
+		'jsoneditor': 'libs/jsoneditor/jsoneditor',
 		moment: 'libs/moment/moment',
 		socketio: 'libs/socket.io/socket.io',
 		resumable: 'libs/resumable/resumable',
@@ -31,6 +32,10 @@ require.config({
 			deps: ['flot'],
 			exports: 'jquery'
 		},
+		'jsoneditor': {
+			deps: ['jquery'],
+			exports: 'jquery'
+		},
 		socketio: {
 			exports: 'io'
 		},
@@ -45,7 +50,8 @@ require([
 	'jquery.bootstrap',
 	'flot',
 	'flot.pie',
+	'jsoneditor',
 	'app'
-], function($, bootstrap, flot, flotpie, App) {
+], function($, bootstrap, flot, flotpie, jsoneditor, App) {
 	App.initialize();
 });

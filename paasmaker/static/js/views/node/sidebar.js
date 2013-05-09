@@ -6,14 +6,14 @@ define([
 	'bases',
 	'tpl!templates/node/sidebar.html',
 	'views/node/sidebar-entry'
-], function($, _, Backbone, context, Bases, nodeSidebarTemplate, SidebarEntryView){
+], function($, _, Backbone, context, Bases, NodeSidebarTemplate, SidebarEntryView){
 	var NodeSidebarListView = Bases.BaseView.extend({
 		initialize: function() {
 			// Render a blank template to start off with.
-			this.$el.html(Bases.errorLoadingHtml + nodeSidebarTemplate({nodes: [], context: context}));
+			this.$el.html(Bases.errorLoadingHtml + NodeSidebarTemplate({nodes: [], context: context}));
 
 			// Add our refresh button.
-			this.$('.controls').append($('<a href="#" class="refresh"><i class="icon-refresh"></i></a>'));
+			this.$('.area-controls').append($('<a href="#" class="refresh"><i class="icon-refresh"></i></a>'));
 
 			// And when the data comes in, update the whole list.
 			this.collection.on('request', this.startLoadingInline, this);

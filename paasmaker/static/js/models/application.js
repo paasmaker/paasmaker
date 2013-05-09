@@ -9,6 +9,7 @@ define([
 		},
 		initialize: function() {
 			this.versions = new VersionCollection();
+			this.versions.url = '/application/' + this.id + '?format=json';
 		},
 		url: function() {
 			return '/application/' + this.id + '?format=json';

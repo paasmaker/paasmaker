@@ -288,7 +288,7 @@ class StreamConnection(tornadio2.SocketConnection):
 			for unsub_job_id in job_ids:
 				if unsub_job_id in self.job_subscribed:
 					del self.job_subscribed[unsub_job_id]
-			self.emit('job.unsubscribed', job_ids)
+			self.emit('job.unsubscribed', list(job_ids))
 
 		self.configuration.job_manager.get_flat_tree(job_id, got_flat_tree_unsubscribe)
 

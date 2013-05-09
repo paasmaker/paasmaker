@@ -8,6 +8,9 @@ define([
 		url: '/workspace/list?format=json',
 		parse: function(response) {
 			return response.data.workspaces;
+		},
+		comparator: function(workspace) {
+			return workspace.get("name");
 		}
 	});
 
