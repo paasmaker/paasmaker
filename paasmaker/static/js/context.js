@@ -10,7 +10,8 @@ define([
 	'collections/roles',
 	'collections/roleallocations',
 	'collections/applications',
-	'collections/versions'
+	'collections/versions',
+	'models/usermeta'
 ], function($, _, Backbone,
 	moment,
 	socketio,
@@ -20,7 +21,8 @@ define([
 	RoleCollection,
 	RoleAllocationCollection,
 	ApplicationCollection,
-	VersionCollection
+	VersionCollection,
+	UserMetadataModel
 ) {
 	var module = {};
 	module.dispatcher = _.clone(Backbone.Events);
@@ -67,6 +69,8 @@ define([
 	module.initialize = function() {
 		// Load the workspaces from the containing page.
 		module.workspaces.reset(workspaces);
+		// Load the user metadata from the containing page.
+		module.usermeta = new UserMetadataModel(usermeta);
 	};
 
 	module.loadPlugin = function(pluginName, callback, errback) {

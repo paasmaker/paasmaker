@@ -54,6 +54,10 @@ define([
 			workspace.applications.on('sync', this.renderApplications, this);
 
 			this.delegateEvents();
+
+			if (context.usermeta.isWorkspaceExpanded(workspace.id)) {
+				this.expandApplications(workspace.id);
+			}
 		},
 		render: function() {
 			this.doneLoading();
@@ -75,9 +79,13 @@ define([
 			var listElement = $('.applications', target.parent());
 			if (listElement.is(':visible')) {
 				listElement.slideUp();
+				context.usermeta.markWorkspaceCollapsed(workspaceId);
+				$('i', target).attr('class', 'icon-chevron-down');
 			} else {
 				listElement.slideDown();
 				this.expandApplications(workspaceId);
+				context.usermeta.markWorkspaceExpanded(workspaceId);
+				$('i', target).attr('class', 'icon-chevron-up');
 			}
 		},
 		expandApplications: function(workspace_id) {
@@ -89,7 +97,7 @@ define([
 			var applicationContainer = this.$('.workspace-' + options.workspace_id + ' .applications');
 			var replacement = $('<ul class="nav nav-list applications"></ul>');
 			if (context.hasPermission('APPLICATION_CREATE', options.workspace_id)) {
-				replacement.append('<li><a href="/workspace/' + options.workspace_id + '/applications/new"><i class="icon-plus"></i> Create Application</a>');
+				replacement.append('<li><a class="virtual" href="/workspace/' + options.workspace_id + '/applications/new"><i class="icon-plus"></i> Create Application</a>');
 			}
 			collection.each(function(application, index, list) {
 				replacement.append(ApplicationEntryTemplate({
@@ -105,6 +113,13 @@ define([
 
 			this.delegateEvents();
 			this.resetActive();
+
+			var _self = this;
+			collection.each(function(application, index, list) {
+				if (context.usermeta.isApplicationExpanded(application.id)) {
+					_self.expandVersions(options.workspace_id, application.id);
+				}
+			});
 		},
 		expandVersionsClick: function(e) {
 			e.preventDefault();
@@ -114,9 +129,13 @@ define([
 			var listElement = $('.versions', target.parent());
 			if (listElement.is(':visible')) {
 				listElement.slideUp();
+				$('i', target).attr('class', 'icon-chevron-down');
+				context.usermeta.markApplicationCollapsed(applicationId);
 			} else {
 				listElement.slideDown();
 				this.expandVersions(workspaceId, applicationId);
+				context.usermeta.markApplicationExpanded(applicationId);
+				$('i', target).attr('class', 'icon-chevron-up');
 			}
 		},
 		expandVersions: function(workspace_id, application_id) {
@@ -130,7 +149,7 @@ define([
 			var applicationContainer = this.$('.application-' + options.application_id + ' .versions');
 			var replacement = $('<ul class="nav nav-list versions"></ul>');
 			if (context.hasPermission('APPLICATION_CREATE', options.workspace_id)) {
-				replacement.append('<li><a href="/application/' + options.application_id + '/newversion"><i class="icon-plus"></i> Create New Version</a>');
+				replacement.append('<li><a class="virtual" href="/application/' + options.application_id + '/newversion"><i class="icon-plus"></i> Create New Version</a>');
 			}
 			collection.each(function(version, index, list) {
 				replacement.append(VersionEntryTemplate({

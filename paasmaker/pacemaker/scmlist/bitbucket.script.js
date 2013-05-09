@@ -14,7 +14,6 @@ define([
 
 	module.SCM_LIST = Bases.BaseView.extend({
 		initialize: function() {
-			console.log(this.$el);
 			this.$el.html(
 				ScmListerDefaultTemplate({
 					title: this.options.title,

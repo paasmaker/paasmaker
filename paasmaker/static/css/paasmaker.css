@@ -76,6 +76,10 @@ body #main
 .workspace-sidebar-list li
 {
 	position: relative;
+}
+
+.workspace-sidebar-list li a
+{
 	text-overflow: ellipsis;
 	overflow: hidden;
 	white-space: nowrap;

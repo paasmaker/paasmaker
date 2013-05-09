@@ -69,5 +69,6 @@
 var permissions = {% raw json.dumps(permissions) %};
 var available_permissions = {% raw json.dumps(available_permissions) %};
 var workspaces = {% raw workspace_json %};
+var usermeta = {% raw json.dumps(current_user.userdata) %};
 </script>
 {% end %}
