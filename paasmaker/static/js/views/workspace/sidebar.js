@@ -44,7 +44,7 @@ define([
 		},
 		addWorkspace: function(workspace) {
 			// Add a container for this workspace, and a view.
-			var workspaceContainer = WorkspaceEntryTemplate({workspace: workspace, context: context});
+			var workspaceContainer = '<li class="divider"></li>' + WorkspaceEntryTemplate({workspace: workspace, context: context});
 			var location = this.$('.workspace-sidebar-list .workspace:last');
 			if (location.length == 0) {
 				location = this.$('.workspace-sidebar-list .nav-header');
@@ -102,7 +102,7 @@ define([
 			var applicationContainer = this.$('.workspace-' + options.workspace_id + ' .applications');
 			var replacement = $('<ul class="nav nav-list applications"></ul>');
 			if (context.hasPermission('APPLICATION_CREATE', options.workspace_id)) {
-				replacement.append('<li><a class="virtual" href="/workspace/' + options.workspace_id + '/applications/new"><i class="icon-plus"></i> Create Application</a>');
+				replacement.append('<li class="create-application-' + options.workspace_id + '"><a class="virtual" href="/workspace/' + options.workspace_id + '/applications/new"><i class="icon-plus"></i> Create Application</a>');
 			}
 			collection.each(function(application, index, list) {
 				replacement.append(ApplicationEntryTemplate({
@@ -154,7 +154,7 @@ define([
 			var applicationContainer = this.$('.application-' + options.application_id + ' .versions');
 			var replacement = $('<ul class="nav nav-list versions"></ul>');
 			if (context.hasPermission('APPLICATION_CREATE', options.workspace_id)) {
-				replacement.append('<li><a class="virtual" href="/application/' + options.application_id + '/newversion"><i class="icon-plus"></i> Create New Version</a>');
+				replacement.append('<li class="create-version-' + options.application_id + '"><a class="virtual" href="/application/' + options.application_id + '/newversion"><i class="icon-plus"></i> Create New Version</a>');
 			}
 			collection.each(function(version, index, list) {
 				replacement.append(VersionEntryTemplate({

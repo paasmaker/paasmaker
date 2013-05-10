@@ -288,6 +288,7 @@ define([
 				if (workspace) {
 					crumbs.push({href: '/workspace/' + workspace_id, title: 'Edit workspace ' + workspace.attributes.name});
 				} else {
+					_self.workspaceSetActive('create-workspace');
 					crumbs.push({href: '/workspace/create', title: 'Create workspace'})
 				}
 				_self.breadcrumbs(crumbs);
@@ -396,7 +397,7 @@ define([
 
 		applicationNew: function(workspace_id) {
 			this.ensureVisible('workspaces');
-			this.workspaceSetActive('workspace-' + workspace_id);
+			this.workspaceSetActive('create-application-' + workspace_id);
 
 			var _self = this;
 			this.fromCollectionOrServer(
@@ -422,7 +423,7 @@ define([
 
 		applicationNewJob: function(workspace_id, job_id) {
 			this.ensureVisible('workspaces');
-			this.workspaceSetActive('workspace-' + workspace_id);
+			this.workspaceSetActive('create-application-' + workspace_id);
 
 			var _self = this;
 			this.fromCollectionOrServer(
@@ -449,7 +450,7 @@ define([
 
 		applicationNewVersion: function(application_id) {
 			this.ensureVisible('workspaces');
-			this.workspaceSetActive('application-' + application_id);
+			this.workspaceSetActive('create-version-' + application_id);
 
 			var _self = this;
 			this.fromCollectionOrServer(
@@ -483,7 +484,7 @@ define([
 
 		applicationNewVersionJob: function(application_id, job_id) {
 			this.ensureVisible('workspaces');
-			this.workspaceSetActive('application-' + application_id);
+			this.workspaceSetActive('create-version-' + application_id);
 
 			var _self = this;
 			this.fromCollectionOrServer(

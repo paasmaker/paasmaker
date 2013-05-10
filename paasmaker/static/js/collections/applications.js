@@ -19,6 +19,9 @@ define([
 				return data;
 			}
 		},
+		comparator: function(application) {
+			return application.get("name");
+		}
 	});
 
 	return ApplicationCollection;

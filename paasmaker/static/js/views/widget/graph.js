@@ -102,6 +102,7 @@ define([
 			context.streamSocket.on('router.history.error', this.errorBinder);
 
 			this.plot = $.plot(this.$el, [], this.graphOptions.flot_options);
+			this.plot.setupGrid();
 
 			// Request the first update.
 			this.requestUpdate();
