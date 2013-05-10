@@ -35,7 +35,8 @@ define([
 	'views/application/new',
 	'views/widget/fileupload',
 	'views/workspace/edit',
-	'views/application/services'
+	'views/application/services',
+	'views/version/manifest'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
@@ -70,7 +71,8 @@ define([
 	ApplicationNewView,
 	FileUploadView, // Not actually used, but referenced here to ensure it ends up in the built version.
 	WorkspaceEditView,
-	ApplicationServicesView
+	ApplicationServicesView,
+	VersionManifestView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -103,6 +105,9 @@ define([
 			this.route(/^job\/list\/application\/(\d+)\?sub\=cron$/, 'applicationJobsList');
 			this.route(/^version\/(\d+)$/, 'versionView');
 			this.route(/^version\/(\d+)\/([a-z]+)\/([-a-z0-9]+)$/, 'versionJob');
+			this.route(/^version\/(\d+)\/manifest$/, 'versionManifest');
+			this.route(/^job\/list\/version\/(\d+)$/, 'versionJobsList');
+			this.route(/^job\/list\/version\/(\d+)\?sub\=cron$/, 'versionJobsList');
 
 			this.route('node/list', 'nodeList');
 			this.route(/^node\/(\d+)$/, 'nodeDetail');
@@ -687,6 +692,85 @@ define([
 				function (version) {
 					// If fetched from the collection, refresh from the server.
 					version.fetch();
+				}
+			);
+		},
+
+		versionManifest: function(version_id) {
+			this.ensureVisible('workspaces');
+			this.workspaceSetActive('version-' + version_id);
+
+			var _self = this;
+			this.fromCollectionOrServer(
+				version_id,
+				this.context.versions,
+				VersionModel,
+				function (version) {
+					_self.breadcrumbs([
+						{href: '/workspace/list', title: 'Workspaces'},
+						{
+							href: '/workspace/' + version.attributes.workspace.id + '/applications',
+							title: version.attributes.workspace.name
+						},
+						{
+							href: '/application/' + version.attributes.application.id,
+							title: version.attributes.application.name
+						},
+						{
+							href: '/version/' + version.attributes.id,
+							title: 'Version ' + version.attributes.version
+						},
+						{
+							href: window.location.pathname,
+							title: 'Manifest'
+						}
+					]);
+
+					_self.genericDataTemplatePage(window.location.pathname + '?format=json', VersionManifestView);
+				}
+			);
+		},
+
+		versionJobsList: function(version_id) {
+			this.ensureVisible('workspaces');
+			this.workspaceSetActive('version-' + version_id);
+
+			var _self = this;
+			this.fromCollectionOrServer(
+				version_id,
+				this.context.versions,
+				VersionModel,
+				function (version) {
+					var crumbs = [
+						{href: '/workspace/list', title: 'Workspaces'},
+						{
+							href: '/workspace/' + version.attributes.workspace.id + '/applications',
+							title: version.attributes.workspace.name
+						},
+						{
+							href: '/application/' + version.attributes.application.id,
+							title: version.attributes.application.name
+						},
+						{
+							href: '/version/' + version.attributes.id,
+							title: 'Version ' + version.attributes.version
+						}
+					];
+
+					var jobsUrl = window.location.pathname;
+					var pageTitle = "All Jobs";
+					if (window.location.search.indexOf('sub=cron') != -1) {
+						crumbs.push({href: '', title: 'Cron Jobs'});
+						jobsUrl += '?sub=cron&format=json';
+						pageTitle = 'Cron Jobs';
+					} else {
+						crumbs.push({href: '', title: 'All Jobs'});
+						jobsUrl += '?format=json';
+					}
+
+					_self.breadcrumbs(crumbs);
+
+					_self.genericJobsListPage(jobsUrl, pageTitle);
 				}
 			);
 		},

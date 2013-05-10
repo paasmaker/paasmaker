@@ -105,7 +105,7 @@ class VersionManifestController(VersionRootController):
 		self.add_data('version', version)
 		self.add_data('manifest', version.manifest)
 
-		self.render("api/apionly.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):

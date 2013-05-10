@@ -32,6 +32,7 @@ define([
 			return this;
 		},
 		events: {
+			"click a.virtual": "navigateAway",
 			"click a.start": "startVersion",
 			"click a.register": "registerVersion",
 			"click a.stop": "stopVersion",
