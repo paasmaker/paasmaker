@@ -34,12 +34,6 @@
 	</div>
 </div>
 
-<h2 class="node-instances">Instances</h2>
-<div class="instances-list tile-box clearfix">
-</div>
-
-<hr>
-
 {{% var runtimes = node.runtimeSummary() }}
 {{% if (runtimes.length > 0) { }}
 	<h3>Runtimes</h3>
@@ -69,4 +63,10 @@
 		<h3>Stats</h3>
 		<pre>{{ JSON.stringify(node.attributes.stats, undefined, 4) }}</pre>
 	</div>
+</div>
+
+<hr>
+
+<h2 class="node-instances">Instances</h2>
+<div class="instances-list tile-box clearfix">
 </div>

@@ -48,4 +48,7 @@ class VirtualPageController(BaseController):
 		routes.append((r"/version/\d+/[a-z]+/[-a-z0-9]+", VirtualPageController, configuration))
 		routes.append((r"/workspace/\d+/applications/new/[-a-z0-9]+", VirtualPageController, configuration))
 		routes.append((r"/application/\d+/newversion/[-a-z0-9]+", VirtualPageController, configuration))
+		# Generic log viewers for versions or nodes.
+		routes.append((r"/version/\d+/log/[-a-z0-9]+", VirtualPageController, configuration))
+		routes.append((r"/node/\d+/log/[-a-z0-9]+", VirtualPageController, configuration))
 		return routes

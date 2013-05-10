@@ -36,7 +36,8 @@ define([
 	'views/widget/fileupload',
 	'views/workspace/edit',
 	'views/application/services',
-	'views/version/manifest'
+	'views/version/manifest',
+	'views/widget/genericlog'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
@@ -72,7 +73,8 @@ define([
 	FileUploadView, // Not actually used, but referenced here to ensure it ends up in the built version.
 	WorkspaceEditView,
 	ApplicationServicesView,
-	VersionManifestView
+	VersionManifestView,
+	GenericLogView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -86,6 +88,7 @@ define([
 	var AppRouter = Backbone.Router.extend({
 		initialize: function() {
 			this.route(/^$/, "overview");
+
 			this.route('workspace/list', 'workspaceList');
 			this.route(/^workspace\/(\d+)\/applications$/, 'applicationList');
 			this.route(/^workspace\/(\d+)$/, 'workspaceEdit');
@@ -104,13 +107,15 @@ define([
 			this.route(/^job\/list\/application\/(\d+)$/, 'applicationJobsList');
 			this.route(/^job\/list\/application\/(\d+)\?sub\=cron$/, 'applicationJobsList');
 			this.route(/^version\/(\d+)$/, 'versionView');
-			this.route(/^version\/(\d+)\/([a-z]+)\/([-a-z0-9]+)$/, 'versionJob');
+			this.route(/^version\/(\d+)\/log\/([-a-z0-9]+)$/, 'versionLogView');
+			this.route(/^version\/(\d+)\/(start|stop|register|deregister|makecurrent)\/([-a-z0-9]+)$/, 'versionJob');
 			this.route(/^version\/(\d+)\/manifest$/, 'versionManifest');
 			this.route(/^job\/list\/version\/(\d+)$/, 'versionJobsList');
 			this.route(/^job\/list\/version\/(\d+)\?sub\=cron$/, 'versionJobsList');
 
 			this.route('node/list', 'nodeList');
 			this.route(/^node\/(\d+)$/, 'nodeDetail');
+			this.route(/^node\/(\d+)\/log\/([-a-z0-9]+)$/, 'nodeLogView');
 
 			this.route('administration/list', 'administrationList');
 			this.route('profile', 'yourProfile');
@@ -731,6 +736,45 @@ define([
 			);
 		},
 
+		versionLogView: function(version_id, log_id) {
+			this.ensureVisible('workspaces');
+			this.workspaceSetActive('version-' + version_id);
+
+			var _self = this;
+			this.fromCollectionOrServer(
+				version_id,
+				this.context.versions,
+				VersionModel,
+				function (version) {
+					_self.breadcrumbs([
+						{href: '/workspace/list', title: 'Workspaces'},
+						{
+							href: '/workspace/' + version.attributes.workspace.id + '/applications',
+							title: version.attributes.workspace.name
+						},
+						{
+							href: '/application/' + version.attributes.application.id,
+							title: version.attributes.application.name
+						},
+						{
+							href: '/version/' + version.attributes.id,
+							title: 'Version ' + version.attributes.version
+						},
+						{
+							href: window.location.pathname,
+							title: 'Log File'
+						}
+					]);
+
+					_self.currentMainView = new GenericLogView({
+						el: $('.mainarea', pages.workspaces),
+						job_id: log_id,
+						title: 'View log'
+					});
+				}
+			);
+		},
+
 		versionJobsList: function(version_id) {
 			this.ensureVisible('workspaces');
 			this.workspaceSetActive('version-' + version_id);
@@ -845,45 +889,48 @@ define([
 			this.ensureVisible('nodes');
 
 			var _self = this;
-			function nodeDetailInner(node) {
-				// Add to the collection, and refetch, so it's tied
-				// to the collection's events.
-				_self.context.nodes.add(node);
-				node = _self.context.nodes.get(node.id);
-				node.set({active: true});
+			this.fromCollectionOrServer(
+				node_id,
+				this.context.nodes,
+				NodeModel,
+				function (node) {
+					node.set({active: true});
 
-				_self.breadcrumbs([
-					{href: '/node/list', title: 'Nodes'},
-					{href: '/node/' + node_id, title: node.attributes.name}
-				]);
+					_self.breadcrumbs([
+						{href: '/node/list', title: 'Nodes'},
+						{href: '/node/' + node_id, title: node.attributes.name}
+					]);
 
-				_self.currentMainView = new NodeDetailView({
-					model: node,
-					el: $('.mainarea', pages.nodes)
-				});
-			}
+					_self.currentMainView = new NodeDetailView({
+						model: node,
+						el: $('.mainarea', pages.nodes)
+					});
+				}
+			);
+		},
 
-			// Try to load from the collection first.
-			var node = this.context.nodes.get(node_id);
-			if (node) {
-				nodeDetailInner(node)
-			} else {
-				this.currentMainView = new GenericLoadingView({el: $('.mainarea', pages.nodes)});
+		nodeLogView: function(node_id, log_id) {
+			this.ensureVisible('nodes');
 
-				this.breadcrumbs([
-					{href: '/node/list', title: 'Nodes'},
-					{href: '#', title: 'Loading node ' + node_id + '...'}
-				]);
+			var _self = this;
+			this.fromCollectionOrServer(
+				node_id,
+				this.context.nodes,
+				NodeModel,
+				function (node) {
+					_self.breadcrumbs([
+						{href: '/node/list', title: 'Nodes'},
+						{href: '/node/' + node_id, title: node.attributes.name},
+						{href: '#', title: 'Log View'}
+					]);
 
-				// Load it directly from the server.
-				node = new NodeModel({'id': node_id});
-				node.fetch({
-					success: function(model, response, options) {
-						nodeDetailInner(model);
-					},
-					error: _.bind(this.currentMainView.loadingError, this.currentMainView)
-				});
-			}
+					_self.currentMainView = new GenericLogView({
+						el: $('.mainarea', pages.nodes),
+						job_id: log_id,
+						title: 'View log'
+					});
+				}
+			);
 		},
 
 		administrationList: function() {

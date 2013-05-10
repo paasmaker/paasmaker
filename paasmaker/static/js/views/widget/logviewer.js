@@ -17,10 +17,12 @@ define([
 		initialize: function() {
 			this.linesBinder = _.bind(this.onLines, this);
 			this.zeroBinder = _.bind(this.onZeroSize, this);
+			this.cantFindBinder = _.bind(this.onCantFind, this);
 			this.jobId = this.$el.data('jobid');
 
 			context.streamSocket.on('log.lines', this.linesBinder);
 			context.streamSocket.on('log.zerosize', this.zeroBinder);
+			context.streamSocket.on('log.cantfind', this.cantFindBinder);
 
 			this.isReading = false;
 		},
@@ -55,6 +57,11 @@ define([
 			this.$el.text('This log is currently empty.');
 			this.$el.removeClass('data');
 		},
+		onCantFind: function(job_id, error_message) {
+			if (this.jobId != job_id) { return; }
+
+			this.$el.text(error_message);
+		},
 		start: function() {
 			if (!this.isReading) {
 				var position = this.$el.data('position');
@@ -79,6 +86,7 @@ define([
 			}
 			context.streamSocket.removeListener('log.lines', this.linesBinder);
 			context.streamSocket.removeListener('log.zerosize', this.zeroBinder);
+			context.streamSocket.removeListener('log.cantfind', this.cantFindBinder);
 		},
 		formatLogLines: function(lines) {
 			var output = lines.join("");

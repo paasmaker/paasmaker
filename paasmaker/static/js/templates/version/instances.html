@@ -1,0 +1,65 @@
+
+{{% _.each(instanceTypes, function(instanceType, instanceTypeName, list) { }}
+	<h2>Instance type: {{ instanceTypeName }}</h2>
+
+	<div class="row-fluid">
+		<div class="span6">
+			<ul>
+				<li><strong>Exclusive:</strong> {{ instanceType.instance_type.exclusive }}</li>
+				<li><strong>Standalone:</strong> {{ instanceType.instance_type.exclusive }}</li>
+				<li>
+					<strong>Runtime:</strong>
+					{{ instanceType.instance_type.runtime_name }},
+					{{ instanceType.instance_type.runtime_version }}
+				</li>
+				<li><strong>Quantity:</strong> {{ instanceType.instance_type.quantity }}</li>
+			</ul>
+		</div>
+		<div class="span6">
+			<ul>
+				<li>
+					<a href="http://{{ instanceType.instance_type.version_url }}{{ frontend_domain_postfix }}" target="_blank">
+						{{ instanceType.instance_type.version_url }}
+					</a>
+				</li>
+				{{% for (var i = 0; i < instanceType.instance_type.hostnames.length; i++) { }}
+					{{% var hostname = instanceType.instance_type.hostnames[i] }}
+					<li>
+						{{% if (is_current) { }}
+							<a href="http://{{ hostname }}{{ frontend_domain_postfix }}" target="_blank">
+						{{% } }}
+							{{ hostname }}
+						{{% if (is_current) { }}
+							</a>
+						{{% } }}
+					</li>
+				{{% } }}
+			</ul>
+		</div>
+	</div>
+
+	<div class="instances tile-box clearfix">
+		{{% for (var i = 0; i < instanceType.instances.length; i++) { }}
+			{{% var instance = instanceType.instances[i] }}
+			<div class="instance tile">
+				<div class="title">
+					<code class="uuid-shrink" title="{{ instance.instance_id }}">{{ instance.instance_id.substr(0, 8) }}</code>
+				</div>
+				<div class="body">
+					<strong>State:</strong> {{ instance.state }}
+					<br />
+					<strong>Node:</strong>
+					{{% if (context.hasPermission('NODE_DETAIL_VIEW')) { }}
+						<a href="/node/{{ instance.node_id }}">
+					{{% } }}
+						{{ instance.node_name }}
+					{{% if (context.hasPermission('NODE_DETAIL_VIEW')) { }}
+						</a>
+					{{% } }}
+					<br />
+					<strong>Log:</strong> <a class="virtual" href="/version/{{ version.id }}/log/{{ instance.instance_id }}">View</a>
+				</div>
+			</div>
+		{{% } }}
+	</div>
+{{% }) }}
