@@ -1,0 +1,23 @@
+
+<h1>Services</h1>
+
+<div class="service-list clearfix">
+	{{% for(var i = 0; i < services.services.length; i++) { }}
+		{{% var service = services.services[i] }}
+		<div class="service tile">
+			<div class="title">
+				{{ service.name }}
+			</div>
+			<div class="body">
+				<strong>Provider:</strong> {{ service.provider }}
+				<br />
+				<strong>State:</strong> {{ service.state }}
+				{{% if (service.credentials) { }}
+					<br />
+					<a href="#" class="showCredentials">Show Credentials</a>
+					<pre class="credentials" style="display: none;">{{ JSON.stringify(service.credentials, null, 2) }}</pre>
+				{{% } }}
+			</div>
+		</div>
+	{{% } }}
+</div>

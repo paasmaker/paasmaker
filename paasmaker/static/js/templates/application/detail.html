@@ -4,34 +4,36 @@
 <div class="btn-toolbar">
 	{{% if (context.hasPermission('APPLICATION_CREATE', application.workspace_id)) { }}
 		<div class="btn-group btn-group-header">
-			<a class="btn" href="/application/{{ application.id }}/newversion"><i class="icon-plus"></i> Create new version</a>
+			<a class="btn virtual" href="/application/{{ application.id }}/newversion"><i class="icon-plus"></i> Create new version</a>
 		</div>
 	{{% } }}
 	<div class="btn-group btn-group-header">
-		<a class="btn" href="/job/list/application/{{ application.id }}">All Jobs</a>
+		<a class="btn virtual" href="/job/list/application/{{ application.id }}">All Jobs</a>
 		{{% if (context.hasPermission('SERVICE_VIEW', application.workspace_id)) { }}
-			<a class="btn" href="/application/{{ application.id }}/services">Services</a>
+			<a class="btn virtual" href="/application/{{ application.id }}/services">Services</a>
 		{{% } }}
-		<a class="btn" href="/job/list/application/{{ application.id }}?sub=cron">Crons</a>
+		<a class="btn virtual" href="/job/list/application/{{ application.id }}?sub=cron">Crons</a>
 	</div>
 	{{% if (context.hasPermission('APPLICATION_DELETE') && application.attributes.can_delete) { }}
 		<div class="btn-group btn-group-header">
-			<a class="btn btn-danger" data-toggle="modal" data-target="#app_delete_modal"><i class="icon-trash icon-white"></i> Delete Application</a>
+			<a class="btn btn-danger delete"><i class="icon-trash icon-white"></i> Delete Application</a>
 		</div>
 	{{% } }}
 </div>
 
-<ul>
-	<li>{{ application.attributes.versions.length }} version{{% if(application.attributes.versions.length != 1) { }}s{{% } }}</li>
-	<li>Health: {{ application.attributes.health }}</li>
-</ul>
+<div class="deleteConfirm well well-small" style="display: none;">
+	<p>Are you sure you want to delete this application? All services and their data will be deleted. This can not be undone.</p>
+	<button class="realDelete btn btn-danger">Delete</button> <button class="noDelete btn">Cancel</button>
+</div>
+
+<p class="lead">Health: {{ application.attributes.health }}</p>
 
 <div class="version-list clearfix">
 	{{% for(var i = 0; i < application.attributes.versions.length; i++) { }}
 		{{% var version = application.attributes.versions[i] }}
 		<div class="version tile">
 			<div class="title title-status">
-				<a href="/version/{{ version.id }}">Version {{ version.version }}</a>
+				<a href="/version/{{ version.id }}" class="virtual">Version {{ version.version }}</a>
 			</div>
 			<div class="body">
 				{{% if(version.is_current) { }}

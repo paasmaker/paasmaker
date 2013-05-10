@@ -34,7 +34,8 @@ define([
 	'views/widget/genericjob',
 	'views/application/new',
 	'views/widget/fileupload',
-	'views/workspace/edit'
+	'views/workspace/edit',
+	'views/application/services'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
@@ -68,7 +69,8 @@ define([
 	GenericJobView,
 	ApplicationNewView,
 	FileUploadView, // Not actually used, but referenced here to ensure it ends up in the built version.
-	WorkspaceEditView
+	WorkspaceEditView,
+	ApplicationServicesView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -95,6 +97,8 @@ define([
 			this.route(/^application\/(\d+)$/, 'applicationView');
 			this.route(/^application\/(\d+)\/newversion$/, 'applicationNewVersion');
 			this.route(/^application\/(\d+)\/newversion\/([-a-z0-9]+)$/, 'applicationNewVersionJob');
+			this.route(/^application\/(\d+)\/services$/, 'applicationServices');
+			this.route(/^application\/(\d+)\/delete\/([-a-z0-9]+)$/, 'applicationDeleteJob');
 			this.route(/^job\/list\/application\/(\d+)$/, 'applicationJobsList');
 			this.route(/^job\/list\/application\/(\d+)\?sub\=cron$/, 'applicationJobsList');
 			this.route(/^version\/(\d+)$/, 'versionView');
@@ -429,6 +433,37 @@ define([
 			);
 		},
 
+		applicationServices: function(application_id) {
+			this.ensureVisible('workspaces');
+			this.workspaceSetActive('application-' + application_id);
+
+			var _self = this;
+			this.fromCollectionOrServer(
+				application_id,
+				this.context.applications,
+				ApplicationModel,
+				function (application) {
+					_self.breadcrumbs([
+						{href: '/workspace/list', title: 'Workspaces'},
+						{
+							href: '/workspace/' + application.attributes.workspace.id + '/applications',
+							title: application.attributes.workspace.name
+						},
+						{
+							href: '/application/' + application.id,
+							title: application.attributes.name
+						},
+						{
+							href: '/application/' + application.id + '/services',
+							title: 'Services'
+						}
+					]);
+
+					_self.genericDataTemplatePage(window.location.pathname + '?format=json', ApplicationServicesView);
+				}
+			);
+		},
+
 		applicationNew: function(workspace_id) {
 			this.ensureVisible('workspaces');
 			this.workspaceSetActive('create-application-' + workspace_id);
@@ -573,6 +608,40 @@ define([
 						{
 							href: window.location.pathname,
 							title: "New Version"
+						}
+					]);
+
+					_self.currentMainView = new GenericJobView({
+						job_id: job_id,
+						el: $('.mainarea', _self.currentPage)
+					});
+				}
+			);
+		},
+
+		applicationDeleteJob: function(application_id, job_id) {
+			this.ensureVisible('workspaces');
+			this.workspaceSetActive('application-' + application_id);
+
+			var _self = this;
+			this.fromCollectionOrServer(
+				application_id,
+				this.context.applications,
+				ApplicationModel,
+				function (application) {
+					_self.breadcrumbs([
+						{href: '/workspace/list', title: 'Workspaces'},
+						{
+							href: '/workspace/' + application.attributes.workspace.id + '/applications',
+							title: application.attributes.workspace.name
+						},
+						{
+							href: '/application/' + application.attributes.id,
+							title: application.attributes.name
+						},
+						{
+							href: window.location.pathname,
+							title: 'Delete'
 						}
 					]);
 
