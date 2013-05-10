@@ -36,8 +36,7 @@ define([
 
 			var el = $(e.currentTarget);
 			var credentials = $('pre', el.parent());
-			el.hide();
-			credentials.slideDown();
+			credentials.slideToggle();
 		}
 	});
 
