@@ -108,7 +108,8 @@ define([
 				replacement.append(ApplicationEntryTemplate({
 					application: application,
 					context: context,
-					workspace_id: options.workspace_id
+					workspace_id: options.workspace_id,
+					healthClasses: collection.healthClasses
 				}));
 			});
 			if (collection.length == 0) {

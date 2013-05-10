@@ -83,7 +83,7 @@ define([
 			flot_options: {
 				yaxis: { min: 0 },
 				xaxis: { mode: "time", minTickSize: [15, "second"], },
-				legend: { position: 'sw' }
+				legend: { position: 'sw', sorted: true }
 			}
 		}
 	};

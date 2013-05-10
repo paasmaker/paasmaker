@@ -1,5 +1,12 @@
 <li class="application application-{{ application.attributes.id }}">
-	<a href="/application/{{ application.attributes.id }}" class="virtual">{{ application.attributes.name }}</a>
+	<a href="/application/{{ application.attributes.id }}" class="virtual">
+		<span class="state">
+			<span class="badge {{ healthClasses[application.attributes.health].badge}}" title="Health: {{ application.attributes.health }}">
+				<i class="{{ healthClasses[application.attributes.health].icon }} icon-white"></i>
+			</span>
+		</span>
+		{{ application.attributes.name }}
+	</a>
 	<a href="#" class="expand-versions" data-workspace="{{ workspace_id }}" data-application="{{ application.attributes.id }}"><i class="icon-chevron-down"></i></a>
 	<ul class="nav nav-list versions" style="display: none;">
 		<li><img src="/static/img/load-inline.gif" width="16" height="11" alt="Loading..." /></li>

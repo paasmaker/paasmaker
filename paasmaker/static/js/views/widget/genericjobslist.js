@@ -52,6 +52,10 @@ define([
 
 				_self.views.push(view);
 			});
+
+			if (this.jobs.length == 0) {
+				this.$el.append('<p class="lead">No jobs found.</p>');
+			}
 		},
 		loadingError: function(model, xhr, options) {
 			this.$('h1').remove();

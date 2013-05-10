@@ -86,6 +86,8 @@ define([
 			this.route(/^workspace\/(\d+)\/applications$/, 'applicationList');
 			this.route(/^workspace\/(\d+)$/, 'workspaceEdit');
 			this.route('workspace/create', 'workspaceEdit');
+			this.route(/^job\/list\/workspace\/(\d+)$/, 'workspaceJobsList');
+			this.route(/^job\/list\/workspace\/(\d+)\?sub\=cron$/, 'workspaceJobsList');
 
 			this.route(/^workspace\/(\d+)\/applications\/new$/, 'applicationNew');
 			this.route(/^workspace\/(\d+)\/applications\/new\/([-a-z0-9]+)$/, 'applicationNewJob');
@@ -93,6 +95,8 @@ define([
 			this.route(/^application\/(\d+)$/, 'applicationView');
 			this.route(/^application\/(\d+)\/newversion$/, 'applicationNewVersion');
 			this.route(/^application\/(\d+)\/newversion\/([-a-z0-9]+)$/, 'applicationNewVersionJob');
+			this.route(/^job\/list\/application\/(\d+)$/, 'applicationJobsList');
+			this.route(/^job\/list\/application\/(\d+)\?sub\=cron$/, 'applicationJobsList');
 			this.route(/^version\/(\d+)$/, 'versionView');
 			this.route(/^version\/(\d+)\/([a-z]+)\/([-a-z0-9]+)$/, 'versionJob');
 
@@ -227,10 +231,6 @@ define([
 			});
 		},
 
-		genericJobFollowerPage: function(breadcrumbs, title, job_id) {
-
-		},
-
 		fromCollectionOrServer: function(server_id, collection, model, innerFunction, alreadyLoadedCallback) {
 			// Fetch the given object from the given collection,
 			// or fetch it from the server if we need to.
@@ -286,7 +286,8 @@ define([
 					{href: '/workspace/list', title: 'Workspaces'}
 				];
 				if (workspace) {
-					crumbs.push({href: '/workspace/' + workspace_id, title: 'Edit workspace ' + workspace.attributes.name});
+					crumbs.push({href: '/workspace/' + workspace_id + '/applications', title: workspace.attributes.name});
+					crumbs.push({href: '/workspace/' + workspace_id, title: 'Edit'});
 				} else {
 					_self.workspaceSetActive('create-workspace');
 					crumbs.push({href: '/workspace/create', title: 'Create workspace'})
@@ -336,6 +337,39 @@ define([
 
 			this.currentMainView.render();
 			this.currentMainView.startLoadingFull();
+		},
+
+		workspaceJobsList: function(workspace_id) {
+			this.ensureVisible('workspaces');
+			this.workspaceSetActive('workspace-' + workspace_id);
+
+			var _self = this;
+			this.fromCollectionOrServer(
+				workspace_id,
+				this.context.workspaces,
+				WorkspaceModel,
+				function (workspace) {
+					var crumbs = [
+						{href: '/workspace/list', title: 'Workspaces'},
+						{href: '/workspace/' + workspace_id + '/applications', title: workspace.attributes.name}
+					];
+
+					var jobsUrl = window.location.pathname;
+					var pageTitle = "All Jobs";
+					if (window.location.search.indexOf('sub=cron') != -1) {
+						crumbs.push({href: '', title: 'Cron Jobs'});
+						jobsUrl += '?sub=cron&format=json';
+						pageTitle = 'Cron Jobs';
+					} else {
+						crumbs.push({href: '', title: 'All Jobs'});
+						jobsUrl += '?format=json';
+					}
+
+					_self.breadcrumbs(crumbs);
+
+					_self.genericJobsListPage(jobsUrl, pageTitle);
+				}
+			);
 		},
 
 		applicationList: function(workspace_id) {
@@ -444,6 +478,40 @@ define([
 						job_id: job_id,
 						el: $('.mainarea', _self.currentPage)
 					});
+				}
+			);
+		},
+
+		applicationJobsList: function(application_id) {
+			this.ensureVisible('workspaces');
+			this.workspaceSetActive('application-' + application_id);
+
+			var _self = this;
+			this.fromCollectionOrServer(
+				application_id,
+				this.context.applications,
+				ApplicationModel,
+				function (application) {
+					var crumbs = [
+						{href: '/workspace/list', title: 'Workspaces'},
+						{href: '/workspace/' + application.attributes.workspace.id + '/applications', title: application.attributes.workspace.name},
+						{href: '/application/' + application.id, title: application.attributes.name}
+					];
+
+					var jobsUrl = window.location.pathname;
+					var pageTitle = "All Jobs";
+					if (window.location.search.indexOf('sub=cron') != -1) {
+						crumbs.push({href: '', title: 'Cron Jobs'});
+						jobsUrl += '?sub=cron&format=json';
+						pageTitle = 'Cron Jobs';
+					} else {
+						crumbs.push({href: '', title: 'All Jobs'});
+						jobsUrl += '?format=json';
+					}
+
+					_self.breadcrumbs(crumbs);
+
+					_self.genericJobsListPage(jobsUrl, pageTitle);
 				}
 			);
 		},
