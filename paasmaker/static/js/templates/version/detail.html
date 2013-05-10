@@ -42,7 +42,16 @@
 		{{% } }}
 	</li>
 	<li><b>State:</b> {{ version.attributes.state }}</li>
-	<li><b>Health:</b> {{ version.attributes.health.overall }}</li>
+	<li>
+		<b>Health:</b> {{ version.attributes.health.overall }}
+		{{% if (version.attributes.health.overall != 'OK') { }}
+			<ul>
+				{{% _.each(version.attributes.health.types, function(data, instanceType, list) { }}
+					<li><strong>{{ instanceType }}</strong>: {{ data.message }}</li>
+				{{% }) }}
+			</ul>
+		{{% } }}
+	</li>
 	<li><b>SCM:</b> {{ version.attributes.scm_name }}</li>
 	{{%if (version.attributes.scm_parameters.formatted_location) { }}
 		<li><b>Original source location:</b> {{ version.attributes.scm_parameters.formatted_location }}</li>

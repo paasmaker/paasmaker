@@ -6,7 +6,7 @@
 		<div class="span6">
 			<ul>
 				<li><strong>Exclusive:</strong> {{ instanceType.instance_type.exclusive }}</li>
-				<li><strong>Standalone:</strong> {{ instanceType.instance_type.exclusive }}</li>
+				<li><strong>Standalone:</strong> {{ instanceType.instance_type.standalone }}</li>
 				<li>
 					<strong>Runtime:</strong>
 					{{ instanceType.instance_type.runtime_name }},
@@ -16,6 +16,7 @@
 			</ul>
 		</div>
 		<div class="span6">
+			{{% if (!instanceType.instance_type.standalone) { }}
 			<ul>
 				<li>
 					<a href="http://{{ instanceType.instance_type.version_url }}{{ frontend_domain_postfix }}" target="_blank">
@@ -35,6 +36,7 @@
 					</li>
 				{{% } }}
 			</ul>
+			{{% } }}
 		</div>
 	</div>
 

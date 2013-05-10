@@ -47,7 +47,8 @@ define([
 
 			this.$('.top').html(VersionDetailTemplate({
 				version: this.model,
-				context: context
+				context: context,
+				_: _
 			}));
 
 			return this;
