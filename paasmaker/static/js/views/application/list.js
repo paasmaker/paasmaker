@@ -56,7 +56,38 @@ define([
 			return this;
 		},
 		events: {
-			"click a": "navigateAway",
+			"click a.virtual": "navigateAway",
+			"click a.delete": "deleteConfirm",
+			"click button.realDelete": "realDelete",
+			"click button.noDelete": "deleteCancel"
+		},
+		deleteConfirm: function(e) {
+			e.preventDefault();
+			this.$('.deleteConfirm').slideDown();
+		},
+		deleteCancel: function(e) {
+			e.preventDefault();
+			this.$('.deleteConfirm').slideUp();
+		},
+		realDelete: function(e) {
+			e.preventDefault();
+
+			var _self = this;
+
+			this.startLoadingFull();
+			var endpoint = '/workspace/' + this.options.workspace.id + '/delete?format=json';
+			$.ajax({
+				url: endpoint,
+				type: 'POST',
+				dataType: 'json',
+				success: function(data) {
+					_self.doneLoading();
+
+					// Go back to the workspace list. This will trigger a fetch.
+					context.navigate('/workspace/list');
+				},
+				error: _.bind(this.loadingError, this)
+			});
 		}
 	});
 

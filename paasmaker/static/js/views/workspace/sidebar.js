@@ -29,6 +29,8 @@ define([
 			this.collection.on('request', this.startLoadingInline, this);
 			this.collection.on('sync', this.render, this);
 			this.collection.on('add', this.addWorkspace, this);
+			this.collection.on('change', this.changeWorkspace, this);
+			this.collection.on('remove', this.removeWorkspace, this);
 			this.collection.on('error', this.loadingError, this);
 		},
 		setActive: function(active) {
@@ -63,6 +65,13 @@ define([
 			if (context.usermeta.isWorkspaceExpanded(workspace.id)) {
 				this.expandApplications(workspace.id);
 			}
+		},
+		changeWorkspace: function(workspace, options) {
+			var titleContainer = this.$('.workspace-' + workspace.id + ' .workspace-title');
+			titleContainer.text(workspace.attributes.name);
+		},
+		removeWorkspace: function(workspace, collection, options) {
+			this.$('.workspace-' + workspace.id).remove();
 		},
 		render: function() {
 			this.doneLoading();

@@ -4,23 +4,28 @@
 <div class="btn-toolbar">
 	{{% if (context.hasPermission('WORKSPACE_EDIT', workspace.id)) { }}
 		<div class="btn-group btn-group-header">
-			<a class="btn" href="/workspace/{{ workspace.id }}"><i class="icon-edit"></i> Edit Workspace</a>
+			<a class="btn virtual" href="/workspace/{{ workspace.id }}"><i class="icon-edit"></i> Edit Workspace</a>
 		</div>
 	{{% } }}
 	{{% if (context.hasPermission('WORKSPACE_DELETE', workspace.id) && workspace.attributes.can_delete) { }}
 		<div class="btn-group btn-group-header">
-			<a class="btn btn-danger"><i class="icon-trash icon-white"></i> Delete Workspace</a>
+			<a class="btn btn-danger delete" href="/workspace/{{ workspace.id}}/delete"><i class="icon-trash icon-white"></i> Delete Workspace</a>
 		</div>
 	{{% } }}
 	{{% if (context.hasPermission('APPLICATION_CREATE', workspace.id)) { }}
 		<div class="btn-group btn-group-header">
-			<a class="btn" href="/workspace/{{ workspace.id }}/applications/new"><i class="icon-plus"></i> Create Application</a>
+			<a class="btn virtual" href="/workspace/{{ workspace.id }}/applications/new"><i class="icon-plus"></i> Create Application</a>
 		</div>
 	{{% } }}
 	<div class="btn-group btn-group-header">
-		<a class="btn" href="/job/list/workspace/{{ workspace.id }}">All Jobs</a>
-		<a class="btn" href="/job/list/workspace/{{ workspace.id }}?sub=cron">Cron Jobs</a>
+		<a class="btn virtual" href="/job/list/workspace/{{ workspace.id }}">All Jobs</a>
+		<a class="btn virtual" href="/job/list/workspace/{{ workspace.id }}?sub=cron">Cron Jobs</a>
 	</div>
+</div>
+
+<div class="deleteConfirm well well-small" style="display: none;">
+	<p>Are you sure you want to delete this workspace? This can not be undone.</p>
+	<button class="realDelete btn btn-danger">Delete</button> <button class="noDelete btn">Cancel</button>
 </div>
 
 <h2>Statistics</h2>
@@ -52,7 +57,7 @@
 						<i class="{{ healthClasses[application.attributes.health].icon }} icon-white"></i>
 					</span>
 				</span>
-				<a href="/application/{{ application.attributes.id }}">{{ application.attributes.name }}</a>
+				<a class="virtual" href="/application/{{ application.attributes.id }}">{{ application.attributes.name }}</a>
 			</div>
 		</div>
 	{{% } }}

@@ -169,7 +169,7 @@ class WorkspaceDeleteController(WorkspaceBaseController):
 		paasmaker.model.WorkspaceUserRoleFlat.build_flat_table(self.session)
 
 		self.add_data('success', True)
-		self.redirect("/")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):
