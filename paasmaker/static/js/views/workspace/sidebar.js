@@ -55,6 +55,7 @@ define([
 
 			var workspaceId = workspace.id;
 			var _self = this;
+			workspace.applications.on('request', this.startLoadingInline, this);
 			workspace.applications.on('sync', function(collection, response, options) {
 				options.workspace_id = workspaceId;
 				_self.renderApplications(collection, response, options);
@@ -108,6 +109,7 @@ define([
 			workspace.applications.fetch({workspace_id: workspace_id});
 		},
 		renderApplications: function(collection, response, options) {
+			this.doneLoading();
 			var applicationContainer = this.$('.workspace-' + options.workspace_id + ' .applications');
 			var replacement = $('<ul class="nav nav-list applications"></ul>');
 			if (context.hasPermission('APPLICATION_CREATE', options.workspace_id)) {
@@ -123,8 +125,8 @@ define([
 
 				// Insert the existing version HTML into the list, until the refresh is
 				// done. TODO: This is a bit hackish.
-				// TODO: This doesn't clone the events, assuming that it will be updated shortly,
-				// but this may not be true.
+				// Note: this doesn't need to clone events, because delegateEvents() will catch
+				// this shortly after the replacement.
 				var existingVersions = this.$('.application-' + application.id + ' ul.versions');
 				var visible = existingVersions.is(':visible');
 				var entries = $('li', existingVersions);
@@ -185,9 +187,13 @@ define([
 					context: context
 				}));
 			});
+
 			if (collection.length == 0) {
 				replacement.append('<li>No versions</li>');
 			}
+
+			replacement.append('<li class="divider"></li>');
+
 			applicationContainer.replaceWith(replacement);
 
 			this.delegateEvents();
