@@ -75,6 +75,7 @@ define([
 			if (e.which != 2) {
 				var el = $(this);
 				context.navigate(el.attr('href'));
+				$('.nav-collapse').css('height', '0px');
 				e.preventDefault();
 			} else {
 				e.stopPropagation();
