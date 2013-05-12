@@ -12,6 +12,9 @@ define([
 			'OK': { badge: 'badge-success', icon: 'icon-ok' },
 			'WARNING': { badge: 'badge-warning', icon: 'icon-warning-sign' },
 			'ERROR': { badge: 'badge-important', icon: 'icon-ban-circle' }
+		},
+		comparator: function(version) {
+			return -version.get("version");
 		}
 	});
 

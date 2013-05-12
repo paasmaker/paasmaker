@@ -108,7 +108,7 @@ define([
 			this.route(/^job\/list\/application\/(\d+)\?sub\=cron$/, 'applicationJobsList');
 			this.route(/^version\/(\d+)$/, 'versionView');
 			this.route(/^version\/(\d+)\/log\/([-a-z0-9]+)$/, 'versionLogView');
-			this.route(/^version\/(\d+)\/(start|stop|register|deregister|makecurrent)\/([-a-z0-9]+)$/, 'versionJob');
+			this.route(/^version\/(\d+)\/(start|stop|register|deregister|setcurrent)\/([-a-z0-9]+)$/, 'versionJob');
 			this.route(/^version\/(\d+)\/manifest$/, 'versionManifest');
 			this.route(/^job\/list\/version\/(\d+)$/, 'versionJobsList');
 			this.route(/^job\/list\/version\/(\d+)\?sub\=cron$/, 'versionJobsList');
@@ -521,7 +521,12 @@ define([
 
 					_self.currentMainView = new GenericJobView({
 						job_id: job_id,
-						el: $('.mainarea', _self.currentPage)
+						el: $('.mainarea', _self.currentPage),
+						finishedCallback: function(jid, state) {
+							// When done, refresh the application that this belongs to.
+							var workspace = _self.context.workspaces.get(workspace.id);
+							workspace.applications.fetch();
+						}
 					});
 				}
 			);
@@ -623,7 +628,12 @@ define([
 
 					_self.currentMainView = new GenericJobView({
 						job_id: job_id,
-						el: $('.mainarea', _self.currentPage)
+						el: $('.mainarea', _self.currentPage),
+						finishedCallback: function(jid, state) {
+							// When done, refresh the application that this belongs to.
+							var workspace = _self.context.workspaces.get(application.attributes.workspace.id);
+							workspace.applications.fetch();
+						}
 					});
 				}
 			);
@@ -657,7 +667,12 @@ define([
 
 					_self.currentMainView = new GenericJobView({
 						job_id: job_id,
-						el: $('.mainarea', _self.currentPage)
+						el: $('.mainarea', _self.currentPage),
+						finishedCallback: function(jid, state) {
+							// When done, refresh the application that this belongs to.
+							var workspace = _self.context.workspaces.get(application.attributes.workspace.id);
+							workspace.applications.fetch();
+						}
 					});
 				}
 			);
@@ -824,7 +839,7 @@ define([
 			'stop': 'Stop',
 			'register': 'Register',
 			'deregister': 'De-Register',
-			'makecurrent': 'Make Current'
+			'setcurrent': 'Make Current'
 		},
 
 		versionJob: function(version_id, action, job_id) {
@@ -859,7 +874,12 @@ define([
 
 					_self.currentMainView = new GenericJobView({
 						job_id: job_id,
-						el: $('.mainarea', _self.currentPage)
+						el: $('.mainarea', _self.currentPage),
+						finishedCallback: function(jid, state) {
+							// When done, refresh the application that this belongs to.
+							var workspace = _self.context.workspaces.get(version.attributes.workspace.id);
+							workspace.applications.fetch();
+						}
 					});
 				}
 			);

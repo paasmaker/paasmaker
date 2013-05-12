@@ -22,7 +22,8 @@ define([
 			var blockContainer = this.$('.job-' + this.options.job_id);
 			this.block = new JobBlockView({
 				job_id: this.options.job_id,
-				el: blockContainer
+				el: blockContainer,
+				finishedCallback: this.options.finishedCallback
 			});
 		},
 		destroy: function() {

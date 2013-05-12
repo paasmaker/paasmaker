@@ -120,7 +120,7 @@ define([
 		},
 		makeCurrentVersion: function(e) {
 			this.startLoadingFull();
-			this.makeJobRequest('makecurrent');
+			this.makeJobRequest('setcurrent');
 
 			e.preventDefault();
 		},

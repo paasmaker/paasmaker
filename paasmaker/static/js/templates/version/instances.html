@@ -64,4 +64,8 @@
 			</div>
 		{{% } }}
 	</div>
+
+	{{% if (instanceType.instances.length == 0) { }}
+		<p>There are no instances of this type.</p>
+	{{% } }}
 {{% }) }}

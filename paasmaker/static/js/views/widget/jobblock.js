@@ -139,9 +139,14 @@ define([
 
 			// If the root job finishes, remove the abort button.
 			if (job_id == this.options.job_id) {
-				if (finished ) {
+				if (finished) {
 					// Remove the abort button.
 					$('.abort', this.$el).remove();
+
+					// Call any finished callbacks.
+					if (this.options.finishedCallback) {
+						this.options.finishedCallback(this.options.job_id, status.state);
+					}
 				}
 			}
 

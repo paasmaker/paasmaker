@@ -120,10 +120,23 @@ define([
 					workspace_id: options.workspace_id,
 					healthClasses: collection.healthClasses
 				}));
+
+				// Insert the existing version HTML into the list, until the refresh is
+				// done. TODO: This is a bit hackish.
+				// TODO: This doesn't clone the events, assuming that it will be updated shortly,
+				// but this may not be true.
+				var existingVersions = this.$('.application-' + application.id + ' ul.versions');
+				var visible = existingVersions.is(':visible');
+				var entries = $('li', existingVersions);
+				if (visible && entries.length > 1) {
+					$('.application-' + application.id + ' ul.versions', replacement).html(existingVersions.clone());
+					$('.application-' + application.id + ' ul.versions', replacement).show();
+				}
 			});
 			if (collection.length == 0) {
 				replacement.append('<li>No applications</li>');
 			}
+
 			applicationContainer.replaceWith(replacement);
 
 			this.delegateEvents();
