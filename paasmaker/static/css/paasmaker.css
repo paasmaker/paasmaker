@@ -272,12 +272,9 @@ div.job .particulars .summary-SUCCESS
 .router-stats, .router-no-stats
 {
 	margin-bottom: 10px;
-
 	float: right;
-	right: 0px;
-
-	min-height: 85px;
-	width: 250px;
+	width: 95%;
+	max-width: 300px;
 }
 
 .router-stats .complete-title

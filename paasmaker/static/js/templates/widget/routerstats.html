@@ -1,0 +1,14 @@
+{{% if (error) { }}
+<div class="alert alert-error">{{ error }}</div>
+{{% } else { }}
+	{{% for (var i = 0; i < data.primary.length; i++) { }}
+		{{% var stat = data.primary[i] }}
+		<div class="stats-row clearfix">
+			<span class="title">{{ stat.title }}:</span>
+			<span class="value">{{ stat.value }}
+				{{% if (stat.unit) { }}<span class="unit">{{ stat.unit}}</span>{{% } }}
+				{{% if (stat.diff) { }} | <span class="diff">{{ stat.diff }}/s</span>{{% } }}
+			</span>
+		</div>
+	{{% } }}
+{{% } }}

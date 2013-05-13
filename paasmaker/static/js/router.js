@@ -227,6 +227,14 @@ define([
 			this.context.administrations.findWhere({path: path}).set({active: true});
 		},
 
+		setMainView: function(view) {
+			if (this.currentMainView) {
+				this.currentMainView.destroy();
+			}
+
+			this.currentMainView = view;
+		},
+
 		workspaceSetActive: function(active) {
 			if (sidebars['workspaces']) {
 				sidebars['workspaces'].setActive(active);
@@ -234,17 +242,17 @@ define([
 		},
 
 		genericJobsListPage: function(sourceUrl, title) {
-			this.currentMainView = new GenericJobsListView({
+			this.setMainView(new GenericJobsListView({
 				url: sourceUrl,
 				title: title,
 				el: $('.mainarea', this.currentPage)
-			});
+			}));
 		},
 
 		genericDataTemplatePage: function(url, view) {
-			this.currentMainView = new view({
+			this.setMainView(new view({
 				el: $('.mainarea', this.currentPage)
-			});
+			}));
 
 			// TODO: Handle when you navigate away before this returns.
 			$.ajax({
@@ -270,7 +278,7 @@ define([
 					alreadyLoadedCallback(obj);
 				}
 			} else {
-				this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
+				this.setMainView(new GenericLoadingView({el: $('.mainarea', this.currentPage)}));
 
 				this.breadcrumbs([
 					{href: '/workspace/list', title: 'Workspaces'},
@@ -318,15 +326,15 @@ define([
 				}
 				_self.breadcrumbs(crumbs);
 
-				_self.currentMainView = new WorkspaceEditView({
+				_self.setMainView(new WorkspaceEditView({
 					model: workspace,
 					el: $('.mainarea', pages.workspaces)
-				});
+				}));
 			}
 
 			if (workspace_id) {
 				// Always fetch from the server before editing.
-				this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
+				this.setMainView(new GenericLoadingView({el: $('.mainarea', this.currentPage)}));
 
 				this.breadcrumbs([
 					{href: '/workspace/list', title: 'Workspaces'},
@@ -350,10 +358,10 @@ define([
 			this.ensureVisible('workspaces');
 			this.workspaceSetActive('');
 
-			this.currentMainView = new WorkspaceListView({
+			this.setMainView(new WorkspaceListView({
 				collection: this.context.workspaces,
 				el: $('.mainarea', this.currentPage)
-			});
+			}));
 
 			this.context.workspaces.fetch();
 
@@ -411,11 +419,11 @@ define([
 						{href: '/workspace/' + workspace_id + '/applications', title: workspace.attributes.name}
 					]);
 
-					_self.currentMainView = new ApplicationListView({
+					_self.setMainView(new ApplicationListView({
 						collection: workspace.applications,
 						workspace: workspace,
 						el: $('.mainarea', _self.currentPage)
-					});
+					}));
 
 					// Load from the server.
 					workspace.applications.fetch();
@@ -445,10 +453,10 @@ define([
 						}
 					]);
 
-					_self.currentMainView = new ApplicationDetailView({
+					_self.setMainView(new ApplicationDetailView({
 						model: application,
 						el: $('.mainarea', _self.currentPage)
-					});
+					}));
 
 					// Get the latest from the server.
 					application.fetch();
@@ -504,12 +512,12 @@ define([
 						{href: '/workspace/' + workspace_id + '/applications/new', title: 'New Application'}
 					]);
 
-					_self.currentMainView = new ApplicationNewView({
+					_self.setMainView(new ApplicationNewView({
 						url: window.location.pathname + '?format=json',
 						workspace: workspace,
 						newApplication: true,
 						el: $('.mainarea', _self.currentPage)
-					});
+					}));
 				}
 			);
 		},
@@ -533,7 +541,7 @@ define([
 						}
 					]);
 
-					_self.currentMainView = new GenericJobView({
+					_self.setMainView(new GenericJobView({
 						job_id: job_id,
 						el: $('.mainarea', _self.currentPage),
 						finishedCallback: function(jid, state) {
@@ -541,7 +549,7 @@ define([
 							var workspace = _self.context.workspaces.get(workspace.id);
 							workspace.applications.fetch();
 						}
-					});
+					}));
 				}
 			);
 		},
@@ -603,13 +611,13 @@ define([
 						{href: window.location.pathname, title: 'New Version'}
 					]);
 
-					_self.currentMainView = new ApplicationNewView({
+					_self.setMainView(new ApplicationNewView({
 						url: window.location.pathname + '?format=json',
 						workspace: application.attributes.workspace,
 						application: application,
 						newApplication: false,
 						el: $('.mainarea', _self.currentPage)
-					});
+					}));
 				}
 			);
 		},
@@ -640,7 +648,7 @@ define([
 						}
 					]);
 
-					_self.currentMainView = new GenericJobView({
+					_self.setMainView(new GenericJobView({
 						job_id: job_id,
 						el: $('.mainarea', _self.currentPage),
 						finishedCallback: function(jid, state) {
@@ -652,7 +660,7 @@ define([
 							var updatedApplication = _self.context.applications.get(application.id);
 							updatedApplication.fetch();
 						}
-					});
+					}));
 				}
 			);
 		},
@@ -683,7 +691,7 @@ define([
 						}
 					]);
 
-					_self.currentMainView = new GenericJobView({
+					_self.setMainView(new GenericJobView({
 						job_id: job_id,
 						el: $('.mainarea', _self.currentPage),
 						finishedCallback: function(jid, state) {
@@ -691,7 +699,7 @@ define([
 							var workspace = _self.context.workspaces.get(application.attributes.workspace.id);
 							workspace.applications.fetch();
 						}
-					});
+					}));
 				}
 			);
 		},
@@ -722,10 +730,10 @@ define([
 						}
 					]);
 
-					_self.currentMainView = new VersionDetailView({
+					_self.setMainView(new VersionDetailView({
 						model: version,
 						el: $('.mainarea', _self.currentPage)
-					});
+					}));
 				},
 				function (version) {
 					// If fetched from the collection, refresh from the server.
@@ -799,11 +807,11 @@ define([
 						}
 					]);
 
-					_self.currentMainView = new GenericLogView({
+					_self.setMainView(new GenericLogView({
 						el: $('.mainarea', pages.workspaces),
 						job_id: log_id,
 						title: 'View log'
-					});
+					}));
 				}
 			);
 		},
@@ -891,7 +899,7 @@ define([
 						}
 					]);
 
-					_self.currentMainView = new GenericJobView({
+					_self.setMainView(new GenericJobView({
 						job_id: job_id,
 						el: $('.mainarea', _self.currentPage),
 						finishedCallback: function(jid, state) {
@@ -899,7 +907,7 @@ define([
 							var workspace = _self.context.workspaces.get(version.attributes.workspace.id);
 							workspace.applications.fetch();
 						}
-					});
+					}));
 				}
 			);
 		},
@@ -907,7 +915,7 @@ define([
 		serviceExport: function(service_id) {
 			this.ensureVisible('workspaces');
 
-			this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
+			this.setMainView(new GenericLoadingView({el: $('.mainarea', this.currentPage)}));
 
 			this.breadcrumbs([
 				{href: '#', title: 'Loading...'},
@@ -935,11 +943,10 @@ define([
 					}
 				]);
 
-				_self.currentMainView.destroy();
-				_self.currentMainView = new ServiceExportView({
+				_self.setMainView(new ServiceExportView({
 					el: $('.mainarea', _self.currentPage),
 					model: service
-				});
+				}));
 			}
 
 			var service = new ServiceModel({'id': service_id});
@@ -955,7 +962,7 @@ define([
 		serviceImport: function(service_id) {
 			this.ensureVisible('workspaces');
 
-			this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
+			this.setMainView(new GenericLoadingView({el: $('.mainarea', this.currentPage)}));
 
 			this.breadcrumbs([
 				{href: '#', title: 'Loading...'},
@@ -983,11 +990,10 @@ define([
 					}
 				]);
 
-				_self.currentMainView.destroy();
-				_self.currentMainView = new ServiceImportView({
+				_self.setMainView(new ServiceImportView({
 					el: $('.mainarea', _self.currentPage),
 					model: service
-				});
+				}));
 			}
 
 			var service = new ServiceModel({'id': service_id});
@@ -1003,7 +1009,7 @@ define([
 		serviceImportJob: function(service_id, job_id) {
 			this.ensureVisible('workspaces');
 
-			this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
+			this.setMainView(new GenericLoadingView({el: $('.mainarea', this.currentPage)}));
 
 			this.breadcrumbs([
 				{href: '#', title: 'Loading...'},
@@ -1035,12 +1041,11 @@ define([
 					}
 				]);
 
-				_self.currentMainView.destroy();
-				_self.currentMainView = new GenericJobView({
+				_self.setMainView(new GenericJobView({
 					job_id: job_id,
 					el: $('.mainarea', _self.currentPage),
 					title: 'Import Status'
-				});
+				}));
 			}
 
 			var service = new ServiceModel({'id': service_id});
@@ -1056,10 +1061,10 @@ define([
 		nodeList: function() {
 			this.ensureVisible('nodes');
 
-			this.currentMainView = new NodeListView({
+			this.setMainView(new NodeListView({
 				collection: this.context.nodes,
 				el: $('.mainarea', pages.nodes)
-			});
+			}));
 
 			// Refresh the list of nodes.
 			this.context.nodes.fetch();
@@ -1089,10 +1094,10 @@ define([
 						{href: '/node/' + node_id, title: node.attributes.name}
 					]);
 
-					_self.currentMainView = new NodeDetailView({
+					_self.setMainView(new NodeDetailView({
 						model: node,
 						el: $('.mainarea', pages.nodes)
-					});
+					}));
 				}
 			);
 		},
@@ -1112,11 +1117,11 @@ define([
 						{href: '#', title: 'Log View'}
 					]);
 
-					_self.currentMainView = new GenericLogView({
+					_self.setMainView(new GenericLogView({
 						el: $('.mainarea', pages.nodes),
 						job_id: log_id,
 						title: 'View log'
-					});
+					}));
 				}
 			);
 		},
@@ -1130,10 +1135,10 @@ define([
 				{href: '/administration/list', title: 'Administration'}
 			]);
 
-			this.currentMainView = new AdministrationListView({
+			this.setMainView(new AdministrationListView({
 				collection: this.context.administrations,
 				el: $('.mainarea', pages.administration)
-			});
+			}));
 		},
 
 		yourProfile: function() {
@@ -1146,9 +1151,9 @@ define([
 
 			this.adminSetActive();
 
-			this.currentMainView = new ProfileView({
+			this.setMainView(new ProfileView({
 				el: $('.mainarea', pages.administration)
-			});
+			}));
 
 			// Load the data manually.
 			// TODO: Error handling.
@@ -1167,10 +1172,10 @@ define([
 
 			this.adminSetActive();
 
-			this.currentMainView = new UserListView({
+			this.setMainView(new UserListView({
 				collection: this.context.users,
 				el: $('.mainarea', pages.administration)
-			});
+			}));
 
 			// Refresh the list of nodes.
 			this.context.users.fetch();
@@ -1205,15 +1210,15 @@ define([
 				}
 				_self.breadcrumbs(crumbs);
 
-				_self.currentMainView = new UserEditView({
+				_self.setMainView(new UserEditView({
 					model: user,
 					el: $('.mainarea', pages.administration)
-				});
+				}));
 			}
 
 			if (user_id) {
 				// Always fetch from the server before editing.
-				this.currentMainView = new GenericLoadingView({el: $('.mainarea', pages.administration)});
+				this.setMainView(new GenericLoadingView({el: $('.mainarea', pages.administration)}));
 
 				this.breadcrumbs([
 					{href: '/administration/list', title: 'Administration'},
@@ -1239,10 +1244,10 @@ define([
 
 			this.adminSetActive();
 
-			this.currentMainView = new RoleListView({
+			this.setMainView(new RoleListView({
 				collection: this.context.roles,
 				el: $('.mainarea', pages.administration)
-			});
+			}));
 
 			// Refresh the list of roles.
 			this.context.roles.fetch();
@@ -1277,15 +1282,15 @@ define([
 				}
 				_self.breadcrumbs(crumbs);
 
-				_self.currentMainView = new RoleEditView({
+				_self.setMainView(new RoleEditView({
 					model: role,
 					el: $('.mainarea', pages.administration)
-				});
+				}));
 			}
 
 			if (role_id) {
 				// Always fetch from the server before editing.
-				this.currentMainView = new GenericLoadingView({el: $('.mainarea', pages.administration)});
+				this.setMainView(new GenericLoadingView({el: $('.mainarea', pages.administration)}));
 
 				this.breadcrumbs([
 					{href: '/administration/list', title: 'Administration'},
@@ -1310,10 +1315,10 @@ define([
 			this.ensureVisible('administration');
 			this.adminSetActive();
 
-			this.currentMainView = new RoleAllocationListView({
+			this.setMainView(new RoleAllocationListView({
 				collection: this.context.roleallocations,
 				el: $('.mainarea', pages.administration)
-			});
+			}));
 
 			// Refresh the list of role allocations.
 			this.context.roleallocations.fetch();
@@ -1341,9 +1346,9 @@ define([
 				{href: '/role/allocation/assign', title: 'Assign Role'}
 			]);
 
-			this.currentMainView = new RoleAllocationAssignView({
+			this.setMainView(new RoleAllocationAssignView({
 				el: $('.mainarea', pages.administration)
-			});
+			}));
 
 			this.currentMainView.render();
 

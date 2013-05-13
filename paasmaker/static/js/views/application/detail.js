@@ -4,8 +4,9 @@ define([
 	'backbone',
 	'context',
 	'bases',
+	'views/widget/routerstats',
 	'tpl!templates/application/detail.html'
-], function($, _, Backbone, context, Bases, ApplicationDetailTemplate){
+], function($, _, Backbone, context, Bases, RouterStatsView, ApplicationDetailTemplate){
 	var ApplicationDetailView = Bases.BaseView.extend({
 		initialize: function() {
 			this.model.on('request', this.startLoadingInline, this);
@@ -18,6 +19,8 @@ define([
 				application: this.model,
 				context: context
 			}));
+
+			this.routerStats = null;
 		},
 		destroy: function() {
 			this.model.off('request', this.startLoadingFull, this);
@@ -25,6 +28,12 @@ define([
 			this.model.versions.off('request', this.startLoadingInline, this);
 			this.model.versions.off('change', this.render, this);
 			this.model.versions.off('sync', this.render, this);
+
+			if (this.routerStats) {
+				console.log("Destroy - exit");
+				this.routerStats.destroy();
+			}
+
 			this.undelegateEvents();
 		},
 		render: function() {
@@ -34,6 +43,18 @@ define([
 				application: this.model,
 				context: context
 			}));
+
+			if (this.routerStats) {
+				console.log("Destroy");
+				this.routerStats.destroy();
+			}
+
+			console.log("Create");
+			this.routerStats = new RouterStatsView({
+				el: this.$('.router-stats'),
+				category: 'application',
+				input_id: this.model.id
+			});
 
 			return this;
 		},
