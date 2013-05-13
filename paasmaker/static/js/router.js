@@ -9,6 +9,7 @@ define([
 	'models/application',
 	'models/version',
 	'models/workspace',
+	'models/service',
 	'views/node/list',
 	'views/workspace/sidebar',
 	'views/node/sidebar',
@@ -37,7 +38,9 @@ define([
 	'views/workspace/edit',
 	'views/application/services',
 	'views/version/manifest',
-	'views/widget/genericlog'
+	'views/widget/genericlog',
+	'views/service/export',
+	'views/service/import'
 ], function($, _, Backbone,
 	breadcrumbTemplate,
 	NodeModel,
@@ -46,6 +49,7 @@ define([
 	ApplicationModel,
 	VersionModel,
 	WorkspaceModel,
+	ServiceModel,
 	NodeListView,
 	WorkspaceSidebarList,
 	NodeSidebarList,
@@ -74,7 +78,9 @@ define([
 	WorkspaceEditView,
 	ApplicationServicesView,
 	VersionManifestView,
-	GenericLogView
+	GenericLogView,
+	ServiceExportView,
+	ServiceImportView
 ) {
 	var pages = {
 		workspaces: $('.page-workspaces'),
@@ -112,6 +118,10 @@ define([
 			this.route(/^version\/(\d+)\/manifest$/, 'versionManifest');
 			this.route(/^job\/list\/version\/(\d+)$/, 'versionJobsList');
 			this.route(/^job\/list\/version\/(\d+)\?sub\=cron$/, 'versionJobsList');
+
+			this.route(/^service\/export\/(\d+)$/, 'serviceExport');
+			this.route(/^service\/import\/(\d+)$/, 'serviceImport');
+			this.route(/^service\/import\/(\d+)\/([-a-z0-9]+)$/, 'serviceImportJob');
 
 			this.route('node/list', 'nodeList');
 			this.route(/^node\/(\d+)$/, 'nodeDetail');
@@ -892,6 +902,155 @@ define([
 					});
 				}
 			);
+		},
+
+		serviceExport: function(service_id) {
+			this.ensureVisible('workspaces');
+
+			this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
+
+			this.breadcrumbs([
+				{href: '#', title: 'Loading...'},
+			]);
+
+			var _self = this;
+			function serviceExportInner(service) {
+				_self.breadcrumbs([
+					{href: '/workspace/list', title: 'Workspaces'},
+					{
+						href: '/workspace/' + service.attributes.workspace.id + '/applications',
+						title: service.attributes.workspace.name
+					},
+					{
+						href: '/application/' + service.attributes.application.id,
+						title: service.attributes.application.name
+					},
+					{
+						href: '/application/' + service.attributes.application.id + '/services',
+						title: 'Services'
+					},
+					{
+						href: '/service/export/' + service_id,
+						title: 'Export service ' + service.attributes.name
+					}
+				]);
+
+				_self.currentMainView.destroy();
+				_self.currentMainView = new ServiceExportView({
+					el: $('.mainarea', _self.currentPage),
+					model: service
+				});
+			}
+
+			var service = new ServiceModel({'id': service_id});
+			service.url = '/service/export/' + service_id + '?format=json';
+			service.fetch({
+				success: function(model, response, options) {
+					serviceExportInner(model);
+				},
+				error: _.bind(this.currentMainView.loadingError, this.currentMainView)
+			});
+		},
+
+		serviceImport: function(service_id) {
+			this.ensureVisible('workspaces');
+
+			this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
+
+			this.breadcrumbs([
+				{href: '#', title: 'Loading...'},
+			]);
+
+			var _self = this;
+			function serviceImportInner(service) {
+				_self.breadcrumbs([
+					{href: '/workspace/list', title: 'Workspaces'},
+					{
+						href: '/workspace/' + service.attributes.workspace.id + '/applications',
+						title: service.attributes.workspace.name
+					},
+					{
+						href: '/application/' + service.attributes.application.id,
+						title: service.attributes.application.name
+					},
+					{
+						href: '/application/' + service.attributes.application.id + '/services',
+						title: 'Services'
+					},
+					{
+						href: '/service/import/' + service_id,
+						title: 'Import service ' + service.attributes.name
+					}
+				]);
+
+				_self.currentMainView.destroy();
+				_self.currentMainView = new ServiceImportView({
+					el: $('.mainarea', _self.currentPage),
+					model: service
+				});
+			}
+
+			var service = new ServiceModel({'id': service_id});
+			service.url = '/service/import/' + service_id + '?format=json';
+			service.fetch({
+				success: function(model, response, options) {
+					serviceImportInner(model);
+				},
+				error: _.bind(this.currentMainView.loadingError, this.currentMainView)
+			});
+		},
+
+		serviceImportJob: function(service_id, job_id) {
+			this.ensureVisible('workspaces');
+
+			this.currentMainView = new GenericLoadingView({el: $('.mainarea', this.currentPage)});
+
+			this.breadcrumbs([
+				{href: '#', title: 'Loading...'},
+			]);
+
+			var _self = this;
+			function serviceImportJobInner(service) {
+				_self.breadcrumbs([
+					{href: '/workspace/list', title: 'Workspaces'},
+					{
+						href: '/workspace/' + service.attributes.workspace.id + '/applications',
+						title: service.attributes.workspace.name
+					},
+					{
+						href: '/application/' + service.attributes.application.id,
+						title: service.attributes.application.name
+					},
+					{
+						href: '/application/' + service.attributes.application.id + '/services',
+						title: 'Services'
+					},
+					{
+						href: '/service/import/' + service_id,
+						title: 'Import service ' + service.attributes.name
+					},
+					{
+						href: '#',
+						title: 'Import Status'
+					}
+				]);
+
+				_self.currentMainView.destroy();
+				_self.currentMainView = new GenericJobView({
+					job_id: job_id,
+					el: $('.mainarea', _self.currentPage),
+					title: 'Import Status'
+				});
+			}
+
+			var service = new ServiceModel({'id': service_id});
+			service.url = '/service/import/' + service_id + '?format=json';
+			service.fetch({
+				success: function(model, response, options) {
+					serviceImportJobInner(model);
+				},
+				error: _.bind(this.currentMainView.loadingError, this.currentMainView)
+			});
 		},
 
 		nodeList: function() {
