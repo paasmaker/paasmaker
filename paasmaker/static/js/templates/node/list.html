@@ -6,6 +6,9 @@
 		{{% var node = nodes[i] }}
 		<div class="node tile">
 			<div class="title">
+				<span class="state">
+					<span class="badge {{ stateClasses[node.attributes.state].badge }}" title="State: {{ node.attributes.state }}"><i class="{{ stateClasses[node.attributes.state].icon }} icon-white"></i></span>
+				</span>
 				{{% if(context.hasPermission('NODE_DETAIL_VIEW')) { }}
 					<a href="/node/{{ node.attributes.id }}">
 				{{% } }}
@@ -15,10 +18,6 @@
 				{{% if(context.hasPermission('NODE_DETAIL_VIEW')) { }}
 					</a>
 				{{% } }}
-
-				<span class="state">
-					<span class="badge {{ stateClasses[node.attributes.state].badge }}" title="State: {{ node.attributes.state }}"><i class="{{ stateClasses[node.attributes.state].icon }} icon-white"></i></span>
-				</span>
 			</div>
 			<div class="body">
 				{{% if (node.attributes.pacemaker) { }}
