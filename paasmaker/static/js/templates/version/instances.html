@@ -12,7 +12,17 @@
 					{{ instanceType.instance_type.runtime_name }},
 					{{ instanceType.instance_type.runtime_version }}
 				</li>
-				<li><strong>Quantity:</strong> {{ instanceType.instance_type.quantity }}</li>
+				<li>
+					{{% if (context.hasPermission('APPLICATION_DEPLOY', version.attributes.workspace.id)) { }}
+						<form method="POST" class="form-inline">
+							<input type="hidden" name="instance_type_id" value="{{ instanceType.instance_type.id }}" />
+							<label for="quantity"><strong>Quantity:</strong></label>
+							<input type="text" name="quantity" id="quantity" size="3" class="quantity input-small" value="{{ instanceType.instance_type.quantity }}" style="width: 20px;" />
+							<button class="btn changeQuantity">Change</button>
+						</form>
+					{{% } else { }}
+						<strong>Quantity:</strong> <span class="quantity">{{ instanceType.instance_type.quantity }}</span></li>
+					{{% } }}
 			</ul>
 		</div>
 		<div class="span6">

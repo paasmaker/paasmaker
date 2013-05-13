@@ -108,7 +108,7 @@ define([
 			this.route(/^job\/list\/application\/(\d+)\?sub\=cron$/, 'applicationJobsList');
 			this.route(/^version\/(\d+)$/, 'versionView');
 			this.route(/^version\/(\d+)\/log\/([-a-z0-9]+)$/, 'versionLogView');
-			this.route(/^version\/(\d+)\/(start|stop|register|deregister|setcurrent)\/([-a-z0-9]+)$/, 'versionJob');
+			this.route(/^version\/(\d+)\/(start|stop|register|deregister|setcurrent|quantity)\/([-a-z0-9]+)$/, 'versionJob');
 			this.route(/^version\/(\d+)\/manifest$/, 'versionManifest');
 			this.route(/^job\/list\/version\/(\d+)$/, 'versionJobsList');
 			this.route(/^job\/list\/version\/(\d+)\?sub\=cron$/, 'versionJobsList');
@@ -839,7 +839,8 @@ define([
 			'stop': 'Stop',
 			'register': 'Register',
 			'deregister': 'De-Register',
-			'setcurrent': 'Make Current'
+			'setcurrent': 'Make Current',
+			'quantity': 'Instance Quantity'
 		},
 
 		versionJob: function(version_id, action, job_id) {

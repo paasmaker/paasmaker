@@ -76,9 +76,10 @@ define([
 			"click a.stop": "stopVersion",
 			"click a.deregister": "deregisterVersion",
 			"click a.makecurrent": "makeCurrentVersion",
-			"click a.delete": "deleteVersion"
+			"click a.delete": "deleteVersion",
+			"click button.changeQuantity": "changeQuantity"
 		},
-		makeJobRequest: function(endpoint) {
+		makeJobRequest: function(endpoint, data) {
 			var _self = this;
 
 			var finalEndpoint = '/version/' + this.model.id + '/' + endpoint + '?format=json';
@@ -131,6 +132,33 @@ define([
 			//this.makeJobRequest('delete');
 
 			e.preventDefault();
+		},
+		changeQuantity: function(e) {
+			e.preventDefault();
+
+			this.startLoadingFull();
+
+			var form = $(e.currentTarget).parent();
+			var instanceTypeId = $('input[name=instance_type_id]', form).val();
+			var quantity = parseInt($('input[name=quantity]', form).val(), 10);
+
+			var _self = this;
+			$.ajax({
+				url: '/instancetype/' + instanceTypeId + '/quantity?format=json',
+				type: 'POST',
+				dataType: 'json',
+				data: JSON.stringify({
+					data: {
+						quantity: quantity
+					}
+				}),
+				success: function(data) {
+					_self.doneLoading();
+
+					context.navigate('/version/' + _self.model.id + '/quantity/' + data.data.job_id);
+				},
+				error: _.bind(this.loadingError, this)
+			});
 		}
 	});
 
