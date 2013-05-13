@@ -8,11 +8,6 @@
 			<div class="title">
 				<a href="/workspace/{{ workspace.attributes.id }}/applications">{{ workspace.attributes.name }}</a>
 			</div>
-			<div class="body">
-				{{% if(context.hasPermission('WORKSPACE_EDIT', workspace.attributes.id)) { }}
-					<a href="/workspace/{{ workspace.attributes.id }}">Edit</a>
-				{{% } }}
-			</div>
 		</div>
 	{{% } }}
 </div>

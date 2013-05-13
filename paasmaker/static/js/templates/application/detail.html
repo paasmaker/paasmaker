@@ -33,7 +33,9 @@
 		{{% var version = application.attributes.versions[i] }}
 		<div class="version tile">
 			<div class="title title-status">
+				{{% if(version.is_current) { }}<strong>{{% } }}
 				<a href="/version/{{ version.id }}" class="virtual">Version {{ version.version }}</a>
+				{{% if(version.is_current) { }}</strong>{{% } }}
 			</div>
 			<div class="body">
 				{{% if(version.is_current) { }}

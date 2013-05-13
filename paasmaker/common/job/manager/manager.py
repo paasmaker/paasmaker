@@ -281,6 +281,7 @@ class JobManager(object):
 					return True
 
 				with tornado.stack_context.ExceptionStackContext(handle_exception_job):
+					self.configuration.send_job_status(job_id, constants.JOB.RUNNING)
 					self.runners[job_id].start_job(context)
 
 			# Now that we have the context, we can start the job off.

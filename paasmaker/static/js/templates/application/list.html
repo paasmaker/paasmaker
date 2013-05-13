@@ -62,3 +62,7 @@
 		</div>
 	{{% } }}
 </div>
+
+{{% if (applications.length == 0) { }}
+	<p>There are no applications in this workspace. <a href="/workspace/{{ workspace.id }}/applications/new" class="virtual">Create one.</a></p>
+{{% } }}

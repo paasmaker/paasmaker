@@ -11,8 +11,6 @@ define([
 			this.$el.html('<h1>Services</h1>');
 			this.startLoadingFull();
 		},
-		destroy: function() {
-		},
 		dataReady: function(data) {
 			this.services = data.data;
 			this.render();

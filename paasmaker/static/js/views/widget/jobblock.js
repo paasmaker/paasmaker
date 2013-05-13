@@ -39,15 +39,20 @@ define([
 			this.gotJobStatusBinder = _.bind(this.gotJobStatus, this);
 			context.streamSocket.on('job.status', this.gotJobStatusBinder);
 
+			this.gotNewJobBinder = _.bind(this.gotNewJob, this);
+			context.streamSocket.on('job.new', this.gotNewJobBinder);
+
 			// Subscribe to updates. This also sends us the job tree.
 			context.streamSocket.emit('job.subscribe', this.options.job_id);
 		},
 		events: {
-			"click a.viewlog": "viewLog"
+			"click a.viewlog": "viewLog",
+			"click a.abort": "abortJob"
 		},
 		render: function() {
 			// Render the initial job tree.
-			this.$el.html(this.renderRecurse(this.jobTree, true));
+			this.$el.html(Bases.errorLoadingHtml);
+			this.$el.append(this.renderRecurse(this.jobTree, true));
 		},
 		renderRecurse: function(root, isRoot) {
 			// Render this level. Direct to a series of DOM
@@ -94,6 +99,11 @@ define([
 
 			this.render();
 		},
+		gotNewJob: function(status) {
+			if (this.myJobs[status.root_id]) {
+				this.addNewChild(status);
+			}
+		},
 		addNewChild: function(status) {
 			var parentContainer = $('.children-' + status.parent_id, this.$el);
 			if (parentContainer.length == 0) {
@@ -101,9 +111,11 @@ define([
 				// for this job just yet. So add it to a queue.
 				this.temporarilyOrphanedChildren.push(status);
 			} else {
-				var childContainer = $('<div class="job clearfix"></div>');
-				childContainer.html(this.renderRecurse(status));
-				parentContainer.append(childContainer);
+				if (this.$('.title-' + status.job_id).length == 0) {
+					var childContainer = $('<div class="job clearfix"></div>');
+					childContainer.html(this.renderRecurse(status));
+					parentContainer.append(childContainer);
+				}
 			}
 		},
 		gotJobStatus: function(job_id, status) {
@@ -129,7 +141,7 @@ define([
 			var titleBlock = $('.title-' + job_id, this.$el);
 			if (titleBlock.length) {
 				var stateLabel = $('span.icon', titleBlock);
-				var stateIcon = $('i', titleBlock);
+				var stateIcon = $('.label i', titleBlock);
 
 				stateLabel.attr('class', 'icon label label-' + statusClassMap[status.state]);
 				stateIcon.attr('class', 'icon-white ' + statusIconMap[status.state]);
@@ -177,9 +189,27 @@ define([
 				this.logViewers[jobId].start();
 			}
 		},
+		abortJob: function(e) {
+			// Abort this root job. This will cascade to the rest.
+			e.preventDefault();
+
+			this.startLoadingInline();
+
+			var _self = this;
+			$.ajax({
+				url: '/job/abort/' + this.options.job_id + '?format=json',
+				dataType: 'json',
+				success: function(data) {
+					// Nothing to do.
+					_self.doneLoading();
+				},
+				error: _.bind(this.loadingError, this)
+			});
+		},
 		destroy: function() {
 			context.streamSocket.removeListener('job.tree', this.gotJobTreeBinder);
 			context.streamSocket.removeListener('job.status', this.gotJobStatusBinder);
+			context.streamSocket.removeListener('job.new', this.gotNewJobBinder);
 
 			_.each(this.myJobs, function(value, key, list) {
 				context.streamSocket.emit('job.unsubscribe', key);
