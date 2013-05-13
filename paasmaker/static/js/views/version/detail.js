@@ -96,42 +96,54 @@ define([
 			});
 		},
 		startVersion: function(e) {
+			e.preventDefault();
 			this.startLoadingFull();
 			this.makeJobRequest('start');
-
-			e.preventDefault();
 		},
 		registerVersion: function(e) {
+			e.preventDefault();
 			this.startLoadingFull();
 			this.makeJobRequest('register');
-
-			e.preventDefault();
 		},
 		stopVersion: function(e) {
+			e.preventDefault();
 			this.startLoadingFull();
 			this.makeJobRequest('stop');
-
-			e.preventDefault();
 		},
 		deregisterVersion: function(e) {
+			e.preventDefault();
 			this.startLoadingFull();
 			this.makeJobRequest('deregister');
-
-			e.preventDefault();
 		},
 		makeCurrentVersion: function(e) {
+			e.preventDefault();
 			this.startLoadingFull();
 			this.makeJobRequest('setcurrent');
-
-			e.preventDefault();
 		},
 		deleteVersion: function(e) {
-			this.startLoadingFull();
-			// This isn't a job.
-			// TODO: Implement.
-			//this.makeJobRequest('delete');
-
 			e.preventDefault();
+			this.startLoadingFull();
+
+			var _self = this;
+			$.ajax({
+				url: '/version/' + this.model.id + '/delete?format=json',
+				type: 'POST',
+				dataType: 'json',
+				success: function(data) {
+					_self.doneLoading();
+
+					// Update the sidebar.
+					var workspace = context.workspaces.get(_self.model.attributes.workspace.id);
+					workspace.fetch();
+					var application = workspace.applications.get(_self.model.attributes.application_id);
+					application.fetch();
+					application.versions.fetch();
+
+					// And view the parent application.
+					context.navigate('/application/' + _self.model.attributes.application_id);
+				},
+				error: _.bind(this.loadingError, this)
+			});
 		},
 		changeQuantity: function(e) {
 			e.preventDefault();

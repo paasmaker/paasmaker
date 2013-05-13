@@ -10,6 +10,9 @@ define([
 		initialize: function() {
 			this.model.on('request', this.startLoadingInline, this);
 			this.model.on('change', this.render, this);
+			this.model.versions.on('request', this.startLoadingInline, this);
+			this.model.versions.on('change', this.render, this);
+			this.model.versions.on('sync', this.render, this);
 
 			this.$el.html(ApplicationDetailTemplate({
 				application: this.model,
@@ -19,6 +22,9 @@ define([
 		destroy: function() {
 			this.model.off('request', this.startLoadingFull, this);
 			this.model.off('change', this.render, this);
+			this.model.versions.off('request', this.startLoadingInline, this);
+			this.model.versions.off('change', this.render, this);
+			this.model.versions.off('sync', this.render, this);
 			this.undelegateEvents();
 		},
 		render: function() {

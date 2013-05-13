@@ -58,6 +58,9 @@ define([
 			workspace.applications.on('request', this.startLoadingInline, this);
 			workspace.applications.on('sync', function(collection, response, options) {
 				options.workspace_id = workspaceId;
+				if (collection.collection) {
+					collection = collection.collection;
+				}
 				_self.renderApplications(collection, response, options);
 			});
 

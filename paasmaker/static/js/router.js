@@ -439,6 +439,10 @@ define([
 						model: application,
 						el: $('.mainarea', _self.currentPage)
 					});
+
+					// Get the latest from the server.
+					application.fetch();
+					application.versions.fetch();
 				}
 			);
 		},
@@ -633,6 +637,10 @@ define([
 							// When done, refresh the application that this belongs to.
 							var workspace = _self.context.workspaces.get(application.attributes.workspace.id);
 							workspace.applications.fetch();
+
+							// And refresh the main application.
+							var updatedApplication = _self.context.applications.get(application.id);
+							updatedApplication.fetch();
 						}
 					});
 				}
