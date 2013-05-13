@@ -5,7 +5,7 @@ define([
 	'context',
 	'bases',
 	'tpl!templates/application/list.html',
-	'views/widget/graph'
+	'views/widget/routergraph'
 ], function($, _, Backbone, context, Bases, ApplicationListTemplate, GraphView){
 	var ApplicationListView = Bases.BaseView.extend({
 		initialize: function() {
