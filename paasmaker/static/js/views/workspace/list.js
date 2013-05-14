@@ -32,7 +32,7 @@ define([
 			return this;
 		},
 		events: {
-			"click a": "navigateAway",
+			"click a.virtual": "navigateAway",
 		}
 	});
 

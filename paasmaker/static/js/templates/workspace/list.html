@@ -6,7 +6,7 @@
 		{{% var workspace = workspaces[i] }}
 		<div class="workspace tile">
 			<div class="title">
-				<a href="/workspace/{{ workspace.attributes.id }}/applications">{{ workspace.attributes.name }}</a>
+				<a href="/workspace/{{ workspace.attributes.id }}/applications" class="virtual">{{ workspace.attributes.name }}</a>
 			</div>
 		</div>
 	{{% } }}

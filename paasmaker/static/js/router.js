@@ -93,7 +93,7 @@ define([
 
 	var AppRouter = Backbone.Router.extend({
 		initialize: function() {
-			this.route(/^$/, "overview");
+			this.route(/^$/, "workspaceList");
 
 			this.route('workspace/list', 'workspaceList');
 			this.route(/^workspace\/(\d+)\/applications$/, 'applicationList');
@@ -150,6 +150,7 @@ define([
 
 			// TODO: Catch the default.
 			//this.route('*path', 'defaultAction');
+			//this.on('route', this.defaultAction, this);
 		},
 
 		/* HELPERS */
@@ -300,13 +301,6 @@ define([
 		},
 
 		/* CONTROLLER FUNCTIONS */
-
-		overview: function() {
-			this.ensureVisible('workspaces');
-			console.log('Overview');
-			// this.context.loadPlugin('paasmaker.service.mysql', function(mod) {
-			// });
-		},
 
 		workspaceEdit: function(workspace_id) {
 			this.ensureVisible('workspaces');
@@ -1418,10 +1412,8 @@ define([
 			this.genericDataTemplatePage('/configuration/plugins?format=json', PluginsDumpView);
 		},
 
-		defaultAction: function(args) {
+		defaultAction: function(route, params) {
 			this.ensureVisible('404');
-			console.log('Default!');
-			console.log(args);
 		}
 	});
 
