@@ -104,6 +104,8 @@ define([
 			this.plot = $.plot(this.$el, [], this.graphOptions.flot_options);
 			this.plot.setupGrid();
 
+			this.awaitingUpdate = false;
+
 			// Request the first update.
 			this.requestUpdate();
 		},
@@ -115,17 +117,21 @@ define([
 			}
 		},
 		requestUpdate: function() {
-			var now = new Date();
-			context.streamSocket.emit(
-				'router.history.update',
-				this.statCategory,
-				this.statInputId,
-				this.graphOptions.socket_request,
-				(now.getTime() / 1000) - 60
-			);
+			if (!this.awaitingUpdate) {
+				var now = new Date();
+				context.streamSocket.emit(
+					'router.history.update',
+					this.statCategory,
+					this.statInputId,
+					this.graphOptions.socket_request,
+					(now.getTime() / 1000) - 60
+				);
+				this.awaitingUpdate = true;
+			}
 		},
 		onData: function(serverStatCategory, serverInputId, start, end, data) {
 			if (serverStatCategory == this.statCategory && serverInputId == this.statInputId) {
+				this.awaitingUpdate = false;
 				var processedData = {};
 				$('.graph-error', this.$el.parent()).remove();
 				for (var metric in data) {
@@ -141,17 +147,21 @@ define([
 				}
 
 				this.showGraph(processedData);
-				timeout = setTimeout(_.bind(this.requestUpdate, this), 1000);
+				this.timeout = setTimeout(_.bind(this.requestUpdate, this), 1000);
 			}
 		},
 		onError: function(message, serverStatCategory, serverInputId) {
 			if (serverStatCategory == this.statCategory && serverInputId == this.statInputId) {
+				this.awaitingUpdate = false;
 				var errorBox = $('.graph-error', this.$el.parent());
 				if (errorBox.length == 0) {
 					errorBox = $('<div class="graph-error"></div>');
 					container.parent().append(errorBox);
 				}
 				errorBox.text("Graph error: " + message);
+
+				// Try again in 5 seconds.
+				this.timeout = setTimeout(_.bind(this.requestUpdate, this), 5000);
 			}
 		},
 		processTimeSeries: function(start, end, graphPoints) {

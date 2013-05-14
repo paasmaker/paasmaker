@@ -108,9 +108,13 @@ define([
 		},
 		onError: function(message, serverStatCategory, serverInputId) {
 			if (serverStatCategory == this.options.category && serverInputId == this.options.input_id) {
+				this.awaitingUpdate = false;
 				this.errorMessage = message;
 				this.data = null;
 				this.render();
+
+				// Try again in 5 seconds.
+				this.timeout = setTimeout(_.bind(this.requestUpdate, this), 5000);
 			}
 		},
 		render: function() {
