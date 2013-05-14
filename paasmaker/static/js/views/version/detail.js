@@ -11,7 +11,6 @@ define([
 ], function($, _, Backbone, context, Bases, util, RouterStatsView, VersionDetailTemplate, VersionInstancesTemplate){
 	var VersionDetailView = Bases.BaseView.extend({
 		initialize: function() {
-			console.log("Version detail?");
 			this.model.on('request', this.startLoadingInline, this);
 			this.model.on('change', this.render, this);
 
