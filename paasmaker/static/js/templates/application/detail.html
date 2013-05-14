@@ -1,34 +1,39 @@
 
-<div class="well well-small router-stats">Loading router stats...</div>
-
 <h1>Application {{ application.attributes.name }}</h1>
 
-<div class="btn-toolbar">
-	{{% if (context.hasPermission('APPLICATION_CREATE', application.workspace_id)) { }}
-		<div class="btn-group btn-group-header">
-			<a class="btn virtual" href="/application/{{ application.id }}/newversion"><i class="icon-plus"></i> Create new version</a>
+<div class="row-fluid">
+	<div class="span8">
+		<div class="btn-toolbar">
+			{{% if (context.hasPermission('APPLICATION_CREATE', application.workspace_id)) { }}
+				<div class="btn-group btn-group-header">
+					<a class="btn virtual" href="/application/{{ application.id }}/newversion"><i class="icon-plus"></i> Create new version</a>
+				</div>
+			{{% } }}
+			<div class="btn-group btn-group-header">
+				<a class="btn virtual" href="/job/list/application/{{ application.id }}">All Jobs</a>
+				{{% if (context.hasPermission('SERVICE_VIEW', application.workspace_id)) { }}
+					<a class="btn virtual" href="/application/{{ application.id }}/services">Services</a>
+				{{% } }}
+				<a class="btn virtual" href="/job/list/application/{{ application.id }}?sub=cron">Crons</a>
+			</div>
+			{{% if (context.hasPermission('APPLICATION_DELETE') && application.attributes.can_delete) { }}
+				<div class="btn-group btn-group-header">
+					<a class="btn btn-danger deleteApplication"><i class="icon-trash icon-white"></i> Delete Application</a>
+				</div>
+			{{% } }}
 		</div>
-	{{% } }}
-	<div class="btn-group btn-group-header">
-		<a class="btn virtual" href="/job/list/application/{{ application.id }}">All Jobs</a>
-		{{% if (context.hasPermission('SERVICE_VIEW', application.workspace_id)) { }}
-			<a class="btn virtual" href="/application/{{ application.id }}/services">Services</a>
-		{{% } }}
-		<a class="btn virtual" href="/job/list/application/{{ application.id }}?sub=cron">Crons</a>
+
+		<p class="lead">Health: {{ application.attributes.health }}</p>
 	</div>
-	{{% if (context.hasPermission('APPLICATION_DELETE') && application.attributes.can_delete) { }}
-		<div class="btn-group btn-group-header">
-			<a class="btn btn-danger deleteApplication"><i class="icon-trash icon-white"></i> Delete Application</a>
-		</div>
-	{{% } }}
+	<div class="span4">
+		<div class="well well-small router-stats">Loading router stats...</div>
+	</div>
 </div>
 
 <div class="deleteConfirm well well-small" style="display: none;">
 	<p>Are you sure you want to delete this application? All services and their data will be deleted. This can not be undone.</p>
 	<button class="realDelete btn btn-danger">Delete</button> <button class="noDelete btn">Cancel</button>
 </div>
-
-<p class="lead">Health: {{ application.attributes.health }}</p>
 
 <div class="version-list clearfix">
 	{{% for(var i = 0; i < application.attributes.versions.length; i++) { }}

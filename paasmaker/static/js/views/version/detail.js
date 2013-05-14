@@ -5,11 +5,13 @@ define([
 	'context',
 	'bases',
 	'util',
+	'views/widget/routerstats',
 	'tpl!templates/version/detail.html',
 	'tpl!templates/version/instances.html'
-], function($, _, Backbone, context, Bases, util, VersionDetailTemplate, VersionInstancesTemplate){
+], function($, _, Backbone, context, Bases, util, RouterStatsView, VersionDetailTemplate, VersionInstancesTemplate){
 	var VersionDetailView = Bases.BaseView.extend({
 		initialize: function() {
+			console.log("Version detail?");
 			this.model.on('request', this.startLoadingInline, this);
 			this.model.on('change', this.render, this);
 
@@ -20,10 +22,22 @@ define([
 				context: context
 			}));
 
+			this.routerStats = null;
+
+			this.routerStats = new RouterStatsView({
+				el: this.$('.router-stats'),
+				category: 'version',
+				input_id: this.model.id
+			});
+
 			// Fetch the instances data.
 			this.loadInstanceData();
 		},
 		destroy: function() {
+			if (this.routerStats) {
+				this.routerStats.destroy();
+			}
+
 			this.model.off('request', this.startLoadingFull, this);
 			this.model.off('change', this.render, this);
 			this.undelegateEvents();
@@ -50,6 +64,16 @@ define([
 				context: context,
 				_: _
 			}));
+
+			if (this.routerStats) {
+				this.routerStats.destroy();
+			}
+
+			this.routerStats = new RouterStatsView({
+				el: this.$('.router-stats'),
+				category: 'version',
+				input_id: this.model.id
+			});
 
 			return this;
 		},
