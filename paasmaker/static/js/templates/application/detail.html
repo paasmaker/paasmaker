@@ -18,7 +18,7 @@
 	</div>
 	{{% if (context.hasPermission('APPLICATION_DELETE') && application.attributes.can_delete) { }}
 		<div class="btn-group btn-group-header">
-			<a class="btn btn-danger delete"><i class="icon-trash icon-white"></i> Delete Application</a>
+			<a class="btn btn-danger deleteApplication"><i class="icon-trash icon-white"></i> Delete Application</a>
 		</div>
 	{{% } }}
 </div>
@@ -32,23 +32,49 @@
 
 <div class="version-list clearfix">
 	{{% for(var i = 0; i < application.attributes.versions.length; i++) { }}
-		{{% var version = application.attributes.versions[i] }}
+		{{% var version = new VersionModel(application.attributes.versions[i]) }}
+		{{% version.attributes.workspace = {id: application.attributes.workspace_id} }}
 		<div class="version tile">
 			<div class="title title-status">
-				{{% if(version.is_current) { }}<strong>{{% } }}
-				<a href="/version/{{ version.id }}" class="virtual">Version {{ version.version }}</a>
-				{{% if(version.is_current) { }}</strong>{{% } }}
+				{{% if(version.attributes.is_current) { }}<strong>{{% } }}
+				<a href="/version/{{ version.id }}" class="virtual">Version {{ version.attributes.version }} {{% if (version.attributes.state == 'RUNNING') { }}<i class="icon-play"></i>{{% } }}{{% if(version.attributes.is_current) { }}<i class="icon-star"></i>{{% } }}</a>
+				{{% if(version.attributes.is_current) { }}</strong>{{% } }}
 			</div>
 			<div class="body">
-				{{% if(version.is_current) { }}
-					<strong><i class="icon-star"></i> Current Version</strong>
-				{{% } else { }}
-					Not current
+				<strong>State:</strong>
+
+					{{ version.attributes.state }},
+					{{% if(version.attributes.is_current) { }}
+						Current Version
+					{{% } else { }}
+						Not current
+					{{% } }}
+				<br />
+				<strong>Health:</strong> {{ version.attributes.health.overall }}
+				<br />
+				{{% var actions = [] }}
+				{{% if(version.canRegister(context)) { }}
+					{{% actions.push('<a class="btn btn-success btn-mini register" data-version="{{ version.id }}">Register</a>') }}
 				{{% } }}
-				<br />
-				<strong>State:</strong> {{ version.state }}
-				<br />
-				<strong>Health:</strong> {{ version.health.overall }}
+				{{% if(version.canStart(context)) { }}
+					{{% actions.push('<a class="btn btn-success btn-mini start" data-version="{{ version.id }}">Start</a>') }}
+				{{% } }}
+				{{% if(version.canStop(context)) { }}
+					{{% actions.push('<a class="btn btn-danger btn-mini stop" data-version="{{ version.id }}">Stop</a>') }}
+				{{% } }}
+				{{% if(version.canDeregister(context)) { }}
+					{{% actions.push('<a class="btn btn-warning btn-mini deregister" data-version="{{ version.id }}">Deregister</a>') }}
+				{{% } }}
+				{{% if(version.canMakeCurrent(context)) { }}
+					{{% actions.push('<a class="btn btn-info btn-mini makecurrent" data-version="{{ version.id }}">Make Current</a>') }}
+				{{% } }}
+				{{% if(version.canDelete(context)) { }}
+					{{% actions.push('<a class="btn btn-danger btn-mini deleteVersion" data-version="{{ version.id }}">Delete</a>') }}
+				{{% } }}
+
+				<div class="btn-group">
+					{{= actions.join(" &middot; ") }}
+				</div>
 			</div>
 		</div>
 	{{% } }}
