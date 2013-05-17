@@ -16,7 +16,6 @@ define([
 		dataReady: function(data) {
 			this.doneLoading();
 			this.plugins = data.data;
-			console.log(this.plugins);
 			this.render();
 		},
 		render: function() {

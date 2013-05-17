@@ -540,7 +540,7 @@ define([
 						el: $('.mainarea', _self.currentPage),
 						finishedCallback: function(jid, state) {
 							// When done, refresh the application that this belongs to.
-							var workspace = _self.context.workspaces.get(workspace.id);
+							var workspace = _self.context.workspaces.get(workspace_id);
 							workspace.applications.fetch();
 						}
 					}));
