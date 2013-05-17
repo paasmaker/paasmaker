@@ -1182,6 +1182,8 @@ class StreamConnectionTest(BaseControllerTest):
 			response = self.wait()
 			self.assertIn(response[0], expected_types, 'Wrong response - got %s.' % response[0])
 
+		remote.close()
+
 	def test_router_stream(self):
 		# Test the websocket version.
 		self._test_router_stream(False)

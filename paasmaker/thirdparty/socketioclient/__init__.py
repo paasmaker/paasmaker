@@ -169,6 +169,9 @@ class LongpollTransport(object):
                 body=body
             )
 
+    def close(self):
+        pass
+
 class SocketIO(object):
 
     messageID = 0
@@ -188,7 +191,8 @@ class SocketIO(object):
         self.force_longpoll = force_longpoll
 
     def __del__(self):
-        self.heartbeat_periodic.stop()
+        if hasattr(self, 'heartbeat_periodic'):
+            self.heartbeat_periodic.stop()
         self.connection.close()
 
     def connect(self):
