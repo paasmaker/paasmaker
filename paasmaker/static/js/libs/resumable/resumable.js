@@ -5,6 +5,8 @@
 * Steffen Tiedemann Christensen, steffen@23company.com
 */
 
+define([], function(){
+
 var Resumable = function(opts){
   if ( !(this instanceof Resumable ) ) {
     return new Resumable( opts );
@@ -563,4 +565,7 @@ var Resumable = function(opts){
     });
   // Return the object
   return(this);
-}
+};
+
+return Resumable;
+});

@@ -38,9 +38,6 @@ require.config({
 		},
 		socketio: {
 			exports: 'io'
-		},
-		resumable: {
-			exports: 'Resumable'
 		}
 	}
 });
@@ -51,7 +48,9 @@ require([
 	'flot',
 	'flot.pie',
 	'jsoneditor',
-	'app'
-], function($, bootstrap, flot, flotpie, jsoneditor, App) {
+	'app',
+	'resumable',
+	'socketio'
+], function($, bootstrap, flot, flotpie, jsoneditor, App, Resumable, socketio) {
 	App.initialize();
 });

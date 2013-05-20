@@ -15,5 +15,6 @@
 		resumable: 'libs/resumable/resumable'
 	},
     name: "main",
-    out: "main-built.js"
+    out: "main-built.js"//,
+    //optimize: "none"
 })
