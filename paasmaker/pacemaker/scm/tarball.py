@@ -63,11 +63,6 @@ class TarballSCM(BaseSCM):
 	def _abort(self):
 		self.extractor.kill()
 
-	def create_form(self, last_parameters):
-		return """
-		<div class="file-uploader-widget"></div>
-		"""
-
 	def create_summary(self):
 		return {
 			'location': 'The location of the tarball file. This can be an uploaded file.'

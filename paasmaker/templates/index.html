@@ -1,0 +1,74 @@
+{% extends "layout/main.html" %}
+
+{% block body %}
+	<div class="page-loading">
+		<script type="text/javascript">
+			document.write('Loading...');
+			document.write('<img src="{{ static_url('img/spinner32.gif') }}" width="32" height="32" alt="Loading..." />');
+		</script>
+		<noscript>You must have JavaScript enabled to use this console.</noscript>
+	</div>
+
+	<div id="page-container" style="display: none;">
+
+		<div class="container-fluid page-workspaces" style="display: none;">
+			<div class="row-fluid">
+				<div class="span3 hidden-phone sidebar">
+
+				</div>
+				<div class="span9">
+					<ul class="breadcrumb">
+					</ul>
+					<div class="mainarea">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="container-fluid page-nodes" style="display: none;">
+			<div class="row-fluid">
+				<div class="span3 hidden-phone sidebar">
+
+				</div>
+				<div class="span9">
+					<ul class="breadcrumb">
+					</ul>
+					<div class="mainarea">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="container-fluid page-administration" style="display: none;">
+			<div class="row-fluid">
+				<div class="span3 hidden-phone sidebar">
+
+				</div>
+				<div class="span9">
+					<ul class="breadcrumb">
+					</ul>
+					<div class="mainarea">
+					</div>
+				</div>
+			</div>
+		</div>
+
+		<div class="container-fluid page-404" style="display: none;">
+			<div class="row-fluid">
+				<div class="span12">
+					<h1>Page not found.</h1>
+				</div>
+			</div>
+		</div>
+
+	</div>
+{% end %}
+
+{% block scripts %}
+<script type="text/javascript">
+var permissions = {% raw json.dumps(permissions) %};
+var available_permissions = {% raw json.dumps(available_permissions) %};
+var workspaces = {% raw workspace_json %};
+var usermeta = {% raw json.dumps(current_user.userdata) %};
+</script>
+{% end %}

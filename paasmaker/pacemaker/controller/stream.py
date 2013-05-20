@@ -193,7 +193,14 @@ class StreamConnection(tornadio2.SocketConnection):
 			# Existing job that's subscribed - fetch and send a complete
 			# status update to the client.
 			def got_job_full(jobs):
-				self.emit('job.status', job_id, jobs[job_id])
+				# Remove some data before sending back.
+				job_data = {}
+				job_data.update(jobs[job_id])
+				del job_data['parameters']
+				del job_data['plugin']
+				if 'tags' in job_data:
+					del job_data['tags']
+				self.emit('job.status', job_id, job_data)
 
 			# Fetch all the data.
 			self.configuration.job_manager.get_jobs([message.job_id], got_job_full)
@@ -210,6 +217,23 @@ class StreamConnection(tornadio2.SocketConnection):
 	@tornadio2.event('bounce')
 	def bounce(self, message):
 		self.emit('bounce', message)
+
+	@tornadio2.event('job.tree')
+	def job_tree(self, job_id):
+		"""
+		Just fetch the job tree only, and return that. Don't subscribe
+		along the way.
+		"""
+		if not self.configuration.is_pacemaker():
+			# We don't relay job information if we're not a pacemaker.
+			self.emit('error', 'This node is not a pacemaker.')
+			return
+
+		def got_pretty_tree(tree):
+			# Send back the pretty tree to the client.
+			self.emit('job.tree', job_id, tree)
+
+		self.configuration.job_manager.get_pretty_tree(job_id, got_pretty_tree)
 
 	@tornadio2.event('job.subscribe')
 	def job_subscribe(self, job_id):
@@ -262,8 +286,9 @@ class StreamConnection(tornadio2.SocketConnection):
 
 		def got_flat_tree_unsubscribe(job_ids):
 			for unsub_job_id in job_ids:
-				del self.job_subscribed[unsub_job_id]
-			self.emit('job.unsubscribed', job_ids)
+				if unsub_job_id in self.job_subscribed:
+					del self.job_subscribed[unsub_job_id]
+			self.emit('job.unsubscribed', list(job_ids))
 
 		self.configuration.job_manager.get_flat_tree(job_id, got_flat_tree_unsubscribe)
 
@@ -1156,6 +1181,8 @@ class StreamConnectionTest(BaseControllerTest):
 		for i in range(expected_qty):
 			response = self.wait()
 			self.assertIn(response[0], expected_types, 'Wrong response - got %s.' % response[0])
+
+		remote.close()
 
 	def test_router_stream(self):
 		# Test the websocket version.

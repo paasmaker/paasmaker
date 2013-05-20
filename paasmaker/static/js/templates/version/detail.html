@@ -1,0 +1,74 @@
+
+<h1>Version {{ version.attributes.version }} of {{ version.attributes.application.name }}</h1>
+
+<div class="row-fluid">
+	<div class="span8">
+		<div class="btn-toolbar">
+			<div class="btn-group btn-group-header">
+				<a class="btn virtual" href="/job/list/version/{{ version.id }}">All Jobs</a>
+				<a class="btn virtual" href="/job/list/version/{{ version.id }}?sub=cron">Crons</a>
+			</div>
+			{{% if (context.hasPermission('APPLICATION_VIEW_MANIFEST', version.attributes.workspace.id)) { }}
+				<div class="btn-group btn-group-header">
+					<a class="btn virtual" href="/version/{{ version.id }}/manifest">View Manifest</a>
+				</div>
+			{{% } }}
+			<div class="btn-group btn-group-header">
+				{{% if(version.canRegister(context)) { }}
+					<a class="btn btn-success register">Register</a>
+				{{% } }}
+				{{% if(version.canStart(context)) { }}
+					<a class="btn btn-success start">Start</a>
+				{{% } }}
+				{{% if(version.canStop(context)) { }}
+					<a class="btn btn-danger stop">Stop</a>
+				{{% } }}
+				{{% if(version.canDeregister(context)) { }}
+					<a class="btn btn-warning deregister">Deregister</a>
+				{{% } }}
+				{{% if(version.canMakeCurrent(context)) { }}
+					<a class="btn btn-info makecurrent">Make Current</a>
+				{{% } }}
+				{{% if(version.canDelete(context)) { }}
+					<a class="btn btn-danger delete">Delete</a>
+				{{% } }}
+			</div>
+		</div>
+
+		<ul>
+			<li>
+				{{% if(version.attributes.is_current) { }}
+					<i class="icon-star"></i> Current
+				{{% } else { }}
+					<i class="icon-minus"></i> Not current
+				{{% } }}
+			</li>
+			<li><b>State:</b> {{ version.attributes.state }}</li>
+			<li>
+				<b>Health:</b> {{ version.attributes.health.overall }}
+				{{% if (version.attributes.health.overall != 'OK') { }}
+					<ul>
+						{{% _.each(version.attributes.health.types, function(data, instanceType, list) { }}
+							<li><strong>{{ instanceType }}</strong>: {{ data.message }}</li>
+						{{% }) }}
+					</ul>
+				{{% } }}
+			</li>
+			<li><b>SCM:</b> {{ version.attributes.scm_name }}</li>
+			{{%if (version.attributes.scm_parameters.formatted_location) { }}
+				<li><b>Original source location:</b> {{ version.attributes.scm_parameters.formatted_location }}</li>
+			{{% } else { }}
+				{{% if (version.attributes.scm_parameters.location) { }}
+					<li><b>Original source location:</b> {{ version.attributes.scm_parameters.location }}</li>
+				{{% } }}
+			{{% } }}
+			{{% if (version.attributes.source_package_type && version.attributes.source_package_type == 'devdirectory') { }}
+				<li><b>Package type:</b> {{ version.attributes.source_package_type }}</li>
+			{{% } }}
+		</ul>
+
+	</div>
+	<div class="span4">
+		<div class="well well-small router-stats">Loading router stats...</div>
+	</div>
+</div>

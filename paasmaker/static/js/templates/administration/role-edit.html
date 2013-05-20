@@ -1,0 +1,30 @@
+
+<h1>{{% if (newRole) { }}Create role{{% } else { }}Edit role{{% } }}</h1>
+
+<form method="POST" class="form-horizontal">
+	<div class="control-group">
+		<label class="control-label" for="name">Name:</label>
+		<div class="controls">
+			<input name="name" id="name" type="text" value="{{ role.attributes.name }}" />
+		</div>
+	</div>
+
+	<div class="control-group">
+		<label class="control-label">Permissions</label>
+		<div class="controls">
+			{{% for(var i = 0; i < availablePermissions.length; i++) { }}
+				{{% var permission = availablePermissions[i] }}
+				<label class="checkbox">
+					<input type="checkbox" name="{{ permission }}" {{% if(_.indexOf(role.attributes.permissions, permission) != -1) { }}checked="checked"{{% } }} value="{{ permission }}" />
+					{{ permission }}
+				</label>
+			{{% } }}
+		</div>
+	</div>
+
+	<div class="control-group">
+		<div class="controls">
+			<button type="submit" class="btn">Submit</button>
+		</div>
+	</div>
+</form>

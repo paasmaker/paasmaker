@@ -100,30 +100,6 @@ class BaseSCM(paasmaker.util.plugin.Plugin):
 		"""
 		raise NotImplementedError("You must implement create_working_copy().")
 
-	def create_form(self, last_selections):
-		"""
-		Return some HTML that goes into the form to be inserted into the
-		web page, for users to interact with. The supplied last_selections
-		is a dict that contains what was used last time (or empty if not found).
-
-		:arg dict last_selections: The selections that the user made last time
-			they deployed the given application.
-		"""
-		raise NotImplementedError("You must implement create_form().")
-
-	def _encoded_or_default(self, selections, key, default):
-		"""
-		Helper function to check to see if key exists in the given
-		selections dict. If it doesn't, it returns the given default
-		value. Before returning the value, it's HTML escaped.
-		"""
-		if selections.has_key(key):
-			value = selections[key]
-		else:
-			value = default
-
-		return tornado.escape.xhtml_escape(value)
-
 	def create_summary(self):
 		"""
 		Return a dict, with the keys being required or optional parameters,

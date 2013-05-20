@@ -1,0 +1,39 @@
+
+<h1>Services</h1>
+
+<div class="service-list clearfix">
+	{{% for(var i = 0; i < services.services.length; i++) { }}
+		{{% var service = services.services[i] }}
+		<div class="service tile">
+			<div class="title">
+				{{ service.name }}
+			</div>
+			<div class="body">
+				<strong>Provider:</strong> {{ service.provider }}
+				<br />
+				<strong>State:</strong> {{ service.state }}
+				<br />
+				{{% var actions = [] }}
+				{{% if (services.exportable_services[service.provider]) { }}
+					{{% actions.push('<a href="/service/export/' + service.id + '" class="virtual">Export</a>') }}
+				{{% } }}
+				{{% if (services.importable_services[service.provider]) { }}
+					{{% actions.push('<a href="/service/import/' + service.id + '" class="virtual">Import</a>') }}
+				{{% } }}
+				{{% if (service.credentials) { }}
+					{{% actions.push('<a href="#" class="showCredentials">Credentials</a>') }}
+				{{% } }}
+
+				{{= actions.join(" &middot; ") }}
+
+				{{% if (service.credentials) { }}
+					<pre class="credentials" style="display: none;">{{ JSON.stringify(service.credentials, null, 2) }}</pre>
+				{{% } }}
+			</div>
+		</div>
+	{{% } }}
+</div>
+
+{{% if (services.services.length == 0) { }}
+	<p class="lead">This application has no services.</p>
+{{% } }}

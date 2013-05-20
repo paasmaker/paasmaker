@@ -1,46 +1,54 @@
 {% extends "../layout/main.html" %}
 
 {% block body %}
-	<div class="index_column">
-		<h1>Welcome to Paasmaker!</h1>
+	<div class="container-fluid">
+		<div class="span12">
+			<h1>Login to {% if cluster_name %}{{ cluster_name }}{% else %}Paasmaker{% end %}</h1>
+			<form method="POST" class="form-horizontal">
+				<div class="control-group">
+					<label class="control-label" for="username">Username:</label>
+					<div class="controls">
+						<input type="text" name="username" id="username" required="required" />
+					</div>
+				</div>
+				<div class="control-group">
+					<label class="control-label" for="password">Password:</label>
+					<div class="controls">
+						<input type="password" id="password" name="password" required="required" />
+					</div>
+				</div>
+				<div class="control-group">
+					<div class="controls">
+						<input type="submit" class="btn" value="Login" />
+					</div>
+				</div>
+			</form>
 
-		<div id="test-browser-features"></div>
-	</div>
-
-	<div class="index_column">
-		<form method="POST">
-			<label for="username">Username:<label>
-			<input type="text" name="username" id="username" required="required" />
-			<label for="password">Password:</label>
-			<input type="password" id="password" name="password" required="required" />
-			<br />
-			<input type="submit" class="btn" value="Login" />
-		</form>
-
-		{% if len(external_logins) > 0 %}
-			<h2>Or login using...</h2>
-			<ul>
-				{% for external in external_logins %}
-					<li>
-						<a href="{{ external['uri'] }}">
-							{# TODO: Implement image feature. #}
-							{{ external['text'] }}
-						</a>
-					</li>
-				{% end %}
-			</ul>
-		{% end %}
+			{% if len(external_logins) > 0 %}
+				<h2>Or login using...</h2>
+				<ul>
+					{% for external in external_logins %}
+						<li>
+							<a href="{{ external['uri'] }}">
+								{# TODO: Implement image feature. #}
+								{{ external['text'] }}
+							</a>
+						</li>
+					{% end %}
+				</ul>
+			{% end %}
+		</div>
 	</div>
 {% end %}
 
 {% block scripts %}
-<script type="text/javascript">
-	$(function() {
-		if ($('#username').val() == '') {
-			$('#username').focus();
-		} else {
-			$('#password').focus();
-		}
-	});
-</script>
+	<script type="text/javascript">
+		// $(function() {
+		// 	if ($('#username').val() == '') {
+		// 		$('#username').focus();
+		// 	} else {
+		// 		$('#password').focus();
+		// 	}
+		// });
+	</script>
 {% end %}

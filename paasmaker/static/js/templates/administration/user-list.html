@@ -1,0 +1,32 @@
+
+<h1>Users</h1>
+
+<div class="btn-group btn-group-header">
+	{{% if (context.hasPermission('USER_EDIT')) { }}
+		<a class="btn" href="/user/create"><i class="icon-plus"></i> Create User</a>
+	{{% } }}
+</div>
+
+<div class="user-list clearfix">
+	{{% for(var i = 0; i < users.length; i++) { }}
+		{{% var user = users[i] }}
+		<div class="user tile">
+			<div class="title">
+				{{% if(context.hasPermission('USER_EDIT')) { }}
+					<a href="/user/{{ user.attributes.id }}">
+				{{% } }}
+
+				{{ user.attributes.name }} ({{ user.attributes.login }})
+
+				{{% if(context.hasPermission('USER_EDIT')) { }}
+					</a>
+				{{% } }}
+			</div>
+			<div class="body">
+				<strong>Method:</strong> {{ user.attributes.auth_source }}
+				<br />
+				<strong>Enabled:</strong> {{ user.attributes.enabled ? 'Enabled' : 'Disabled' }}
+			</div>
+		</div>
+	{{% } }}
+</div>

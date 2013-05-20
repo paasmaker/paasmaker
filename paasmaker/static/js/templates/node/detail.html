@@ -1,0 +1,72 @@
+<h1>
+	Node {{ node.attributes.name }}
+</h1>
+
+<div class="row-fluid">
+	<div class="span6">
+		<ul class="node-details" style="clear: left;">
+			<li><strong>Roles:</strong>
+			{{% if (node.attributes.pacemaker) { }}
+				<i class="icon-calendar"></i> Pacemaker
+			{{% } }}
+			{{% if (node.attributes.heart) { }}
+				<i class="icon-heart"></i> Heart
+			{{% } }}
+			{{% if (node.attributes.router) { }}
+				<i class="icon-random"></i> Router
+			{{% } }}
+			</li>
+			<li><strong>UUID:</strong> <code>{{ node.attributes.uuid }}</code></li>
+			<li><strong>Route:</strong> {{ node.attributes.route }}:{{ node.attributes.apiport }}</li>
+			<li><strong>State:</strong> {{ node.attributes.state }}</li>
+			<li title="Started at {{ node.attributes.start_time }}"><strong>Uptime:</strong> {{ node.uptimeString() }}</li>
+			<li title="{{ node.attributes.updated_age.toFixed(2) }}"><strong>Last report:</strong> {{ node.attributes.updated_age.toFixed(2) }} seconds ago</li>
+			<li><strong>Score:</strong> {{ node.attributes.score.toFixed(2) }}</li>
+		</ul>
+	</div>
+	<div class="span6">
+		<div class="node-chart node-disk">
+			<div class="chart"></div><div class="legend"></div>
+		</div>
+		<div class="node-chart node-memory">
+			<div class="chart"></div><div class="legend"></div>
+		</div>
+	</div>
+</div>
+
+{{% var runtimes = node.runtimeSummary() }}
+{{% if (runtimes.length > 0) { }}
+	<h3>Runtimes</h3>
+	<div class="runtimes-list tile-box clearfix">
+		{{% for(var i = 0; i < runtimes.length; i++) { }}
+			{{% var runtime = runtimes[i] }}
+			<div class="runtime tile">
+				<div class="title">
+					<strong>{{ runtime.name }}</strong>
+				</div>
+				<div class="body">
+					Versions: {{ runtime.versions }}
+				</div>
+			</div>
+		{{% } }}
+	</div>
+
+	<hr/>
+{{% } }}
+
+<div class="row-fluid">
+	<div class="span6">
+		<h3>Tags</h3>
+		<pre>{{ JSON.stringify(node.attributes.tags, undefined, 4) }}</pre>
+	</div>
+	<div class="span6">
+		<h3>Stats</h3>
+		<pre>{{ JSON.stringify(node.attributes.stats, undefined, 4) }}</pre>
+	</div>
+</div>
+
+<hr>
+
+<h2 class="node-instances">Instances</h2>
+<div class="instances-list tile-box clearfix">
+</div>

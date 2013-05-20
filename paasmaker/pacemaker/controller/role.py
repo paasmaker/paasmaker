@@ -121,9 +121,9 @@ class RoleEditController(BaseController):
 		self.add_data('role', role)
 		available_permissions = constants.PERMISSION.ALL
 		available_permissions.sort()
-		self.add_data_template('available_permissions', available_permissions)
+		self.add_data('available_permissions', available_permissions)
 
-		self.render("role/edit.html")
+		self.client_side_render()
 
 	def post(self, role_id=None):
 		self.require_permission(constants.PERMISSION.ROLE_EDIT)
@@ -164,7 +164,8 @@ class RoleEditController(BaseController):
 		else:
 			self.add_data('role', role)
 			self.add_data_template('available_permissions', constants.PERMISSION.ALL)
-			self.render("role/edit.html")
+
+			self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):
@@ -197,7 +198,7 @@ class RoleAllocationAssignController(BaseController):
 			self.add_data_template('roles', roles)
 			self.add_data_template('workspaces', workspaces)
 
-		self.render("role/allocationassign.html")
+		self.client_side_render()
 
 	def post(self):
 		self.require_permission(constants.PERMISSION.ROLE_ASSIGN)
@@ -240,7 +241,7 @@ class RoleAllocationAssignController(BaseController):
 			self.add_data('allocation', allocation)
 			self.redirect('/role/allocation/list')
 		else:
-			self.render("role/allocationassign.html")
+			self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):

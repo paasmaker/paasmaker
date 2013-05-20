@@ -1,0 +1,32 @@
+
+<h1>Role Allocations</h1>
+
+<div class="btn-group btn-group-header">
+	{{% if (context.hasPermission('ROLE_ASSIGN')) { }}
+		<a class="btn" href="/role/allocation/assign"><i class="icon-plus"></i> Assign Role</a>
+	{{% } }}
+</div>
+
+<div class="role-allocation-list clearfix">
+	{{% for(var i = 0; i < allocations.length; i++) { }}
+		{{% var allocation = allocations[i] }}
+		<div class="role-allocation tile">
+			<div class="title-multilink">
+				Allocation ID {{ allocation.attributes.id }} <button class="btn btn-mini btn-danger remove" href="#" data-allocation="{{ allocation.attributes.id }}">Remove</button>
+			</div>
+			<div class="body">
+				<strong>Role:</strong> <a href="/role/{{ allocation.attributes.role.id }}">{{ allocation.attributes.role.name }}</a>
+				<br />
+				<strong>User:</strong> <a href="/user/{{ allocation.attributes.user.id }}">{{ allocation.attributes.user.name }} ({{ allocation.attributes.user.login}})</a>
+				<br />
+				<strong>Workspace:</strong>
+				{{% if (allocation.attributes.workspace) { }}
+					<a href="/workspace/{{ allocation.attributes.workspace.id }}">{{ allocation.attributes.workspace.name }}</a>
+				{{% } else { }}
+					All workspaces
+				{{% } }}
+				</strong>
+			</div>
+		</div>
+	{{% } }}
+</div>

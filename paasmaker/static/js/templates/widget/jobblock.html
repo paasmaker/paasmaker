@@ -1,0 +1,17 @@
+<div class="title title-{{ job.job_id }}">
+	<span class="icon label label-{{ statusClassMap[job.state] }}">
+		<i class="{{ statusIconMap[job.state] }} icon-white"></i>
+	</span>
+	<span class="title"><a href="#" class="viewlog" data-jobid="{{ job.job_id }}">{{ job.title }}</a></span>
+	<span class="area-controls">
+		{{% if (isRoot && !isFinished) { }}<a href="#" class="abort btn"><i class="icon-off"></i>Abort</a>{{% } }}
+	</span>
+</div>
+<div class="particulars particulars-{{ job.job_id }} clearfix">
+	<div class="summary summary-{{ job.state }}">{{% if (job.summary) { }}{{ job.summary }}{{% } }}</div>
+	<div class="log">
+		<pre data-jobid="{{ job.job_id}}">Loading...</pre>
+	</div>
+</div>
+<div class="children children-{{ job.job_id }} clearfix">
+</div>

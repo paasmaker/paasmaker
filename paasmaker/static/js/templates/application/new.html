@@ -1,0 +1,45 @@
+
+{{% if (newApplication) { }}
+	<h1>New Application</h1>
+{{% } else { }}
+	<h1>New Version</h1>
+{{% } }}
+
+<ul class="nav nav-tabs" id="scm-exports">
+	{{% _.each(plugins, function(element, index, list) { }}
+		<li>
+			<a href="#export-{{ index }}" class="export-{{ index }}">{{ element.title }}</a>
+		</li>
+	{{% }) }}
+</ul>
+
+<div class="tab-content">
+	{{% _.each(plugins, function(element, index, list) { }}
+		<div class="tab-pane {{% if (index == 0) { }}active{{% } }}" id="export-{{ index }}">
+			<form method="post" class="form-horizontal">
+				<input type="hidden" name="scm" value="{{ element.plugin }}" />
+
+				<div class="scm-listers clearfix">
+				</div>
+
+				<div class="scm-inner clearfix">
+				</div>
+
+				<div class="control-group">
+					<label class="control-label" for="manifest_path">Manifest Path:</label>
+					<div class="controls">
+						<input name="manifest_path" id="manifest_path" type="text" value="manifest.yml" required="required" />
+					</div>
+				</div>
+
+				<div class="control-group">
+					<div class="controls">
+						<a class="btn btn-success submit" href="#">
+							Create <i class="icon-chevron-right icon-white"></i>
+						</a>
+					</div>
+				</div>
+			</form>
+		</div>
+	{{% }) }}
+</div>

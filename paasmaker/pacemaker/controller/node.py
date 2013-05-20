@@ -11,6 +11,7 @@ import uuid
 import logging
 import json
 import datetime
+import time
 
 import paasmaker
 from paasmaker.common.controller import BaseController, BaseControllerTest

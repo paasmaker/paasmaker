@@ -1,14 +1,18 @@
 {% extends "../layout/main.html" %}
 
 {% block body %}
-<h1>An error occurred</h1>
+	<div class="container-fluid">
+		<div class="span12">
+			<h1>An error occurred</h1>
 
-<p>HTTP response code {{ error_code }}.</p>
+			<p>HTTP response code {{ error_code }}.</p>
 
-<p>{{ _("Reported error:", "Reported errors:", len(errors)) }}</p>
-<ul>
-	{% for error in errors %}
-		<li>{{ error }}</li>
-	{% end %}
-</ul>
+			<p>{{ _("Reported error:", "Reported errors:", len(errors)) }}</p>
+			<ul>
+				{% for error in errors %}
+					<li>{{ error }}</li>
+				{% end %}
+			</ul>
+		</div>
+	</div>
 {% end %}

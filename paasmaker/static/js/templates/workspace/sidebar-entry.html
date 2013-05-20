@@ -1,0 +1,7 @@
+<li class="workspace workspace-{{ workspace.attributes.id }}">
+	{{% if(context.hasPermission('WORKSPACE_VIEW')) { }}<a href="/workspace/{{ workspace.attributes.id }}/applications" class="virtual">{{% } }}<span class="workspace-title">{{ workspace.attributes.name }}</span>{{% if(context.hasPermission('WORKSPACE_VIEW')) { }}</a>{{% } }}
+	<a href="#" class="expand-applications" data-workspace="{{ workspace.attributes.id }}"><i class="icon-chevron-down"></i></a>
+	<ul class="nav nav-list applications" style="display: none;">
+		<li><img src="/static/img/load-inline.gif" width="16" height="11" alt="Loading..." /></li>
+	</ul>
+</li>

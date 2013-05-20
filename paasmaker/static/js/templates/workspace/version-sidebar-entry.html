@@ -1,0 +1,11 @@
+<li class="version version-{{ version.id }}">
+	<a href="/version/{{ version.id }}" class="virtual">
+		Version {{ version.attributes.version }}
+		{{% if (version.attributes.is_current) { }}
+			<i class="icon-star"></i>
+		{{% } }}
+		{{% if (version.attributes.state == 'RUNNING') { }}
+			<i class="icon-play"></i>
+		{{% } }}
+	</a>
+</li>

@@ -9,7 +9,6 @@
 
 		<link rel="icon" href="{{ static_url("img/favicon.ico") }}" sizes="16x16 32x32 48x48 64x64" type="image/vnd.microsoft.icon">
 
-		<!-- Le styles -->
 		<link href="{{ static_url("css/bootstrap.css") }}" rel="stylesheet">
 		<style>
 			body {
@@ -20,13 +19,6 @@
 		<link href="{{ static_url("css/paasmaker.css") }}" rel="stylesheet">
 		{% block styles %}
 		{% end %}
-
-		<!-- Le fav and touch icons -->
-		{# <link rel="shortcut icon" href="../assets/ico/favicon.ico">
-		<link rel="apple-touch-icon-precomposed" sizes="144x144" href="../assets/ico/apple-touch-icon-144-precomposed.png">
-		<link rel="apple-touch-icon-precomposed" sizes="114x114" href="../assets/ico/apple-touch-icon-114-precomposed.png">
-		<link rel="apple-touch-icon-precomposed" sizes="72x72" href="../assets/ico/apple-touch-icon-72-precomposed.png">
-		<link rel="apple-touch-icon-precomposed" href="../assets/ico/apple-touch-icon-57-precomposed.png"> #}
 	</head>
 	<body>
 		<div class="navbar navbar-inverse navbar-fixed-top">
@@ -37,12 +29,15 @@
 				<span class="icon-bar"></span>
 				<span class="icon-bar"></span>
 			</a>
-			<a class="brand" href="/"><img src="{{ static_url("img/pm-dark-32.png") }}" alt="Paasmaker"></a>
-			<div class="nav-collapse collapse">
+			<a class="brand" href="/">
+				<img class="connected" src="{{ static_url("img/pm-dark-32.png") }}" width="143" height="32" alt="Paasmaker" />
+				<img class="disconnected" src="{{ static_url("img/pm-dark-32-flatline.png") }}" width="143" height="32" alt="Paasmaker - disconnected" style="display: none;" />
+			</a>
+			<div class="nav-collapse">
 				{% if is_pacemaker %}
-					<p class="navbar-text pull-right">
+					<p class="navbar-text pull-right hidden-phone hidden-tablet">
 						{% if current_user %}
-							Logged in as <a href="/profile" class="navbar-link">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
+							Logged in as <a href="/profile" class="navbar-link virtual">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
 						{% else %}
 							<a href="/login">Login</a>
 						{% end %}
@@ -51,50 +46,14 @@
 					<ul class="nav">
 						{# Don't bother showing any of this if you're not logged in. #}
 						{% if current_user %}
-							<li class="dropdown">
-								<a href="#" class="dropdown-toggle" data-toggle="dropdown">Workspaces <b class="caret"></b></a>
-								<ul class="dropdown-menu workspace-list">
-									{% if user_permissions.has_permission(PERMISSION.WORKSPACE_EDIT, None) %}
-										<li><a href="/workspace/create"><i class="icon-plus"></i> Create workspace</a></li>
-										<li role="presentation" class="divider"></li>
-									{% end %}
-								</ul>
+							<li>
+								<a href="/workspace/list" class="virtual">Workspaces</a>
 							</li>
-							{% if user_permissions.has_permission(PERMISSION.NODE_LIST, None) %}
-								<li class="dropdown">
-									<a href="#" class="dropdown-toggle" data-toggle="dropdown">Nodes <b class="caret"></b></a>
-									<ul class="dropdown-menu node-list">
-										<li><a href="/node/list">All Nodes</a></li>
-										<li role="presentation" class="divider"></li>
-									</ul>
-								</li>
-							{% end %}
-							<li class="dropdown">
-								<a href="#" class="dropdown-toggle" data-toggle="dropdown">Administration <b class="caret"></b></a>
-								<ul class="dropdown-menu">
-									<li><a href="/profile">Your Profile</a></li>
-									{% if user_permissions.has_permission(PERMISSION.USER_LIST, None) %}
-										<li><a href="/user/list">Users</a></li>
-									{% end %}
-									{% if user_permissions.has_permission(PERMISSION.ROLE_LIST, None) %}
-										<li role="presentation" class="divider"></li>
-										<li><a href="/role/list">Roles</a></li>
-									{% end %}
-									{% if user_permissions.has_permission(PERMISSION.ROLE_ASSIGN, None) %}
-										<li><a href="/role/allocation/list">Role Allocations</a></li>
-									{% end %}
-									{% if user_permissions.has_permission(PERMISSION.HEALTH_CHECK, None) %}
-										<li role="presentation" class="divider"></li>
-										<li><a href="/job/list/health">Health Checks</a></li>
-									{% end %}
-									{% if user_permissions.has_permission(PERMISSION.SYSTEM_ADMINISTRATION, None) %}
-										<li><a href="/job/list/periodic">Periodic Tasks</a></li>
-										<li role="presentation" class="divider"></li>
-										<li><a href="/router/dump">Router Table Dump</a></li>
-										<li><a href="/configuration/dump">System Configuration</a></li>
-										<li><a href="/configuration/plugins">Plugins</a></li>
-									{% end %}
-								</ul>
+							<li>
+								<a href="/node/list" class="virtual">Nodes</a>
+							</li>
+							<li>
+								<a href="/administration/list" class="virtual">Administration</a>
 							</li>
 						{% end %}
 					</ul>
@@ -105,77 +64,53 @@
 		</div>
 
 		<div class="container" id="main">
-			{% block leftnav %}{% end %}
-
-			<div id="main_right_view" {% block mainmodifier %}{% end %}>
-				{% block pretitle %}{% end %}
-				<h1>{% block pagetitle %}{% end %}</h1>
-
-				{% block errors %}
-					{% if len(errors) > 0 %}
-						<div class="alert alert-error">
-							<ul class="errors">
-								{% for error in errors %}
-									<li>{{ error }}</li>
-								{% end %}
-								{% try %}
-									{% for key, error in input_errors.iteritems() %}
-										<li>{{ key }}: {{ error }}</li>
-									{% end %}
-								{% except NameError, ex %}
-									{# Does't have input errors. Ignore. #}
-								{% end %}
-							</ul>
-						</div>
-					{% end %}
-				{% end %}
-
-				{% block body %}
-				{% end %}
+			<div class="container-fluid">
+				<div class="span12">
+					<div id="error-block">
+						{% block errors %}
+							{% if len(errors) > 0 %}
+								<div class="alert alert-error">
+									<ul class="errors">
+										{% for error in errors %}
+											<li>{{ error }}</li>
+										{% end %}
+										{% try %}
+											{% for key, error in input_errors.iteritems() %}
+												<li>{{ key }}: {{ error }}</li>
+											{% end %}
+										{% except NameError, ex %}
+											{# Does't have input errors. Ignore. #}
+										{% end %}
+									</ul>
+								</div>
+							{% end %}
+						{% end %}
+					</div>
+				</div>
 			</div>
+
+			{% block body %}
+			{% end %}
 		</div>
 
-		<script src="{{ static_url("js/libs/jquery-1.9.1.js") }}"></script>
-		<script src="{{ static_url("js/libs/jquery.json-2.4.min.js") }}"></script>
-		<script src="{{ static_url("js/libs/jquery.flot.js") }}"></script>
-		<script src="{{ static_url("js/libs/jquery.flot.pie.js") }}"></script>
-		<script src="{{ static_url("js/libs/jquery.jsoneditor.js") }}"></script>
-		<script src="{{ static_url("js/libs/bootstrap.js") }}"></script>
-		<script src="{{ static_url("js/libs/resumable.js") }}"></script>
-		<script src="{{ static_url("js/libs/socket.io.js") }}"></script>
-		<script src="{{ static_url("js/libs/handlebars.js") }}"></script>
-		<script src="{{ static_url("js/libs/moment.js") }}"></script>
-
-		<script src="{{ static_url("js/script.js") }}"></script>
-		<script src="{{ static_url("js/pm.util.js") }}"></script>
-		<script src="{{ static_url("js/pm.data.js") }}"></script>
-		<script src="{{ static_url("js/stats/router.js") }}"></script>
-		<script src="{{ static_url("js/logs/instance.js") }}"></script>
-		<script src="{{ static_url("js/jobs/display.js") }}"></script>
-		<script src="{{ static_url("js/widgets/upload.js") }}"></script>
-
-		<script src="{{ static_url("js/pm.leftmenu.js") }}"></script>
-		<script src="{{ static_url("js/pm.admin.js") }}"></script>
-		<script src="{{ static_url("js/pm.node.js") }}"></script>
-		<script src="{{ static_url("js/pm.workspace.js") }}"></script>
-		<script src="{{ static_url("js/pm.application.js") }}"></script>
-		<script src="{{ static_url("js/pm.version.js") }}"></script>
-		<script src="{{ static_url("js/pm.service.js") }}"></script>
-		<script src="{{ static_url("js/pm.upload.js") }}"></script>
-		<script src="{{ static_url("js/pm.history.js") }}"></script>
-
-		{# Handlebars templates. Run in debug mode and view the page to recompile them all.
-			Check in any changes that it makes to pm.templates.js for production systems. #}
-		{% if debug %}
-			<script src="/development/templates.js"></script>
-		{% else %}
-			<script src="{{ static_url("js/pm.templates.js") }}"></script>
+		{% if is_pacemaker %}
+			<div class="hidden-desktop footer">
+				{% if current_user %}
+					Logged in as <a href="/profile" class="navbar-link virtual">{{ current_user.name }}</a>. <a href="/logout">Logout</a>
+				{% else %}
+					<a href="/login">Login</a>
+				{% end %}
+			</div>
 		{% end %}
 
-		<script src="/my-permissions.js" type="text/javascript"></script>
-		<script type="text/javascript">
-			{% if "js_commands" in globals() %}{% raw js_commands %}{% end %}
-		</script>
+		{% if debug %}
+			<script data-main="/static/js/main" src="{{ static_url("js/libs/require/require.js") }}"></script>
+			{# You should check in the updated main-built.js, as that's the production version. #}
+			<script src="/development/rebuild-javascript.txt" type="text/plain"></script>
+		{% else %}
+			<script data-main="/static/js/main-built" src="{{ static_url("js/libs/require/require.js") }}"></script>
+		{% end %}
+
 		{% block scripts %}
 		{% end %}
 	</body>

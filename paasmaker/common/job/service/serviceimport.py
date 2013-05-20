@@ -153,7 +153,7 @@ class ServiceImportJob(BaseJob):
 			self.plugin.import_cancel()
 
 	@classmethod
-	def setup_for_service(cls, configuration, service, filename, callback, delete_after_import=False):
+	def setup_for_service(cls, configuration, service, filename, parameters, callback, delete_after_import=False):
 		tags = [
 			'workspace:%d' % service.application.workspace.id,
 			'application:%d' % service.application.id
@@ -165,7 +165,8 @@ class ServiceImportJob(BaseJob):
 			{
 				'service_id': service.id,
 				'import_file': filename,
-				'delete_after_import': delete_after_import
+				'delete_after_import': delete_after_import,
+				'parameters': parameters
 			},
 			"Import into service %s" % service.name,
 			tags=tags

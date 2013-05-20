@@ -1,0 +1,13 @@
+
+<h1>Workspaces</h1>
+
+<div class="workspace-list clearfix">
+	{{% for(var i = 0; i < workspaces.length; i++) { }}
+		{{% var workspace = workspaces[i] }}
+		<div class="workspace tile">
+			<div class="title">
+				<a href="/workspace/{{ workspace.attributes.id }}/applications" class="virtual">{{ workspace.attributes.name }}</a>
+			</div>
+		</div>
+	{{% } }}
+</div>

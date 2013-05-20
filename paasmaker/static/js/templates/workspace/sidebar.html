@@ -1,0 +1,8 @@
+
+<ul class="nav nav-list workspace-sidebar-list">
+	<li class="nav-header">Workspaces</li>
+	{{% if (context.hasPermission('WORKSPACE_EDIT')) { }}
+		<li class="divider"></li>
+		<li class="create-workspace"><a href="/workspace/create" class="virtual"><i class="icon-plus"></i> Create workspace</a></li>
+	{{% } }}
+</ul>

@@ -59,6 +59,8 @@ class VersionController(VersionRootController):
 		self.add_data_template('configuration', self.configuration)
 
 		self.add_data('version', version)
+		self.add_data('application', version.application)
+		self.add_data('workspace', version.application.workspace)
 
 		self.add_data('frontend_domain_postfix', self.configuration.get_flat('pacemaker.frontend_domain_postfix'))
 
@@ -82,11 +84,18 @@ class VersionInstancesController(VersionRootController):
 			data = {}
 			data['instance_type'] = instance_type.flatten()
 			data['instance_type']['version_url'] = instance_type.version_hostname(self.configuration)
-			data['instances'] = instance_type.instances
-			instances[instance_type.name] = data
-		self.add_data('instances', instances)
+			data['instances'] = []
+			for instance in instance_type.instances:
+				flat = instance.flatten()
+				flat['node_name'] = instance.node.name
+				data['instances'].append(flat)
 
-		self.render("version/instances.html")
+			instances[instance_type.name] = data
+
+		self.add_data('instances', instances)
+		self.add_data('frontend_domain_postfix', self.configuration.get_flat('pacemaker.frontend_domain_postfix'))
+
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):
@@ -103,7 +112,7 @@ class VersionManifestController(VersionRootController):
 		self.add_data('version', version)
 		self.add_data('manifest', version.manifest)
 
-		self.render("api/apionly.html")
+		self.client_side_render()
 
 	@staticmethod
 	def get_routes(configuration):

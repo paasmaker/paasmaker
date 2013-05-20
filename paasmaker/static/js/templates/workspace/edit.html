@@ -1,0 +1,32 @@
+
+<h1>{{% if (newWorkspace) { }}Create Workspace{{% } else { }}Edit Workspace{{% } }}</h1>
+
+<form method="POST" class="form-horizontal">
+	<div class="control-group">
+		<label class="control-label" for="name">Name:</label>
+		<div class="controls">
+			<input name="name" id="name" type="text" value="{{ workspace.attributes.name }}" />
+		</div>
+	</div>
+
+	<div class="control-group">
+		<label class="control-label" for="stub">Stub:</label>
+		<div class="controls">
+			<input name="stub" id="stub" type="text" value="{{ workspace.attributes.stub }}" />
+		</div>
+	</div>
+
+	<div class="control-group">
+		<label class="control-label">Tags:</label>
+		<div class="controls">
+			<input type="hidden" id="tags" name="serialised_tags" value="">
+			<div class="workspace-tag-editor pm-tag-editor"></div>
+		</div>
+	</div>
+
+	<div class="control-group">
+		<div class="controls">
+			<button class="btn submit">Submit</button>
+		</div>
+	</div>
+</form>

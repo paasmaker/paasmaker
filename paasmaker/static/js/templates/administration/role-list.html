@@ -1,0 +1,30 @@
+
+<h1>Roles</h1>
+
+<div class="btn-group btn-group-header">
+	{{% if (context.hasPermission('ROLE_EDIT')) { }}
+		<a class="btn" href="/role/create"><i class="icon-plus"></i> Create Role</a>
+	{{% } }}
+</div>
+
+<div class="role-list clearfix">
+	{{% for(var i = 0; i < roles.length; i++) { }}
+		{{% var role = roles[i] }}
+		<div class="role tile">
+			<div class="title">
+				{{% if(context.hasPermission('ROLE_EDIT')) { }}
+					<a href="/role/{{ role.attributes.id }}">
+				{{% } }}
+
+				{{ role.attributes.name }}
+
+				{{% if(context.hasPermission('ROLE_EDIT')) { }}
+					</a>
+				{{% } }}
+			</div>
+			<div class="body">
+				{{ role.attributes.permissions.length }} permissions
+			</div>
+		</div>
+	{{% } }}
+</div>

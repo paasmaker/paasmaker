@@ -1,0 +1,19 @@
+
+{{% for(var i = 0; i < instances.length; i++) { }}
+	{{% var instance = instances[i] }}
+	<div class="instance tile">
+		<div class="title-multilink">
+			<strong>
+				<a href="/application/{{ instance.attributes.application.id }}">{{ instance.attributes.application.name }}</a>,
+				<a href="/version/{{ instance.attributes.version.id }}">version {{ instance.attributes.version.version }}</a>
+			</strong>
+		</div>
+		<div class="body">
+			<strong>State:</strong> {{ instance.attributes.state }}
+			<br />
+			<code class="uuid-shrink" title="{{ instance.attributes.instance_id }}">{{ instance.attributes.instance_id.substr(0, 8) }}</code>
+			<br />
+			<strong>Log:</strong> <a href="/node/{{ instance.attributes.node_id }}/log/{{ instance.attributes.instance_id }}">View</a>
+		</div>
+	</div>
+{{% } }}

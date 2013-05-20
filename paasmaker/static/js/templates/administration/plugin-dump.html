@@ -1,0 +1,30 @@
+<h1>Plugins</h1>
+
+<table class="table table-striped table-bordered">
+	<thead>
+		<tr>
+			<th>Plugin</th>
+			<th>Symbolic Name</th>
+			<th>Configuration</th>
+			<th>Available Modes</th>
+		</tr>
+	</thead>
+	<tbody>
+	{{% _.each(plugins.plugins, function(value, key, list) { }}
+		<tr>
+			<td><strong>{{ value.title }}</strong></td>
+			<td>{{ value.name }}</td>
+			<td>
+				{{% if (value.options) { }}
+					<pre>{{ JSON.stringify(value.options, null, 2) }}</pre>
+				{{% } }}
+			</td>
+			<td><ul>
+				{{% _.each(value.modes, function(mode, index, list) { }}
+					<li>{{ mode }}</li>
+				{{% }) }}
+			</ul></td>
+		</tr>
+	{{% }) }}
+	</tbody>
+</table>

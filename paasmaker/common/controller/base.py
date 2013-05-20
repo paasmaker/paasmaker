@@ -385,12 +385,23 @@ class BaseController(tornado.web.RequestHandler):
 	def client_side_render(self):
 		"""
 		Handler for pages that are generated on the client side rather than on the server side.
-		Loads an empty main.html, with an extra script block that fires off the code in
-		pm.history.js to perform necessary ajax requests, etc.
+		This renders the layout, and then the JavaScript will kick in and fix the rest of it.
 		"""
 		if self.format == 'html':
-			self.add_data('js_commands', '$(function(){ pm.history.onpopstate({ state: { handle_in_js: true } }); });')
-			self.render("layout/main.html")
+			# TODO: This relies a lot on how the base controller works.
+			user = self.get_current_user()
+			cache = self.PERMISSIONS_CACHE[str(user.id)]
+			self.add_data_template('permissions', cache.cache)
+			self.add_data_template('json', json)
+
+			available_permissions = constants.PERMISSION.ALL
+			available_permissions.sort()
+			self.add_data_template('available_permissions', available_permissions)
+
+			workspace_json = json.dumps(self._my_workspace_list(), cls=paasmaker.util.jsonencoder.JsonEncoder, model_additional=self.extra_data_fields)
+			self.add_data_template('workspace_json', workspace_json)
+
+			self.render("index.html")
 		else:
 			self.render('')
 

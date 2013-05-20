@@ -51,6 +51,8 @@ class ServiceGetController(ServiceBaseController):
 		)
 
 		self.add_data('service', service)
+		self.add_data('application', service.application)
+		self.add_data('workspace', service.application.workspace)
 
 		self.render("api/apionly.html")
 
@@ -72,6 +74,9 @@ class ServiceExportController(ServiceBaseController):
 
 	def get(self, service_id):
 		service = self._get_service(service_id)
+		self.add_data('service', service)
+		self.add_data('application', service.application)
+		self.add_data('workspace', service.application.workspace)
 		self.client_side_render()
 
 	def post(self, service_id):
@@ -183,6 +188,9 @@ class ServiceImportController(ServiceBaseController):
 
 	def get(self, service_id):
 		service = self._get_service(service_id)
+		self.add_data('service', service)
+		self.add_data('application', service.application)
+		self.add_data('workspace', service.application.workspace)
 		self.client_side_render()
 
 	def post(self, service_id):
@@ -229,6 +237,7 @@ class ServiceImportController(ServiceBaseController):
 			self.configuration,
 			service,
 			filename,
+			self.params['parameters'],
 			import_job_ready,
 			delete_after_import=True
 		)

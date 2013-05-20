@@ -119,6 +119,7 @@ if configuration.is_pacemaker():
 
 	logging.info("Setting up pacemaker routes...")
 	routes.extend(paasmaker.pacemaker.controller.index.IndexController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.index.VirtualPageController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.login.LoginController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.login.LogoutController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.user.UserEditController.get_routes(route_extras))
@@ -132,12 +133,13 @@ if configuration.is_pacemaker():
 	routes.extend(paasmaker.pacemaker.controller.workspace.WorkspaceDeleteController.get_routes(route_extras))
 
 	routes.extend(paasmaker.pacemaker.controller.plugin.PluginResourceJsController.get_routes(route_extras))
+	routes.extend(paasmaker.pacemaker.controller.plugin.PluginResourceTemplateController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.plugin.PluginResourceCssController.get_routes(route_extras))
 
 	routes.extend(paasmaker.pacemaker.controller.tools.ToolsController.get_routes(route_extras))
 
 	if configuration.debug:
-		routes.extend(paasmaker.pacemaker.controller.templates.TemplatesController.get_routes(route_extras))
+		routes.extend(paasmaker.pacemaker.controller.development.DevelopmentJavascriptController.get_routes(route_extras))
 
 	routes.extend(paasmaker.pacemaker.controller.role.RoleEditController.get_routes(route_extras))
 	routes.extend(paasmaker.pacemaker.controller.role.RoleListController.get_routes(route_extras))

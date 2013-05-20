@@ -1,0 +1,68 @@
+
+<h1>Workspace: {{ workspace.attributes.name }}</h1>
+
+<div class="btn-toolbar">
+	{{% if (context.hasPermission('WORKSPACE_EDIT', workspace.id)) { }}
+		<div class="btn-group btn-group-header">
+			<a class="btn virtual" href="/workspace/{{ workspace.id }}"><i class="icon-edit"></i> Edit Workspace</a>
+		</div>
+	{{% } }}
+	{{% if (context.hasPermission('WORKSPACE_DELETE', workspace.id) && workspace.attributes.can_delete) { }}
+		<div class="btn-group btn-group-header">
+			<a class="btn btn-danger delete" href="/workspace/{{ workspace.id}}/delete"><i class="icon-trash icon-white"></i> Delete Workspace</a>
+		</div>
+	{{% } }}
+	{{% if (context.hasPermission('APPLICATION_CREATE', workspace.id)) { }}
+		<div class="btn-group btn-group-header">
+			<a class="btn virtual" href="/workspace/{{ workspace.id }}/applications/new"><i class="icon-plus"></i> Create Application</a>
+		</div>
+	{{% } }}
+	<div class="btn-group btn-group-header">
+		<a class="btn virtual" href="/job/list/workspace/{{ workspace.id }}">All Jobs</a>
+		<a class="btn virtual" href="/job/list/workspace/{{ workspace.id }}?sub=cron">Cron Jobs</a>
+	</div>
+</div>
+
+<div class="deleteConfirm well well-small" style="display: none;">
+	<p>Are you sure you want to delete this workspace? This can not be undone.</p>
+	<button class="realDelete btn btn-danger">Delete</button> <button class="noDelete btn">Cancel</button>
+</div>
+
+<h2>Statistics</h2>
+
+<div class="graph-list clearfix">
+	<div class="tile graph-requests">
+		<span class="graph-title">Requests by type</span>
+		<div class="graph-tile-inner">
+			Loading...
+		</div>
+	</div>
+	<div class="tile graph-bytes">
+		<span class="graph-title">Bytes Transferred</span>
+		<div class="graph-tile-inner">
+			Loading...
+		</div>
+	</div>
+</div>
+
+<h2>Applications</h2>
+
+<div class="application-list clearfix">
+	{{% for(var i = 0; i < applications.length; i++) { }}
+		{{% var application = applications[i] }}
+		<div class="application tile">
+			<div class="title title-status">
+				<span class="state">
+					<span class="badge {{ healthClasses[application.attributes.health].badge}}" title="Health: {{ application.attributes.health }}">
+						<i class="{{ healthClasses[application.attributes.health].icon }} icon-white"></i>
+					</span>
+				</span>
+				<a class="virtual" href="/application/{{ application.attributes.id }}">{{ application.attributes.name }}</a>
+			</div>
+		</div>
+	{{% } }}
+</div>
+
+{{% if (applications.length == 0) { }}
+	<p>There are no applications in this workspace. <a href="/workspace/{{ workspace.id }}/applications/new" class="virtual">Create one.</a></p>
+{{% } }}

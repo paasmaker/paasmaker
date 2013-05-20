@@ -1,0 +1,47 @@
+
+<h1>{{% if (newUser) { }}Create user{{% } else { }}Edit user{{% } }}</h1>
+
+<form method="POST" class="form-horizontal">
+	<div class="control-group">
+		<label class="control-label" for="name">Name:</label>
+		<div class="controls">
+			<input name="name" id="name" type="text" value="{{ user.attributes.name }}" />
+		</div>
+	</div>
+
+	<div class="control-group">
+		<label class="control-label" for="login">Login:</label>
+		<div class="controls">
+			<input name="login" id="login" type="text" value="{{ user.attributes.login }}" />
+		</div>
+	</div>
+
+	<div class="control-group">
+		<label class="control-label" for="email">Email address:</label>
+		<div class="controls">
+			<input name="email" id="email" type="email" value="{{ user.attributes.email }}" />
+		</div>
+	</div>
+
+	<div class="control-group">
+		<label class="control-label" for="password">Password:</label>
+		<div class="controls">
+			<input name="password" id="password" type="password" value="" />
+		</div>
+	</div>
+
+	<div class="control-group">
+		<div class="controls">
+			<label for="enabled" class="checkbox">
+				<input name="enabled" id="enabled" type="checkbox" {{% if (user.attributes.enabled) { }}checked="checked"{{% } }} />
+				Enabled
+			</label>
+		</div>
+	</div>
+
+	<div class="control-group">
+		<div class="controls">
+			<button type="submit" class="btn">Submit</button>
+		</div>
+	</div>
+</form>

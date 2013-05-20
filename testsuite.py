@@ -142,6 +142,7 @@ test_sets = {
 	paasmaker.pacemaker.scm.subversion: ['normal', 'scm'],
 
 	paasmaker.pacemaker.scmlist.bitbucket: ['normal', 'scmlist', 'slow'],
+	paasmaker.pacemaker.scmlist.github: ['normal', 'scmlist', 'slow'],
 
 	paasmaker.pacemaker.auth.internal: ['normal', 'auth'],
 	paasmaker.pacemaker.auth.allowany: ['normal', 'auth'],

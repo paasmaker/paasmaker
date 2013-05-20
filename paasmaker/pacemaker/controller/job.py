@@ -166,9 +166,22 @@ class JobListController(BaseController):
 
 		# TODO: Paginate...
 		# TODO: Unit test.
+		def on_more_data(jobdata):
+			for key, meta in jobdata.iteritems():
+				jobdata[key] = {
+					'state': meta['state'],
+					'title': meta['title'],
+					'time': meta['time'],
+					'job_id': meta['job_id']
+				}
+				if 'summary' in meta:
+					jobdata[key]['summary'] = meta['summary']
+			self.add_data('job_detail', jobdata)
+			self.client_side_render()
+
 		def on_found_jobs(job_ids):
 			self.add_data('jobs', job_ids)
-			self.client_side_render()
+			self.configuration.job_manager.get_jobs(job_ids, on_more_data)
 
 		def on_found_tree(tree):
 			self.add_data('detail', tree)

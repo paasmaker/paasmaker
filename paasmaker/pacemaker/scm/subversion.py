@@ -122,19 +122,6 @@ class SubversionSCM(BaseSCM):
 		elif self.output_in_progress:
 			self.rsync.kill()
 
-	def create_form(self, last_parameters):
-		template = """
-		<label>Repository URL:
-		<input class="lister-target" type="text" name="parameters.location" value="%(location)s" required="required"></label>
-
-		<label>Revision:
-		<input type="text" name="parameters.revision" placeholder="HEAD"></label>
-		"""
-
-		return template % {
-			'location': self._encoded_or_default(last_parameters, 'location', '')
-		}
-
 	def create_summary(self):
 		return {
 			'location': 'The subversion repository URL',
