@@ -161,7 +161,7 @@ define([
 			} else {
 				// Add in the common data.
 				data.scm = scmName;
-				data.manifest_path = $('input[name=manifest_path]').val();
+				data.manifest_path = $('input[name=manifest_path]', scmForm).val();
 
 				this.startLoadingFull();
 				$.ajax({
