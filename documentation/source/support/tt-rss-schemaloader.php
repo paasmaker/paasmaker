@@ -8,16 +8,13 @@ if (php_sapi_name() != "cli") {
 set_include_path(dirname(__FILE__) ."/include" . PATH_SEPARATOR .
 	get_include_path());
 
+require_once "autoload.php";
 require_once "functions.php";
 require_once "db.php";
 
-$link = db_connect(DB_HOST, DB_USER, DB_PASS, DB_NAME);
-
-if (!init_connection($link)) return;
-
 // TODO: This doesn't detect between if the schema is loaded or
 // if it can't connect to the database.
-$result = db_query($link, "SELECT true FROM ttrss_feeds", false);
+$result = db_query("SELECT true FROM ttrss_feeds", false);
 
 if ($result) {
 	// In this case, there is already tables in the database.
@@ -36,6 +33,7 @@ if ($result) {
 			" " . escapeshellarg(DB_NAME);
 
 		$code = 0;
+		echo "Importing MySQL database...";
 		passthru($command, $code);
 		exit($code);
 	} else {
@@ -53,6 +51,7 @@ if ($result) {
 			" " . escapeshellarg(DB_NAME);
 
 		$code = 0;
+		echo "Importing Postgres database...";
 		passthru($command, $code);
 		unlink($pwfile);
 		exit($code);

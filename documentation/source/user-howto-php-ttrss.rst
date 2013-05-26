@@ -33,10 +33,10 @@ copy. At the time of writing, I used version 1.7.8.
 	$ mkdir my-ttrss
 	$ cd my-ttrss
 	$ git init .
-	$ wget https://github.com/gothfox/Tiny-Tiny-RSS/archive/1.7.8.tar.gz
-	$ tar -ztvf 1.7.8.tar.gz
-	$ mv Tiny-Tiny-RSS-1.7.8 tt-rss
-	$ rm 1.7.8.tar.gz
+	$ wget https://github.com/gothfox/Tiny-Tiny-RSS/archive/1.7.9.tar.gz
+	$ tar -ztvf 1.7.9.tar.gz
+	$ mv Tiny-Tiny-RSS-1.7.9 tt-rss
+	$ rm 1.7.9.tar.gz
 	$ git add .
 	$ git commit
 
@@ -121,7 +121,7 @@ the file and make any other changes that you need.
 
 .. literalinclude:: support/tt-rss-config.php
 	:language: php
-	:emphasize-lines: 6-22,32-36
+	:emphasize-lines: 6-16,26-30,36
 
 Now add a new script, in ``tt-rss/schemaloader.php`` with the following
 contents. This script is called in the prepare phase to load the database
@@ -133,9 +133,7 @@ schema.
 .. WARNING::
 	The schema loader here currently can't detect between "no schema" and
 	"unable to connect to the database". If it is not loading the schema,
-	check the prepare logs to make sure it could connect. If you're using
-	Postgres, be sure to carefully edit the configuration file as per the
-	comments, as the connection hostname for MySQL and Postgres is different.
+	check the prepare logs to make sure it could connect.
 
 File layout
 -----------
