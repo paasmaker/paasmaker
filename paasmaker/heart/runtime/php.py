@@ -205,6 +205,9 @@ Listen %(port)d
 			'environment': "\n".join(env_list)
 		}
 
+		if not os.path.exists(os.path.dirname(error_log_path)):
+			os.mkdir(error_log_path)
+
 		config_location = self._config_location(instance_id)
 		fp = open(config_location, 'w')
 		fp.write(configuration)
