@@ -60,7 +60,7 @@ use to access it permanently.
 	        parameters:
 	          commands:
 	            - cd tt-rss
-	            - for DIR in feed-icons cache cache/export cache/images cache/js cache/simplepie
+	            - for DIR in feed-icons cache cache/export cache/images cache/js cache/simplepie cache/upload
 	            - do
 	            -   if [ ! -d $DIR ];
 	            -   then
