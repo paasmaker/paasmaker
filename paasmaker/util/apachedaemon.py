@@ -79,6 +79,10 @@ LogLevel warn
 
 NameVirtualHost *:%(port)d
 Listen %(port)d
+<VirtualHost *:%(port)d>
+	Options -Indexes -FollowSymLinks
+	DocumentRoot %(default_document_root)s
+</VirtualHost>
 
 # And this is where it includes configuration from.
 Include %(config_file_dir)s/
@@ -199,6 +203,7 @@ LoadModule php5_module /usr/libexec/apache2/libphp5.so
 		parameters['config_file_dir'] = self.parameters['config_file_dir']
 		parameters['platform_darwin'] = ''
 		parameters['platform_ubuntu'] = ''
+		parameters['default_document_root'] = os.path.join(self.parameters['working_dir'], 'defaultdocumentroot')
 		if platform.system() == 'Darwin':
 			parameters['platform_darwin'] = self.PLATFORM_DARWIN
 		if platform.system() == 'Linux' and 'Ubuntu' in platform.platform():
@@ -207,6 +212,9 @@ LoadModule php5_module /usr/libexec/apache2/libphp5.so
 
 		configuration = self.CONFIGURATION % parameters
 		#print configuration
+
+		if not os.path.exists(parameters['default_document_root']):
+			os.mkdir(parameters['default_document_root'])
 
 		fp = open(configfile, 'w')
 		fp.write(configuration)
