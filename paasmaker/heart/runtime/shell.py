@@ -80,7 +80,8 @@ class ShellRuntime(BaseRuntime):
 
 		# Wait for it to start.
 		def errored_out(message, exception=None):
-			error_callback("Failed to start up instance inside timeout.", exception=exception)
+			self.logger.error(message)
+			error_callback("Process failed to start and gave an error.", exception=exception)
 
 		def timed_out(message):
 			# Failed to start up in time. Stop the instance.
@@ -280,7 +281,7 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		# Wait until it's started.
 		self.wait()
 		self.assertFalse(self.success)
-		self.assertIn("timeout", self.message)
+		self.assertIn("error", self.message)
 
 	def test_standalone(self):
 		# Put together the barest of possible information to start up the system.
@@ -386,4 +387,4 @@ class ShellRuntimeTest(BaseRuntimeTest):
 		self.wait()
 
 		self.assertFalse(self.success)
-		self.assertIn("Failed to start up instance inside timeout.", self.message)
+		self.assertIn("Process failed to start and gave an error.", self.message)

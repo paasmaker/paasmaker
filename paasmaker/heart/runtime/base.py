@@ -262,7 +262,7 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 			# Wait for the appropriate time before checking the instance.
 			self.configuration.io_loop.add_timeout(time.time() + standalone_wait, wait_for_state)
 		else:
-			self.configuration.io_loop.add_timeout(time.time() + 0.2, wait_for_state)
+			self.configuration.io_loop.add_timeout(time.time() + 1.0, wait_for_state)
 
 	def _supervise_stop(self, instance_id):
 		"""
