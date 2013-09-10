@@ -79,6 +79,7 @@ class CommandSupervisor(object):
 			shell = self.data['shell']
 			self.log_helper("INFO", "Using shell mode.")
 		pidfile = self.data['pidfile']
+		startflagfile = self.data['startflagfile']
 
 		# Install our signal handler.
 		signal.signal(signal.SIGTERM, self.signal_handler)
@@ -114,6 +115,14 @@ class CommandSupervisor(object):
 				pid_fd.write(str(os.getpid()))
 				pid_fd.close()
 
+				# Now write out the startup flag file.
+				# This is to signal that we've actually started -
+				# this is to prevent the case where we look for
+				# the PID file too soon.
+				startflag_fd = open(startflagfile, 'w')
+				startflag_fd.write("started")
+				startflag_fd.close()
+
 				# Wait for it to complete, or for a signal.
 				self.process.wait()
 
@@ -129,6 +138,12 @@ class CommandSupervisor(object):
 				self.log_helper("ERROR", str(ex))
 
 				return_code = ex.errno
+
+				# Now write out the startup flag file.
+				# This indicates that we started, but failed.
+				startflag_fd = open(startflagfile, 'w')
+				startflag_fd.write("started")
+				startflag_fd.close()
 
 			# Reopen the log file.
 			self.process_active = False

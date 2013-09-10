@@ -58,6 +58,7 @@ class CommandSupervisorLauncher(object):
 		payload['port'] = port
 		payload['log_file'] = self.configuration.get_job_log_path(self.instance_id)
 		payload['pidfile'] = self._get_pid_path()
+		payload['startflagfile'] = self._get_startflag_path()
 
 		payload_path = self._get_payload_path()
 		fp = open(payload_path, 'w')
@@ -87,6 +88,10 @@ class CommandSupervisorLauncher(object):
 		root = self._get_supervisor_dir()
 		return os.path.join(root, "%s.json" % self.instance_id)
 
+	def _get_startflag_path(self):
+		root = self._get_supervisor_dir()
+		return os.path.join(root, "%s.startflag" % self.instance_id)
+
 	def kill(self):
 		"""
 		Kill the supervised command.
@@ -100,6 +105,23 @@ class CommandSupervisorLauncher(object):
 			pid = int(fp.read())
 			fp.close()
 			os.kill(pid, signal.SIGTERM)
+
+	def has_started(self):
+		"""
+		Check to see if the supervisor has started.
+
+		This looks for the startup flag file, and returns
+		True once it exists. It also deletes the file if it
+		finds it. The idea is that after this returns
+		true, you can use ``is_running()`` to monitor this
+		supervisor.
+		"""
+		startflagfile = self._get_startflag_path()
+		if os.path.exists(startflagfile):
+			os.unlink(startflagfile)
+			return True
+		else:
+			return False
 
 	def is_running(self):
 		"""
@@ -170,6 +192,8 @@ class CommandSupervisorTest(BaseControllerTest):
 		# Wait for the subprocess to finish.
 		self.short_wait_hack(length=0.5)
 
+		self.assertTrue(launcher.has_started(), "Supervisor is not started.")
+
 		# Check that it output what we expected.
 		job_path = self.configuration.get_job_log_path(instance_id)
 		job_contents =""
@@ -196,6 +220,9 @@ class CommandSupervisorTest(BaseControllerTest):
 		self.short_wait_hack(length=0.5)
 
 		self.assertTrue(launcher.is_running(), "Supervisor is not running.")
+		self.assertTrue(launcher.has_started(), "Supervisor is not started.")
+		# The second call should return False, as it deletes the flag file.
+		self.assertFalse(launcher.has_started(), "Supervisor started flag still exists.")
 
 		# Send it a SIGHUP. It should ignore that.
 		pid = int(open(launcher._get_pid_path(), 'r').read())
@@ -274,6 +301,9 @@ class CommandSupervisorTest(BaseControllerTest):
 
 		# Wait for the subprocess to finish.
 		self.short_wait_hack(length=0.5)
+
+		# Should still indicate that it started.
+		self.assertTrue(launcher.has_started(), "Supervisor is not started.")
 
 		# Check that it output what we expected.
 		# TODO: Check that it got the correct pubsub broadcast instead.

@@ -236,15 +236,18 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		end_timeout = time.time() + tcp_timeout
 
 		def wait_for_state():
+			if not wait_for_state.supervisor_started:
+				wait_for_state.supervisor_started = self._supervise_has_started(instance_id)
+
 			process_running = self._supervise_is_running(instance_id)
 			if not standalone:
 				port_in_use = self.configuration.port_allocator.in_use(port)
 
-			if not process_running:
+			if wait_for_state.supervisor_started and not process_running:
 				# It errored.
 				error_callback("Process is no longer running.")
 				return
-			if standalone and process_running:
+			if wait_for_state.supervisor_started and standalone and process_running:
 				# It's running.
 				callback("Process is running.")
 				return
@@ -258,11 +261,13 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 
 			self.configuration.io_loop.add_timeout(time.time() + 0.2, wait_for_state)
 
+		wait_for_state.supervisor_started = False
+
 		if standalone:
 			# Wait for the appropriate time before checking the instance.
 			self.configuration.io_loop.add_timeout(time.time() + standalone_wait, wait_for_state)
 		else:
-			self.configuration.io_loop.add_timeout(time.time() + 1.0, wait_for_state)
+			self.configuration.io_loop.add_timeout(time.time() + 0.2, wait_for_state)
 
 	def _supervise_stop(self, instance_id):
 		"""
@@ -328,6 +333,16 @@ class BaseRuntime(paasmaker.util.plugin.Plugin):
 		"""
 		supervisor = paasmaker.util.CommandSupervisorLauncher(self.configuration, instance_id)
 		return supervisor.is_running()
+
+	def _supervise_has_started(self, instance_id):
+		"""
+		Determine if the supervised command has actually started yet.
+		Returns True if it is, or False otherwise.
+
+		:arg str instance_id: The instance ID to check.
+		"""
+		supervisor = paasmaker.util.CommandSupervisorLauncher(self.configuration, instance_id)
+		return supervisor.has_started()
 
 class BaseRuntimeTest(paasmaker.common.controller.BaseControllerTest):
 	config_modules = ['heart']
