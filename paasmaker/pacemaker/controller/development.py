@@ -35,8 +35,11 @@ class DevelopmentJavascriptController(BaseController):
 		target_path = os.path.join(javascript_path, 'main-built.js')
 
 		should_rebuild = False
-		target_stat = os.stat(target_path)
-		target_mtime = target_stat.st_mtime
+		if os.path.exists(target_path):
+			target_stat = os.stat(target_path)
+			target_mtime = target_stat.st_mtime
+		else:
+			target_mtime = 0
 
 		# Figure out if anything has changed, and thus we need to rebuild the JavaScript.
 		matches = []
