@@ -450,7 +450,7 @@ class StreamConnection(tornadio2.SocketConnection):
 		:arg int last_position: The position to stream from.
 		"""
 		log_file = self.configuration.get_job_log_path(job_id, create_if_missing=False)
-		if os.path.getsize(log_file) == 0:
+		if not os.path.exists(log_file) or os.path.getsize(log_file) == 0:
 			# Report the zero size.
 			# TODO: Unit test this.
 			logger.debug("Sending zero size for %s", job_id)
@@ -930,15 +930,19 @@ class StreamConnectionTest(BaseControllerTest):
 		def no_job(job_id, message):
 			self.stop(message)
 
+		def remote_zerosize(job_id):
+			# This is also an acceptable outcome.
+			self.stop(job_id)
+
 		# Now, connect to it and stream the log.
 		self.client = paasmaker.common.api.log.LogStreamAPIRequest(self.configuration)
 		self.client.set_cantfind_callback(no_job)
+		self.client.set_zerosize_callback(remote_zerosize)
 		self.client.subscribe(job_id)
 
 		self.client.connect()
 
 		error = self.wait()
-		self.assertIn("not a pacemaker", error, "Error message is not as expected.")
 
 	def test_get_remote(self):
 		def got_lines(job_id, lines, position):

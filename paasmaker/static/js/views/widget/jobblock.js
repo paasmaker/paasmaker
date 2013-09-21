@@ -176,12 +176,12 @@ define([
 
 			var logContainer = this.$('.particulars-' + jobId + ' .log');
 			if (logContainer.is(":visible")) {
-				this.$('.particulars-' + jobId + ' .log').slideUp();
+				logContainer.slideUp();
 				if (this.logViewers[jobId]) {
 					this.logViewers[jobId].pause();
 				}
 			} else {
-				this.$('.particulars-' + jobId + ' .log').slideDown();
+				logContainer.slideDown();
 
 				if (!this.logViewers[jobId]) {
 					this.logViewers[jobId] = new LogView({el: $('pre', logContainer)});

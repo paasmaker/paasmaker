@@ -12,6 +12,7 @@ import paasmaker
 import os
 import uuid
 import json
+import time
 
 import tornado.testing
 
@@ -156,9 +157,12 @@ class JobWatcher(object):
 				self.watches[job_id]['ref']
 			)
 		else:
-			filename = self.configuration.get_job_log_path(job_id)
+			filename = self.configuration.get_job_log_path(job_id, create_if_missing=False)
+			size = 0
+			if os.path.exists(filename):
+				size = os.path.getsize(filename)
 			self.watches[job_id] = {
-				'size': os.path.getsize(filename),
+				'size': size,
 				'filename': filename,
 				'ref': 1
 			}
@@ -205,7 +209,9 @@ class JobWatcher(object):
 
 	def _check_log_files(self):
 		for job_id, meta in self.watches.iteritems():
-			size = os.path.getsize(meta['filename'])
+			size = 0
+			if os.path.exists(meta['filename']):
+				size = os.path.getsize(meta['filename'])
 			#logger.debug("Checking file %s (old %d, new %d)", meta['filename'], meta['size'], size)
 			if meta['size'] != size:
 				self.watches[job_id]['size'] = size
@@ -403,6 +409,14 @@ class JobLoggingTest(tornado.testing.AsyncTestCase):
 		# Wait for the watcher to catch up.
 		return_id = self.wait()
 		self.assertEquals(return_id, id1, "Another job id returned... ?")
+
+		# Keep an eye on a file that doesn't exist. This should not fail.
+		id2 = str(uuid.uuid4())
+
+		watcher.add_watch(id2)
+		self.io_loop.add_timeout(time.time() + 0.5, self.stop)
+		self.wait()
+		watcher.remove_watch(id2)
 
 	def test_takeover(self):
 		# This test makes sure that we can take over a FP, and it closes everything cleanly.

@@ -1690,9 +1690,13 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			callback(job_id, self.get_job_log_path(job_id))
 			return
 
-		if not self.is_pacemaker():
-			# The search ends here.
-			error_callback(job_id, "Node is not a pacemaker, and can't search other nodes.")
+		if not self.job_exists_locally(job_id) and not self.is_pacemaker():
+			# It doesn't exist locally - which can be caused by the
+			# job not yet starting. Seeing as we're not a Pacemaker, act like
+			# it does exist, in the expectation that it'll come through shortly.
+			# We assume you only got here if you're a pacemaker which should
+			# limit the number of invalid job requests.
+			callback(job_id, self.get_job_log_path(job_id))
 			return
 
 		def got_database_session(session):

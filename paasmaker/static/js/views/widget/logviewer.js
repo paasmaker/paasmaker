@@ -34,7 +34,7 @@ define([
 		onLines: function(job_id, lines, position) {
 			if (this.jobId != job_id) { return; }
 
-			if (this.$el.text() == "Loading...") {
+			if (!this.$el.hasClass('data')) {
 				this.$el.empty();
 			}
 
@@ -61,6 +61,7 @@ define([
 			if (this.jobId != job_id) { return; }
 
 			this.$el.text(error_message);
+			this.$el.removeClass('data');
 		},
 		start: function() {
 			if (!this.isReading) {
