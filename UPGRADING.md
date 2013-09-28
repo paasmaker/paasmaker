@@ -32,3 +32,16 @@ NOTE: This does involve some downtime.
 
 * Restart the Paasmaker node. Paasmaker will restart the new Redis version as
   it starts. The data will be read from the existing files.
+
+Revision 5706328f, September 28th, 2013
+---------------------------------------
+
+Password hashing update. The method used to hash passwords was updated. The previous
+method wasn't insecure, but it wasn't a strong as it could have been. This update fixes
+that.
+
+The update requires a new Python library. Re-running the installer with the same
+configuration file you used originally will add the missing dependency.
+
+Passwords set prior to this release will continue to function as normal. However, as
+you change passwords they'll be stored with the new hashing method.
