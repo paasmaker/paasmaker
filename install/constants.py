@@ -6,6 +6,8 @@
 # file, You can obtain one at http://mozilla.org/MPL/2.0/.
 #
 
+import os
+
 # Define constants. Why? Because if we spell these wrong
 # in the code, Python will tell us. If we spell it wrong
 # inside the string, the code just won't work the way we
@@ -121,11 +123,11 @@ OPENRESTY = {
 	'install_command': 'make install' # NOTE: No sudo here - we're installing to the build location.
 }
 REDIS = {
-	'working_name': 'redis-2.6.9',
-	'url': "http://redis.googlecode.com/files/redis-2.6.9.tar.gz",
-	'sha1': "519fc3d1e7a477217f1ace73252be622e0101001",
-	'binary': 'redis-2.6.9/src/redis-server',
-	'unpacked_name': 'redis-2.6.9',
+	'working_name': 'redis-2.6.16',
+	'url': "http://download.redis.io/releases/redis-2.6.16.tar.gz",
+	'sha1': "f94c0f623aaa8c310f9be2a88e81716de01ce0ce",
+	'binary': 'redis-2.6.16/src/redis-server',
+	'unpacked_name': 'redis-2.6.16',
 	'make_command': 'make -j 16'
 }
 
@@ -155,10 +157,10 @@ DEFAULT_INSTALLER_CONFIGURATION = {
 	'init_redirect_port80': False,
 
 	'use_system_openresty': False,
-	'openresty_binary': 'thirdparty/ngx_openresty-1.2.6.1/nginx/sbin/nginx',
+	'openresty_binary': os.path.join('thirdparty', OPENRESTY['binary']),
 
 	'use_system_redis': False,
-	'redis_binary': 'thirdparty/redis-2.6.9/src/redis-server',
+	'redis_binary': os.path.join('thirdparty', REDIS['binary']),
 
 	'runtime_shell_enable': True,
 
