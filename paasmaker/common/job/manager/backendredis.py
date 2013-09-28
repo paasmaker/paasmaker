@@ -637,7 +637,13 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 	def tearDown(self):
 		self.configuration.cleanup(self.stop, self.stop)
-		self.wait()
+		try:
+			self.wait()
+		except Exception, ex:
+			# Any pending callbacks when the Redis was
+			# shut down will throw exceptions, that will bubble back to
+			# this self.wait() call. Ignore them.
+			pass
 		super(JobManagerBackendTest, self).tearDown()
 
 	def test_simple(self):
