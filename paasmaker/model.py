@@ -26,8 +26,12 @@ from sqlalchemy.ext.hybrid import hybrid_property
 from sqlalchemy import func
 from sqlalchemy import or_
 
+from passlib.context import CryptContext
+
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
+password_hashing_context = CryptContext(schemes=["sha512_crypt"])
 
 Base = declarative_base()
 
@@ -291,6 +295,13 @@ class User(OrmBase, Base):
 		return self._password
 	@password.setter
 	def password(self, val):
+		meta = self.auth_meta
+		if 'hashlibrary' not in meta:
+			# Upgrade old versions of Paasmaker once the password
+			# is reset. This doesn't change libraries however.
+			meta['hashlibrary'] = 'passlib'
+			self.auth_meta = meta
+
 		self._password = self.password_hash(val)
 
 	@hybrid_property
@@ -324,18 +335,28 @@ class User(OrmBase, Base):
 
 		:arg str plain: The plain text password.
 		"""
-		# Select a salt, if we don't already have one for this user.
 		meta = self.auth_meta
-		if not meta.has_key('salt'):
-			meta['salt'] = str(uuid.uuid4())
-		self.auth_meta = meta
 
-		# Now hash their password, plus the salt.
-		h = hashlib.md5()
-		h.update(meta['salt'])
-		h.update(plain)
-		h.update(meta['salt'])
-		return h.hexdigest()
+		if 'hashlibrary' in meta:
+			# Use that hash library.
+			if meta['hashlibrary'] == 'passlib':
+				# Access the single global context.
+				return password_hashing_context.encrypt(plain)
+			else:
+				raise ValueError("Hashing library %s is unknown in this version." % meta['hashlibrary'])
+		else:
+			# Use the old fashioned and insecure md5+salt hashing.
+			# Select a salt, if we don't already have one for this user.
+			if not meta.has_key('salt'):
+				meta['salt'] = str(uuid.uuid4())
+			self.auth_meta = meta
+
+			# Now hash their password, plus the salt.
+			h = hashlib.md5()
+			h.update(meta['salt'])
+			h.update(plain)
+			h.update(meta['salt'])
+			return h.hexdigest()
 
 	def generate_api_key(self):
 		"""
@@ -353,7 +374,17 @@ class User(OrmBase, Base):
 
 		:arg str plain: The plain text password.
 		"""
-		return self.password == self.password_hash(plain)
+		meta = self.auth_meta
+
+		if 'hashlibrary' in meta:
+			# Use that hash library.
+			if meta['hashlibrary'] == 'passlib':
+				# Access the single global context.
+				return password_hashing_context.verify(plain, self.password)
+			else:
+				raise ValueError("Hashing library %s is unknown in this version." % meta['hashlibrary'])
+		else:
+			return self.password == self.password_hash(plain)
 
 class Role(OrmBase, Base):
 	"""
@@ -1483,6 +1514,30 @@ class TestModel(unittest.TestCase):
 		decoded = json.loads(encoded)
 
 		self.assertEquals(decoded['node']['id'], 1, "ID is not correct.")
+
+	def test_password_hashing(self):
+		s = self.session
+
+		user = User()
+		user.login = 'username'
+		user.email = 'username@example.com'
+		user.password = 'test'
+
+		s.add(user)
+		s.commit()
+
+		self.assertTrue(user.check_password('test'), "Password couldn't be verified.")
+		self.assertFalse(user.check_password('test1'), "Different password was correct.")
+		self.assertEquals(user.password[0], '$', "Password is not in correct format.")
+
+		# Force old style hashing, to make sure that old passwords
+		# still validate.
+		user.auth_meta = {'salt': str(uuid.uuid4())}
+		user._password = user.password_hash('test')
+
+		self.assertTrue(user.check_password('test'), "Old password can not be verified.")
+		self.assertFalse(user.check_password('test1'), "Different password was correct.")
+		self.assertNotEquals(user.password[0], '$', "Password is not in correct format.")
 
 	def test_user_permissions(self):
 		s = self.session
