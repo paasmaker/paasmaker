@@ -116,10 +116,14 @@ class JobBackend(object):
 		"""
 		raise NotImplementedError("You must implement get_job().")
 
-	def get_jobs(self, jobs, callback):
+	def get_jobs(self, jobs, callback, root_id=None):
 		"""
 		Get the data for all the given jobs in one go, calling the callback
 		with a dict. The keys are the job ids and the values a map of data.
+
+		If root_id is supplied, it's assumed that you're fetching an entire
+		tree of jobs. Some backends may be able to optimise this fetch
+		with this hint supplied.
 		"""
 		raise NotImplementedError("You must implement get_jobs().")
 

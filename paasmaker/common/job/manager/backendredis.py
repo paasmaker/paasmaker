@@ -10,6 +10,7 @@ import time
 import json
 import uuid
 import logging
+import os
 
 import paasmaker
 from ...testhelpers import TestHelpers
@@ -21,6 +22,9 @@ import tornado.testing
 
 logger = logging.getLogger(__name__)
 logger.addHandler(logging.NullHandler())
+
+MOVE_TO_DISK_CHECK_INTERVAL = 60000 # 60 seconds, in milliseconds.
+MOVE_TO_DISK_OLDER_THAN = 300 # 5 Minutes.
 
 class RedisJobBackend(JobBackend):
 	"""
@@ -67,11 +71,26 @@ class RedisJobBackend(JobBackend):
 	roots => ZSET
 		A set of all root jobs, sorted by their timestamp. Used to locate old
 		jobs for removal.
+	completed => ZSET
+		A set of root jobs that have entered the completed state, sorted by their
+		timestamp. Used by a pacemaker to write the jobs out to disk after
+		they've completed.
 	"""
 
 	def setup(self, callback, error_callback):
 		self.setup_callback = callback
 		self.setup_steps = 2
+
+		# Set up a periodic to move completed jobs from Redis onto disk.
+		# This is a crude workaround to reduce the jobs Redis's memory usage.
+		if self.configuration.is_pacemaker() and not hasattr(self, 'memory_free_periodic'):
+			self.disk_store_location = self.configuration.get_scratch_path_exists('job', 'archive')
+			self.memory_free_periodic = tornado.ioloop.PeriodicCallback(
+				self._check_move_jobs_to_disk,
+				MOVE_TO_DISK_CHECK_INTERVAL,
+				io_loop=self.configuration.io_loop
+			)
+			self.memory_free_periodic.start()
 
 		if not hasattr(self, 'pubsub_internal_subscribed'):
 			self.pubsub_internal_subscribed = False
@@ -356,6 +375,13 @@ class RedisJobBackend(JobBackend):
 		def on_complete(result):
 			# The last result is the whole job object.
 			job_data = self._from_json(result[-1])
+
+			if not job_data['parent_id'] and job_data['state'] in constants.JOB_FINISHED_STATES:
+				# This was a root job, and it's finished. Add it to the list to prune.
+				# Don't pass a callback because we're not too fussed about
+				# the result. Also, if we miss it, it'll get cleaned up eventually.
+				self.redis.zadd("completed", time.time(), job_id)
+
 			callback(job_data)
 
 		def on_got_current_state(job):
@@ -403,7 +429,18 @@ class RedisJobBackend(JobBackend):
 
 		self.redis.hgetall(job_id, on_hgetall)
 
-	def get_jobs(self, jobs, callback):
+	def get_jobs(self, jobs, callback, root_id=None):
+		if root_id is not None:
+			# See if we can fetch from the on-disk cache.
+			list_path, tree_path = self._get_archive_paths(root_id)
+			if os.path.exists(tree_path):
+				logger.debug("Satisfying request for get_jobs() root id %s from file %s.", root_id, tree_path)
+				tree_fp = open(tree_path, 'r')
+				result = json.loads(tree_fp.read())
+				tree_fp.close()
+				callback(result)
+				return
+
 		def on_bulk_hmget(values):
 			output = {}
 			for result in values:
@@ -454,7 +491,7 @@ class RedisJobBackend(JobBackend):
 			callback(jobs)
 
 		offset = None
-		if limit:
+		if limit is not None:
 			offset = 0
 
 		self.redis.zrevrangebyscore("roots", age, "-inf", offset=offset, limit=limit, callback=on_zrevrangebyscore)
@@ -517,6 +554,19 @@ class RedisJobBackend(JobBackend):
 		self.get_root(job_id, on_found_root)
 
 	def get_tree(self, job_id, callback, state=None, node=None):
+		# If we're not interested in the state/node filter,
+		# it's probably an old job, so check the on disk cache for this
+		# result.
+		if state is None and node is None:
+			list_path, tree_path = self._get_archive_paths(job_id)
+			if os.path.exists(list_path):
+				logger.debug("Satisfying request for get_tree() root id %s from file %s.", job_id, list_path)
+				list_fp = open(list_path, 'r')
+				result = json.loads(list_fp.read())
+				list_fp.close()
+				callback(result)
+				return
+
 		# State Node Source
 		# None  None  [root tree] SET
 		# []    None  [root tree in states] UNION
@@ -529,7 +579,7 @@ class RedisJobBackend(JobBackend):
 			state_sets = []
 			state_set_name = "temp_state:" + str(uuid.uuid4())
 			result_set_name = "temp_result:" + str(uuid.uuid4())
-			if state:
+			if state is not None:
 				# Assemble the states into a set of sets that
 				# contain the desired states.
 				sfilter = state
@@ -548,7 +598,7 @@ class RedisJobBackend(JobBackend):
 			# Select all those sets into the temporary set.
 			pipeline.sunionstore(state_sets, state_set_name)
 			# Now, if we have a node, intersect that and store it.
-			if node:
+			if node is not None:
 				pipeline.sinterstore([state_set_name, "node:%s" % node], result_set_name)
 			else:
 				result_set_name = state_set_name
@@ -560,10 +610,19 @@ class RedisJobBackend(JobBackend):
 
 		self.get_root(job_id, on_found_root)
 
-	def delete_tree(self, job_id, callback):
+	def delete_tree(self, job_id, callback, delete_indexes=True):
 		def on_found_root(root_id):
 			def on_root_tags(root_tags):
 				def on_completed(result):
+					if delete_indexes:
+						# Remove on disk archived versions if we're deleting the indexes
+						# because this will be the last trace of the job.
+						disk_paths = self._get_archive_paths(root_id)
+						for path in disk_paths:
+							if os.path.exists(path):
+								logger.debug("Removing archived job file %s.", path)
+								os.unlink(path)
+
 					callback()
 					# end of on_completed()
 
@@ -577,18 +636,30 @@ class RedisJobBackend(JobBackend):
 						pipeline.delete(child_id)
 						pipeline.delete("%s:context" % child_id)
 						pipeline.delete("%s:parent" % child_id)
-						pipeline.delete("%s:root" % child_id)
+
+						if delete_indexes or (not delete_indexes and child_id != root_id):
+							# If we're deleting indexes, remote the root pointer.
+							# However, if we're not deleting indexes, leave the root
+							# pointer in place for the root job only.
+							pipeline.delete("%s:root" % child_id)
+
 						pipeline.delete("%s:children" % child_id)
 						pipeline.srem("node:%s" % node_id, child_id)
 						for state in constants.JOB.ALL:
 							pipeline.delete("%s:children:%s" % (child_id, state))
 							pipeline.srem("node:%s:%s" % (node_id, state), child_id)
 
-					# Now for the root job.
-					for tag in root_tags:
-						pipeline.zrem("tag:%s" % tag, root_id)
+					if delete_indexes:
+						# Remove the tags and the root job from
+						# the index. This means it can no longer be found.
+						for tag in root_tags:
+							pipeline.zrem("tag:%s" % tag, root_id)
 
-					pipeline.zrem("roots", root_id)
+						pipeline.zrem("roots", root_id)
+
+					# Remove from the completed set.
+					pipeline.zrem("completed", root_id)
+
 					pipeline.execute(on_completed)
 
 				def on_found_tree(tree):
@@ -624,6 +695,74 @@ class RedisJobBackend(JobBackend):
 		# Now fetch the intersection of those sets.
 		self.redis.sunion(sets, callback=got_node_jobs)
 
+	def _get_archive_paths(self, root_id):
+		# This is for the result of get_tree(), that is the list of jobs for a given
+		# tree.
+		tree_list_path = os.path.join(self.disk_store_location, "%s_list.json" % root_id)
+
+		# This is for the result of get_jobs(), that is the dict containing information
+		# about a given tree of jobs.
+		tree_set_path = os.path.join(self.disk_store_location, "%s.json" % root_id)
+
+		return (tree_list_path, tree_set_path)
+
+	def _archive_on_disk(self, root_id, callback):
+		logger.debug("Arching job with root %s to disk.", root_id)
+		tree_list_path, tree_set_path = self._get_archive_paths(root_id)
+
+		def finished_deleting():
+			callback()
+			# end of finished_deleting()
+
+		def got_jobs(jobs):
+			logger.debug("Saving jobs dict to path %s.", tree_set_path)
+			body_fp = open(tree_set_path, 'w')
+			body_fp.write(json.dumps(jobs))
+			body_fp.close()
+
+			# Remove it from Redis (but not the indexes)
+			self.delete_tree(root_id, finished_deleting, delete_indexes=False)
+
+			# end of got_jobs()
+
+		def got_tree(tree):
+			logger.debug("Saving jobs tree list to path %s.", tree_list_path)
+			list_fp = open(tree_list_path, 'w')
+			list_fp.write(json.dumps(list(tree)))
+			list_fp.close()
+
+			self.get_jobs(tree, got_jobs)
+			# end of got_tree()
+
+		self.get_tree(root_id, got_tree)
+
+	def _check_move_jobs_to_disk(self, older_than=MOVE_TO_DISK_OLDER_THAN, callback=None):
+		# Find jobs older than a few minutes, and if they're completed,
+		# move them out of memory and onto disk.
+		# The optional parameters are for unit tests to be able to
+		# hook in and make sure it's working correctly.
+
+		def processor(job_id, handler):
+			# Called for each job_id. Archive, then fetch the next one.
+			self._archive_on_disk(job_id, handler.next)
+
+			# end of processor()
+
+		def got_job_list(jobs_list):
+			# This is a list of completed root jobs.
+			listprocessor = paasmaker.util.CallbackProcessList(jobs_list, processor, callback)
+			listprocessor.start()
+
+			# end of got_job_list()
+
+		self.redis.zrevrangebyscore(
+			"completed",
+			time.time() - older_than,
+			"-inf",
+			limit=100,
+			callback=got_job_list
+		)
+
 class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 	def setUp(self):
 		super(JobManagerBackendTest, self).setUp()
@@ -631,6 +770,8 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# TODO: This only tests the redis backend. But in future,
 		# all backends should be testable with exactly the same
 		# unit tests as shown here.
+		# TODO: No longer true. Some tests are specific to the redis backend,
+		# and are marked as such.
 		self.backend = RedisJobBackend(self.configuration)
 		self.backend.setup(self.stop, self.stop)
 		self.wait()
@@ -640,6 +781,7 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 		try:
 			self.wait()
 		except Exception, ex:
+			# TODO: REDIS BACKEND SPECIFIC
 			# Any pending callbacks when the Redis was
 			# shut down will throw exceptions, that will bubble back to
 			# this self.wait() call. Ignore them.
@@ -948,3 +1090,69 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.assertEquals(status.job_id, job_id, "Job ID was not as expected.")
 		self.assertEquals(status.state, 'ROUNDTRIP', "Job status was not as expected.")
 		self.assertEquals(status.source, 'BOGUS', 'Source was correct.')
+
+	def test_archive(self):
+		# NOTE: This test is Redis backend specific.
+		self.backend.add_job('here', 'root', None, self.stop, constants.JOB.NEW, tags=['foo'])
+		self.wait()
+		root_id = 'root'
+		self.backend.add_job('here', 'child1', 'root', self.stop, constants.JOB.NEW)
+		self.wait()
+		self.backend.add_job('here', 'child2', 'root', self.stop, constants.JOB.NEW)
+		self.wait()
+		self.backend.add_job('here', 'child1_1', 'child1', self.stop, constants.JOB.NEW)
+		self.wait()
+		self.backend.add_job('here', 'root2', None, self.stop, constants.JOB.WAITING)
+		self.wait()
+
+		# Update the whole tree.
+		self.backend.set_state_tree('child1', constants.JOB.NEW, constants.JOB.SUCCESS, self.stop)
+		self.wait()
+
+		# Fetch the raw jobs as well.
+		self.backend.get_tree(root_id, self.stop)
+		jobs_list = self.wait()
+
+		# Make sure the on disk archive doesn't exist.
+		list_path, store_path = self.backend._get_archive_paths(root_id)
+
+		self.assertFalse(os.path.exists(list_path), "Archive already exists?")
+		self.assertFalse(os.path.exists(store_path), "Archive already exists?")
+
+		# Manually run an archive run. Setting the older_than make it go into
+		# the future.
+		self.backend._check_move_jobs_to_disk(older_than=-10, callback=self.stop)
+		self.wait()
+
+		# Now check that the archives do exist.
+		self.assertTrue(os.path.exists(list_path), "Archive doesn't exist.")
+		self.assertTrue(os.path.exists(store_path), "Archive doesn't exist.")
+
+		# Check that you can still fetch the job tree.
+		self.backend.get_tree(root_id, self.stop)
+		disk_jobs_list = self.wait()
+
+		self.assertTrue(isinstance(disk_jobs_list, list), "Returned object was not a list.")
+		self.assertEquals(len(jobs_list), len(disk_jobs_list), "Jobs list didn't match in size.")
+
+		# And fetch the jobs from that list.
+		self.backend.get_jobs(disk_jobs_list, self.stop, root_id=root_id)
+		disk_jobs_detail = self.wait()
+
+		print str(disk_jobs_detail)
+		self.assertTrue(isinstance(disk_jobs_detail, dict), "Returned object was not a dict.")
+
+		# Try to find the job by tag. That should still exist.
+		self.backend.find_by_tag('foo', self.stop)
+		tagged_jobs = self.wait()
+
+		self.assertIn(root_id, tagged_jobs, "Couldn't find archived job by tag.")
+
+		# Now really delete the job from disk.
+		self.backend.delete_tree(root_id, self.stop)
+		self.wait()
+
+		self.backend.find_by_tag('foo', self.stop)
+		tagged_jobs = self.wait()
+
+		self.assertEquals(len(tagged_jobs), 0, "Found job still when it should have been deleted.")

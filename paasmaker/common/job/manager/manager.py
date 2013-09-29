@@ -588,8 +588,8 @@ class JobManager(object):
 	def delete_tree(self, job_id, callback):
 		self.backend.delete_tree(job_id, callback)
 
-	def get_jobs(self, jobs, callback):
-		self.backend.get_jobs(jobs, callback)
+	def get_jobs(self, jobs, callback, root_id=None):
+		self.backend.get_jobs(jobs, callback, root_id)
 
 	def get_flat_tree(self, job_id, callback):
 		self.backend.get_tree(job_id, callback)
@@ -635,7 +635,7 @@ class JobManager(object):
 
 		def on_root_tree(tree):
 			# Now fetch the complete job data on all these elements.
-			self.backend.get_jobs(tree, on_job_full)
+			self.backend.get_jobs(tree, on_job_full, root_id=on_job_full.root_id)
 
 		def on_found_root(root_id):
 			# Find the root's entire tree.
