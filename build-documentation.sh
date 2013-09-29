@@ -13,3 +13,6 @@
 
 # Build the HTML docs.
 make -C documentation/ html
+
+# Deactivate
+deactivate

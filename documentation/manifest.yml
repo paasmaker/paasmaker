@@ -18,6 +18,7 @@ application:
         parameters:
           commands:
             - ./build-documentation.sh
+            - rm -rf thirdparty/
 
 instances:
   - name: web
