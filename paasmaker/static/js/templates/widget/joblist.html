@@ -5,6 +5,10 @@
 	{{% var jobId = jobs[i] }}
 	{{% var jobMeta = job_detail[jobId] }}
 	<div class="job well well-small" data-jobid="{{ jobId }}">
-		<img src="/static/img/load-inline.gif" width="16" height="11" alt="Loading..." /> Job '{{ jobMeta.title }}' in state {{ jobMeta.state }}
+		{{% if(jobMeta) { }}
+			<img src="/static/img/load-inline.gif" width="16" height="11" alt="Loading..." /> Job '{{ jobMeta.title }}' in state {{ jobMeta.state }}
+		{{% } else { }}
+			<img src="/static/img/load-inline.gif" width="16" height="11" alt="Loading..." /> Loading...
+		{{% } }}
 	</div>
 {{% } }}
