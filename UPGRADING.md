@@ -45,3 +45,23 @@ configuration file you used originally will add the missing dependency.
 
 Passwords set prior to this release will continue to function as normal. However, as
 you change passwords they'll be stored with the new hashing method.
+
+Revision bc887653, October 5th, 2013
+------------------------------------
+
+In this revision, the database schema was updated. Prior to this release, Alembic
+had been included but not set up correctly for database migrations.
+
+In this revision, the database is automatically created only if it doesn't exist.
+Otherwise, you'll need to run a migration to update it to the current version.
+
+From the root directory, you can run these commands to update your schema to
+the latest version:
+
+    $ . thirdparty/python/bin/activate
+    $ alembic upgrade head
+    $ deactivate
+
+You don't need to stop your Paasmaker node to do this, although you will need
+to apply the migration before restarting Paasmaker, otherwise it will fail to
+start.
