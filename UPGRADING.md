@@ -65,3 +65,36 @@ the latest version:
 You don't need to stop your Paasmaker node to do this, although you will need
 to apply the migration before restarting Paasmaker, otherwise it will fail to
 start.
+
+Revision 5ea854fa, October 5th, 2013
+------------------------------------
+
+OpenResty/NGINX upgrade. The version of OpenResty used was upgraded to a version
+that includes NGINX 1.4. This was done to finally allow applications to use websockets
+and have those be proxied through correctly.
+
+If you don't perform these upgrade steps, everything will continue to work as normal.
+However, to get advantage of it, be sure to upgrade to the newer version with these steps.
+You only need to do this on the router nodes. If you start these steps, be sure to perform
+all of them!
+
+NOTE: This will cause some downtime for that router node as you update it.
+
+* Run the installer again with the same configuration file you used. The installer will
+  download and build the newer version of OpenResty.
+* Stop Paasmaker on the node.
+* Terminate the running NGINX instance. You can locate them as follows.
+
+        $ ps aux | grep nginx
+        ...
+        daniel   13873  0.0  0.0  30816  1104 ?        Ss   09:27   0:00 nginx: master process thirdparty/ngx_openresty-1.4.2.9/nginx/sbin/nginx -c /home/daniel/dev/paasmaker/scratch/nginx/service.conf
+        $ kill 13873
+
+* Remove the nginx configuration file. This will force it to be rewritten next time.
+
+        $ rm scratch/nginx/service.conf scratch/nginx/service.json
+
+* Restart Paasmaker. Paasmaker will launch NGINX again with a brand new configuration.
+
+NOTE: If you don't remove the configuration, NGINX will start but may not be listening
+on IPv4 addresses, and thus won't work correctly.
