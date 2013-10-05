@@ -33,6 +33,8 @@ from paasmaker.common.core import constants
 from pubsub import pub
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
+from sqlalchemy import func
+import sqlalchemy
 import colander
 from paasmaker.thirdparty.pika import TornadoConnection
 from paasmaker.thirdparty.tornadoredis import Client as TornadoRedisClient
@@ -1132,9 +1134,38 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 		self.engine = create_engine(self.get_flat('pacemaker.dsn'), **self['pacemaker']['database_options'])
 		self.session = sessionmaker(bind=self.engine)
 
-		# Create the tables.
+		# Bind the session to the metadata.
 		paasmaker.model.Base.metadata.bind = self.engine
-		paasmaker.model.Base.metadata.create_all()
+
+		# Now see if we need to create tables. If so, do that,
+		# and set the Alembic migrations starting point.
+		check_session = None
+		try:
+			check_session = self.session()
+			query = check_session.query(
+				func.count(paasmaker.model.Workspace.id)
+			)
+
+			# This will throw an exception if the table
+			# does not exist. We query Workspace because
+			# it exists in the oldest versions of Paasmaker,
+			# and additionally it shouldn't contain too
+			# many entries.
+			count = query.count()
+
+			logger.info("Database already created. No action to take.")
+
+		except sqlalchemy.exc.OperationalError, ex:
+			# We need to create the tables. Do that now.
+			logger.info("No database created. Creating tables now...")
+			paasmaker.model.Base.metadata.create_all()
+
+			# And tell alembic to stamp this database at the head
+			# migration, for future compatibility.
+			from alembic.config import Config
+			from alembic import command
+			alembic_cfg = Config("alembic.ini")
+			command.stamp(alembic_cfg, "head")
 
 	def get_free_port(self):
 		"""

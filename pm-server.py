@@ -113,7 +113,7 @@ for plugin in routes_plugins:
 if configuration.is_pacemaker():
 	# Pacemaker setup.
 	# Connect to the database.
-	logging.info("Database connection and table creation...")
+	logging.info("Database setup.")
 	logging.info("Please be patient, this can take a few moments on first run.")
 	configuration.setup_database()
 

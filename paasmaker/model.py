@@ -39,6 +39,17 @@ Base = declarative_base()
 def now():
 	return datetime.datetime.utcnow()
 
+# Helper function to merge two dicts together recursively.
+# Modified from an answer to this question:
+# http://stackoverflow.com/questions/7204805/python-dictionaries-of-dictionaries-merge
+def merge_dict(a, b):
+	for key in b:
+		if key in a and isinstance(a[key], dict) and isinstance(b[key], dict):
+			merge_dict(a[key], b[key])
+		else:
+			a[key] = b[key]
+	return a
+
 class OrmExtension(MapperExtension):
 	def before_update(self, mapper, connection, instance):
 		instance.updated = now()
@@ -500,12 +511,13 @@ class Workspace(OrmBase, Base):
 	name = Column(String(255), nullable=False, unique=True)
 	stub = Column(String(255), nullable=False, unique=True)
 	_tags = Column('tags', Text, nullable=True)
+	_options = Column("options", Text, nullable=True)
 
 	def __repr__(self):
 		return "<Workspace('%s')>" % self.name
 
 	def flatten(self, field_list=None):
-		return super(Workspace, self).flatten(['name', 'stub', 'tags', 'can_delete'])
+		return super(Workspace, self).flatten(['name', 'stub', 'tags', 'can_delete', 'options'])
 
 	@hybrid_property
 	def tags(self):
@@ -517,6 +529,17 @@ class Workspace(OrmBase, Base):
 	@tags.setter
 	def tags(self, val):
 		self._tags = json.dumps(val)
+
+	@hybrid_property
+	def options(self):
+		if self._options:
+			return json.loads(self._options)
+		else:
+			return {}
+
+	@options.setter
+	def options(self, val):
+		self._options = json.dumps(val)
 
 	@property
 	def can_delete(self):
@@ -786,12 +809,13 @@ class Application(OrmBase, Base):
 	# Names are unique per workspace.
 	name = Column(String(255), index=True)
 	manifest_path = Column(String(255), nullable=True)
+	_options = Column("options", Text, nullable=True)
 
 	def __repr__(self):
 		return "<Application('%s')>" % self.name
 
 	def flatten(self, field_list=None):
-		return super(Application, self).flatten(['name', 'workspace_id', 'health', 'can_delete'])
+		return super(Application, self).flatten(['name', 'workspace_id', 'health', 'can_delete', 'options'])
 
 	def flatten_for_heart(self):
 		"""
@@ -800,6 +824,23 @@ class Application(OrmBase, Base):
 		"""
 		fields = ['name']
 		return super(Application, self).flatten(fields)
+
+	@hybrid_property
+	def options(self):
+		our_options = {}
+		if self._options:
+			our_options = json.loads(self._options)
+
+		# Get the parent's options, and merge our options over the top.
+		parent_options = self.workspace.options
+
+		result_options = merge_dict(parent_options, our_options)
+
+		return result_options
+
+	@options.setter
+	def options(self, val):
+		self._options = json.dumps(val)
 
 	@property
 	def health(self):
@@ -835,8 +876,8 @@ class Application(OrmBase, Base):
 # Joining table between Application Version and services.
 # There is no ORM object to represent this.
 application_version_services = Table('application_version_service', Base.metadata,
-     Column('application_version_id', Integer, ForeignKey('application_version.id')),
-     Column('service_id', Integer, ForeignKey('service.id'))
+	Column('application_version_id', Integer, ForeignKey('application_version.id')),
+	Column('service_id', Integer, ForeignKey('service.id'))
 )
 
 class ApplicationVersion(OrmBase, Base):
@@ -866,6 +907,7 @@ class ApplicationVersion(OrmBase, Base):
 	source_package_type = Column(String(255), nullable=True)
 	scm_name = Column(String(255), nullable=False)
 	_scm_parameters = Column("scm_parameters", Text, nullable=False)
+	_options = Column("options", Text, nullable=True)
 
 	state = Column(String(255), nullable=False, index=True)
 
@@ -885,11 +927,28 @@ class ApplicationVersion(OrmBase, Base):
 	def scm_parameters(self, val):
 		self._scm_parameters = json.dumps(val)
 
+	@hybrid_property
+	def options(self):
+		our_options = {}
+		if self._options:
+			our_options = json.loads(self._options)
+
+		# Get the parent's options, and merge our options over the top.
+		parent_options = self.application.options
+
+		result_options = merge_dict(parent_options, our_options)
+
+		return result_options
+
+	@options.setter
+	def options(self, val):
+		self._options = json.dumps(val)
+
 	def __repr__(self):
 		return "<ApplicationVersion('%s'@'%s' - active: %s)>" % (self.version, self.application, str(self.is_current))
 
 	def flatten(self, field_list=None):
-		return super(ApplicationVersion, self).flatten(['application_id', 'version', 'is_current', 'state', 'health', 'scm_name', 'scm_parameters', 'source_package_type'])
+		return super(ApplicationVersion, self).flatten(['application_id', 'version', 'is_current', 'state', 'health', 'scm_name', 'scm_parameters', 'source_package_type', 'options'])
 
 	def flatten_for_heart(self):
 		"""
@@ -1769,10 +1828,25 @@ class TestModel(unittest.TestCase):
 		workspace = paasmaker.model.Workspace()
 		workspace.name = 'Test'
 		workspace.stub = 'test'
+		workspace.options = {
+			'test_workspace': True,
+			'sub': {
+				'value': 'workspace',
+				'dict': 'scalar'
+			}
+		}
 
 		application = paasmaker.model.Application()
 		application.workspace = workspace
 		application.name = 'foo.com'
+		application.options = {
+			'test_application': [1],
+			'test_workspace': False,
+			'sub': {
+				'value': 'application',
+				'dict': {'value': 'application'}
+			}
+		}
 
 		service = paasmaker.model.Service()
 		service.application = application
@@ -1793,6 +1867,14 @@ class TestModel(unittest.TestCase):
 		application_version.state = paasmaker.common.core.constants.VERSION.PREPARED
 		application_version.scm_name = 'paasmaker.scm.zip'
 		application_version.scm_parameters = {}
+		application_version.options = {
+			'test_application': [2, 3],
+			'test_version': True,
+			'sub': {
+				'value': 'version',
+				'dict': {'value': 'version'}
+			}
+		}
 
 		application_version.services.append(service)
 
@@ -1831,6 +1913,38 @@ class TestModel(unittest.TestCase):
 		session.add(instance)
 		session.commit()
 
+		# Test the version/application/workspace options and merging.
+		# First, the top level elements.
+		self.assertIn('test_workspace', workspace.options)
+		self.assertTrue(workspace.options['test_workspace'])
+		self.assertIn('test_workspace', application.options)
+		self.assertFalse(application.options['test_workspace'])
+		self.assertIn('test_workspace', application_version.options)
+		self.assertFalse(application_version.options['test_workspace'])
+
+		self.assertNotIn('test_application', workspace.options)
+		self.assertIn('test_application', application.options)
+		self.assertEquals(len(application.options['test_application']), 1)
+		self.assertEquals(application.options['test_application'][0], 1)
+		self.assertIn('test_application', application_version.options)
+		self.assertEquals(len(application_version.options['test_application']), 2)
+		self.assertEquals(application_version.options['test_application'][0], 2)
+		self.assertEquals(application_version.options['test_application'][1], 3)
+
+		self.assertNotIn('test_version', workspace.options)
+		self.assertNotIn('test_version', application.options)
+		self.assertIn('test_version', application_version.options)
+		self.assertTrue(application_version.options['test_version'])
+
+		# Now sub dict merging.
+		self.assertEquals(workspace.options['sub']['dict'], 'scalar')
+		self.assertIn('value', application.options['sub']['dict'])
+		self.assertEquals(application.options['sub']['value'], 'application')
+		self.assertEquals(application.options['sub']['dict']['value'], 'application')
+		self.assertEquals(application_version.options['sub']['value'], 'version')
+		self.assertEquals(application_version.options['sub']['dict']['value'], 'version')
+
+		# Now try deleting. Should not raise any exceptions.
 		session.delete(application)
 		session.commit()
 
