@@ -112,11 +112,11 @@ SYSTEM_PACKAGES = {
 
 # FROM SOURCE PACKAGE METADATA
 OPENRESTY = {
-	'working_name': 'ngx_openresty-1.2.6.1.tar.gz',
-	'url': "http://agentzh.org/misc/nginx/ngx_openresty-1.2.6.1.tar.gz",
-	'unpacked_name': 'ngx_openresty-1.2.6.1',
-	'sha1': '6e25cf573faf58deb233f04dafde35c612cadcc7',
-	'binary': 'ngx_openresty-1.2.6.1/nginx/sbin/nginx',
+	'working_name': 'ngx_openresty-1.4.2.9.tar.gz',
+	'url': 'http://openresty.org/download/ngx_openresty-1.4.2.9.tar.gz',
+	'unpacked_name': 'ngx_openresty-1.4.2.9',
+	'sha1': 'd6df036381e88125745475d686643f4bb9830974',
+	'binary': 'ngx_openresty-1.4.2.9/nginx/sbin/nginx',
 	'configure_command': './configure --with-luajit --prefix=`pwd` --with-ipv6',
 	'darwin_generic_configure_command': './configure --with-ipv6 --with-luajit --prefix=`pwd`  --with-cc-opt="-I%(homebrew_pcre_path)s/include" --with-ld-opt="-L%(homebrew_pcre_path)s/lib"',
 	'make_command': 'make -j 16',

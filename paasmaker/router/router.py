@@ -14,10 +14,16 @@ import shutil
 import signal
 import json
 import time
+import logging
 
 import paasmaker
 
 import tornado.testing
+import tornado.websocket
+
+# Set up logging for this module.
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 # The tests in this file are designed to test the LUA scripts used by the router
 # to make it's routing determinations.
@@ -54,8 +60,16 @@ http {
 
 	%(temp_paths)s
 
+	# Map a HTTP Upgrade header, if supplied.
+	# This is to enable websocket proxying.
+	map $http_upgrade $connection_upgrade {
+		default upgrade;
+		'' close;
+	}
+
 	server {
-		listen       [::]:%(listen_port_direct)d;
+		listen       [::]:%(listen_port_direct)d ipv6only=on;
+		listen       %(listen_port_direct)d;
 		server_name  localhost;
 
 		location / {
@@ -77,11 +91,16 @@ http {
 			proxy_send_timeout          60;
 			proxy_read_timeout          60;
 			proxy_pass                  http://$upstream;
+
+			# Websocket handling.
+			proxy_set_header            Upgrade $http_upgrade;
+			proxy_set_header            Connection $connection_upgrade;
 		}
 	}
 
 	server {
-		listen       [::]:%(listen_port_80)d;
+		listen       [::]:%(listen_port_80)d ipv6only=on;
+		listen       %(listen_port_80)d;
 		server_name  localhost;
 
 		location / {
@@ -103,11 +122,16 @@ http {
 			proxy_send_timeout          60;
 			proxy_read_timeout          60;
 			proxy_pass                  http://$upstream;
+
+			# Websocket handling.
+			proxy_set_header            Upgrade $http_upgrade;
+			proxy_set_header            Connection $connection_upgrade;
 		}
 	}
 
 	server {
-		listen       [::]:%(listen_port_443)d;
+		listen       [::]:%(listen_port_443)d ipv6only=on;
+		listen       %(listen_port_443)d;
 		server_name  localhost;
 
 		location / {
@@ -130,6 +154,10 @@ http {
 			proxy_send_timeout          60;
 			proxy_read_timeout          60;
 			proxy_pass                  http://$upstream;
+
+			# Websocket handling.
+			proxy_set_header            Upgrade $http_upgrade;
+			proxy_set_header            Connection $connection_upgrade;
 		}
 	}
 }
@@ -289,6 +317,33 @@ http {
 
 		return parameters
 
+class RouterWebsocketTestController(tornado.websocket.WebSocketHandler):
+	def open(self):
+		logger.debug("Router test websocket server opened.")
+
+	def on_message(self, message):
+		logger.debug("Router test websocket server got message: %s", message)
+		self.write_message("You said: " + message)
+
+	def on_close(self):
+		logger.debug("Router test websocket server closed.")
+
+class RouterWebsocketTestClient(paasmaker.thirdparty.twc.websocket.WebSocket):
+
+	def __init__(self, url, test_object, **kwargs):
+		self.test_object = test_object
+
+		super(RouterWebsocketTestClient, self).__init__(url, **kwargs)
+
+	def on_open(self):
+		self.test_object.stop('open')
+
+	def on_message(self, data):
+		self.test_object.stop(data)
+
+	def on_unsupported(self):
+		self.test_object.stop('unsupported')
+
 class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 	"""
 	Test the NGINX routing system and stats collector.
@@ -308,6 +363,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		routes = paasmaker.common.controller.example.ExampleController.get_routes({'configuration': self.configuration})
 		routes.extend(paasmaker.common.controller.example.ExampleFailController.get_routes({'configuration': self.configuration}))
 		routes.extend(paasmaker.common.controller.example.ExamplePostController.get_routes({'configuration': self.configuration}))
+		routes.append((r"/websocket", RouterWebsocketTestController, {}))
 		application = tornado.web.Application(routes, **self.configuration.get_tornado_configuration())
 		return application
 
@@ -448,6 +504,30 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 		self.assertEquals(response.code, 200, "Response is not 200.")
 
+		# Try to connect to a websocket behind the proxy.
+		# We can't easily send a different Host: header,
+		# so insert a host entry for localhost.
+		redis.sadd('instances:localhost', target, callback=self.stop)
+		self.wait()
+		client = RouterWebsocketTestClient(
+			"ws://localhost:%d/websocket" % self.nginxport,
+			self,
+			io_loop=self.io_loop
+		)
+
+		# Wait until connected.
+		result = self.wait()
+		self.assertEquals(result, 'open', "Wasn't able to open websocket - got %s." % result)
+		# Send a message.
+		client.write_message('test')
+		result = self.wait()
+		self.assertIn('test', result, "Didn't get response from remote.")
+
+		# Close the connection.
+		# This allows it to be logged.
+		client.close()
+		self.short_wait_hack(length=0.2)
+
 		# Now test reading the stats log.
 		stats_reader = paasmaker.router.stats.StatsLogReader(self.configuration)
 		stats_reader.read(self.stop, self.stop)
@@ -478,8 +558,10 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		result = self.wait()
 		#print json.dumps(result, indent=4, sort_keys=True)
 
-		self.assertEquals(result['requests'], 3, "Wrong number of requests.")
+		self.assertEquals(result['requests'], 4, "Wrong number of requests.")
 		self.assertEquals(result['2xx'], 3, "Wrong number of requests.")
+		# 1xx requests are websockets.
+		self.assertEquals(result['1xx'], 1, "Wrong number of requests.")
 		self.assertTrue(result['bytes'] > 400, "Wrong value returned.")
 		self.assertTrue(result['nginxtime'] > 0, "Wrong value returned.")
 		self.assertTrue(result['time'] > 0, "Wrong value returned.")
@@ -515,8 +597,9 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 		# And the result should match the stats results for the
 		# version type.
-		self.assertEquals(result['requests'], 3, "Wrong number of requests.")
+		self.assertEquals(result['requests'], 4, "Wrong number of requests.")
 		self.assertEquals(result['2xx'], 3, "Wrong number of requests.")
+		self.assertEquals(result['1xx'], 1, "Wrong number of requests.")
 		self.assertTrue(result['bytes'] > 400, "Wrong value returned.")
 		self.assertTrue(result['nginxtime'] > 0, "Wrong value returned.")
 		self.assertTrue(result['time'] > 0, "Wrong value returned.")
@@ -540,7 +623,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# Why is both 1 and 2 points permitted? In case the unit test requests over
 		# a second boundary. It does happen.
 		self.assertIn(len(result['requests']), [1, 2], "Wrong number of data points.")
-		self.assertEquals(result['requests'][0][1], 3, "Wrong number of requests.")
+		self.assertEquals(result['requests'][0][1], 4, "Wrong number of requests.")
 
 		# Do the same thing for the node history.
 		# Node history stats are not working at this time. TODO: Fix this.
@@ -551,3 +634,4 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# self.assertIn('requests', result, "Missing requests graph.")
 		# self.assertIn(len(result['requests']), [1, 2], "Wrong number of data points.")
 		# self.assertEquals(result['requests'][0][1], 3, "Wrong number of requests.")
+
