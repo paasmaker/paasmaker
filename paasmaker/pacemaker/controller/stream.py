@@ -165,8 +165,8 @@ class StreamConnection(tornadio2.SocketConnection):
 			self.log_job_watcher.remove_watch(job_id)
 			pub.unsubscribe(self.log_message_update, self.configuration.get_job_message_pub_topic(job_id))
 		logger.debug("Closing %d remote connections.", len(self.log_remote_connections))
-		for remote_uuid, remote_data in self.log_remote_connections:
-			remote_data['connection'].close_connection()
+		for remote_uuid, remote_data in self.log_remote_connections.iteritems():
+			remote_data['connection'].close()
 		logger.debug("Closing complete.")
 
 		# Clean up router stats.
@@ -914,7 +914,11 @@ class StreamConnectionTest(BaseControllerTest):
 
 	def tearDown(self):
 		if hasattr(self, 'client'):
-			self.client.close()
+			try:
+				self.client.close()
+			except IOError, ex:
+				# Sometimes already closed. Ignore.
+				pass
 
 		super(StreamConnectionTest, self).tearDown()
 
@@ -989,11 +993,16 @@ class StreamConnectionTest(BaseControllerTest):
 		log.info("Another additional log entry.")
 		log.info("And Another additional log entry.")
 
-		self.client.subscribe(job_id, position=got_lines.position)
+		self.client.subscribe(job_id, position=got_lines.position, unittest_force_remote=True)
 
 		lines = self.wait()
 
 		self.assertEquals(2, len(lines), "Didn't download the expected number of lines.")
+
+		# Close the connection whilst we're subscribed.
+		# This forces the cleanup code to execute.
+		self.client.close()
+		self.short_wait_hack()
 
 	def test_remote_instance_log(self):
 		instance_type = self.create_sample_application(
@@ -1047,7 +1056,7 @@ class StreamConnectionTest(BaseControllerTest):
 		log.info("Another additional log entry.")
 		log.info("And Another additional log entry.")
 
-		self.client.subscribe(instance.instance_id, position=got_lines.position)
+		self.client.subscribe(instance.instance_id, position=got_lines.position, unittest_force_remote=True)
 
 		lines = self.wait()
 
@@ -1060,11 +1069,16 @@ class StreamConnectionTest(BaseControllerTest):
 		self.client.set_cantfind_callback(cantfind)
 
 		noexist = str(uuid.uuid4())
-		self.client.subscribe(noexist)
+		self.client.subscribe(noexist, None, True)
 
 		message = self.wait()
 
 		self.assertIn("No such job", message, "Error message not as expected.")
+
+		# Close the connection whilst we're subscribed.
+		# This forces the cleanup code to execute.
+		self.client.close()
+		self.short_wait_hack()
 
 	def test_get_log(self):
 		# Test the websocket version.
