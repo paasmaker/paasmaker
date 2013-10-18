@@ -1160,6 +1160,10 @@ class Configuration(paasmaker.util.configurationhelper.ConfigurationHelper):
 			logger.info("No database created. Creating tables now...")
 			paasmaker.model.Base.metadata.create_all()
 
+			# A hack to prevent alembic from altering the
+			# Python logger settings.
+			paasmaker.ALEMBIC_NO_LOGGING = True
+
 			# And tell alembic to stamp this database at the head
 			# migration, for future compatibility.
 			from alembic.config import Config

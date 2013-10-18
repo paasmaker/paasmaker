@@ -18,7 +18,11 @@ config = context.config
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-fileConfig(config.config_file_name)
+# However, we look at a special attribute to see if we
+# shouldn't touch the logging. Used when stamping a new database
+# with the head revision.
+if not hasattr(paasmaker, 'ALEMBIC_NO_LOGGING'):
+    fileConfig(config.config_file_name)
 
 target_metadata = paasmaker.model.Base.metadata
 
