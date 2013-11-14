@@ -10,6 +10,7 @@ import os
 import subprocess
 import uuid
 import socket
+import logging
 
 import paasmaker
 from paasmaker.common.core import constants
@@ -26,6 +27,9 @@ import tornado
 from pubsub import pub
 import colander
 import sqlalchemy
+
+logger = logging.getLogger(__name__)
+logger.addHandler(logging.NullHandler())
 
 # TODO: Implement abort features for all of these jobs.
 
@@ -196,7 +200,12 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 	def tearDown(self):
 		self.configuration.cleanup(self.stop, self.stop)
-		self.wait()
+		try:
+			self.wait()
+		except paasmaker.thirdparty.tornadoredis.exceptions.ConnectionError, ex:
+			# This is raised because we kill Redis and some things
+			# are still pending. We can safely ignore it.
+			pass
 		super(RegisterRootJobTest, self).tearDown()
 
 	def on_job_status(self, message):
@@ -403,6 +412,13 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 		self.assertEquals(instance.state, constants.INSTANCE.RUNNING, "Instance not in correct state.")
 
+		# Test the instance manager runtime check here.
+		self.configuration.instances.check_instances_runtime(logger, self.stop)
+		result = self.wait()
+
+		# There should be no instances that required adjustments.
+		self.assertEquals(len(result), 0, "Adjusted instances when it should not have needed to.")
+
 		# Test the setup_instances() code path here.
 		# Shutdown the instance, but instance ID.
 		ShutdownRootJob.setup_instances(
@@ -534,6 +550,71 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# Fetch the instance path here. Don't do it later because this will recreate it.
 		instance_path = self.configuration.get_instance_path(instance.instance_id)
 
+		# Start it up again.
+		StartupRootJob.setup_instances(
+			self.configuration,
+			[instance],
+			self.stop,
+			self.stop
+		)
+
+		start_instances_job_id = self.wait()
+		pub.subscribe(self.on_job_status, self.configuration.get_job_status_pub_topic(start_instances_job_id))
+
+		# And make it work.
+		self.configuration.job_manager.allow_execution(start_instances_job_id, self.stop)
+		self.wait()
+
+		result = self.wait()
+		while result is None or result.state != constants.JOB.SUCCESS:
+			result = self.wait()
+
+		# Check it started.
+		session.refresh(instance)
+		self.assertEquals(instance.state, constants.INSTANCE.RUNNING, "Instance not in correct state.")
+
+		# Manually kill it off, without recording the state, so we can check that the active
+		# instance check will detect and error that instance.
+		instance_logger = self.configuration.get_job_logger(instance.instance_id)
+		data = self.configuration.instances.get_instance(instance.instance_id)
+		runtime = self.configuration.plugins.instantiate(
+			data['instance_type']['runtime_name'],
+			paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
+			data['instance_type']['runtime_parameters'],
+			instance_logger
+		)
+
+		runtime.stop(
+			instance.instance_id,
+			self.stop,
+			self.stop
+		)
+
+		result = self.wait()
+		self.assertIn("free", result, "Was unable to stop instance.")
+
+		# Give it a short time.
+		self.short_wait_hack()
+
+		# The database should still show it as running.
+		session.refresh(instance)
+		self.assertEquals(instance.state, constants.INSTANCE.RUNNING, "Instance not in correct state.")
+
+		# Now run the instance check again. This should detect the failed instance.
+		self.configuration.instances.check_instances_runtime(logger, self.stop)
+		result = self.wait()
+
+		# There should be no instances that required adjustments.
+		self.assertEquals(len(result), 1, "Did not find the broken instance.")
+
+		# We also now need to manually set the database side of this to ERROR.
+		# The check would have reported this to the master, but in this test we
+		# don't have any HTTP controllers to handle it.
+		session.refresh(instance)
+		instance.state = constants.INSTANCE.ERROR
+		session.add(instance)
+		session.commit()
+
 		# Deregister the whole lot.
 		DeRegisterRootJob.setup_version(
 			self.configuration,
@@ -569,7 +650,7 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		# Refresh the instance object that we have.
 		session.refresh(instance)
 
-		# To check: that the instance is marked as STOPPED.
+		# To check: that the instance is marked as DEREGISTERED.
 		has_instance = self.configuration.instances.has_instance(instance.instance_id)
 		self.assertFalse(has_instance, "Instance still exists.")
 		self.assertEquals(instance.state, constants.INSTANCE.DEREGISTERED, "Instance not in correct state.")

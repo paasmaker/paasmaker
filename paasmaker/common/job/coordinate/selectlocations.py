@@ -121,7 +121,12 @@ class SelectLocationsJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 
 	def tearDown(self):
 		self.configuration.cleanup(self.stop, self.stop)
-		self.wait()
+		try:
+			self.wait()
+		except paasmaker.thirdparty.tornadoredis.exceptions.ConnectionError, ex:
+			# This is raised because we kill Redis and some things
+			# are still pending. We can safely ignore it.
+			pass
 		super(SelectLocationsJobTest, self).tearDown()
 
 	def on_job_status(self, message):

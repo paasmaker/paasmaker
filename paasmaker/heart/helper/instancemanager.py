@@ -218,6 +218,113 @@ class InstanceManager(object):
 
 		return ports
 
+	def check_instances_runtime(self, runtime_logger, callback):
+		"""
+		Check all instances in the catalog, during runtime.
+
+		This is designed to be run periodically on each heart node.
+		It goes over all instances in the catalog, checking their state
+		matches what is stored. Once complete, it will call the supplied
+		callback. The callback is supplied a list of instance IDs that
+		have changed state as a result of the checks.
+
+		:arg Logger runtime_logger: The logger to send messages about the progress
+			of the checks to.
+		:arg callable callback: The callback to call when complete.
+		"""
+		instances = self.catalog.keys()
+		altered_instances = []
+		runtime_logger.info("Checking %d instances registered on this node.", len(instances))
+
+		def done_instances():
+			if len(altered_instances) > 0:
+				# Trigger a save, which also reports the updates back to the master.
+				self.save()
+			runtime_logger.info("Completed checking instances. %d altered instances.", len(altered_instances))
+			callback(altered_instances)
+
+		def check_instance(instance_id, processor):
+			def on_success_instance(message):
+				# All good. No action to take.
+				runtime_logger.info("Instance %s is still running.", instance_id)
+				processor.next()
+				# end of on_success_instance()
+
+			def on_error_instance(message, exception=None):
+				# Instance is no longer running.
+				# Place it into the ERROR state, and then we'll let
+				# the pacemaker know shortly. It can then organise to
+				# start a new one for us.
+				runtime_logger.error("Instance %s is no longer running!", instance_id)
+				runtime_logger.error(message)
+
+				# Record the error against the instance.
+				instance_logger = self.configuration.get_job_logger(instance_id)
+				instance_logger.error("Determined not to be running. Pacemaker will decide the fate now.")
+				instance_logger.error(message)
+				if exception:
+					instance_logger.error("Exception:", exc_info=exception)
+				instance_logger.finished()
+
+				data = self.get_instance(instance_id)
+				data['instance']['state'] = constants.INSTANCE.ERROR
+				# Save the data, but delay reporting back until the checks are complete.
+				self.save(False)
+				altered_instances.append(instance_id)
+				processor.next()
+				# end of on_error_instance()
+
+			data = self.get_instance(instance_id)
+			runtime_logger.info("Instance %s recorded as being in state %s", instance_id, data['instance']['state'])
+
+			# If it's supposed to be running, load the plugin and check that
+			# it's actually running.
+			if data['instance']['state'] == constants.INSTANCE.RUNNING:
+				# Load the plugin, and check that it's actually running.
+				plugin_exists = self.configuration.plugins.exists(
+					data['instance_type']['runtime_name'],
+					paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
+				)
+
+				if not plugin_exists:
+					# Well, that's an error.
+					data['instance']['state'] = constants.INSTANCE.ERROR
+					self.save()
+					altered_instances.append(instance_id)
+					runtime_logger.error("Instance %s has a non existent runtime %s.", instance_id, data['instance_type']['runtime_name'])
+
+					instance_logger = self.configuration.get_job_logger(instance_id)
+					instance_logger.error("This heart node no longer has runtime %s.", data['instance_type']['runtime_name'])
+					instance_logger.finished()
+
+					processor.next()
+				else:
+					instance_logger = self.configuration.get_job_logger(instance_id)
+					runtime = self.configuration.plugins.instantiate(
+						data['instance_type']['runtime_name'],
+						paasmaker.util.plugin.MODE.RUNTIME_EXECUTE,
+						data['instance_type']['runtime_parameters'],
+						instance_logger
+					)
+
+					runtime.status(
+						instance_id,
+						on_success_instance,
+						on_error_instance
+					)
+			else:
+				# Not running - just check the next instance.
+				processor.next()
+
+			# end of check_instance()
+
+		processor = paasmaker.util.callbackprocesslist.CallbackProcessList(
+			instances,
+			check_instance,
+			done_instances
+		)
+		processor.start()
+
 	def check_instances_startup(self, callback):
 		"""
 		Check all instances in the catalog.
