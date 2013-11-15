@@ -191,6 +191,9 @@ plugins:
   - name: paasmaker.periodic.statshistory
     class: paasmaker.common.periodic.statshistory.StatsHistoryCleaner
     title: Jobs Cleaner
+  - name: paasmaker.periodic.instances
+    class: paasmaker.common.periodic.instances.InstancesCheck
+    title: Active Instances Checker
 
   # SOURCE CODE PACKERS
   - name: paasmaker.packer.default

@@ -10,3 +10,4 @@ import base
 import logs
 import jobs
 import statshistory
+import instances

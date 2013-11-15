@@ -5,3 +5,5 @@ periodics:
     interval: 3600
   - plugin: paasmaker.periodic.statshistory
     interval: 3600
+  - plugin: paasmaker.periodic.instances
+    interval: 60
