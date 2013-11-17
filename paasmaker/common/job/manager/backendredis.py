@@ -631,6 +631,7 @@ class RedisJobBackend(JobBackend):
 					pipeline = self.redis.pipeline(True)
 
 					for child_id, metadata in all_jobs.iteritems():
+						self.configuration.job_manager.clean_misc(child_id)
 						node_id = metadata['node']
 
 						pipeline.delete(child_id)
@@ -1139,7 +1140,7 @@ class JobManagerBackendTest(tornado.testing.AsyncTestCase, TestHelpers):
 		self.backend.get_jobs(disk_jobs_list, self.stop, root_id=root_id)
 		disk_jobs_detail = self.wait()
 
-		print str(disk_jobs_detail)
+		# print str(disk_jobs_detail)
 		self.assertTrue(isinstance(disk_jobs_detail, dict), "Returned object was not a dict.")
 
 		# Try to find the job by tag. That should still exist.

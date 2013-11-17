@@ -644,6 +644,12 @@ class JobManager(object):
 
 		self.backend.get_root(job_id, on_found_root)
 
+	def clean_misc(self, job_id):
+		# Clean up any misc internal data.
+		# This is called by the backend when a job is deleted.
+		if job_id in self.abort_handlers:
+			del self.abort_handlers[job_id]
+
 class JobManagerBackendWatchdog(object):
 	"""
 	A class to periodically check that the backend for the job
