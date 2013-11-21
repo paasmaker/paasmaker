@@ -16,6 +16,7 @@ import datetime
 import paasmaker
 from base import BasePeriodic, BasePeriodicTest
 from ..testhelpers import TestHelpers
+from ...common.core import constants
 
 import colander
 
@@ -32,7 +33,8 @@ class OldInstancesConfigurationSchema(colander.MappingSchema):
 		title="States to remove",
 		description="A set of states to remove after the timeout.",
 		default=[],
-		missing=[]
+		missing=[],
+		validator=colander.ContainsOnly(constants.INSTANCE.ALL)
 	)
 	only_inactive = colander.SchemaNode(
 		colander.Boolean(),
