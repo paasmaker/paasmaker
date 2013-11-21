@@ -194,6 +194,13 @@ plugins:
   - name: paasmaker.periodic.instances
     class: paasmaker.common.periodic.instances.InstancesCheck
     title: Active Instances Checker
+  - name: paasmaker.periodic.oldinstances.error
+    class: paasmaker.common.periodic.oldinstances.OldInstancesCleaner
+    title: Remove old ERROR instances
+    parameters:
+      states: ['ERROR']
+      max_age: 86400
+      only_inactive: False
 
   # SOURCE CODE PACKERS
   - name: paasmaker.packer.default

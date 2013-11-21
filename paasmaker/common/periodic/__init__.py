@@ -11,3 +11,4 @@ import logs
 import jobs
 import statshistory
 import instances
+import oldinstances

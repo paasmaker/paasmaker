@@ -88,7 +88,8 @@ class TestHelpers(object):
 			runtime_name,
 			runtime_parameters,
 			runtime_version,
-			application):
+			application,
+			session=None):
 		# Pack up the tornado simple test application.
 		temptarball = self.pack_sample_application(application)
 
@@ -103,8 +104,9 @@ class TestHelpers(object):
 				modules=['pacemaker'],
 				io_loop=self.io_loop)
 
-		configuration.get_database_session(self.stop, None)
-		session = self.wait()
+		if session is None:
+			configuration.get_database_session(self.stop, None)
+			session = self.wait()
 
 		# Make a node (ie, us) to run on.
 		# our_uuid = str(uuid.uuid4())

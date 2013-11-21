@@ -158,6 +158,7 @@ test_sets = {
 	paasmaker.common.periodic.logs: ['normal', 'periodic'],
 	paasmaker.common.periodic.jobs: ['normal', 'periodic'],
 	paasmaker.common.periodic.instances: ['normal', 'periodic'],
+	paasmaker.common.periodic.oldinstances: ['normal', 'periodic', 'oldinstances'],
 	paasmaker.common.periodic.statshistory: ['normal', 'periodic', 'statscleaner'],
 
 	paasmaker.common.job.prepare.prepareroot: ['normal', 'application', 'prepare'],

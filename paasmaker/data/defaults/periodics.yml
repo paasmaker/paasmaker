@@ -7,3 +7,5 @@ periodics:
     interval: 3600
   - plugin: paasmaker.periodic.instances
     interval: 60
+  - plugin: paasmaker.periodic.oldinstances.error
+    interval: 3600
