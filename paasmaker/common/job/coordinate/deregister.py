@@ -43,8 +43,16 @@ class DeRegisterRootJob(InstanceRootBase):
 		context = {}
 		context['application_version_id'] = application_version.id
 
+		context['update_version'] = True
 		if limit_instances:
 			context['limit_instances'] = limit_instances
+
+			# If we're shutting down just some instances, don't update
+			# the version to READY. Why? Because when we're adjusting
+			# just some instances it's normally for a health check of some kind,
+			# so we still want the version to be running.
+			# TODO: This is an assumption and an edge case.
+			context['update_version'] = False
 
 		tags = []
 		tags.append('workspace:%d' % application_version.application.workspace.id)

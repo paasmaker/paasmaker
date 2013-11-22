@@ -443,10 +443,15 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 		session.refresh(instance)
 		self.assertEquals(instance.state, constants.INSTANCE.STOPPED, "Instance not in correct state.")
 
+		# Now that we were filtering by instance, it should not have marked the
+		# whole version as stopped. This is a poorly documented edge case.
+		session.refresh(our_version)
+		self.assertEquals(our_version.state, constants.VERSION.RUNNING)
+
 		# Start it up again, as we can't make it current if it's not running.
-		StartupRootJob.setup_instances(
+		StartupRootJob.setup_version(
 			self.configuration,
-			[instance],
+			instance_type.application_version,
 			self.stop,
 			self.stop
 		)

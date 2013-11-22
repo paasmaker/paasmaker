@@ -84,7 +84,10 @@ class InstanceRootBase(BaseJob):
 		version into the given state.
 		"""
 		def got_session(session):
-			if context.has_key('application_version_id'):
+			update_version = True
+			if 'update_version' in context:
+				update_version = context['update_version']
+			if update_version and 'application_version_id' in context:
 				# Update that application version ID to the prepared state,
 				# because we've just applied this to the whole version.
 				version = session.query(
@@ -95,6 +98,8 @@ class InstanceRootBase(BaseJob):
 				session.commit()
 				session.close()
 
+				callback()
+			else:
 				callback()
 
 		self.configuration.get_database_session(got_session, self._failure_callback)
