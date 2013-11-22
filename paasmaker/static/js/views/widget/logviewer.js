@@ -6,11 +6,11 @@ define([
 	'bases'
 ], function($, _, Backbone, context, Bases){
 	var logLevelMap = [
-		['DEBUG', 'label', new RegExp('\\sDEBUG\\s', 'g')],
-		['INFO', 'label label-info', new RegExp('\\sINFO\\s', 'g')],
-		['WARNING', 'label label-warning', new RegExp('\\sWARNING\\s', 'g')],
-		['ERROR', 'label label-important', new RegExp('\\sERROR\\s', 'g')],
-		['CRITICAL', 'label label-important', new RegExp('\\sCRITICAL\\s', 'g')]
+		['DEBUG', 'label', new RegExp('\\d\\sDEBUG\\s', 'g')],
+		['INFO', 'label label-info', new RegExp('\\d\\sINFO\\s', 'g')],
+		['WARNING', 'label label-warning', new RegExp('\\d\\sWARNING\\s', 'g')],
+		['ERROR', 'label label-important', new RegExp('\\d\\sERROR\\s', 'g')],
+		['CRITICAL', 'label label-important', new RegExp('\\d\\sCRITICAL\\s', 'g')]
 	];
 
 	var LogView = Bases.BaseView.extend({
