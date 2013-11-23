@@ -153,12 +153,13 @@ class AdjustInstancesHealthCheck(BaseHealthCheck):
 			# TODO: Probably should de-register the instances. Or another
 			# health check comes along to do that for us?
 
-			# Fetch all the instances, and then rank them.
+			# Fetch all the running instances, and then rank them.
 			instances = self.session.query(
 				paasmaker.model.ApplicationInstance
 			).filter(
 				paasmaker.model.ApplicationInstance.application_instance_type_id == instance_type.id,
-				paasmaker.model.ApplicationInstance.node_id.in_(self.active_nodes)
+				paasmaker.model.ApplicationInstance.node_id.in_(self.active_nodes),
+				paasmaker.model.ApplicationInstance.state == constants.INSTANCE.RUNNING
 			).all()
 
 			def rank_by_node(a, b):
