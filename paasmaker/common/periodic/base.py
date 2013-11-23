@@ -55,7 +55,14 @@ class BasePeriodicTest(tornado.testing.AsyncTestCase):
 
 	def tearDown(self):
 		self.configuration.cleanup(self.stop, self.stop)
-		self.wait()
+		try:
+			self.wait()
+		except paasmaker.thirdparty.tornadoredis.exceptions.ConnectionError, ex:
+			# This is raised because we kill Redis and some things
+			# are still pending. This also prevents the test redis from being
+			# stopped. So call it again to properly clean up.
+			self.configuration.cleanup(self.stop, self.stop)
+			self.wait()
 		super(BasePeriodicTest, self).tearDown()
 
 	def success_callback(self, message):

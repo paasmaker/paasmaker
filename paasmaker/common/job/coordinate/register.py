@@ -204,8 +204,10 @@ class RegisterRootJobTest(tornado.testing.AsyncTestCase, TestHelpers):
 			self.wait()
 		except paasmaker.thirdparty.tornadoredis.exceptions.ConnectionError, ex:
 			# This is raised because we kill Redis and some things
-			# are still pending. We can safely ignore it.
-			pass
+			# are still pending. This also prevents the test redis from being
+			# stopped. So call it again to properly clean up.
+			self.configuration.cleanup(self.stop, self.stop)
+			self.wait()
 		super(RegisterRootJobTest, self).tearDown()
 
 	def on_job_status(self, message):

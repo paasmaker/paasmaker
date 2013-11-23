@@ -187,8 +187,10 @@ class OldInstancesCleanerTest(BasePeriodicTest, TestHelpers):
 			self.wait()
 		except paasmaker.thirdparty.tornadoredis.exceptions.ConnectionError, ex:
 			# This is raised because we kill Redis and some things
-			# are still pending. We can safely ignore it.
-			pass
+			# are still pending. This also prevents the test redis from being
+			# stopped. So call it again to properly clean up.
+			self.configuration.cleanup(self.stop, self.stop)
+			self.wait()
 
 	def test_simple(self):
 		self.configuration.get_database_session(self.stop, self.stop)
