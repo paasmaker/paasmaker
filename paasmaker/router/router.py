@@ -390,6 +390,8 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		self.accesslog_stats = os.path.join(config['log_path'], 'access.log.paasmaker')
 		self.accesslog_combined = os.path.join(config['log_path'], 'access.log')
 
+		self.redis_log = self.configuration.get_scratch_path('redis', 'table', 'redis.log')
+
 		# Insert the stats scripts.
 		paasmaker.router.stats.ApplicationStats.load_redis_scripts(
 			self.configuration,
@@ -446,6 +448,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 		#print response.body
 		#print open(self.errorlog, 'r').read()
+		#print open(self.redis_log, 'r').read()
 		#print open(self.accesslog_stats, 'r').read()
 		#print open(self.accesslog_combined, 'r').read()
 
@@ -624,6 +627,8 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# a second boundary. It does happen.
 		self.assertIn(len(result['requests']), [1, 2], "Wrong number of data points.")
 		self.assertEquals(result['requests'][0][1], 4, "Wrong number of requests.")
+
+		#print open(self.redis_log, 'r').read()
 
 		# Do the same thing for the node history.
 		# Node history stats are not working at this time. TODO: Fix this.

@@ -19,34 +19,7 @@ if err then
 	ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
 end
 
--- Helper function to split strings. From http://lua-users.org/wiki/SplitJoin,
--- using the "Function: true Python semantics for split" section.
-function string:split(sSeparator, nMax, bRegexp)
-	assert(sSeparator ~= '')
-	assert(nMax == nil or nMax >= 1)
-
-	local aRecord = {}
-
-	if self:len() > 0 then
-		local bPlain = not bRegexp
-		nMax = nMax or -1
-
-		local nField=1 nStart=1
-		local nFirst,nLast = self:find(sSeparator, nStart, bPlain)
-		while nFirst and nMax ~= 0 do
-			aRecord[nField] = self:sub(nStart, nFirst-1)
-			nField = nField+1
-			nStart = nLast+1
-			nFirst,nLast = self:find(sSeparator, nStart, bPlain)
-			nMax = nMax-1
-		end
-		aRecord[nField] = self:sub(nStart)
-	end
-
-	return aRecord
-end
-
--- Now look up the hostname.
+-- Fetch out the Host: header.
 local host = ngx.req.get_headers()["Host"]
 ngx.log(ngx.DEBUG, host)
 if not host then
@@ -60,70 +33,109 @@ if not host then
 	end
 end
 
--- String processing before we proceed.
+-- Time for Lua-ception. This LUA script is passed to Redis to do
+-- the lookups inside the Redis instance. This allows greater
+-- hostname probing with less round trips, as well as some other
+-- features like sticky sessions.
+-- Other notes:
+-- * Why not load it as an EVALSHA script? Because then we'd need to
+--   know the SHA1, and you might as well send the script anyway.
+--   According to the Redis docs, it's cached anyway, so the only
+--   overhead is sending the LUA script again.
+-- TODO: Use EVALSHA instead of sending the script every time.
+local redis_script = [[
+-- Helper function to split strings. From http://lua-users.org/wiki/SplitJoin,
+-- using the "Function: true Python semantics for split" section.
+function string:split(sSeparator, nMax, bRegexp)
+	assert(sSeparator ~= '')
+	assert(nMax == nil or nMax >= 1)
+
+	local aRecord = {}
+
+	if self:len() > 0 then
+		local bPlain = not bRegexp
+		nMax = nMax or -1
+
+		local nField=1
+		local nStart=1
+		local nFirst = self:find(sSeparator, nStart, bPlain)
+		local nLast = nFirst
+		while nFirst and nMax ~= 0 do
+			aRecord[nField] = self:sub(nStart, nFirst-1)
+			nField = nField+1
+			nStart = nLast+1
+			nFirst,nLast = self:find(sSeparator, nStart, bPlain)
+			nMax = nMax-1
+		end
+		aRecord[nField] = self:sub(nStart)
+	end
+
+	return aRecord
+end
+
+-- Our input is the hostname from the Host: header.
+local host = ARGV[1]
+
 -- Convert the incoming hostname to lowercase.
 host = host:lower()
 
 -- Strip off any port in the host. This is probably
 -- against the HTTP spec, but allows for easier testing,
 -- and possibly some other magic scenarios.
-bits = string.split(host, ':')
-host = bits[1] -- Yes, remember that Lua's array indexes start at 1.
+local bits = string.split(host, ':')
+host = bits[1]
 
--- Convert 'www.foo.com' into '*.foo.com' for a secondary search.
-wildcard_host = host:gsub("(.-)[.]", "*.", 1)
-
--- Set up all our redis keys now.
-local redis_host_key = "instances:" .. host
-local redis_wildcard_key = "instances:" .. wildcard_host
-
-ngx.log(ngx.DEBUG, "Host: " .. host)
-ngx.log(ngx.DEBUG, "Wildcard host: " .. wildcard_host)
-ngx.log(ngx.DEBUG, "Redis instances key: " .. redis_host_key)
-ngx.log(ngx.DEBUG, "Redis wildcard instances key: " .. redis_wildcard_key)
-
--- Start the pipeline, and ask all the questions.
--- Why a pipeline? To reduce the round trips to the redis instance.
-red:init_pipeline()
-red:srandmember(redis_host_key)
-red:srandmember(redis_wildcard_key)
-
--- Commit the pipeline and fetch the results.
-local results, err = red:commit_pipeline()
-if not results then
-	ngx.log(ngx.DEBUG, "Failed to query redis, exiting...")
-	ngx.exit(ngx.HTTP_INTERNAL_SERVER_ERROR)
+-- Split into parts, then reassemble combinations.
+-- We want to end up with an table like: {sub.foo.com, *.foo.com, *.com, *}
+local test_hosts = {host}
+local host_bits = string.split(host, '.')
+for start = 2, #host_bits do
+	table.insert(test_hosts, "*." .. table.concat(host_bits, ".", start))
 end
+table.insert(test_hosts, "*")
 
-ngx.log(ngx.DEBUG, "Raw results: ")
-ngx.log(ngx.DEBUG, results[1])
-ngx.log(ngx.DEBUG, results[2])
+-- Return format:
+-- {upstream, versiontypekey, nodekey, instancekey, options}
 
--- Process the results.
-if results[1] ~= ngx.null then
-	ngx.log(ngx.DEBUG, "Found and using direct " .. host)
-	-- Explode the bits.
-	bits = string.split(results[1], '#')
-	ngx.var.upstream = bits[1]
-	ngx.var.versiontypekey = bits[2]
-	ngx.var.nodekey = bits[3]
-	ngx.var.instancekey = bits[4]
-else
-	if results[2] ~= ngx.null then
-		ngx.log(ngx.DEBUG, "Found and using wildcard " .. wildcard_host)
+-- The default response - meaning nothing found.
+local result = {nil}
 
-		-- Explode the bits.
-		bits = string.split(results[2], '#')
-		ngx.var.upstream = bits[1]
-		ngx.var.versiontypekey = bits[2]
-		ngx.var.nodekey = bits[3]
-		ngx.var.instancekey = bits[4]
-	else
-		-- No match.
-		ngx.log(ngx.DEBUG, "Not found.")
-		ngx.exit(ngx.HTTP_NOT_FOUND)
+for index, hostname in ipairs(test_hosts) do
+	-- See if we can find a set with members in it.
+	redis.log(redis.LOG_NOTICE, "Key: " .. "instances:" .. hostname)
+	local upstream = redis.call('SRANDMEMBER', "instances:" .. hostname)
+
+	-- If we found the member... use it.
+	if upstream then
+		-- redis.log(redis.LOG_NOTICE, "SRANDMEMBER: " .. upstream)
+		-- Split upstream into parts.
+		local upstream_parts = string.split(upstream, "#")
+		-- No options yet.
+		table.insert(upstream_parts, nil)
+		result = upstream_parts
+		break
 	end
 end
 
-ngx.log(ngx.DEBUG, "Upstream result: " .. ngx.var.upstream)
-ngx.log(ngx.DEBUG, "Log key: " .. ngx.var.versiontypekey)
+return result
+]]
+
+local res, err = red:eval(redis_script, 0, host)
+ngx.log(ngx.DEBUG, "Result: ", res[1])
+ngx.log(ngx.DEBUG, "Result: ", res[2])
+ngx.log(ngx.DEBUG, "Result: ", res[3])
+ngx.log(ngx.DEBUG, "Result: ", res[4])
+ngx.log(ngx.DEBUG, "Result: ", res[5])
+
+if res[1] ~= nil then
+	-- Found. Go upstream.
+	ngx.log(ngx.DEBUG, "Found and using upstream " .. res[1])
+	ngx.var.upstream = res[1]
+	ngx.var.versiontypekey = res[2]
+	ngx.var.nodekey = res[3]
+	ngx.var.instancekey = res[4]
+else
+	-- Not found. 404.
+	ngx.log(ngx.DEBUG, "Not found.")
+	ngx.exit(ngx.HTTP_NOT_FOUND)
+end
