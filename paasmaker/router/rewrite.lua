@@ -33,6 +33,13 @@ if not host then
 	end
 end
 
+-- Try to find the Redis script SHA1.
+local dict = ngx.shared.redis
+local sha1 = nil
+if dict ~= nil then
+	sha1 = dict:get('sha1')
+end
+
 -- Time for Lua-ception. This LUA script is passed to Redis to do
 -- the lookups inside the Redis instance. This allows greater
 -- hostname probing with less round trips, as well as some other
@@ -120,7 +127,39 @@ end
 return result
 ]]
 
-local res, err = red:eval(redis_script, 0, host)
+-- SHA1 of script is nil? Load it and save the SHA1.
+-- But only if we can save the SHA1, otherwise we're just
+-- making two round trips for nothing.
+if sha1 == nil and dict ~= nil then
+	ngx.log(ngx.DEBUG, "Inserting script into Redis.")
+	sha1, err = red:script('load', redis_script)
+	ngx.log(ngx.DEBUG, "SHA1 stored: ", sha1)
+	dict:set('sha1', sha1)
+end
+
+ngx.log(ngx.DEBUG, "SHA1 in use: ", sha1)
+
+-- First up, if we have a sha1, attempt to use it.
+-- This may fail if the SHA1 is no longer in memory.
+-- If it fails, it's caught later.
+local res = nil
+local err = nil
+if sha1 ~= nil then
+	ngx.log(ngx.DEBUG, "Using EVALSHA")
+	res, err = red:evalsha(sha1, 0, host)
+	if err then
+		dict:delete('sha1')
+	end
+end
+
+-- If it fails to run via sha1, we've already made a bunch of round
+-- trips, so just exec the script so we can get the response back to
+-- the user. We'll try SHA1 next time.
+if err or sha1 == nil then
+	ngx.log(ngx.WARN, "Fallback - running script directly in Redis.")
+	res, err = red:eval(redis_script, 0, host)
+end
+
 ngx.log(ngx.DEBUG, "Result: ", res[1])
 ngx.log(ngx.DEBUG, "Result: ", res[2])
 ngx.log(ngx.DEBUG, "Result: ", res[3])

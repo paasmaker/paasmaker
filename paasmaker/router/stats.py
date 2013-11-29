@@ -363,10 +363,12 @@ class ApplicationStats(object):
 		'nginxtime_average'
 	]
 
+	SCRIPTS = ['stats_standard.lua', 'stats_history.lua']
+
 	@classmethod
 	def load_redis_scripts(cls, configuration, callback, error_callback):
 		# Load the scripts required for the stats into the stats Redis.
-		scripts = ['stats_standard.lua', 'stats_history.lua']
+		scripts = list(ApplicationStats.SCRIPTS)
 		script_path = os.path.normpath(os.path.dirname(__file__))
 
 		def got_redis(client):
@@ -417,6 +419,7 @@ class ApplicationStats(object):
 			call when unable to get ready.
 		"""
 		self.ready_callback = callback
+		self.error_callback = error_callback
 		self.configuration.get_stats_redis(
 			self._redis_ready,
 			error_callback
@@ -536,7 +539,27 @@ class ApplicationStats(object):
 		if listtype not in ['node', 'vt']:
 			raise ValueError("List type must be either node or vt.")
 
+		def load_scripts():
+			def scripts_loaded(result):
+				self.stats_for_name(name, input_id, callback, listtype)
+
+			ApplicationStats.load_redis_scripts(
+				self.configuration,
+				scripts_loaded,
+				None # TODO: This should be an error callback.
+			)
+
+		# If we've not loaded the script before, do that now.
+		if 'stats_standard.lua' not in self.configuration.redis_scripts:
+			load_scripts()
+			return
+
 		def script_result(result):
+			if isinstance(result, paasmaker.thirdparty.tornadoredis.exceptions.ResponseError):
+				# No such script. Load it first.
+				load_scripts()
+				return
+
 			# The result is a list, so convert it to a dict.
 			# The entries are in order, so we can just merge the
 			# two together.
@@ -622,6 +645,22 @@ class ApplicationStats(object):
 		if listtype not in ['node', 'vt']:
 			raise ValueError("List type must be either node or vt.")
 
+		def load_scripts():
+			def scripts_loaded(result):
+				self.history_for_name(name, input_id, metrics, callback, start, end, listtype)
+
+			ApplicationStats.load_redis_scripts(
+				self.configuration,
+				scripts_loaded,
+				None # TODO: This should be an error callback.
+			)
+			return
+
+		# If we've not loaded the script before, do that now.
+		if 'stats_history.lua' not in self.configuration.redis_scripts:
+			load_scripts()
+			return
+
 		if not end:
 			end = int(time.time())
 
@@ -632,6 +671,11 @@ class ApplicationStats(object):
 			metrics = [metrics]
 
 		def script_result(result):
+			if isinstance(result, paasmaker.thirdparty.tornadoredis.exceptions.ResponseError):
+				# No such script. Load it first.
+				load_scripts()
+				return
+
 			# The result is a JSON encoded string, so decode it,
 			# and then perform some postprocessing on it.
 			decoded = json.loads(result)

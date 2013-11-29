@@ -904,14 +904,6 @@ class StreamConnectionTest(BaseControllerTest):
 		self.manager.prepare(self.stop, self.stop)
 		self.wait()
 
-		# Insert the stats scripts.
-		paasmaker.router.stats.ApplicationStats.load_redis_scripts(
-			self.configuration,
-			self.stop,
-			self.stop
-		)
-		self.wait()
-
 	def tearDown(self):
 		if hasattr(self, 'client'):
 			try:

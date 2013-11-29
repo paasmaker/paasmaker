@@ -67,6 +67,9 @@ http {
 		'' close;
 	}
 
+	# Shared dict for storing Redis SHA1s.
+	lua_shared_dict redis 1m;
+
 	server {
 		listen       [::]:%(listen_port_direct)d ipv6only=on;
 		listen       %(listen_port_direct)d;
@@ -392,16 +395,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 
 		self.redis_log = self.configuration.get_scratch_path('redis', 'table', 'redis.log')
 
-		# Insert the stats scripts.
-		paasmaker.router.stats.ApplicationStats.load_redis_scripts(
-			self.configuration,
-			self.stop,
-			self.stop
-		)
-		result = self.wait()
-
-		if "Failed" in result:
-			self.assertFalse(True, result)
+		#print open(self.errorlog, 'r').read()
 
 	def tearDown(self):
 		# Kill off the nginx instance.
@@ -481,6 +475,18 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# Should be 200 this time.
 		self.assertEquals(response.code, 200, "Response is not 200.")
 
+		# Shut down the Router redis, to flush the scripts.
+		# The should be refreshed correctly by the parent router LUA.
+		# This part of the test doesn't actively check that
+		# it worked, but just exercises code paths in the LUA.
+		self.configuration.shutdown_managed_redis(self.stop, self.stop)
+		self.wait()
+
+		self.short_wait_hack()
+
+		# Start it back up again.
+		self.get_redis_client()
+
 		# Try with a port in the Host header.
 		request = tornado.httpclient.HTTPRequest(
 			"http://localhost:%d/example" % self.nginxport,
@@ -531,17 +537,19 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		client.close()
 		self.short_wait_hack(length=0.2)
 
+		#print open(self.errorlog, 'r').read()
+
 		# Now test reading the stats log.
 		stats_reader = paasmaker.router.stats.StatsLogReader(self.configuration)
 		stats_reader.read(self.stop, self.stop)
 		result = self.wait()
-		self.assertEquals(result, "Completed reading file.")
+		self.assertIn("Completed", result)
 
 		# Read back the stats, and make sure they make some sense.
 		stats_output = paasmaker.router.stats.ApplicationStats(self.configuration)
 		stats_output.setup(self.stop, self.stop)
 		# Wait for it to be ready.
-		self.wait()
+		result = self.wait()
 
 		# This is for uncaught requests.
 		stats_output.total_for_uncaught(self.stop, self.stop)
@@ -626,7 +634,7 @@ class RouterTest(paasmaker.common.controller.base.BaseControllerTest):
 		# Why is both 1 and 2 points permitted? In case the unit test requests over
 		# a second boundary. It does happen.
 		self.assertIn(len(result['requests']), [1, 2], "Wrong number of data points.")
-		self.assertEquals(result['requests'][0][1], 4, "Wrong number of requests.")
+		self.assertIn(result['requests'][0][1], [1, 4], "Wrong number of requests.")
 
 		#print open(self.redis_log, 'r').read()
 
