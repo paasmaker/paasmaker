@@ -98,3 +98,29 @@ NOTE: This will cause some downtime for that router node as you update it.
 
 NOTE: If you don't remove the configuration, NGINX will start but may not be listening
 on IPv4 addresses, and thus won't work correctly.
+
+Revision 98355aa6, November 29th, 2013
+------------------------------------
+
+NGINX router LUA updates. This update uses an embedded LUA script inside Redis to
+do the route lookup, allowing it to probe more than one level deep to match the domain
+name. This also allows a catch all wildcard for a cluster.
+
+The update is backwards compatible, but for full performance, you will need to refresh
+your NGINX configuration file.
+
+NOTE: This will cause some downtime for that router node as you update it.
+
+* Stop Paasmaker on the node.
+* Terminate the running NGINX instance. You can locate them as follows.
+
+        $ ps aux | grep nginx
+        ...
+        daniel   13873  0.0  0.0  30816  1104 ?        Ss   08:20   0:00 nginx: master process thirdparty/ngx_openresty-1.4.2.9/nginx/sbin/nginx -c /home/daniel/dev/paasmaker/scratch/nginx/service.conf
+        $ kill 13873
+
+* Remove the nginx configuration file. This will force it to be rewritten next time.
+
+        $ rm scratch/nginx/service.conf scratch/nginx/service.json
+
+* Restart Paasmaker. Paasmaker will launch NGINX again with a brand new configuration.
